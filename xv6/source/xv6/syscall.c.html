@@ -1,0 +1,163 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>syscall.c source code [xv6/syscall.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'xv6/syscall.c'; var root_path = '..'; var data_path = '../../data';</script>
+<script src='../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='./'>xv6</a>/<a href='syscall.c.html'>syscall.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><u>#include <a href="types.h.html">"types.h"</a></u></td></tr>
+<tr><th id="2">2</th><td><u>#include <a href="defs.h.html">"defs.h"</a></u></td></tr>
+<tr><th id="3">3</th><td><u>#include <a href="param.h.html">"param.h"</a></u></td></tr>
+<tr><th id="4">4</th><td><u>#include <a href="memlayout.h.html">"memlayout.h"</a></u></td></tr>
+<tr><th id="5">5</th><td><u>#include <a href="mmu.h.html">"mmu.h"</a></u></td></tr>
+<tr><th id="6">6</th><td><u>#include <a href="proc.h.html">"proc.h"</a></u></td></tr>
+<tr><th id="7">7</th><td><u>#include <a href="x86.h.html">"x86.h"</a></u></td></tr>
+<tr><th id="8">8</th><td><u>#include <a href="syscall.h.html">"syscall.h"</a></u></td></tr>
+<tr><th id="9">9</th><td></td></tr>
+<tr><th id="10">10</th><td><i>// User code makes a system call with INT T_SYSCALL.</i></td></tr>
+<tr><th id="11">11</th><td><i>// System call number in %eax.</i></td></tr>
+<tr><th id="12">12</th><td><i>// Arguments on the stack, from the user call to the C</i></td></tr>
+<tr><th id="13">13</th><td><i>// library system call function. The saved user %esp points</i></td></tr>
+<tr><th id="14">14</th><td><i>// to a saved program counter, and then the first argument.</i></td></tr>
+<tr><th id="15">15</th><td><i></i></td></tr>
+<tr><th id="16">16</th><td><i>// Fetch the int at addr from the current process.</i></td></tr>
+<tr><th id="17">17</th><td><em>int</em></td></tr>
+<tr><th id="18">18</th><td><dfn class="decl def" id="fetchint" title='fetchint' data-ref="fetchint">fetchint</dfn>(<a class="typedef" href="types.h.html#uint" title='uint' data-type='unsigned int' data-ref="uint">uint</a> <dfn class="local col1 decl" id="1addr" title='addr' data-type='uint' data-ref="1addr">addr</dfn>, <em>int</em> *<dfn class="local col2 decl" id="2ip" title='ip' data-type='int *' data-ref="2ip">ip</dfn>)</td></tr>
+<tr><th id="19">19</th><td>{</td></tr>
+<tr><th id="20">20</th><td>  <b>struct</b> <a class="type" href="proc.h.html#proc" title='proc' data-ref="proc">proc</a> *<dfn class="local col3 decl" id="3curproc" title='curproc' data-type='struct proc *' data-ref="3curproc">curproc</dfn> = <a class="ref" href="defs.h.html#myproc" title='myproc' data-ref="myproc">myproc</a>();</td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td>  <b>if</b>(<a class="local col1 ref" href="#1addr" title='addr' data-ref="1addr">addr</a> &gt;= <a class="local col3 ref" href="#3curproc" title='curproc' data-ref="3curproc">curproc</a>-&gt;<a class="ref" href="proc.h.html#proc::sz" title='proc::sz' data-ref="proc::sz">sz</a> || <a class="local col1 ref" href="#1addr" title='addr' data-ref="1addr">addr</a>+<var>4</var> &gt; <a class="local col3 ref" href="#3curproc" title='curproc' data-ref="3curproc">curproc</a>-&gt;<a class="ref" href="proc.h.html#proc::sz" title='proc::sz' data-ref="proc::sz">sz</a>)</td></tr>
+<tr><th id="23">23</th><td>    <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="24">24</th><td>  *<a class="local col2 ref" href="#2ip" title='ip' data-ref="2ip">ip</a> = *(<em>int</em>*)(<a class="local col1 ref" href="#1addr" title='addr' data-ref="1addr">addr</a>);</td></tr>
+<tr><th id="25">25</th><td>  <b>return</b> <var>0</var>;</td></tr>
+<tr><th id="26">26</th><td>}</td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td><i>// Fetch the nul-terminated string at addr from the current process.</i></td></tr>
+<tr><th id="29">29</th><td><i>// Doesn't actually copy the string - just sets *pp to point at it.</i></td></tr>
+<tr><th id="30">30</th><td><i>// Returns length of string, not including nul.</i></td></tr>
+<tr><th id="31">31</th><td><em>int</em></td></tr>
+<tr><th id="32">32</th><td><dfn class="decl def" id="fetchstr" title='fetchstr' data-ref="fetchstr">fetchstr</dfn>(<a class="typedef" href="types.h.html#uint" title='uint' data-type='unsigned int' data-ref="uint">uint</a> <dfn class="local col4 decl" id="4addr" title='addr' data-type='uint' data-ref="4addr">addr</dfn>, <em>char</em> **<dfn class="local col5 decl" id="5pp" title='pp' data-type='char **' data-ref="5pp">pp</dfn>)</td></tr>
+<tr><th id="33">33</th><td>{</td></tr>
+<tr><th id="34">34</th><td>  <em>char</em> *<dfn class="local col6 decl" id="6s" title='s' data-type='char *' data-ref="6s">s</dfn>, *<dfn class="local col7 decl" id="7ep" title='ep' data-type='char *' data-ref="7ep">ep</dfn>;</td></tr>
+<tr><th id="35">35</th><td>  <b>struct</b> <a class="type" href="proc.h.html#proc" title='proc' data-ref="proc">proc</a> *<dfn class="local col8 decl" id="8curproc" title='curproc' data-type='struct proc *' data-ref="8curproc">curproc</dfn> = <a class="ref" href="defs.h.html#myproc" title='myproc' data-ref="myproc">myproc</a>();</td></tr>
+<tr><th id="36">36</th><td></td></tr>
+<tr><th id="37">37</th><td>  <b>if</b>(<a class="local col4 ref" href="#4addr" title='addr' data-ref="4addr">addr</a> &gt;= <a class="local col8 ref" href="#8curproc" title='curproc' data-ref="8curproc">curproc</a>-&gt;<a class="ref" href="proc.h.html#proc::sz" title='proc::sz' data-ref="proc::sz">sz</a>)</td></tr>
+<tr><th id="38">38</th><td>    <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="39">39</th><td>  *<a class="local col5 ref" href="#5pp" title='pp' data-ref="5pp">pp</a> = (<em>char</em>*)<a class="local col4 ref" href="#4addr" title='addr' data-ref="4addr">addr</a>;</td></tr>
+<tr><th id="40">40</th><td>  <a class="local col7 ref" href="#7ep" title='ep' data-ref="7ep">ep</a> = (<em>char</em>*)<a class="local col8 ref" href="#8curproc" title='curproc' data-ref="8curproc">curproc</a>-&gt;<a class="ref" href="proc.h.html#proc::sz" title='proc::sz' data-ref="proc::sz">sz</a>;</td></tr>
+<tr><th id="41">41</th><td>  <b>for</b>(<a class="local col6 ref" href="#6s" title='s' data-ref="6s">s</a> = *<a class="local col5 ref" href="#5pp" title='pp' data-ref="5pp">pp</a>; <a class="local col6 ref" href="#6s" title='s' data-ref="6s">s</a> &lt; <a class="local col7 ref" href="#7ep" title='ep' data-ref="7ep">ep</a>; <a class="local col6 ref" href="#6s" title='s' data-ref="6s">s</a>++){</td></tr>
+<tr><th id="42">42</th><td>    <b>if</b>(*<a class="local col6 ref" href="#6s" title='s' data-ref="6s">s</a> == <var>0</var>)</td></tr>
+<tr><th id="43">43</th><td>      <b>return</b> <a class="local col6 ref" href="#6s" title='s' data-ref="6s">s</a> - *<a class="local col5 ref" href="#5pp" title='pp' data-ref="5pp">pp</a>;</td></tr>
+<tr><th id="44">44</th><td>  }</td></tr>
+<tr><th id="45">45</th><td>  <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="46">46</th><td>}</td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td><i>// Fetch the nth 32-bit system call argument.</i></td></tr>
+<tr><th id="49">49</th><td><em>int</em></td></tr>
+<tr><th id="50">50</th><td><dfn class="decl def" id="argint" title='argint' data-ref="argint">argint</dfn>(<em>int</em> <dfn class="local col9 decl" id="9n" title='n' data-type='int' data-ref="9n">n</dfn>, <em>int</em> *<dfn class="local col0 decl" id="10ip" title='ip' data-type='int *' data-ref="10ip">ip</dfn>)</td></tr>
+<tr><th id="51">51</th><td>{</td></tr>
+<tr><th id="52">52</th><td>  <b>return</b> <a class="ref" href="#fetchint" title='fetchint' data-ref="fetchint">fetchint</a>((<a class="ref" href="defs.h.html#myproc" title='myproc' data-ref="myproc">myproc</a>()-&gt;<a class="ref" href="proc.h.html#proc::tf" title='proc::tf' data-ref="proc::tf">tf</a>-&gt;<a class="ref" href="x86.h.html#trapframe::esp" title='trapframe::esp' data-ref="trapframe::esp">esp</a>) + <var>4</var> + <var>4</var>*<a class="local col9 ref" href="#9n" title='n' data-ref="9n">n</a>, <a class="local col0 ref" href="#10ip" title='ip' data-ref="10ip">ip</a>);</td></tr>
+<tr><th id="53">53</th><td>}</td></tr>
+<tr><th id="54">54</th><td></td></tr>
+<tr><th id="55">55</th><td><i>// Fetch the nth word-sized system call argument as a pointer</i></td></tr>
+<tr><th id="56">56</th><td><i>// to a block of memory of size bytes.  Check that the pointer</i></td></tr>
+<tr><th id="57">57</th><td><i>// lies within the process address space.</i></td></tr>
+<tr><th id="58">58</th><td><em>int</em></td></tr>
+<tr><th id="59">59</th><td><dfn class="decl def" id="argptr" title='argptr' data-ref="argptr">argptr</dfn>(<em>int</em> <dfn class="local col1 decl" id="11n" title='n' data-type='int' data-ref="11n">n</dfn>, <em>char</em> **<dfn class="local col2 decl" id="12pp" title='pp' data-type='char **' data-ref="12pp">pp</dfn>, <em>int</em> <dfn class="local col3 decl" id="13size" title='size' data-type='int' data-ref="13size">size</dfn>)</td></tr>
+<tr><th id="60">60</th><td>{</td></tr>
+<tr><th id="61">61</th><td>  <em>int</em> <dfn class="local col4 decl" id="14i" title='i' data-type='int' data-ref="14i">i</dfn>;</td></tr>
+<tr><th id="62">62</th><td>  <b>struct</b> <a class="type" href="proc.h.html#proc" title='proc' data-ref="proc">proc</a> *<dfn class="local col5 decl" id="15curproc" title='curproc' data-type='struct proc *' data-ref="15curproc">curproc</dfn> = <a class="ref" href="defs.h.html#myproc" title='myproc' data-ref="myproc">myproc</a>();</td></tr>
+<tr><th id="63">63</th><td> </td></tr>
+<tr><th id="64">64</th><td>  <b>if</b>(<a class="ref" href="#argint" title='argint' data-ref="argint">argint</a>(<a class="local col1 ref" href="#11n" title='n' data-ref="11n">n</a>, &amp;<a class="local col4 ref" href="#14i" title='i' data-ref="14i">i</a>) &lt; <var>0</var>)</td></tr>
+<tr><th id="65">65</th><td>    <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="66">66</th><td>  <b>if</b>(<a class="local col3 ref" href="#13size" title='size' data-ref="13size">size</a> &lt; <var>0</var> || (<a class="typedef" href="types.h.html#uint" title='uint' data-type='unsigned int' data-ref="uint">uint</a>)<a class="local col4 ref" href="#14i" title='i' data-ref="14i">i</a> &gt;= <a class="local col5 ref" href="#15curproc" title='curproc' data-ref="15curproc">curproc</a>-&gt;<a class="ref" href="proc.h.html#proc::sz" title='proc::sz' data-ref="proc::sz">sz</a> || (<a class="typedef" href="types.h.html#uint" title='uint' data-type='unsigned int' data-ref="uint">uint</a>)<a class="local col4 ref" href="#14i" title='i' data-ref="14i">i</a>+<a class="local col3 ref" href="#13size" title='size' data-ref="13size">size</a> &gt; <a class="local col5 ref" href="#15curproc" title='curproc' data-ref="15curproc">curproc</a>-&gt;<a class="ref" href="proc.h.html#proc::sz" title='proc::sz' data-ref="proc::sz">sz</a>)</td></tr>
+<tr><th id="67">67</th><td>    <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="68">68</th><td>  *<a class="local col2 ref" href="#12pp" title='pp' data-ref="12pp">pp</a> = (<em>char</em>*)<a class="local col4 ref" href="#14i" title='i' data-ref="14i">i</a>;</td></tr>
+<tr><th id="69">69</th><td>  <b>return</b> <var>0</var>;</td></tr>
+<tr><th id="70">70</th><td>}</td></tr>
+<tr><th id="71">71</th><td></td></tr>
+<tr><th id="72">72</th><td><i>// Fetch the nth word-sized system call argument as a string pointer.</i></td></tr>
+<tr><th id="73">73</th><td><i>// Check that the pointer is valid and the string is nul-terminated.</i></td></tr>
+<tr><th id="74">74</th><td><i>// (There is no shared writable memory, so the string can't change</i></td></tr>
+<tr><th id="75">75</th><td><i>// between this check and being used by the kernel.)</i></td></tr>
+<tr><th id="76">76</th><td><em>int</em></td></tr>
+<tr><th id="77">77</th><td><dfn class="decl def" id="argstr" title='argstr' data-ref="argstr">argstr</dfn>(<em>int</em> <dfn class="local col6 decl" id="16n" title='n' data-type='int' data-ref="16n">n</dfn>, <em>char</em> **<dfn class="local col7 decl" id="17pp" title='pp' data-type='char **' data-ref="17pp">pp</dfn>)</td></tr>
+<tr><th id="78">78</th><td>{</td></tr>
+<tr><th id="79">79</th><td>  <em>int</em> <dfn class="local col8 decl" id="18addr" title='addr' data-type='int' data-ref="18addr">addr</dfn>;</td></tr>
+<tr><th id="80">80</th><td>  <b>if</b>(<a class="ref" href="#argint" title='argint' data-ref="argint">argint</a>(<a class="local col6 ref" href="#16n" title='n' data-ref="16n">n</a>, &amp;<a class="local col8 ref" href="#18addr" title='addr' data-ref="18addr">addr</a>) &lt; <var>0</var>)</td></tr>
+<tr><th id="81">81</th><td>    <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="82">82</th><td>  <b>return</b> <a class="ref" href="#fetchstr" title='fetchstr' data-ref="fetchstr">fetchstr</a>(<a class="local col8 ref" href="#18addr" title='addr' data-ref="18addr">addr</a>, <a class="local col7 ref" href="#17pp" title='pp' data-ref="17pp">pp</a>);</td></tr>
+<tr><th id="83">83</th><td>}</td></tr>
+<tr><th id="84">84</th><td></td></tr>
+<tr><th id="85">85</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="sys_chdir" title='sys_chdir' data-ref="sys_chdir">sys_chdir</dfn>(<em>void</em>);</td></tr>
+<tr><th id="86">86</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="sys_close" title='sys_close' data-ref="sys_close">sys_close</dfn>(<em>void</em>);</td></tr>
+<tr><th id="87">87</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="sys_dup" title='sys_dup' data-ref="sys_dup">sys_dup</dfn>(<em>void</em>);</td></tr>
+<tr><th id="88">88</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="sys_exec" title='sys_exec' data-ref="sys_exec">sys_exec</dfn>(<em>void</em>);</td></tr>
+<tr><th id="89">89</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="sys_exit" title='sys_exit' data-ref="sys_exit">sys_exit</dfn>(<em>void</em>);</td></tr>
+<tr><th id="90">90</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="sys_fork" title='sys_fork' data-ref="sys_fork">sys_fork</dfn>(<em>void</em>);</td></tr>
+<tr><th id="91">91</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="sys_fstat" title='sys_fstat' data-ref="sys_fstat">sys_fstat</dfn>(<em>void</em>);</td></tr>
+<tr><th id="92">92</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="sys_getpid" title='sys_getpid' data-ref="sys_getpid">sys_getpid</dfn>(<em>void</em>);</td></tr>
+<tr><th id="93">93</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="sys_kill" title='sys_kill' data-ref="sys_kill">sys_kill</dfn>(<em>void</em>);</td></tr>
+<tr><th id="94">94</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="sys_link" title='sys_link' data-ref="sys_link">sys_link</dfn>(<em>void</em>);</td></tr>
+<tr><th id="95">95</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="sys_mkdir" title='sys_mkdir' data-ref="sys_mkdir">sys_mkdir</dfn>(<em>void</em>);</td></tr>
+<tr><th id="96">96</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="sys_mknod" title='sys_mknod' data-ref="sys_mknod">sys_mknod</dfn>(<em>void</em>);</td></tr>
+<tr><th id="97">97</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="sys_open" title='sys_open' data-ref="sys_open">sys_open</dfn>(<em>void</em>);</td></tr>
+<tr><th id="98">98</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="sys_pipe" title='sys_pipe' data-ref="sys_pipe">sys_pipe</dfn>(<em>void</em>);</td></tr>
+<tr><th id="99">99</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="sys_read" title='sys_read' data-ref="sys_read">sys_read</dfn>(<em>void</em>);</td></tr>
+<tr><th id="100">100</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="sys_sbrk" title='sys_sbrk' data-ref="sys_sbrk">sys_sbrk</dfn>(<em>void</em>);</td></tr>
+<tr><th id="101">101</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="sys_sleep" title='sys_sleep' data-ref="sys_sleep">sys_sleep</dfn>(<em>void</em>);</td></tr>
+<tr><th id="102">102</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="sys_unlink" title='sys_unlink' data-ref="sys_unlink">sys_unlink</dfn>(<em>void</em>);</td></tr>
+<tr><th id="103">103</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="sys_wait" title='sys_wait' data-ref="sys_wait">sys_wait</dfn>(<em>void</em>);</td></tr>
+<tr><th id="104">104</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="sys_write" title='sys_write' data-ref="sys_write">sys_write</dfn>(<em>void</em>);</td></tr>
+<tr><th id="105">105</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="sys_uptime" title='sys_uptime' data-ref="sys_uptime">sys_uptime</dfn>(<em>void</em>);</td></tr>
+<tr><th id="106">106</th><td></td></tr>
+<tr><th id="107">107</th><td><em>static</em> <em>int</em> (*<dfn class="tu decl def" id="syscalls" title='syscalls' data-type='int (*[22])(void)' data-ref="syscalls">syscalls</dfn>[])(<em>void</em>) = {</td></tr>
+<tr><th id="108">108</th><td>[<a class="macro" href="syscall.h.html#2" title="1" data-ref="_M/SYS_fork">SYS_fork</a>]    <span class='error' title="use of GNU &apos;missing =&apos; extension in designator"><a class="ref" href="#sys_fork" title='sys_fork' data-ref="sys_fork"><a class="ref" href="#sys_fork" title='sys_fork' data-ref="sys_fork">sys_fork</a></a></span>,</td></tr>
+<tr><th id="109">109</th><td>[<a class="macro" href="syscall.h.html#3" title="2" data-ref="_M/SYS_exit">SYS_exit</a>]    <span class='error' title="use of GNU &apos;missing =&apos; extension in designator"><a class="ref" href="#sys_exit" title='sys_exit' data-ref="sys_exit"><a class="ref" href="#sys_exit" title='sys_exit' data-ref="sys_exit">sys_exit</a></a></span>,</td></tr>
+<tr><th id="110">110</th><td>[<a class="macro" href="syscall.h.html#4" title="3" data-ref="_M/SYS_wait">SYS_wait</a>]    <span class='error' title="use of GNU &apos;missing =&apos; extension in designator"><a class="ref" href="#sys_wait" title='sys_wait' data-ref="sys_wait"><a class="ref" href="#sys_wait" title='sys_wait' data-ref="sys_wait">sys_wait</a></a></span>,</td></tr>
+<tr><th id="111">111</th><td>[<a class="macro" href="syscall.h.html#5" title="4" data-ref="_M/SYS_pipe">SYS_pipe</a>]    <span class='error' title="use of GNU &apos;missing =&apos; extension in designator"><a class="ref" href="#sys_pipe" title='sys_pipe' data-ref="sys_pipe"><a class="ref" href="#sys_pipe" title='sys_pipe' data-ref="sys_pipe">sys_pipe</a></a></span>,</td></tr>
+<tr><th id="112">112</th><td>[<a class="macro" href="syscall.h.html#6" title="5" data-ref="_M/SYS_read">SYS_read</a>]    <span class='error' title="use of GNU &apos;missing =&apos; extension in designator"><a class="ref" href="#sys_read" title='sys_read' data-ref="sys_read"><a class="ref" href="#sys_read" title='sys_read' data-ref="sys_read">sys_read</a></a></span>,</td></tr>
+<tr><th id="113">113</th><td>[<a class="macro" href="syscall.h.html#7" title="6" data-ref="_M/SYS_kill">SYS_kill</a>]    <span class='error' title="use of GNU &apos;missing =&apos; extension in designator"><a class="ref" href="#sys_kill" title='sys_kill' data-ref="sys_kill"><a class="ref" href="#sys_kill" title='sys_kill' data-ref="sys_kill">sys_kill</a></a></span>,</td></tr>
+<tr><th id="114">114</th><td>[<a class="macro" href="syscall.h.html#8" title="7" data-ref="_M/SYS_exec">SYS_exec</a>]    <span class='error' title="use of GNU &apos;missing =&apos; extension in designator"><a class="ref" href="#sys_exec" title='sys_exec' data-ref="sys_exec"><a class="ref" href="#sys_exec" title='sys_exec' data-ref="sys_exec">sys_exec</a></a></span>,</td></tr>
+<tr><th id="115">115</th><td>[<a class="macro" href="syscall.h.html#9" title="8" data-ref="_M/SYS_fstat">SYS_fstat</a>]   <span class='error' title="use of GNU &apos;missing =&apos; extension in designator"><a class="ref" href="#sys_fstat" title='sys_fstat' data-ref="sys_fstat"><a class="ref" href="#sys_fstat" title='sys_fstat' data-ref="sys_fstat">sys_fstat</a></a></span>,</td></tr>
+<tr><th id="116">116</th><td>[<a class="macro" href="syscall.h.html#10" title="9" data-ref="_M/SYS_chdir">SYS_chdir</a>]   <span class='error' title="use of GNU &apos;missing =&apos; extension in designator"><a class="ref" href="#sys_chdir" title='sys_chdir' data-ref="sys_chdir"><a class="ref" href="#sys_chdir" title='sys_chdir' data-ref="sys_chdir">sys_chdir</a></a></span>,</td></tr>
+<tr><th id="117">117</th><td>[<a class="macro" href="syscall.h.html#11" title="10" data-ref="_M/SYS_dup">SYS_dup</a>]     <span class='error' title="use of GNU &apos;missing =&apos; extension in designator"><a class="ref" href="#sys_dup" title='sys_dup' data-ref="sys_dup"><a class="ref" href="#sys_dup" title='sys_dup' data-ref="sys_dup">sys_dup</a></a></span>,</td></tr>
+<tr><th id="118">118</th><td>[<a class="macro" href="syscall.h.html#12" title="11" data-ref="_M/SYS_getpid">SYS_getpid</a>]  <span class='error' title="use of GNU &apos;missing =&apos; extension in designator"><a class="ref" href="#sys_getpid" title='sys_getpid' data-ref="sys_getpid"><a class="ref" href="#sys_getpid" title='sys_getpid' data-ref="sys_getpid">sys_getpid</a></a></span>,</td></tr>
+<tr><th id="119">119</th><td>[<a class="macro" href="syscall.h.html#13" title="12" data-ref="_M/SYS_sbrk">SYS_sbrk</a>]    <span class='error' title="use of GNU &apos;missing =&apos; extension in designator"><a class="ref" href="#sys_sbrk" title='sys_sbrk' data-ref="sys_sbrk"><a class="ref" href="#sys_sbrk" title='sys_sbrk' data-ref="sys_sbrk">sys_sbrk</a></a></span>,</td></tr>
+<tr><th id="120">120</th><td>[<a class="macro" href="syscall.h.html#14" title="13" data-ref="_M/SYS_sleep">SYS_sleep</a>]   <span class='error' title="use of GNU &apos;missing =&apos; extension in designator"><a class="ref" href="#sys_sleep" title='sys_sleep' data-ref="sys_sleep"><a class="ref" href="#sys_sleep" title='sys_sleep' data-ref="sys_sleep">sys_sleep</a></a></span>,</td></tr>
+<tr><th id="121">121</th><td>[<a class="macro" href="syscall.h.html#15" title="14" data-ref="_M/SYS_uptime">SYS_uptime</a>]  <span class='error' title="use of GNU &apos;missing =&apos; extension in designator"><a class="ref" href="#sys_uptime" title='sys_uptime' data-ref="sys_uptime"><a class="ref" href="#sys_uptime" title='sys_uptime' data-ref="sys_uptime">sys_uptime</a></a></span>,</td></tr>
+<tr><th id="122">122</th><td>[<a class="macro" href="syscall.h.html#16" title="15" data-ref="_M/SYS_open">SYS_open</a>]    <span class='error' title="use of GNU &apos;missing =&apos; extension in designator"><a class="ref" href="#sys_open" title='sys_open' data-ref="sys_open"><a class="ref" href="#sys_open" title='sys_open' data-ref="sys_open">sys_open</a></a></span>,</td></tr>
+<tr><th id="123">123</th><td>[<a class="macro" href="syscall.h.html#17" title="16" data-ref="_M/SYS_write">SYS_write</a>]   <span class='error' title="use of GNU &apos;missing =&apos; extension in designator"><a class="ref" href="#sys_write" title='sys_write' data-ref="sys_write"><a class="ref" href="#sys_write" title='sys_write' data-ref="sys_write">sys_write</a></a></span>,</td></tr>
+<tr><th id="124">124</th><td>[<a class="macro" href="syscall.h.html#18" title="17" data-ref="_M/SYS_mknod">SYS_mknod</a>]   <span class='error' title="use of GNU &apos;missing =&apos; extension in designator"><a class="ref" href="#sys_mknod" title='sys_mknod' data-ref="sys_mknod"><a class="ref" href="#sys_mknod" title='sys_mknod' data-ref="sys_mknod">sys_mknod</a></a></span>,</td></tr>
+<tr><th id="125">125</th><td>[<a class="macro" href="syscall.h.html#19" title="18" data-ref="_M/SYS_unlink">SYS_unlink</a>]  <span class='error' title="use of GNU &apos;missing =&apos; extension in designator"><a class="ref" href="#sys_unlink" title='sys_unlink' data-ref="sys_unlink"><a class="ref" href="#sys_unlink" title='sys_unlink' data-ref="sys_unlink">sys_unlink</a></a></span>,</td></tr>
+<tr><th id="126">126</th><td>[<a class="macro" href="syscall.h.html#20" title="19" data-ref="_M/SYS_link">SYS_link</a>]    <span class='error' title="use of GNU &apos;missing =&apos; extension in designator"><a class="ref" href="#sys_link" title='sys_link' data-ref="sys_link"><a class="ref" href="#sys_link" title='sys_link' data-ref="sys_link">sys_link</a></a></span>,</td></tr>
+<tr><th id="127">127</th><td>[<a class="macro" href="syscall.h.html#21" title="20" data-ref="_M/SYS_mkdir">SYS_mkdir</a>]   <span class='error' title="use of GNU &apos;missing =&apos; extension in designator"><a class="ref" href="#sys_mkdir" title='sys_mkdir' data-ref="sys_mkdir"><a class="ref" href="#sys_mkdir" title='sys_mkdir' data-ref="sys_mkdir">sys_mkdir</a></a></span>,</td></tr>
+<tr><th id="128">128</th><td>[<a class="macro" href="syscall.h.html#22" title="21" data-ref="_M/SYS_close">SYS_close</a>]   <span class='error' title="use of GNU &apos;missing =&apos; extension in designator"><a class="ref" href="#sys_close" title='sys_close' data-ref="sys_close"><a class="ref" href="#sys_close" title='sys_close' data-ref="sys_close">sys_close</a></a></span>,</td></tr>
+<tr><th id="129">129</th><td>};</td></tr>
+<tr><th id="130">130</th><td></td></tr>
+<tr><th id="131">131</th><td><em>void</em></td></tr>
+<tr><th id="132">132</th><td><dfn class="decl def" id="syscall" title='syscall' data-ref="syscall">syscall</dfn>(<em>void</em>)</td></tr>
+<tr><th id="133">133</th><td>{</td></tr>
+<tr><th id="134">134</th><td>  <em>int</em> <dfn class="local col9 decl" id="19num" title='num' data-type='int' data-ref="19num">num</dfn>;</td></tr>
+<tr><th id="135">135</th><td>  <b>struct</b> <a class="type" href="proc.h.html#proc" title='proc' data-ref="proc">proc</a> *<dfn class="local col0 decl" id="20curproc" title='curproc' data-type='struct proc *' data-ref="20curproc">curproc</dfn> = <a class="ref" href="defs.h.html#myproc" title='myproc' data-ref="myproc">myproc</a>();</td></tr>
+<tr><th id="136">136</th><td></td></tr>
+<tr><th id="137">137</th><td>  <a class="local col9 ref" href="#19num" title='num' data-ref="19num">num</a> = <a class="local col0 ref" href="#20curproc" title='curproc' data-ref="20curproc">curproc</a>-&gt;<a class="ref" href="proc.h.html#proc::tf" title='proc::tf' data-ref="proc::tf">tf</a>-&gt;<a class="ref" href="x86.h.html#trapframe::eax" title='trapframe::eax' data-ref="trapframe::eax">eax</a>;</td></tr>
+<tr><th id="138">138</th><td>  <b>if</b>(<a class="local col9 ref" href="#19num" title='num' data-ref="19num">num</a> &gt; <var>0</var> &amp;&amp; <a class="local col9 ref" href="#19num" title='num' data-ref="19num">num</a> &lt; <a class="macro" href="defs.h.html#190" title="(sizeof(syscalls)/sizeof((syscalls)[0]))" data-ref="_M/NELEM">NELEM</a>(<a class="tu ref" href="#syscalls" title='syscalls' data-use='r' data-ref="syscalls">syscalls</a>) &amp;&amp; <a class="tu ref" href="#syscalls" title='syscalls' data-use='r' data-ref="syscalls">syscalls</a>[<a class="local col9 ref" href="#19num" title='num' data-ref="19num">num</a>]) {</td></tr>
+<tr><th id="139">139</th><td>    <a class="local col0 ref" href="#20curproc" title='curproc' data-ref="20curproc">curproc</a>-&gt;<a class="ref" href="proc.h.html#proc::tf" title='proc::tf' data-ref="proc::tf">tf</a>-&gt;<a class="ref" href="x86.h.html#trapframe::eax" title='trapframe::eax' data-ref="trapframe::eax">eax</a> = <a class="tu ref" href="#syscalls" title='syscalls' data-use='r' data-ref="syscalls">syscalls</a>[<a class="local col9 ref" href="#19num" title='num' data-ref="19num">num</a>]();</td></tr>
+<tr><th id="140">140</th><td>  } <b>else</b> {</td></tr>
+<tr><th id="141">141</th><td>    <a class="ref" href="defs.h.html#cprintf" title='cprintf' data-ref="cprintf">cprintf</a>(<q>"%d %s: unknown sys call %d\n"</q>,</td></tr>
+<tr><th id="142">142</th><td>            <a class="local col0 ref" href="#20curproc" title='curproc' data-ref="20curproc">curproc</a>-&gt;<a class="ref" href="proc.h.html#proc::pid" title='proc::pid' data-ref="proc::pid">pid</a>, <a class="local col0 ref" href="#20curproc" title='curproc' data-ref="20curproc">curproc</a>-&gt;<a class="ref" href="proc.h.html#proc::name" title='proc::name' data-ref="proc::name">name</a>, <a class="local col9 ref" href="#19num" title='num' data-ref="19num">num</a>);</td></tr>
+<tr><th id="143">143</th><td>    <a class="local col0 ref" href="#20curproc" title='curproc' data-ref="20curproc">curproc</a>-&gt;<a class="ref" href="proc.h.html#proc::tf" title='proc::tf' data-ref="proc::tf">tf</a>-&gt;<a class="ref" href="x86.h.html#trapframe::eax" title='trapframe::eax' data-ref="trapframe::eax">eax</a> = -<var>1</var>;</td></tr>
+<tr><th id="144">144</th><td>  }</td></tr>
+<tr><th id="145">145</th><td>}</td></tr>
+<tr><th id="146">146</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2019-Mar-13</em> from project xv6<br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

@@ -1,0 +1,602 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>memcpy.S source code [glibc/sysdeps/x86_64/memcpy.S] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'glibc/sysdeps/x86_64/memcpy.S'; var root_path = '../../..'; var data_path = '../../../../data';</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>glibc</a>/<a href='..'>sysdeps</a>/<a href='./'>x86_64</a>/<a href='memcpy.S.html'>memcpy.S</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*</i></td></tr>
+<tr><th id="2">2</th><td><i>   Optimized memcpy for x86-64.</i></td></tr>
+<tr><th id="3">3</th><td><i></i></td></tr>
+<tr><th id="4">4</th><td><i>   Copyright (C) 2007-2016 Free Software Foundation, Inc.</i></td></tr>
+<tr><th id="5">5</th><td><i>   Contributed by Evandro Menezes &lt;evandro.menezes@amd.com&gt;, 2007.</i></td></tr>
+<tr><th id="6">6</th><td><i></i></td></tr>
+<tr><th id="7">7</th><td><i>   This file is part of the GNU C Library.</i></td></tr>
+<tr><th id="8">8</th><td><i></i></td></tr>
+<tr><th id="9">9</th><td><i>   The GNU C Library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="10">10</th><td><i>   modify it under the terms of the GNU Lesser General Public</i></td></tr>
+<tr><th id="11">11</th><td><i>   License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="12">12</th><td><i>   version 2.1 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="13">13</th><td><i></i></td></tr>
+<tr><th id="14">14</th><td><i>   The GNU C Library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="15">15</th><td><i>   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="16">16</th><td><i>   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="17">17</th><td><i>   Lesser General Public License for more details.</i></td></tr>
+<tr><th id="18">18</th><td><i></i></td></tr>
+<tr><th id="19">19</th><td><i>   You should have received a copy of the GNU Lesser General Public</i></td></tr>
+<tr><th id="20">20</th><td><i>   License along with the GNU C Library; if not, see</i></td></tr>
+<tr><th id="21">21</th><td><i>   &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.</i></td></tr>
+<tr><th id="22">22</th><td><i>*/</i></td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../unix/sysv/linux/x86_64/sysdep.h.html">&lt;sysdep.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../generic/asm-syntax.h.html">"asm-syntax.h"</a></u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><i>/* Stack slots in the red-zone. */</i></td></tr>
+<tr><th id="28">28</th><td></td></tr>
+<tr><th id="29">29</th><td><u>#<span data-ppcond="29">ifdef</span> <span class="macro" data-ref="_M/USE_AS_MEMPCPY">USE_AS_MEMPCPY</span></u></td></tr>
+<tr><th id="30">30</th><td><u>#  define RETVAL	(0)</u></td></tr>
+<tr><th id="31">31</th><td><u>#<span data-ppcond="29">else</span></u></td></tr>
+<tr><th id="32">32</th><td><u>#  define <dfn class="macro" id="_M/RETVAL" data-ref="_M/RETVAL">RETVAL</dfn>	(-8)</u></td></tr>
+<tr><th id="33">33</th><td><u>#  <span data-ppcond="33">if</span> defined <span class="macro" data-ref="_M/SHARED">SHARED</span> &amp;&amp; !defined <a class="macro" href="../../build/config.h.html#142" data-ref="_M/USE_MULTIARCH">USE_MULTIARCH</a> &amp;&amp; <a class="macro" href="../../include/libc-symbols.h.html#24" title="(17 == 17)" data-ref="_M/IS_IN">IS_IN</a> (libc)</u></td></tr>
+<tr><th id="34">34</th><td><u>#    define memcpy	__memcpy</u></td></tr>
+<tr><th id="35">35</th><td><u>#    undef libc_hidden_builtin_def</u></td></tr>
+<tr><th id="36">36</th><td><u>#    define libc_hidden_builtin_def(name) \</u></td></tr>
+<tr><th id="37">37</th><td><u>	.globl __GI_memcpy; __GI_memcpy = __memcpy</u></td></tr>
+<tr><th id="38">38</th><td><u>#  <span data-ppcond="33">endif</span></u></td></tr>
+<tr><th id="39">39</th><td><u>#<span data-ppcond="29">endif</span></u></td></tr>
+<tr><th id="40">40</th><td><u>#define <dfn class="macro" id="_M/SAVE0" data-ref="_M/SAVE0">SAVE0</dfn>	(RETVAL - 8)</u></td></tr>
+<tr><th id="41">41</th><td><u>#define <dfn class="macro" id="_M/SAVE1" data-ref="_M/SAVE1">SAVE1</dfn>	(SAVE0	- 8)</u></td></tr>
+<tr><th id="42">42</th><td><u>#define <dfn class="macro" id="_M/SAVE2" data-ref="_M/SAVE2">SAVE2</dfn>	(SAVE1	- 8)</u></td></tr>
+<tr><th id="43">43</th><td><u>#define <dfn class="macro" id="_M/SAVE3" data-ref="_M/SAVE3">SAVE3</dfn>	(SAVE2	- 8)</u></td></tr>
+<tr><th id="44">44</th><td></td></tr>
+<tr><th id="45">45</th><td>        <span class='error' title="expected identifier or &apos;(&apos;">.</span>text</td></tr>
+<tr><th id="46">46</th><td></td></tr>
+<tr><th id="47">47</th><td><u>#<span data-ppcond="47">if</span> defined <span class="macro" data-ref="_M/PIC">PIC</span> &amp;&amp; <a class="macro" href="../../include/libc-symbols.h.html#24" title="(17 == 17)" data-ref="_M/IS_IN">IS_IN</a> (libc)</u></td></tr>
+<tr><th id="48">48</th><td>ENTRY_CHK (__memcpy_chk)</td></tr>
+<tr><th id="49">49</th><td></td></tr>
+<tr><th id="50">50</th><td>	cmpq	%rdx, %rcx</td></tr>
+<tr><th id="51">51</th><td>	jb	HIDDEN_JUMPTARGET (__chk_fail)</td></tr>
+<tr><th id="52">52</th><td></td></tr>
+<tr><th id="53">53</th><td>END_CHK (__memcpy_chk)</td></tr>
+<tr><th id="54">54</th><td><u>#<span data-ppcond="47">endif</span></u></td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td><a class="macro" href="sysdep.h.html#41" title=".globl memcpy; .type memcpy,@function; .align 1&lt;&lt;4; memcpy: .cfi_startproc;" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><span class='error' title="redefinition of &apos;memcpy&apos; as different kind of symbol">memcpy</span></span>)				<i>/* (void *, const void*, size_t) */</i></td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td><i>/* Handle tiny blocks. */</i></td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td><a class="macro" href="sysdep.h.html#101" title=".L1try" data-ref="_M/L">L</a>(<var>1try</var>):				<i>/* up to 32B */</i></td></tr>
+<tr><th id="61">61</th><td>	cmpq	$<var>32</var>, %rdx</td></tr>
+<tr><th id="62">62</th><td><u>#<span data-ppcond="62">ifndef</span> <span class="macro" data-ref="_M/USE_AS_MEMPCPY">USE_AS_MEMPCPY</span></u></td></tr>
+<tr><th id="63">63</th><td>	movq	%rdi, %rax		<i>/* save return value */</i></td></tr>
+<tr><th id="64">64</th><td><u>#<span data-ppcond="62">endif</span></u></td></tr>
+<tr><th id="65">65</th><td>	jae	<a class="macro" href="sysdep.h.html#101" title=".L1after" data-ref="_M/L">L</a>(<var>1after</var>)</td></tr>
+<tr><th id="66">66</th><td></td></tr>
+<tr><th id="67">67</th><td><a class="macro" href="sysdep.h.html#101" title=".L1" data-ref="_M/L">L</a>(<var>1</var>):					<i>/* 1-byte once */</i></td></tr>
+<tr><th id="68">68</th><td>	testb	$<var>1</var>, %dl</td></tr>
+<tr><th id="69">69</th><td>	jz	<a class="macro" href="sysdep.h.html#101" title=".L1a" data-ref="_M/L">L</a>(<var>1a</var>)</td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td>	movzbl	(%rsi),	%ecx</td></tr>
+<tr><th id="72">72</th><td>	movb	%cl, (%rdi)</td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td>	incq	%rsi</td></tr>
+<tr><th id="75">75</th><td>	incq	%rdi</td></tr>
+<tr><th id="76">76</th><td></td></tr>
+<tr><th id="77">77</th><td>	.p2align <var>4</var>,, <var>4</var></td></tr>
+<tr><th id="78">78</th><td></td></tr>
+<tr><th id="79">79</th><td><a class="macro" href="sysdep.h.html#101" title=".L1a" data-ref="_M/L">L</a>(<var>1a</var>):					<i>/* 2-byte once */</i></td></tr>
+<tr><th id="80">80</th><td>	testb	$<var>2</var>, %dl</td></tr>
+<tr><th id="81">81</th><td>	jz	<a class="macro" href="sysdep.h.html#101" title=".L1b" data-ref="_M/L">L</a>(<var>1b</var>)</td></tr>
+<tr><th id="82">82</th><td></td></tr>
+<tr><th id="83">83</th><td>	movzwl	(%rsi),	%ecx</td></tr>
+<tr><th id="84">84</th><td>	movw	%cx, (%rdi)</td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td>	addq	$<var>2</var>, %rsi</td></tr>
+<tr><th id="87">87</th><td>	addq	$<var>2</var>, %rdi</td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td>	.p2align <var>4</var>,, <var>4</var></td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td><a class="macro" href="sysdep.h.html#101" title=".L1b" data-ref="_M/L">L</a>(<var>1b</var>):					<i>/* 4-byte once */</i></td></tr>
+<tr><th id="92">92</th><td>	testb	$<var>4</var>, %dl</td></tr>
+<tr><th id="93">93</th><td>	jz	<a class="macro" href="sysdep.h.html#101" title=".L1c" data-ref="_M/L">L</a>(<var>1c</var>)</td></tr>
+<tr><th id="94">94</th><td></td></tr>
+<tr><th id="95">95</th><td>	movl	(%rsi),	%ecx</td></tr>
+<tr><th id="96">96</th><td>	movl	%ecx, (%rdi)</td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td>	addq	$<var>4</var>, %rsi</td></tr>
+<tr><th id="99">99</th><td>	addq	$<var>4</var>, %rdi</td></tr>
+<tr><th id="100">100</th><td></td></tr>
+<tr><th id="101">101</th><td>	.p2align <var>4</var>,, <var>4</var></td></tr>
+<tr><th id="102">102</th><td></td></tr>
+<tr><th id="103">103</th><td><a class="macro" href="sysdep.h.html#101" title=".L1c" data-ref="_M/L">L</a>(<var>1c</var>):					<i>/* 8-byte once */</i></td></tr>
+<tr><th id="104">104</th><td>	testb	$<var>8</var>, %dl</td></tr>
+<tr><th id="105">105</th><td>	jz	<a class="macro" href="sysdep.h.html#101" title=".L1d" data-ref="_M/L">L</a>(<var>1d</var>)</td></tr>
+<tr><th id="106">106</th><td></td></tr>
+<tr><th id="107">107</th><td>	movq	(%rsi), %rcx</td></tr>
+<tr><th id="108">108</th><td>	movq	%rcx, (%rdi)</td></tr>
+<tr><th id="109">109</th><td></td></tr>
+<tr><th id="110">110</th><td>	addq	$<var>8</var>, %rsi</td></tr>
+<tr><th id="111">111</th><td>	addq	$<var>8</var>, %rdi</td></tr>
+<tr><th id="112">112</th><td></td></tr>
+<tr><th id="113">113</th><td>	.p2align <var>4</var>,, <var>4</var></td></tr>
+<tr><th id="114">114</th><td></td></tr>
+<tr><th id="115">115</th><td><a class="macro" href="sysdep.h.html#101" title=".L1d" data-ref="_M/L">L</a>(<var>1d</var>):					<i>/* 16-byte loop */</i></td></tr>
+<tr><th id="116">116</th><td>	andl	$<var>0xf0</var>, %edx</td></tr>
+<tr><th id="117">117</th><td>	jz	<a class="macro" href="sysdep.h.html#101" title=".Lexit" data-ref="_M/L">L</a>(exit)</td></tr>
+<tr><th id="118">118</th><td></td></tr>
+<tr><th id="119">119</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="120">120</th><td></td></tr>
+<tr><th id="121">121</th><td><a class="macro" href="sysdep.h.html#101" title=".L1loop" data-ref="_M/L">L</a>(<var>1loop</var>):</td></tr>
+<tr><th id="122">122</th><td>	movq	 (%rsi), %rcx</td></tr>
+<tr><th id="123">123</th><td>	movq	<var>8</var>(%rsi), %r8</td></tr>
+<tr><th id="124">124</th><td>	movq	%rcx,  (%rdi)</td></tr>
+<tr><th id="125">125</th><td>	movq	 %r8, <var>8</var>(%rdi)</td></tr>
+<tr><th id="126">126</th><td></td></tr>
+<tr><th id="127">127</th><td>	subl	$<var>16</var>, %edx</td></tr>
+<tr><th id="128">128</th><td></td></tr>
+<tr><th id="129">129</th><td>	leaq	<var>16</var>(%rsi), %rsi</td></tr>
+<tr><th id="130">130</th><td>	leaq	<var>16</var>(%rdi), %rdi</td></tr>
+<tr><th id="131">131</th><td></td></tr>
+<tr><th id="132">132</th><td>	jnz	<a class="macro" href="sysdep.h.html#101" title=".L1loop" data-ref="_M/L">L</a>(<var>1loop</var>)</td></tr>
+<tr><th id="133">133</th><td></td></tr>
+<tr><th id="134">134</th><td>	.p2align <var>4</var>,, <var>4</var></td></tr>
+<tr><th id="135">135</th><td></td></tr>
+<tr><th id="136">136</th><td><a class="macro" href="sysdep.h.html#101" title=".Lexit" data-ref="_M/L">L</a>(exit):				<i>/* exit */</i></td></tr>
+<tr><th id="137">137</th><td><u>#<span data-ppcond="137">ifdef</span> <span class="macro" data-ref="_M/USE_AS_MEMPCPY">USE_AS_MEMPCPY</span></u></td></tr>
+<tr><th id="138">138</th><td>	movq	%rdi, %rax		<i>/* return value */</i></td></tr>
+<tr><th id="139">139</th><td><u>#<span data-ppcond="137">else</span></u></td></tr>
+<tr><th id="140">140</th><td>	rep</td></tr>
+<tr><th id="141">141</th><td><u>#<span data-ppcond="137">endif</span></u></td></tr>
+<tr><th id="142">142</th><td>	retq</td></tr>
+<tr><th id="143">143</th><td></td></tr>
+<tr><th id="144">144</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="145">145</th><td></td></tr>
+<tr><th id="146">146</th><td><a class="macro" href="sysdep.h.html#101" title=".L1after" data-ref="_M/L">L</a>(<var>1after</var>):</td></tr>
+<tr><th id="147">147</th><td><u>#<span data-ppcond="147">ifndef</span> <span class="macro" data-ref="_M/USE_AS_MEMPCPY">USE_AS_MEMPCPY</span></u></td></tr>
+<tr><th id="148">148</th><td>	movq	%rax, <a class="macro" href="#32" title="(-8)" data-ref="_M/RETVAL">RETVAL</a>(%rsp)	<i>/* save return value */</i></td></tr>
+<tr><th id="149">149</th><td><u>#<span data-ppcond="147">endif</span></u></td></tr>
+<tr><th id="150">150</th><td></td></tr>
+<tr><th id="151">151</th><td><i>/* Align to the natural word size. */</i></td></tr>
+<tr><th id="152">152</th><td></td></tr>
+<tr><th id="153">153</th><td><a class="macro" href="sysdep.h.html#101" title=".Laligntry" data-ref="_M/L">L</a>(aligntry):</td></tr>
+<tr><th id="154">154</th><td>	movl	%esi, %ecx      	<i>/* align by source */</i></td></tr>
+<tr><th id="155">155</th><td></td></tr>
+<tr><th id="156">156</th><td>	andl	$<var>7</var>, %ecx</td></tr>
+<tr><th id="157">157</th><td>	jz	<a class="macro" href="sysdep.h.html#101" title=".Lalignafter" data-ref="_M/L">L</a>(alignafter)  		<i>/* already aligned */</i></td></tr>
+<tr><th id="158">158</th><td></td></tr>
+<tr><th id="159">159</th><td><a class="macro" href="sysdep.h.html#101" title=".Lalign" data-ref="_M/L">L</a>(align):		      		<i>/* align */</i></td></tr>
+<tr><th id="160">160</th><td>	leaq	-<var>8</var>(%rcx, %rdx), %rdx	<i>/* calculate remaining bytes */</i></td></tr>
+<tr><th id="161">161</th><td>	subl	$<var>8</var>, %ecx</td></tr>
+<tr><th id="162">162</th><td></td></tr>
+<tr><th id="163">163</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="164">164</th><td></td></tr>
+<tr><th id="165">165</th><td><a class="macro" href="sysdep.h.html#101" title=".Lalignloop" data-ref="_M/L">L</a>(alignloop):				<i>/* 1-byte alignment loop */</i></td></tr>
+<tr><th id="166">166</th><td>	movzbl	(%rsi), %eax</td></tr>
+<tr><th id="167">167</th><td>	movb	%al, (%rdi)</td></tr>
+<tr><th id="168">168</th><td></td></tr>
+<tr><th id="169">169</th><td>	incl	%ecx</td></tr>
+<tr><th id="170">170</th><td></td></tr>
+<tr><th id="171">171</th><td>	leaq	<var>1</var>(%rsi), %rsi</td></tr>
+<tr><th id="172">172</th><td>	leaq	<var>1</var>(%rdi), %rdi</td></tr>
+<tr><th id="173">173</th><td></td></tr>
+<tr><th id="174">174</th><td>	jnz	<a class="macro" href="sysdep.h.html#101" title=".Lalignloop" data-ref="_M/L">L</a>(alignloop)</td></tr>
+<tr><th id="175">175</th><td></td></tr>
+<tr><th id="176">176</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="177">177</th><td></td></tr>
+<tr><th id="178">178</th><td><a class="macro" href="sysdep.h.html#101" title=".Lalignafter" data-ref="_M/L">L</a>(alignafter):</td></tr>
+<tr><th id="179">179</th><td></td></tr>
+<tr><th id="180">180</th><td><i>/* Handle mid-sized blocks. */</i></td></tr>
+<tr><th id="181">181</th><td></td></tr>
+<tr><th id="182">182</th><td><a class="macro" href="sysdep.h.html#101" title=".L32try" data-ref="_M/L">L</a>(<var>32try</var>):				<i>/* up to 1KB */</i></td></tr>
+<tr><th id="183">183</th><td>	cmpq	$<var>1024</var>, %rdx</td></tr>
+<tr><th id="184">184</th><td>	ja	<a class="macro" href="sysdep.h.html#101" title=".L32after" data-ref="_M/L">L</a>(<var>32after</var>)</td></tr>
+<tr><th id="185">185</th><td></td></tr>
+<tr><th id="186">186</th><td><a class="macro" href="sysdep.h.html#101" title=".L32" data-ref="_M/L">L</a>(<var>32</var>):					<i>/* 32-byte loop */</i></td></tr>
+<tr><th id="187">187</th><td>	movl	%edx, %ecx</td></tr>
+<tr><th id="188">188</th><td>	shrl	$<var>5</var>, %ecx</td></tr>
+<tr><th id="189">189</th><td>	jz	<a class="macro" href="sysdep.h.html#101" title=".L32skip" data-ref="_M/L">L</a>(<var>32skip</var>)</td></tr>
+<tr><th id="190">190</th><td></td></tr>
+<tr><th id="191">191</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="192">192</th><td></td></tr>
+<tr><th id="193">193</th><td><a class="macro" href="sysdep.h.html#101" title=".L32loop" data-ref="_M/L">L</a>(<var>32loop</var>):</td></tr>
+<tr><th id="194">194</th><td>	decl	%ecx</td></tr>
+<tr><th id="195">195</th><td></td></tr>
+<tr><th id="196">196</th><td>	movq	  (%rsi), %rax</td></tr>
+<tr><th id="197">197</th><td>	movq	 <var>8</var>(%rsi), %r8</td></tr>
+<tr><th id="198">198</th><td>	movq	<var>16</var>(%rsi), %r9</td></tr>
+<tr><th id="199">199</th><td>	movq	<var>24</var>(%rsi), %r10</td></tr>
+<tr><th id="200">200</th><td></td></tr>
+<tr><th id="201">201</th><td>	movq	%rax,   (%rdi)</td></tr>
+<tr><th id="202">202</th><td>	movq	 %r8,  <var>8</var>(%rdi)</td></tr>
+<tr><th id="203">203</th><td>	movq	 %r9, <var>16</var>(%rdi)</td></tr>
+<tr><th id="204">204</th><td>	movq	%r10, <var>24</var>(%rdi)</td></tr>
+<tr><th id="205">205</th><td></td></tr>
+<tr><th id="206">206</th><td>	leaq	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="207">207</th><td>	leaq	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="208">208</th><td></td></tr>
+<tr><th id="209">209</th><td>	jz	<a class="macro" href="sysdep.h.html#101" title=".L32skip" data-ref="_M/L">L</a>(<var>32skip</var>)		<i>/* help out smaller blocks */</i></td></tr>
+<tr><th id="210">210</th><td></td></tr>
+<tr><th id="211">211</th><td>	decl	%ecx</td></tr>
+<tr><th id="212">212</th><td></td></tr>
+<tr><th id="213">213</th><td>	movq	  (%rsi), %rax</td></tr>
+<tr><th id="214">214</th><td>	movq	 <var>8</var>(%rsi), %r8</td></tr>
+<tr><th id="215">215</th><td>	movq	<var>16</var>(%rsi), %r9</td></tr>
+<tr><th id="216">216</th><td>	movq	<var>24</var>(%rsi), %r10</td></tr>
+<tr><th id="217">217</th><td></td></tr>
+<tr><th id="218">218</th><td>	movq	%rax,   (%rdi)</td></tr>
+<tr><th id="219">219</th><td>	movq	 %r8,  <var>8</var>(%rdi)</td></tr>
+<tr><th id="220">220</th><td>	movq	 %r9, <var>16</var>(%rdi)</td></tr>
+<tr><th id="221">221</th><td>	movq	%r10, <var>24</var>(%rdi)</td></tr>
+<tr><th id="222">222</th><td></td></tr>
+<tr><th id="223">223</th><td>	leaq	<var>32</var>(%rsi), %rsi</td></tr>
+<tr><th id="224">224</th><td>	leaq	<var>32</var>(%rdi), %rdi</td></tr>
+<tr><th id="225">225</th><td></td></tr>
+<tr><th id="226">226</th><td>	jnz	<a class="macro" href="sysdep.h.html#101" title=".L32loop" data-ref="_M/L">L</a>(<var>32loop</var>)</td></tr>
+<tr><th id="227">227</th><td></td></tr>
+<tr><th id="228">228</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="229">229</th><td></td></tr>
+<tr><th id="230">230</th><td><a class="macro" href="sysdep.h.html#101" title=".L32skip" data-ref="_M/L">L</a>(<var>32skip</var>):</td></tr>
+<tr><th id="231">231</th><td>	andl	$<var>31</var>, %edx		<i>/* check for left overs */</i></td></tr>
+<tr><th id="232">232</th><td><u>#<span data-ppcond="232">ifdef</span> <span class="macro" data-ref="_M/USE_AS_MEMPCPY">USE_AS_MEMPCPY</span></u></td></tr>
+<tr><th id="233">233</th><td>	jnz	L(<var>1</var>)</td></tr>
+<tr><th id="234">234</th><td></td></tr>
+<tr><th id="235">235</th><td>	movq	%rdi, %rax</td></tr>
+<tr><th id="236">236</th><td><u>#<span data-ppcond="232">else</span></u></td></tr>
+<tr><th id="237">237</th><td>	movq	<a class="macro" href="#32" title="(-8)" data-ref="_M/RETVAL">RETVAL</a>(%rsp), %rax</td></tr>
+<tr><th id="238">238</th><td>	jnz	<a class="macro" href="sysdep.h.html#101" title=".L1" data-ref="_M/L">L</a>(<var>1</var>)</td></tr>
+<tr><th id="239">239</th><td></td></tr>
+<tr><th id="240">240</th><td>	rep</td></tr>
+<tr><th id="241">241</th><td><u>#<span data-ppcond="232">endif</span></u></td></tr>
+<tr><th id="242">242</th><td>	retq				<i>/* exit */</i></td></tr>
+<tr><th id="243">243</th><td></td></tr>
+<tr><th id="244">244</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="245">245</th><td></td></tr>
+<tr><th id="246">246</th><td><a class="macro" href="sysdep.h.html#101" title=".L32after" data-ref="_M/L">L</a>(<var>32after</var>):</td></tr>
+<tr><th id="247">247</th><td></td></tr>
+<tr><th id="248">248</th><td><i>/*</i></td></tr>
+<tr><th id="249">249</th><td><i>	In order to minimize code-size in RTLD, algorithms specific for</i></td></tr>
+<tr><th id="250">250</th><td><i>	larger blocks are excluded when building for RTLD.</i></td></tr>
+<tr><th id="251">251</th><td><i>*/</i></td></tr>
+<tr><th id="252">252</th><td></td></tr>
+<tr><th id="253">253</th><td><i>/* Handle blocks smaller than 1/2 L1. */</i></td></tr>
+<tr><th id="254">254</th><td></td></tr>
+<tr><th id="255">255</th><td><a class="macro" href="sysdep.h.html#101" title=".Lfasttry" data-ref="_M/L">L</a>(fasttry):				<i>/* first 1/2 L1 */</i></td></tr>
+<tr><th id="256">256</th><td><u>#<span data-ppcond="256">if</span> <a class="macro" href="../../include/libc-symbols.h.html#24" title="(17 == 17)" data-ref="_M/IS_IN">IS_IN</a> (libc)			/* only up to this algorithm outside of libc.so */</u></td></tr>
+<tr><th id="257">257</th><td>	mov	__x86_data_cache_size_half(%rip), %<a class="macro" href="sysdep.h.html#127" title="r11" data-ref="_M/R11_LP">R11_LP</a></td></tr>
+<tr><th id="258">258</th><td>	cmpq	%rdx, %r11		<i>/* calculate the smaller of */</i></td></tr>
+<tr><th id="259">259</th><td>	cmovaq	%rdx, %r11		<i>/* remaining bytes and 1/2 L1 */</i></td></tr>
+<tr><th id="260">260</th><td><u>#<span data-ppcond="256">endif</span></u></td></tr>
+<tr><th id="261">261</th><td></td></tr>
+<tr><th id="262">262</th><td><a class="macro" href="sysdep.h.html#101" title=".Lfast" data-ref="_M/L">L</a>(fast):				<i>/* good ol' MOVS */</i></td></tr>
+<tr><th id="263">263</th><td><u>#<span data-ppcond="263">if</span> <a class="macro" href="../../include/libc-symbols.h.html#24" title="(17 == 17)" data-ref="_M/IS_IN">IS_IN</a> (libc)</u></td></tr>
+<tr><th id="264">264</th><td>	movq	%r11, %rcx</td></tr>
+<tr><th id="265">265</th><td>	andq	$-<var>8</var>, %r11</td></tr>
+<tr><th id="266">266</th><td><u>#<span data-ppcond="263">else</span></u></td></tr>
+<tr><th id="267">267</th><td>	movq	%rdx, %rcx</td></tr>
+<tr><th id="268">268</th><td><u>#<span data-ppcond="263">endif</span></u></td></tr>
+<tr><th id="269">269</th><td>	shrq	$<var>3</var>, %rcx</td></tr>
+<tr><th id="270">270</th><td>	jz	<a class="macro" href="sysdep.h.html#101" title=".Lfastskip" data-ref="_M/L">L</a>(fastskip)</td></tr>
+<tr><th id="271">271</th><td></td></tr>
+<tr><th id="272">272</th><td>	rep</td></tr>
+<tr><th id="273">273</th><td>	movsq</td></tr>
+<tr><th id="274">274</th><td></td></tr>
+<tr><th id="275">275</th><td>	.p2align <var>4</var>,, <var>4</var></td></tr>
+<tr><th id="276">276</th><td></td></tr>
+<tr><th id="277">277</th><td><a class="macro" href="sysdep.h.html#101" title=".Lfastskip" data-ref="_M/L">L</a>(fastskip):</td></tr>
+<tr><th id="278">278</th><td><u>#<span data-ppcond="278">if</span> <a class="macro" href="../../include/libc-symbols.h.html#24" title="(17 == 17)" data-ref="_M/IS_IN">IS_IN</a> (libc)</u></td></tr>
+<tr><th id="279">279</th><td>	subq	%r11, %rdx		<i>/* check for more */</i></td></tr>
+<tr><th id="280">280</th><td>	testq	$-<var>8</var>, %rdx</td></tr>
+<tr><th id="281">281</th><td>	jnz	<a class="macro" href="sysdep.h.html#101" title=".Lfastafter" data-ref="_M/L">L</a>(fastafter)</td></tr>
+<tr><th id="282">282</th><td><u>#<span data-ppcond="278">endif</span></u></td></tr>
+<tr><th id="283">283</th><td></td></tr>
+<tr><th id="284">284</th><td>	andl	$<var>7</var>, %edx		<i>/* check for left overs */</i></td></tr>
+<tr><th id="285">285</th><td><u>#<span data-ppcond="285">ifdef</span> <span class="macro" data-ref="_M/USE_AS_MEMPCPY">USE_AS_MEMPCPY</span></u></td></tr>
+<tr><th id="286">286</th><td>	jnz	L(<var>1</var>)</td></tr>
+<tr><th id="287">287</th><td></td></tr>
+<tr><th id="288">288</th><td>	movq	%rdi, %rax</td></tr>
+<tr><th id="289">289</th><td><u>#<span data-ppcond="285">else</span></u></td></tr>
+<tr><th id="290">290</th><td>	movq	<a class="macro" href="#32" title="(-8)" data-ref="_M/RETVAL">RETVAL</a>(%rsp), %rax</td></tr>
+<tr><th id="291">291</th><td>	jnz	<a class="macro" href="sysdep.h.html#101" title=".L1" data-ref="_M/L">L</a>(<var>1</var>)</td></tr>
+<tr><th id="292">292</th><td></td></tr>
+<tr><th id="293">293</th><td>	rep</td></tr>
+<tr><th id="294">294</th><td><u>#<span data-ppcond="285">endif</span></u></td></tr>
+<tr><th id="295">295</th><td>	retq				<i>/* exit */</i></td></tr>
+<tr><th id="296">296</th><td></td></tr>
+<tr><th id="297">297</th><td><u>#<span data-ppcond="297">if</span> <a class="macro" href="../../include/libc-symbols.h.html#24" title="(17 == 17)" data-ref="_M/IS_IN">IS_IN</a> (libc)			/* none of the algorithms below for RTLD */</u></td></tr>
+<tr><th id="298">298</th><td></td></tr>
+<tr><th id="299">299</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="300">300</th><td></td></tr>
+<tr><th id="301">301</th><td><a class="macro" href="sysdep.h.html#101" title=".Lfastafter" data-ref="_M/L">L</a>(fastafter):</td></tr>
+<tr><th id="302">302</th><td></td></tr>
+<tr><th id="303">303</th><td><i>/* Handle large blocks smaller than 1/2 L2. */</i></td></tr>
+<tr><th id="304">304</th><td></td></tr>
+<tr><th id="305">305</th><td><a class="macro" href="sysdep.h.html#101" title=".Lpretry" data-ref="_M/L">L</a>(pretry):				<i>/* first 1/2 L2 */</i></td></tr>
+<tr><th id="306">306</th><td>	mov	__x86_shared_cache_size_half (%rip), %<a class="macro" href="sysdep.h.html#124" title="r8" data-ref="_M/R8_LP">R8_LP</a></td></tr>
+<tr><th id="307">307</th><td>	cmpq	%rdx, %r8		<i>/* calculate the lesser of */</i></td></tr>
+<tr><th id="308">308</th><td>	cmovaq	%rdx, %r8		<i>/* remaining bytes and 1/2 L2 */</i></td></tr>
+<tr><th id="309">309</th><td></td></tr>
+<tr><th id="310">310</th><td><a class="macro" href="sysdep.h.html#101" title=".Lpre" data-ref="_M/L">L</a>(pre):					<i>/* 64-byte with prefetching */</i></td></tr>
+<tr><th id="311">311</th><td>	movq	%r8, %rcx</td></tr>
+<tr><th id="312">312</th><td>	andq	$-<var>64</var>, %r8</td></tr>
+<tr><th id="313">313</th><td>	shrq	$<var>6</var>, %rcx</td></tr>
+<tr><th id="314">314</th><td>	jz	<a class="macro" href="sysdep.h.html#101" title=".Lpreskip" data-ref="_M/L">L</a>(preskip)</td></tr>
+<tr><th id="315">315</th><td></td></tr>
+<tr><th id="316">316</th><td>	movq	%r14, <a class="macro" href="#40" title="((-8) - 8)" data-ref="_M/SAVE0">SAVE0</a>(%rsp)</td></tr>
+<tr><th id="317">317</th><td>	<a class="macro" href="../generic/sysdep.h.html#47" title=".cfi_rel_offset %r14, ((-8) - 8)" data-ref="_M/cfi_rel_offset">cfi_rel_offset</a> (%r14, <a class="macro" href="#40" title="((-8) - 8)" data-ref="_M/SAVE0">SAVE0</a>)</td></tr>
+<tr><th id="318">318</th><td>	movq	%r13, <a class="macro" href="#41" title="(((-8) - 8) - 8)" data-ref="_M/SAVE1">SAVE1</a>(%rsp)</td></tr>
+<tr><th id="319">319</th><td>	<a class="macro" href="../generic/sysdep.h.html#47" title=".cfi_rel_offset %r13, (((-8) - 8) - 8)" data-ref="_M/cfi_rel_offset">cfi_rel_offset</a> (%r13, <a class="macro" href="#41" title="(((-8) - 8) - 8)" data-ref="_M/SAVE1">SAVE1</a>)</td></tr>
+<tr><th id="320">320</th><td>	movq	%r12, <a class="macro" href="#42" title="((((-8) - 8) - 8) - 8)" data-ref="_M/SAVE2">SAVE2</a>(%rsp)</td></tr>
+<tr><th id="321">321</th><td>	<a class="macro" href="../generic/sysdep.h.html#47" title=".cfi_rel_offset %r12, ((((-8) - 8) - 8) - 8)" data-ref="_M/cfi_rel_offset">cfi_rel_offset</a> (%r12, <a class="macro" href="#42" title="((((-8) - 8) - 8) - 8)" data-ref="_M/SAVE2">SAVE2</a>)</td></tr>
+<tr><th id="322">322</th><td>	movq	%rbx, <a class="macro" href="#43" title="(((((-8) - 8) - 8) - 8) - 8)" data-ref="_M/SAVE3">SAVE3</a>(%rsp)</td></tr>
+<tr><th id="323">323</th><td>	<a class="macro" href="../generic/sysdep.h.html#47" title=".cfi_rel_offset %rbx, (((((-8) - 8) - 8) - 8) - 8)" data-ref="_M/cfi_rel_offset">cfi_rel_offset</a> (%rbx, <a class="macro" href="#43" title="(((((-8) - 8) - 8) - 8) - 8)" data-ref="_M/SAVE3">SAVE3</a>)</td></tr>
+<tr><th id="324">324</th><td></td></tr>
+<tr><th id="325">325</th><td>	cmpl	$<var>0</var>, __x86_prefetchw(%rip)</td></tr>
+<tr><th id="326">326</th><td>	jz	<a class="macro" href="sysdep.h.html#101" title=".Lpreloop" data-ref="_M/L">L</a>(preloop)		<i>/* check if PREFETCHW OK */</i></td></tr>
+<tr><th id="327">327</th><td></td></tr>
+<tr><th id="328">328</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="329">329</th><td></td></tr>
+<tr><th id="330">330</th><td><i>/* ... when PREFETCHW is available (less cache-probe traffic in MP systems). */</i></td></tr>
+<tr><th id="331">331</th><td></td></tr>
+<tr><th id="332">332</th><td><a class="macro" href="sysdep.h.html#101" title=".Lprewloop" data-ref="_M/L">L</a>(prewloop):				<i>/* cache-line in state M */</i></td></tr>
+<tr><th id="333">333</th><td>	decq	%rcx</td></tr>
+<tr><th id="334">334</th><td></td></tr>
+<tr><th id="335">335</th><td>	movq	   (%rsi), %rax</td></tr>
+<tr><th id="336">336</th><td>	movq	 <var>8</var> (%rsi), %rbx</td></tr>
+<tr><th id="337">337</th><td>	movq	<var>16</var> (%rsi), %r9</td></tr>
+<tr><th id="338">338</th><td>	movq	<var>24</var> (%rsi), %r10</td></tr>
+<tr><th id="339">339</th><td>	movq	<var>32</var> (%rsi), %r11</td></tr>
+<tr><th id="340">340</th><td>	movq	<var>40</var> (%rsi), %r12</td></tr>
+<tr><th id="341">341</th><td>	movq	<var>48</var> (%rsi), %r13</td></tr>
+<tr><th id="342">342</th><td>	movq	<var>56</var> (%rsi), %r14</td></tr>
+<tr><th id="343">343</th><td></td></tr>
+<tr><th id="344">344</th><td>	prefetcht0	 <var>0</var> + <var>896</var> (%rsi)</td></tr>
+<tr><th id="345">345</th><td>	prefetcht0	<var>64</var> + <var>896</var> (%rsi)</td></tr>
+<tr><th id="346">346</th><td></td></tr>
+<tr><th id="347">347</th><td>	movq	%rax,   (%rdi)</td></tr>
+<tr><th id="348">348</th><td>	movq	%rbx,  <var>8</var>(%rdi)</td></tr>
+<tr><th id="349">349</th><td>	movq	 %r9, <var>16</var>(%rdi)</td></tr>
+<tr><th id="350">350</th><td>	movq	%r10, <var>24</var>(%rdi)</td></tr>
+<tr><th id="351">351</th><td>	movq	%r11, <var>32</var>(%rdi)</td></tr>
+<tr><th id="352">352</th><td>	movq	%r12, <var>40</var>(%rdi)</td></tr>
+<tr><th id="353">353</th><td>	movq	%r13, <var>48</var>(%rdi)</td></tr>
+<tr><th id="354">354</th><td>	movq	%r14, <var>56</var>(%rdi)</td></tr>
+<tr><th id="355">355</th><td></td></tr>
+<tr><th id="356">356</th><td>	leaq	<var>64</var>(%rsi), %rsi</td></tr>
+<tr><th id="357">357</th><td>	leaq	<var>64</var>(%rdi), %rdi</td></tr>
+<tr><th id="358">358</th><td></td></tr>
+<tr><th id="359">359</th><td>	jz	<a class="macro" href="sysdep.h.html#101" title=".Lprebail" data-ref="_M/L">L</a>(prebail)</td></tr>
+<tr><th id="360">360</th><td></td></tr>
+<tr><th id="361">361</th><td>	decq	%rcx</td></tr>
+<tr><th id="362">362</th><td></td></tr>
+<tr><th id="363">363</th><td>	movq	  (%rsi), %rax</td></tr>
+<tr><th id="364">364</th><td>	movq	 <var>8</var>(%rsi), %rbx</td></tr>
+<tr><th id="365">365</th><td>	movq	<var>16</var>(%rsi), %r9</td></tr>
+<tr><th id="366">366</th><td>	movq	<var>24</var>(%rsi), %r10</td></tr>
+<tr><th id="367">367</th><td>	movq	<var>32</var>(%rsi), %r11</td></tr>
+<tr><th id="368">368</th><td>	movq	<var>40</var>(%rsi), %r12</td></tr>
+<tr><th id="369">369</th><td>	movq	<var>48</var>(%rsi), %r13</td></tr>
+<tr><th id="370">370</th><td>	movq	<var>56</var>(%rsi), %r14</td></tr>
+<tr><th id="371">371</th><td></td></tr>
+<tr><th id="372">372</th><td>	movq	%rax,   (%rdi)</td></tr>
+<tr><th id="373">373</th><td>	movq	%rbx,  <var>8</var>(%rdi)</td></tr>
+<tr><th id="374">374</th><td>	movq	 %r9, <var>16</var>(%rdi)</td></tr>
+<tr><th id="375">375</th><td>	movq	%r10, <var>24</var>(%rdi)</td></tr>
+<tr><th id="376">376</th><td>	movq	%r11, <var>32</var>(%rdi)</td></tr>
+<tr><th id="377">377</th><td>	movq	%r12, <var>40</var>(%rdi)</td></tr>
+<tr><th id="378">378</th><td>	movq	%r13, <var>48</var>(%rdi)</td></tr>
+<tr><th id="379">379</th><td>	movq	%r14, <var>56</var>(%rdi)</td></tr>
+<tr><th id="380">380</th><td></td></tr>
+<tr><th id="381">381</th><td>	prefetchw	<var>896</var> - <var>64</var>(%rdi)</td></tr>
+<tr><th id="382">382</th><td>	prefetchw	<var>896</var> -  <var>0</var>(%rdi)</td></tr>
+<tr><th id="383">383</th><td></td></tr>
+<tr><th id="384">384</th><td>	leaq	<var>64</var>(%rsi), %rsi</td></tr>
+<tr><th id="385">385</th><td>	leaq	<var>64</var>(%rdi), %rdi</td></tr>
+<tr><th id="386">386</th><td></td></tr>
+<tr><th id="387">387</th><td>	jnz	<a class="macro" href="sysdep.h.html#101" title=".Lprewloop" data-ref="_M/L">L</a>(prewloop)</td></tr>
+<tr><th id="388">388</th><td>	jmp	<a class="macro" href="sysdep.h.html#101" title=".Lprebail" data-ref="_M/L">L</a>(prebail)</td></tr>
+<tr><th id="389">389</th><td></td></tr>
+<tr><th id="390">390</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="391">391</th><td></td></tr>
+<tr><th id="392">392</th><td><i>/* ... when PREFETCHW is not available. */</i></td></tr>
+<tr><th id="393">393</th><td></td></tr>
+<tr><th id="394">394</th><td><a class="macro" href="sysdep.h.html#101" title=".Lpreloop" data-ref="_M/L">L</a>(preloop):				<i>/* cache-line in state E */</i></td></tr>
+<tr><th id="395">395</th><td>	decq	%rcx</td></tr>
+<tr><th id="396">396</th><td></td></tr>
+<tr><th id="397">397</th><td>	movq	  (%rsi), %rax</td></tr>
+<tr><th id="398">398</th><td>	movq	 <var>8</var>(%rsi), %rbx</td></tr>
+<tr><th id="399">399</th><td>	movq	<var>16</var>(%rsi), %r9</td></tr>
+<tr><th id="400">400</th><td>	movq	<var>24</var>(%rsi), %r10</td></tr>
+<tr><th id="401">401</th><td>	movq	<var>32</var>(%rsi), %r11</td></tr>
+<tr><th id="402">402</th><td>	movq	<var>40</var>(%rsi), %r12</td></tr>
+<tr><th id="403">403</th><td>	movq	<var>48</var>(%rsi), %r13</td></tr>
+<tr><th id="404">404</th><td>	movq	<var>56</var>(%rsi), %r14</td></tr>
+<tr><th id="405">405</th><td></td></tr>
+<tr><th id="406">406</th><td>	prefetcht0	<var>896</var> +  <var>0</var>(%rsi)</td></tr>
+<tr><th id="407">407</th><td>	prefetcht0	<var>896</var> + <var>64</var>(%rsi)</td></tr>
+<tr><th id="408">408</th><td></td></tr>
+<tr><th id="409">409</th><td>	movq	%rax,   (%rdi)</td></tr>
+<tr><th id="410">410</th><td>	movq	%rbx,  <var>8</var>(%rdi)</td></tr>
+<tr><th id="411">411</th><td>	movq	 %r9, <var>16</var>(%rdi)</td></tr>
+<tr><th id="412">412</th><td>	movq	%r10, <var>24</var>(%rdi)</td></tr>
+<tr><th id="413">413</th><td>	movq	%r11, <var>32</var>(%rdi)</td></tr>
+<tr><th id="414">414</th><td>	movq	%r12, <var>40</var>(%rdi)</td></tr>
+<tr><th id="415">415</th><td>	movq	%r13, <var>48</var>(%rdi)</td></tr>
+<tr><th id="416">416</th><td>	movq	%r14, <var>56</var>(%rdi)</td></tr>
+<tr><th id="417">417</th><td></td></tr>
+<tr><th id="418">418</th><td>	leaq	<var>64</var> (%rsi), %rsi</td></tr>
+<tr><th id="419">419</th><td>	leaq	<var>64</var> (%rdi), %rdi</td></tr>
+<tr><th id="420">420</th><td></td></tr>
+<tr><th id="421">421</th><td>	jz	<a class="macro" href="sysdep.h.html#101" title=".Lprebail" data-ref="_M/L">L</a>(prebail)</td></tr>
+<tr><th id="422">422</th><td></td></tr>
+<tr><th id="423">423</th><td>	decq	%rcx</td></tr>
+<tr><th id="424">424</th><td></td></tr>
+<tr><th id="425">425</th><td>	movq	  (%rsi), %rax</td></tr>
+<tr><th id="426">426</th><td>	movq	 <var>8</var>(%rsi), %rbx</td></tr>
+<tr><th id="427">427</th><td>	movq	<var>16</var>(%rsi), %r9</td></tr>
+<tr><th id="428">428</th><td>	movq	<var>24</var>(%rsi), %r10</td></tr>
+<tr><th id="429">429</th><td>	movq	<var>32</var>(%rsi), %r11</td></tr>
+<tr><th id="430">430</th><td>	movq	<var>40</var>(%rsi), %r12</td></tr>
+<tr><th id="431">431</th><td>	movq	<var>48</var>(%rsi), %r13</td></tr>
+<tr><th id="432">432</th><td>	movq	<var>56</var>(%rsi), %r14</td></tr>
+<tr><th id="433">433</th><td></td></tr>
+<tr><th id="434">434</th><td>	prefetcht0	<var>896</var> - <var>64</var>(%rdi)</td></tr>
+<tr><th id="435">435</th><td>	prefetcht0	<var>896</var> -  <var>0</var>(%rdi)</td></tr>
+<tr><th id="436">436</th><td></td></tr>
+<tr><th id="437">437</th><td>	movq	%rax,   (%rdi)</td></tr>
+<tr><th id="438">438</th><td>	movq	%rbx,  <var>8</var>(%rdi)</td></tr>
+<tr><th id="439">439</th><td>	movq	 %r9, <var>16</var>(%rdi)</td></tr>
+<tr><th id="440">440</th><td>	movq	%r10, <var>24</var>(%rdi)</td></tr>
+<tr><th id="441">441</th><td>	movq	%r11, <var>32</var>(%rdi)</td></tr>
+<tr><th id="442">442</th><td>	movq	%r12, <var>40</var>(%rdi)</td></tr>
+<tr><th id="443">443</th><td>	movq	%r13, <var>48</var>(%rdi)</td></tr>
+<tr><th id="444">444</th><td>	movq	%r14, <var>56</var>(%rdi)</td></tr>
+<tr><th id="445">445</th><td></td></tr>
+<tr><th id="446">446</th><td>	leaq	<var>64</var>(%rsi), %rsi</td></tr>
+<tr><th id="447">447</th><td>	leaq	<var>64</var>(%rdi), %rdi</td></tr>
+<tr><th id="448">448</th><td></td></tr>
+<tr><th id="449">449</th><td>	jnz	<a class="macro" href="sysdep.h.html#101" title=".Lpreloop" data-ref="_M/L">L</a>(preloop)</td></tr>
+<tr><th id="450">450</th><td></td></tr>
+<tr><th id="451">451</th><td><a class="macro" href="sysdep.h.html#101" title=".Lprebail" data-ref="_M/L">L</a>(prebail):</td></tr>
+<tr><th id="452">452</th><td>	movq	<a class="macro" href="#43" title="(((((-8) - 8) - 8) - 8) - 8)" data-ref="_M/SAVE3">SAVE3</a>(%rsp), %rbx</td></tr>
+<tr><th id="453">453</th><td>	<a class="macro" href="../generic/sysdep.h.html#50" title=".cfi_restore %rbx" data-ref="_M/cfi_restore">cfi_restore</a> (%rbx)</td></tr>
+<tr><th id="454">454</th><td>	movq	<a class="macro" href="#42" title="((((-8) - 8) - 8) - 8)" data-ref="_M/SAVE2">SAVE2</a>(%rsp), %r12</td></tr>
+<tr><th id="455">455</th><td>	<a class="macro" href="../generic/sysdep.h.html#50" title=".cfi_restore %r12" data-ref="_M/cfi_restore">cfi_restore</a> (%r12)</td></tr>
+<tr><th id="456">456</th><td>	movq	<a class="macro" href="#41" title="(((-8) - 8) - 8)" data-ref="_M/SAVE1">SAVE1</a>(%rsp), %r13</td></tr>
+<tr><th id="457">457</th><td>	<a class="macro" href="../generic/sysdep.h.html#50" title=".cfi_restore %r13" data-ref="_M/cfi_restore">cfi_restore</a> (%r13)</td></tr>
+<tr><th id="458">458</th><td>	movq	<a class="macro" href="#40" title="((-8) - 8)" data-ref="_M/SAVE0">SAVE0</a>(%rsp), %r14</td></tr>
+<tr><th id="459">459</th><td>	<a class="macro" href="../generic/sysdep.h.html#50" title=".cfi_restore %r14" data-ref="_M/cfi_restore">cfi_restore</a> (%r14)</td></tr>
+<tr><th id="460">460</th><td></td></tr>
+<tr><th id="461">461</th><td><i>/*       .p2align 4 */</i></td></tr>
+<tr><th id="462">462</th><td></td></tr>
+<tr><th id="463">463</th><td><a class="macro" href="sysdep.h.html#101" title=".Lpreskip" data-ref="_M/L">L</a>(preskip):</td></tr>
+<tr><th id="464">464</th><td>	subq	%r8, %rdx		<i>/* check for more */</i></td></tr>
+<tr><th id="465">465</th><td>	testq	$-<var>64</var>, %rdx</td></tr>
+<tr><th id="466">466</th><td>	jnz	<a class="macro" href="sysdep.h.html#101" title=".Lpreafter" data-ref="_M/L">L</a>(preafter)</td></tr>
+<tr><th id="467">467</th><td></td></tr>
+<tr><th id="468">468</th><td>	andl	$<var>63</var>, %edx		<i>/* check for left overs */</i></td></tr>
+<tr><th id="469">469</th><td><u>#<span data-ppcond="469">ifdef</span> <span class="macro" data-ref="_M/USE_AS_MEMPCPY">USE_AS_MEMPCPY</span></u></td></tr>
+<tr><th id="470">470</th><td>	jnz	L(<var>1</var>)</td></tr>
+<tr><th id="471">471</th><td></td></tr>
+<tr><th id="472">472</th><td>	movq	%rdi, %rax</td></tr>
+<tr><th id="473">473</th><td><u>#<span data-ppcond="469">else</span></u></td></tr>
+<tr><th id="474">474</th><td>	movq	<a class="macro" href="#32" title="(-8)" data-ref="_M/RETVAL">RETVAL</a>(%rsp), %rax</td></tr>
+<tr><th id="475">475</th><td>	jnz	<a class="macro" href="sysdep.h.html#101" title=".L1" data-ref="_M/L">L</a>(<var>1</var>)</td></tr>
+<tr><th id="476">476</th><td></td></tr>
+<tr><th id="477">477</th><td>	rep</td></tr>
+<tr><th id="478">478</th><td><u>#<span data-ppcond="469">endif</span></u></td></tr>
+<tr><th id="479">479</th><td>	retq				<i>/* exit */</i></td></tr>
+<tr><th id="480">480</th><td></td></tr>
+<tr><th id="481">481</th><td>	.p2align <var>4</var></td></tr>
+<tr><th id="482">482</th><td></td></tr>
+<tr><th id="483">483</th><td><a class="macro" href="sysdep.h.html#101" title=".Lpreafter" data-ref="_M/L">L</a>(preafter):</td></tr>
+<tr><th id="484">484</th><td></td></tr>
+<tr><th id="485">485</th><td><i>/* Handle huge blocks. */</i></td></tr>
+<tr><th id="486">486</th><td></td></tr>
+<tr><th id="487">487</th><td><a class="macro" href="sysdep.h.html#101" title=".LNTtry" data-ref="_M/L">L</a>(NTtry):</td></tr>
+<tr><th id="488">488</th><td></td></tr>
+<tr><th id="489">489</th><td><a class="macro" href="sysdep.h.html#101" title=".LNT" data-ref="_M/L">L</a>(NT):					<i>/* non-temporal 128-byte */</i></td></tr>
+<tr><th id="490">490</th><td>	movq	%rdx, %rcx</td></tr>
+<tr><th id="491">491</th><td>	shrq	$<var>7</var>, %rcx</td></tr>
+<tr><th id="492">492</th><td>	jz	<a class="macro" href="sysdep.h.html#101" title=".LNTskip" data-ref="_M/L">L</a>(NTskip)</td></tr>
+<tr><th id="493">493</th><td></td></tr>
+<tr><th id="494">494</th><td>	movq	%r14, <a class="macro" href="#40" title="((-8) - 8)" data-ref="_M/SAVE0">SAVE0</a>(%rsp)</td></tr>
+<tr><th id="495">495</th><td>	<a class="macro" href="../generic/sysdep.h.html#47" title=".cfi_rel_offset %r14, ((-8) - 8)" data-ref="_M/cfi_rel_offset">cfi_rel_offset</a> (%r14, <a class="macro" href="#40" title="((-8) - 8)" data-ref="_M/SAVE0">SAVE0</a>)</td></tr>
+<tr><th id="496">496</th><td>	movq	%r13, <a class="macro" href="#41" title="(((-8) - 8) - 8)" data-ref="_M/SAVE1">SAVE1</a>(%rsp)</td></tr>
+<tr><th id="497">497</th><td>	<a class="macro" href="../generic/sysdep.h.html#47" title=".cfi_rel_offset %r13, (((-8) - 8) - 8)" data-ref="_M/cfi_rel_offset">cfi_rel_offset</a> (%r13, <a class="macro" href="#41" title="(((-8) - 8) - 8)" data-ref="_M/SAVE1">SAVE1</a>)</td></tr>
+<tr><th id="498">498</th><td>	movq	%r12, <a class="macro" href="#42" title="((((-8) - 8) - 8) - 8)" data-ref="_M/SAVE2">SAVE2</a>(%rsp)</td></tr>
+<tr><th id="499">499</th><td>	<a class="macro" href="../generic/sysdep.h.html#47" title=".cfi_rel_offset %r12, ((((-8) - 8) - 8) - 8)" data-ref="_M/cfi_rel_offset">cfi_rel_offset</a> (%r12, <a class="macro" href="#42" title="((((-8) - 8) - 8) - 8)" data-ref="_M/SAVE2">SAVE2</a>)</td></tr>
+<tr><th id="500">500</th><td></td></tr>
+<tr><th id="501">501</th><td>       .p2align <var>4</var></td></tr>
+<tr><th id="502">502</th><td></td></tr>
+<tr><th id="503">503</th><td><a class="macro" href="sysdep.h.html#101" title=".LNTloop" data-ref="_M/L">L</a>(NTloop):</td></tr>
+<tr><th id="504">504</th><td>	prefetchnta	<var>768</var>(%rsi)</td></tr>
+<tr><th id="505">505</th><td>	prefetchnta	<var>832</var>(%rsi)</td></tr>
+<tr><th id="506">506</th><td></td></tr>
+<tr><th id="507">507</th><td>	decq	%rcx</td></tr>
+<tr><th id="508">508</th><td></td></tr>
+<tr><th id="509">509</th><td>	movq	  (%rsi), %rax</td></tr>
+<tr><th id="510">510</th><td>	movq	 <var>8</var>(%rsi), %r8</td></tr>
+<tr><th id="511">511</th><td>	movq	<var>16</var>(%rsi), %r9</td></tr>
+<tr><th id="512">512</th><td>	movq	<var>24</var>(%rsi), %r10</td></tr>
+<tr><th id="513">513</th><td>	movq	<var>32</var>(%rsi), %r11</td></tr>
+<tr><th id="514">514</th><td>	movq	<var>40</var>(%rsi), %r12</td></tr>
+<tr><th id="515">515</th><td>	movq	<var>48</var>(%rsi), %r13</td></tr>
+<tr><th id="516">516</th><td>	movq	<var>56</var>(%rsi), %r14</td></tr>
+<tr><th id="517">517</th><td></td></tr>
+<tr><th id="518">518</th><td>	movntiq	%rax,   (%rdi)</td></tr>
+<tr><th id="519">519</th><td>	movntiq	 %r8,  <var>8</var>(%rdi)</td></tr>
+<tr><th id="520">520</th><td>	movntiq	 %r9, <var>16</var>(%rdi)</td></tr>
+<tr><th id="521">521</th><td>	movntiq	%r10, <var>24</var>(%rdi)</td></tr>
+<tr><th id="522">522</th><td>	movntiq	%r11, <var>32</var>(%rdi)</td></tr>
+<tr><th id="523">523</th><td>	movntiq	%r12, <var>40</var>(%rdi)</td></tr>
+<tr><th id="524">524</th><td>	movntiq	%r13, <var>48</var>(%rdi)</td></tr>
+<tr><th id="525">525</th><td>	movntiq	%r14, <var>56</var>(%rdi)</td></tr>
+<tr><th id="526">526</th><td></td></tr>
+<tr><th id="527">527</th><td>	movq	 <var>64</var>(%rsi), %rax</td></tr>
+<tr><th id="528">528</th><td>	movq	 <var>72</var>(%rsi), %r8</td></tr>
+<tr><th id="529">529</th><td>	movq	 <var>80</var>(%rsi), %r9</td></tr>
+<tr><th id="530">530</th><td>	movq	 <var>88</var>(%rsi), %r10</td></tr>
+<tr><th id="531">531</th><td>	movq	 <var>96</var>(%rsi), %r11</td></tr>
+<tr><th id="532">532</th><td>	movq	<var>104</var>(%rsi), %r12</td></tr>
+<tr><th id="533">533</th><td>	movq	<var>112</var>(%rsi), %r13</td></tr>
+<tr><th id="534">534</th><td>	movq	<var>120</var>(%rsi), %r14</td></tr>
+<tr><th id="535">535</th><td></td></tr>
+<tr><th id="536">536</th><td>	movntiq	%rax,  <var>64</var>(%rdi)</td></tr>
+<tr><th id="537">537</th><td>	movntiq	 %r8,  <var>72</var>(%rdi)</td></tr>
+<tr><th id="538">538</th><td>	movntiq	 %r9,  <var>80</var>(%rdi)</td></tr>
+<tr><th id="539">539</th><td>	movntiq	%r10,  <var>88</var>(%rdi)</td></tr>
+<tr><th id="540">540</th><td>	movntiq	%r11,  <var>96</var>(%rdi)</td></tr>
+<tr><th id="541">541</th><td>	movntiq	%r12, <var>104</var>(%rdi)</td></tr>
+<tr><th id="542">542</th><td>	movntiq	%r13, <var>112</var>(%rdi)</td></tr>
+<tr><th id="543">543</th><td>	movntiq	%r14, <var>120</var>(%rdi)</td></tr>
+<tr><th id="544">544</th><td></td></tr>
+<tr><th id="545">545</th><td>	leaq	<var>128</var>(%rsi), %rsi</td></tr>
+<tr><th id="546">546</th><td>	leaq	<var>128</var>(%rdi), %rdi</td></tr>
+<tr><th id="547">547</th><td></td></tr>
+<tr><th id="548">548</th><td>	jnz	<a class="macro" href="sysdep.h.html#101" title=".LNTloop" data-ref="_M/L">L</a>(NTloop)</td></tr>
+<tr><th id="549">549</th><td></td></tr>
+<tr><th id="550">550</th><td>	sfence				<i>/* serialize memory stores */</i></td></tr>
+<tr><th id="551">551</th><td></td></tr>
+<tr><th id="552">552</th><td>	movq	<a class="macro" href="#42" title="((((-8) - 8) - 8) - 8)" data-ref="_M/SAVE2">SAVE2</a>(%rsp), %r12</td></tr>
+<tr><th id="553">553</th><td>	<a class="macro" href="../generic/sysdep.h.html#50" title=".cfi_restore %r12" data-ref="_M/cfi_restore">cfi_restore</a> (%r12)</td></tr>
+<tr><th id="554">554</th><td>	movq	<a class="macro" href="#41" title="(((-8) - 8) - 8)" data-ref="_M/SAVE1">SAVE1</a>(%rsp), %r13</td></tr>
+<tr><th id="555">555</th><td>	<a class="macro" href="../generic/sysdep.h.html#50" title=".cfi_restore %r13" data-ref="_M/cfi_restore">cfi_restore</a> (%r13)</td></tr>
+<tr><th id="556">556</th><td>	movq	<a class="macro" href="#40" title="((-8) - 8)" data-ref="_M/SAVE0">SAVE0</a>(%rsp), %r14</td></tr>
+<tr><th id="557">557</th><td>	<a class="macro" href="../generic/sysdep.h.html#50" title=".cfi_restore %r14" data-ref="_M/cfi_restore">cfi_restore</a> (%r14)</td></tr>
+<tr><th id="558">558</th><td></td></tr>
+<tr><th id="559">559</th><td><a class="macro" href="sysdep.h.html#101" title=".LNTskip" data-ref="_M/L">L</a>(NTskip):</td></tr>
+<tr><th id="560">560</th><td>	andl	$<var>127</var>, %edx		<i>/* check for left overs */</i></td></tr>
+<tr><th id="561">561</th><td><u>#<span data-ppcond="561">ifdef</span> <span class="macro" data-ref="_M/USE_AS_MEMPCPY">USE_AS_MEMPCPY</span></u></td></tr>
+<tr><th id="562">562</th><td>	jnz	L(<var>1</var>)</td></tr>
+<tr><th id="563">563</th><td></td></tr>
+<tr><th id="564">564</th><td>	movq	%rdi, %rax</td></tr>
+<tr><th id="565">565</th><td><u>#<span data-ppcond="561">else</span></u></td></tr>
+<tr><th id="566">566</th><td>	movq	<a class="macro" href="#32" title="(-8)" data-ref="_M/RETVAL">RETVAL</a>(%rsp), %rax</td></tr>
+<tr><th id="567">567</th><td>	jnz	<a class="macro" href="sysdep.h.html#101" title=".L1" data-ref="_M/L">L</a>(<var>1</var>)</td></tr>
+<tr><th id="568">568</th><td></td></tr>
+<tr><th id="569">569</th><td>	rep</td></tr>
+<tr><th id="570">570</th><td><u>#<span data-ppcond="561">endif</span></u></td></tr>
+<tr><th id="571">571</th><td>	retq				<i>/* exit */</i></td></tr>
+<tr><th id="572">572</th><td></td></tr>
+<tr><th id="573">573</th><td><u>#<span data-ppcond="297">endif</span> /* IS_IN (libc) */</u></td></tr>
+<tr><th id="574">574</th><td></td></tr>
+<tr><th id="575">575</th><td><a class="macro" href="sysdep.h.html#50" title=".cfi_endproc; .size memcpy,.-memcpy;" data-ref="_M/END">END</a>(memcpy)</td></tr>
+<tr><th id="576">576</th><td></td></tr>
+<tr><th id="577">577</th><td><u>#<span data-ppcond="577">ifndef</span> <span class="macro" data-ref="_M/USE_AS_MEMPCPY">USE_AS_MEMPCPY</span></u></td></tr>
+<tr><th id="578">578</th><td><a class="macro" href="../../include/libc-symbols.h.html#673" title="" data-ref="_M/libc_hidden_builtin_def">libc_hidden_builtin_def</a> (memcpy)</td></tr>
+<tr><th id="579">579</th><td><u># <span data-ppcond="579">if</span> defined <span class="macro" data-ref="_M/SHARED">SHARED</span> &amp;&amp; !defined <a class="macro" href="../../build/config.h.html#142" data-ref="_M/USE_MULTIARCH">USE_MULTIARCH</a> &amp;&amp; <a class="macro" href="../../include/libc-symbols.h.html#24" title="(17 == 17)" data-ref="_M/IS_IN">IS_IN</a> (libc)</u></td></tr>
+<tr><th id="580">580</th><td><u>#  undef memcpy</u></td></tr>
+<tr><th id="581">581</th><td><u>#  include &lt;shlib-compat.h&gt;</u></td></tr>
+<tr><th id="582">582</th><td>versioned_symbol (libc, __memcpy, memcpy, GLIBC_2_14);</td></tr>
+<tr><th id="583">583</th><td><u># <span data-ppcond="579">endif</span></u></td></tr>
+<tr><th id="584">584</th><td><u>#<span data-ppcond="577">endif</span></u></td></tr>
+<tr><th id="585">585</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='multiarch/memcpy.S.html'>glibc/sysdeps/x86_64/multiarch/memcpy.S</a><br/>Generated on <em>2019-Mar-12</em> from project glibc<br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

@@ -1,0 +1,247 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>lapic.c source code [xv6/lapic.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'xv6/lapic.c'; var root_path = '..'; var data_path = '../../data';</script>
+<script src='../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='./'>xv6</a>/<a href='lapic.c.html'>lapic.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// The local APIC manages internal (non-I/O) interrupts.</i></td></tr>
+<tr><th id="2">2</th><td><i>// See Chapter 8 &amp; Appendix C of Intel processor manual volume 3.</i></td></tr>
+<tr><th id="3">3</th><td></td></tr>
+<tr><th id="4">4</th><td><u>#include <a href="param.h.html">"param.h"</a></u></td></tr>
+<tr><th id="5">5</th><td><u>#include <a href="types.h.html">"types.h"</a></u></td></tr>
+<tr><th id="6">6</th><td><u>#include <a href="defs.h.html">"defs.h"</a></u></td></tr>
+<tr><th id="7">7</th><td><u>#include <a href="date.h.html">"date.h"</a></u></td></tr>
+<tr><th id="8">8</th><td><u>#include <a href="memlayout.h.html">"memlayout.h"</a></u></td></tr>
+<tr><th id="9">9</th><td><u>#include <a href="traps.h.html">"traps.h"</a></u></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="mmu.h.html">"mmu.h"</a></u></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="x86.h.html">"x86.h"</a></u></td></tr>
+<tr><th id="12">12</th><td></td></tr>
+<tr><th id="13">13</th><td><i>// Local APIC registers, divided by 4 for use as uint[] indices.</i></td></tr>
+<tr><th id="14">14</th><td><u>#define <dfn class="macro" id="_M/ID" data-ref="_M/ID">ID</dfn>      (0x0020/4)   // ID</u></td></tr>
+<tr><th id="15">15</th><td><u>#define <dfn class="macro" id="_M/VER" data-ref="_M/VER">VER</dfn>     (0x0030/4)   // Version</u></td></tr>
+<tr><th id="16">16</th><td><u>#define <dfn class="macro" id="_M/TPR" data-ref="_M/TPR">TPR</dfn>     (0x0080/4)   // Task Priority</u></td></tr>
+<tr><th id="17">17</th><td><u>#define <dfn class="macro" id="_M/EOI" data-ref="_M/EOI">EOI</dfn>     (0x00B0/4)   // EOI</u></td></tr>
+<tr><th id="18">18</th><td><u>#define <dfn class="macro" id="_M/SVR" data-ref="_M/SVR">SVR</dfn>     (0x00F0/4)   // Spurious Interrupt Vector</u></td></tr>
+<tr><th id="19">19</th><td>  <u>#define <dfn class="macro" id="_M/ENABLE" data-ref="_M/ENABLE">ENABLE</dfn>     0x00000100   // Unit Enable</u></td></tr>
+<tr><th id="20">20</th><td><u>#define <dfn class="macro" id="_M/ESR" data-ref="_M/ESR">ESR</dfn>     (0x0280/4)   // Error Status</u></td></tr>
+<tr><th id="21">21</th><td><u>#define <dfn class="macro" id="_M/ICRLO" data-ref="_M/ICRLO">ICRLO</dfn>   (0x0300/4)   // Interrupt Command</u></td></tr>
+<tr><th id="22">22</th><td>  <u>#define <dfn class="macro" id="_M/INIT" data-ref="_M/INIT">INIT</dfn>       0x00000500   // INIT/RESET</u></td></tr>
+<tr><th id="23">23</th><td>  <u>#define <dfn class="macro" id="_M/STARTUP" data-ref="_M/STARTUP">STARTUP</dfn>    0x00000600   // Startup IPI</u></td></tr>
+<tr><th id="24">24</th><td>  <u>#define <dfn class="macro" id="_M/DELIVS" data-ref="_M/DELIVS">DELIVS</dfn>     0x00001000   // Delivery status</u></td></tr>
+<tr><th id="25">25</th><td>  <u>#define <dfn class="macro" id="_M/ASSERT" data-ref="_M/ASSERT">ASSERT</dfn>     0x00004000   // Assert interrupt (vs deassert)</u></td></tr>
+<tr><th id="26">26</th><td>  <u>#define <dfn class="macro" id="_M/DEASSERT" data-ref="_M/DEASSERT">DEASSERT</dfn>   0x00000000</u></td></tr>
+<tr><th id="27">27</th><td>  <u>#define <dfn class="macro" id="_M/LEVEL" data-ref="_M/LEVEL">LEVEL</dfn>      0x00008000   // Level triggered</u></td></tr>
+<tr><th id="28">28</th><td>  <u>#define <dfn class="macro" id="_M/BCAST" data-ref="_M/BCAST">BCAST</dfn>      0x00080000   // Send to all APICs, including self.</u></td></tr>
+<tr><th id="29">29</th><td>  <u>#define <dfn class="macro" id="_M/BUSY" data-ref="_M/BUSY">BUSY</dfn>       0x00001000</u></td></tr>
+<tr><th id="30">30</th><td>  <u>#define <dfn class="macro" id="_M/FIXED" data-ref="_M/FIXED">FIXED</dfn>      0x00000000</u></td></tr>
+<tr><th id="31">31</th><td><u>#define <dfn class="macro" id="_M/ICRHI" data-ref="_M/ICRHI">ICRHI</dfn>   (0x0310/4)   // Interrupt Command [63:32]</u></td></tr>
+<tr><th id="32">32</th><td><u>#define <dfn class="macro" id="_M/TIMER" data-ref="_M/TIMER">TIMER</dfn>   (0x0320/4)   // Local Vector Table 0 (TIMER)</u></td></tr>
+<tr><th id="33">33</th><td>  <u>#define <dfn class="macro" id="_M/X1" data-ref="_M/X1">X1</dfn>         0x0000000B   // divide counts by 1</u></td></tr>
+<tr><th id="34">34</th><td>  <u>#define <dfn class="macro" id="_M/PERIODIC" data-ref="_M/PERIODIC">PERIODIC</dfn>   0x00020000   // Periodic</u></td></tr>
+<tr><th id="35">35</th><td><u>#define <dfn class="macro" id="_M/PCINT" data-ref="_M/PCINT">PCINT</dfn>   (0x0340/4)   // Performance Counter LVT</u></td></tr>
+<tr><th id="36">36</th><td><u>#define <dfn class="macro" id="_M/LINT0" data-ref="_M/LINT0">LINT0</dfn>   (0x0350/4)   // Local Vector Table 1 (LINT0)</u></td></tr>
+<tr><th id="37">37</th><td><u>#define <dfn class="macro" id="_M/LINT1" data-ref="_M/LINT1">LINT1</dfn>   (0x0360/4)   // Local Vector Table 2 (LINT1)</u></td></tr>
+<tr><th id="38">38</th><td><u>#define <dfn class="macro" id="_M/ERROR" data-ref="_M/ERROR">ERROR</dfn>   (0x0370/4)   // Local Vector Table 3 (ERROR)</u></td></tr>
+<tr><th id="39">39</th><td>  <u>#define <dfn class="macro" id="_M/MASKED" data-ref="_M/MASKED">MASKED</dfn>     0x00010000   // Interrupt masked</u></td></tr>
+<tr><th id="40">40</th><td><u>#define <dfn class="macro" id="_M/TICR" data-ref="_M/TICR">TICR</dfn>    (0x0380/4)   // Timer Initial Count</u></td></tr>
+<tr><th id="41">41</th><td><u>#define <dfn class="macro" id="_M/TCCR" data-ref="_M/TCCR">TCCR</dfn>    (0x0390/4)   // Timer Current Count</u></td></tr>
+<tr><th id="42">42</th><td><u>#define <dfn class="macro" id="_M/TDCR" data-ref="_M/TDCR">TDCR</dfn>    (0x03E0/4)   // Timer Divide Configuration</u></td></tr>
+<tr><th id="43">43</th><td></td></tr>
+<tr><th id="44">44</th><td><em>volatile</em> <a class="typedef" href="types.h.html#uint" title='uint' data-type='unsigned int' data-ref="uint">uint</a> *<dfn class="decl def" id="lapic" title='lapic' data-ref="lapic">lapic</dfn>;  <i>// Initialized in mp.c</i></td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td><i  data-doc="lapicw">//PAGEBREAK!</i></td></tr>
+<tr><th id="47">47</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="48">48</th><td><dfn class="tu decl def" id="lapicw" title='lapicw' data-type='void lapicw(int index, int value)' data-ref="lapicw">lapicw</dfn>(<em>int</em> <dfn class="local col1 decl" id="1index" title='index' data-type='int' data-ref="1index">index</dfn>, <em>int</em> <dfn class="local col2 decl" id="2value" title='value' data-type='int' data-ref="2value">value</dfn>)</td></tr>
+<tr><th id="49">49</th><td>{</td></tr>
+<tr><th id="50">50</th><td>  <a class="ref" href="defs.h.html#lapic" title='lapic' data-ref="lapic">lapic</a>[<a class="local col1 ref" href="#1index" title='index' data-ref="1index">index</a>] = <a class="local col2 ref" href="#2value" title='value' data-ref="2value">value</a>;</td></tr>
+<tr><th id="51">51</th><td>  <a class="ref" href="defs.h.html#lapic" title='lapic' data-ref="lapic">lapic</a>[<a class="macro" href="#14" title="(0x0020/4)" data-ref="_M/ID">ID</a>];  <i>// wait for write to finish, by reading</i></td></tr>
+<tr><th id="52">52</th><td>}</td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td><em>void</em></td></tr>
+<tr><th id="55">55</th><td><dfn class="decl def" id="lapicinit" title='lapicinit' data-ref="lapicinit">lapicinit</dfn>(<em>void</em>)</td></tr>
+<tr><th id="56">56</th><td>{</td></tr>
+<tr><th id="57">57</th><td>  <b>if</b>(!<a class="ref" href="defs.h.html#lapic" title='lapic' data-ref="lapic">lapic</a>)</td></tr>
+<tr><th id="58">58</th><td>    <b>return</b>;</td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td>  <i>// Enable local APIC; set spurious interrupt vector.</i></td></tr>
+<tr><th id="61">61</th><td>  <a class="tu ref" href="#lapicw" title='lapicw' data-use='c' data-ref="lapicw">lapicw</a>(<a class="macro" href="#18" title="(0x00F0/4)" data-ref="_M/SVR">SVR</a>, <a class="macro" href="#19" title="0x00000100" data-ref="_M/ENABLE">ENABLE</a> | (<a class="macro" href="traps.h.html#30" title="32" data-ref="_M/T_IRQ0">T_IRQ0</a> + <a class="macro" href="traps.h.html#37" title="31" data-ref="_M/IRQ_SPURIOUS">IRQ_SPURIOUS</a>));</td></tr>
+<tr><th id="62">62</th><td></td></tr>
+<tr><th id="63">63</th><td>  <i>// The timer repeatedly counts down at bus frequency</i></td></tr>
+<tr><th id="64">64</th><td><i>  // from lapic[TICR] and then issues an interrupt.</i></td></tr>
+<tr><th id="65">65</th><td><i>  // If xv6 cared more about precise timekeeping,</i></td></tr>
+<tr><th id="66">66</th><td><i>  // TICR would be calibrated using an external time source.</i></td></tr>
+<tr><th id="67">67</th><td>  <a class="tu ref" href="#lapicw" title='lapicw' data-use='c' data-ref="lapicw">lapicw</a>(<a class="macro" href="#42" title="(0x03E0/4)" data-ref="_M/TDCR">TDCR</a>, <a class="macro" href="#33" title="0x0000000B" data-ref="_M/X1">X1</a>);</td></tr>
+<tr><th id="68">68</th><td>  <a class="tu ref" href="#lapicw" title='lapicw' data-use='c' data-ref="lapicw">lapicw</a>(<a class="macro" href="#32" title="(0x0320/4)" data-ref="_M/TIMER">TIMER</a>, <a class="macro" href="#34" title="0x00020000" data-ref="_M/PERIODIC">PERIODIC</a> | (<a class="macro" href="traps.h.html#30" title="32" data-ref="_M/T_IRQ0">T_IRQ0</a> + <a class="macro" href="traps.h.html#32" title="0" data-ref="_M/IRQ_TIMER">IRQ_TIMER</a>));</td></tr>
+<tr><th id="69">69</th><td>  <a class="tu ref" href="#lapicw" title='lapicw' data-use='c' data-ref="lapicw">lapicw</a>(<a class="macro" href="#40" title="(0x0380/4)" data-ref="_M/TICR">TICR</a>, <var>10000000</var>);</td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td>  <i>// Disable logical interrupt lines.</i></td></tr>
+<tr><th id="72">72</th><td>  <a class="tu ref" href="#lapicw" title='lapicw' data-use='c' data-ref="lapicw">lapicw</a>(<a class="macro" href="#36" title="(0x0350/4)" data-ref="_M/LINT0">LINT0</a>, <a class="macro" href="#39" title="0x00010000" data-ref="_M/MASKED">MASKED</a>);</td></tr>
+<tr><th id="73">73</th><td>  <a class="tu ref" href="#lapicw" title='lapicw' data-use='c' data-ref="lapicw">lapicw</a>(<a class="macro" href="#37" title="(0x0360/4)" data-ref="_M/LINT1">LINT1</a>, <a class="macro" href="#39" title="0x00010000" data-ref="_M/MASKED">MASKED</a>);</td></tr>
+<tr><th id="74">74</th><td></td></tr>
+<tr><th id="75">75</th><td>  <i>// Disable performance counter overflow interrupts</i></td></tr>
+<tr><th id="76">76</th><td><i>  // on machines that provide that interrupt entry.</i></td></tr>
+<tr><th id="77">77</th><td>  <b>if</b>(((<a class="ref" href="defs.h.html#lapic" title='lapic' data-ref="lapic">lapic</a>[<a class="macro" href="#15" title="(0x0030/4)" data-ref="_M/VER">VER</a>]&gt;&gt;<var>16</var>) &amp; <var>0xFF</var>) &gt;= <var>4</var>)</td></tr>
+<tr><th id="78">78</th><td>    <a class="tu ref" href="#lapicw" title='lapicw' data-use='c' data-ref="lapicw">lapicw</a>(<a class="macro" href="#35" title="(0x0340/4)" data-ref="_M/PCINT">PCINT</a>, <a class="macro" href="#39" title="0x00010000" data-ref="_M/MASKED">MASKED</a>);</td></tr>
+<tr><th id="79">79</th><td></td></tr>
+<tr><th id="80">80</th><td>  <i>// Map error interrupt to IRQ_ERROR.</i></td></tr>
+<tr><th id="81">81</th><td>  <a class="tu ref" href="#lapicw" title='lapicw' data-use='c' data-ref="lapicw">lapicw</a>(<a class="macro" href="#38" title="(0x0370/4)" data-ref="_M/ERROR">ERROR</a>, <a class="macro" href="traps.h.html#30" title="32" data-ref="_M/T_IRQ0">T_IRQ0</a> + <a class="macro" href="traps.h.html#36" title="19" data-ref="_M/IRQ_ERROR">IRQ_ERROR</a>);</td></tr>
+<tr><th id="82">82</th><td></td></tr>
+<tr><th id="83">83</th><td>  <i>// Clear error status register (requires back-to-back writes).</i></td></tr>
+<tr><th id="84">84</th><td>  <a class="tu ref" href="#lapicw" title='lapicw' data-use='c' data-ref="lapicw">lapicw</a>(<a class="macro" href="#20" title="(0x0280/4)" data-ref="_M/ESR">ESR</a>, <var>0</var>);</td></tr>
+<tr><th id="85">85</th><td>  <a class="tu ref" href="#lapicw" title='lapicw' data-use='c' data-ref="lapicw">lapicw</a>(<a class="macro" href="#20" title="(0x0280/4)" data-ref="_M/ESR">ESR</a>, <var>0</var>);</td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td>  <i>// Ack any outstanding interrupts.</i></td></tr>
+<tr><th id="88">88</th><td>  <a class="tu ref" href="#lapicw" title='lapicw' data-use='c' data-ref="lapicw">lapicw</a>(<a class="macro" href="#17" title="(0x00B0/4)" data-ref="_M/EOI">EOI</a>, <var>0</var>);</td></tr>
+<tr><th id="89">89</th><td></td></tr>
+<tr><th id="90">90</th><td>  <i>// Send an Init Level De-Assert to synchronise arbitration ID's.</i></td></tr>
+<tr><th id="91">91</th><td>  <a class="tu ref" href="#lapicw" title='lapicw' data-use='c' data-ref="lapicw">lapicw</a>(<a class="macro" href="#31" title="(0x0310/4)" data-ref="_M/ICRHI">ICRHI</a>, <var>0</var>);</td></tr>
+<tr><th id="92">92</th><td>  <a class="tu ref" href="#lapicw" title='lapicw' data-use='c' data-ref="lapicw">lapicw</a>(<a class="macro" href="#21" title="(0x0300/4)" data-ref="_M/ICRLO">ICRLO</a>, <a class="macro" href="#28" title="0x00080000" data-ref="_M/BCAST">BCAST</a> | <a class="macro" href="#22" title="0x00000500" data-ref="_M/INIT">INIT</a> | <a class="macro" href="#27" title="0x00008000" data-ref="_M/LEVEL">LEVEL</a>);</td></tr>
+<tr><th id="93">93</th><td>  <b>while</b>(<a class="ref" href="defs.h.html#lapic" title='lapic' data-ref="lapic">lapic</a>[<a class="macro" href="#21" title="(0x0300/4)" data-ref="_M/ICRLO">ICRLO</a>] &amp; <a class="macro" href="#24" title="0x00001000" data-ref="_M/DELIVS">DELIVS</a>)</td></tr>
+<tr><th id="94">94</th><td>    ;</td></tr>
+<tr><th id="95">95</th><td></td></tr>
+<tr><th id="96">96</th><td>  <i>// Enable interrupts on the APIC (but not on the processor).</i></td></tr>
+<tr><th id="97">97</th><td>  <a class="tu ref" href="#lapicw" title='lapicw' data-use='c' data-ref="lapicw">lapicw</a>(<a class="macro" href="#16" title="(0x0080/4)" data-ref="_M/TPR">TPR</a>, <var>0</var>);</td></tr>
+<tr><th id="98">98</th><td>}</td></tr>
+<tr><th id="99">99</th><td></td></tr>
+<tr><th id="100">100</th><td><em>int</em></td></tr>
+<tr><th id="101">101</th><td><dfn class="decl def" id="lapicid" title='lapicid' data-ref="lapicid">lapicid</dfn>(<em>void</em>)</td></tr>
+<tr><th id="102">102</th><td>{</td></tr>
+<tr><th id="103">103</th><td>  <b>if</b> (!<a class="ref" href="defs.h.html#lapic" title='lapic' data-ref="lapic">lapic</a>)</td></tr>
+<tr><th id="104">104</th><td>    <b>return</b> <var>0</var>;</td></tr>
+<tr><th id="105">105</th><td>  <b>return</b> <a class="ref" href="defs.h.html#lapic" title='lapic' data-ref="lapic">lapic</a>[<a class="macro" href="#14" title="(0x0020/4)" data-ref="_M/ID">ID</a>] &gt;&gt; <var>24</var>;</td></tr>
+<tr><th id="106">106</th><td>}</td></tr>
+<tr><th id="107">107</th><td></td></tr>
+<tr><th id="108">108</th><td><i>// Acknowledge interrupt.</i></td></tr>
+<tr><th id="109">109</th><td><em>void</em></td></tr>
+<tr><th id="110">110</th><td><dfn class="decl def" id="lapiceoi" title='lapiceoi' data-ref="lapiceoi">lapiceoi</dfn>(<em>void</em>)</td></tr>
+<tr><th id="111">111</th><td>{</td></tr>
+<tr><th id="112">112</th><td>  <b>if</b>(<a class="ref" href="defs.h.html#lapic" title='lapic' data-ref="lapic">lapic</a>)</td></tr>
+<tr><th id="113">113</th><td>    <a class="tu ref" href="#lapicw" title='lapicw' data-use='c' data-ref="lapicw">lapicw</a>(<a class="macro" href="#17" title="(0x00B0/4)" data-ref="_M/EOI">EOI</a>, <var>0</var>);</td></tr>
+<tr><th id="114">114</th><td>}</td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td><i>// Spin for a given number of microseconds.</i></td></tr>
+<tr><th id="117">117</th><td><i>// On real hardware would want to tune this dynamically.</i></td></tr>
+<tr><th id="118">118</th><td><em>void</em></td></tr>
+<tr><th id="119">119</th><td><dfn class="decl def" id="microdelay" title='microdelay' data-ref="microdelay">microdelay</dfn>(<em>int</em> <dfn class="local col3 decl" id="3us" title='us' data-type='int' data-ref="3us">us</dfn>)</td></tr>
+<tr><th id="120">120</th><td>{</td></tr>
+<tr><th id="121">121</th><td>}</td></tr>
+<tr><th id="122">122</th><td></td></tr>
+<tr><th id="123">123</th><td><u>#define <dfn class="macro" id="_M/CMOS_PORT" data-ref="_M/CMOS_PORT">CMOS_PORT</dfn>    0x70</u></td></tr>
+<tr><th id="124">124</th><td><u>#define <dfn class="macro" id="_M/CMOS_RETURN" data-ref="_M/CMOS_RETURN">CMOS_RETURN</dfn>  0x71</u></td></tr>
+<tr><th id="125">125</th><td></td></tr>
+<tr><th id="126">126</th><td><i>// Start additional processor running entry code at addr.</i></td></tr>
+<tr><th id="127">127</th><td><i>// See Appendix B of MultiProcessor Specification.</i></td></tr>
+<tr><th id="128">128</th><td><em>void</em></td></tr>
+<tr><th id="129">129</th><td><dfn class="decl def" id="lapicstartap" title='lapicstartap' data-ref="lapicstartap">lapicstartap</dfn>(<a class="typedef" href="types.h.html#uchar" title='uchar' data-type='unsigned char' data-ref="uchar">uchar</a> <dfn class="local col4 decl" id="4apicid" title='apicid' data-type='uchar' data-ref="4apicid">apicid</dfn>, <a class="typedef" href="types.h.html#uint" title='uint' data-type='unsigned int' data-ref="uint">uint</a> <dfn class="local col5 decl" id="5addr" title='addr' data-type='uint' data-ref="5addr">addr</dfn>)</td></tr>
+<tr><th id="130">130</th><td>{</td></tr>
+<tr><th id="131">131</th><td>  <em>int</em> <dfn class="local col6 decl" id="6i" title='i' data-type='int' data-ref="6i">i</dfn>;</td></tr>
+<tr><th id="132">132</th><td>  <a class="typedef" href="types.h.html#ushort" title='ushort' data-type='unsigned short' data-ref="ushort">ushort</a> *<dfn class="local col7 decl" id="7wrv" title='wrv' data-type='ushort *' data-ref="7wrv">wrv</dfn>;</td></tr>
+<tr><th id="133">133</th><td></td></tr>
+<tr><th id="134">134</th><td>  <i>// "The BSP must initialize CMOS shutdown code to 0AH</i></td></tr>
+<tr><th id="135">135</th><td><i>  // and the warm reset vector (DWORD based at 40:67) to point at</i></td></tr>
+<tr><th id="136">136</th><td><i>  // the AP startup code prior to the [universal startup algorithm]."</i></td></tr>
+<tr><th id="137">137</th><td>  <a class="ref" href="x86.h.html#outb" title='outb' data-ref="outb">outb</a>(<a class="macro" href="#123" title="0x70" data-ref="_M/CMOS_PORT">CMOS_PORT</a>, <var>0xF</var>);  <i>// offset 0xF is shutdown code</i></td></tr>
+<tr><th id="138">138</th><td>  <a class="ref" href="x86.h.html#outb" title='outb' data-ref="outb">outb</a>(<a class="macro" href="#123" title="0x70" data-ref="_M/CMOS_PORT">CMOS_PORT</a>+<var>1</var>, <var>0x0A</var>);</td></tr>
+<tr><th id="139">139</th><td>  <a class="local col7 ref" href="#7wrv" title='wrv' data-ref="7wrv">wrv</a> = (<a class="typedef" href="types.h.html#ushort" title='ushort' data-type='unsigned short' data-ref="ushort">ushort</a>*)<a class="macro" href="memlayout.h.html#12" title="((void *)(((char *) ((0x40&lt;&lt;4 | 0x67))) + 0x80000000))" data-ref="_M/P2V">P2V</a>((<var>0x40</var>&lt;&lt;<var>4</var> | <var>0x67</var>));  <i>// Warm reset vector</i></td></tr>
+<tr><th id="140">140</th><td>  <a class="local col7 ref" href="#7wrv" title='wrv' data-ref="7wrv">wrv</a>[<var>0</var>] = <var>0</var>;</td></tr>
+<tr><th id="141">141</th><td>  <a class="local col7 ref" href="#7wrv" title='wrv' data-ref="7wrv">wrv</a>[<var>1</var>] = <a class="local col5 ref" href="#5addr" title='addr' data-ref="5addr">addr</a> &gt;&gt; <var>4</var>;</td></tr>
+<tr><th id="142">142</th><td></td></tr>
+<tr><th id="143">143</th><td>  <i>// "Universal startup algorithm."</i></td></tr>
+<tr><th id="144">144</th><td><i>  // Send INIT (level-triggered) interrupt to reset other CPU.</i></td></tr>
+<tr><th id="145">145</th><td>  <a class="tu ref" href="#lapicw" title='lapicw' data-use='c' data-ref="lapicw">lapicw</a>(<a class="macro" href="#31" title="(0x0310/4)" data-ref="_M/ICRHI">ICRHI</a>, <a class="local col4 ref" href="#4apicid" title='apicid' data-ref="4apicid">apicid</a>&lt;&lt;<var>24</var>);</td></tr>
+<tr><th id="146">146</th><td>  <a class="tu ref" href="#lapicw" title='lapicw' data-use='c' data-ref="lapicw">lapicw</a>(<a class="macro" href="#21" title="(0x0300/4)" data-ref="_M/ICRLO">ICRLO</a>, <a class="macro" href="#22" title="0x00000500" data-ref="_M/INIT">INIT</a> | <a class="macro" href="#27" title="0x00008000" data-ref="_M/LEVEL">LEVEL</a> | <a class="macro" href="#25" title="0x00004000" data-ref="_M/ASSERT">ASSERT</a>);</td></tr>
+<tr><th id="147">147</th><td>  <a class="ref" href="#microdelay" title='microdelay' data-ref="microdelay">microdelay</a>(<var>200</var>);</td></tr>
+<tr><th id="148">148</th><td>  <a class="tu ref" href="#lapicw" title='lapicw' data-use='c' data-ref="lapicw">lapicw</a>(<a class="macro" href="#21" title="(0x0300/4)" data-ref="_M/ICRLO">ICRLO</a>, <a class="macro" href="#22" title="0x00000500" data-ref="_M/INIT">INIT</a> | <a class="macro" href="#27" title="0x00008000" data-ref="_M/LEVEL">LEVEL</a>);</td></tr>
+<tr><th id="149">149</th><td>  <a class="ref" href="#microdelay" title='microdelay' data-ref="microdelay">microdelay</a>(<var>100</var>);    <i>// should be 10ms, but too slow in Bochs!</i></td></tr>
+<tr><th id="150">150</th><td></td></tr>
+<tr><th id="151">151</th><td>  <i>// Send startup IPI (twice!) to enter code.</i></td></tr>
+<tr><th id="152">152</th><td><i>  // Regular hardware is supposed to only accept a STARTUP</i></td></tr>
+<tr><th id="153">153</th><td><i>  // when it is in the halted state due to an INIT.  So the second</i></td></tr>
+<tr><th id="154">154</th><td><i>  // should be ignored, but it is part of the official Intel algorithm.</i></td></tr>
+<tr><th id="155">155</th><td><i>  // Bochs complains about the second one.  Too bad for Bochs.</i></td></tr>
+<tr><th id="156">156</th><td>  <b>for</b>(<a class="local col6 ref" href="#6i" title='i' data-ref="6i">i</a> = <var>0</var>; <a class="local col6 ref" href="#6i" title='i' data-ref="6i">i</a> &lt; <var>2</var>; <a class="local col6 ref" href="#6i" title='i' data-ref="6i">i</a>++){</td></tr>
+<tr><th id="157">157</th><td>    <a class="tu ref" href="#lapicw" title='lapicw' data-use='c' data-ref="lapicw">lapicw</a>(<a class="macro" href="#31" title="(0x0310/4)" data-ref="_M/ICRHI">ICRHI</a>, <a class="local col4 ref" href="#4apicid" title='apicid' data-ref="4apicid">apicid</a>&lt;&lt;<var>24</var>);</td></tr>
+<tr><th id="158">158</th><td>    <a class="tu ref" href="#lapicw" title='lapicw' data-use='c' data-ref="lapicw">lapicw</a>(<a class="macro" href="#21" title="(0x0300/4)" data-ref="_M/ICRLO">ICRLO</a>, <a class="macro" href="#23" title="0x00000600" data-ref="_M/STARTUP">STARTUP</a> | (<a class="local col5 ref" href="#5addr" title='addr' data-ref="5addr">addr</a>&gt;&gt;<var>12</var>));</td></tr>
+<tr><th id="159">159</th><td>    <a class="ref" href="#microdelay" title='microdelay' data-ref="microdelay">microdelay</a>(<var>200</var>);</td></tr>
+<tr><th id="160">160</th><td>  }</td></tr>
+<tr><th id="161">161</th><td>}</td></tr>
+<tr><th id="162">162</th><td></td></tr>
+<tr><th id="163">163</th><td><u>#define <dfn class="macro" id="_M/CMOS_STATA" data-ref="_M/CMOS_STATA">CMOS_STATA</dfn>   0x0a</u></td></tr>
+<tr><th id="164">164</th><td><u>#define <dfn class="macro" id="_M/CMOS_STATB" data-ref="_M/CMOS_STATB">CMOS_STATB</dfn>   0x0b</u></td></tr>
+<tr><th id="165">165</th><td><u>#define <dfn class="macro" id="_M/CMOS_UIP" data-ref="_M/CMOS_UIP">CMOS_UIP</dfn>    (1 &lt;&lt; 7)        // RTC update in progress</u></td></tr>
+<tr><th id="166">166</th><td></td></tr>
+<tr><th id="167">167</th><td><u>#define <dfn class="macro" id="_M/SECS" data-ref="_M/SECS">SECS</dfn>    0x00</u></td></tr>
+<tr><th id="168">168</th><td><u>#define <dfn class="macro" id="_M/MINS" data-ref="_M/MINS">MINS</dfn>    0x02</u></td></tr>
+<tr><th id="169">169</th><td><u>#define <dfn class="macro" id="_M/HOURS" data-ref="_M/HOURS">HOURS</dfn>   0x04</u></td></tr>
+<tr><th id="170">170</th><td><u>#define <dfn class="macro" id="_M/DAY" data-ref="_M/DAY">DAY</dfn>     0x07</u></td></tr>
+<tr><th id="171">171</th><td><u>#define <dfn class="macro" id="_M/MONTH" data-ref="_M/MONTH">MONTH</dfn>   0x08</u></td></tr>
+<tr><th id="172">172</th><td><u>#define <dfn class="macro" id="_M/YEAR" data-ref="_M/YEAR">YEAR</dfn>    0x09</u></td></tr>
+<tr><th id="173">173</th><td></td></tr>
+<tr><th id="174">174</th><td><em>static</em> <a class="typedef" href="types.h.html#uint" title='uint' data-type='unsigned int' data-ref="uint">uint</a></td></tr>
+<tr><th id="175">175</th><td><dfn class="tu decl def" id="cmos_read" title='cmos_read' data-type='uint cmos_read(uint reg)' data-ref="cmos_read">cmos_read</dfn>(<a class="typedef" href="types.h.html#uint" title='uint' data-type='unsigned int' data-ref="uint">uint</a> <dfn class="local col8 decl" id="8reg" title='reg' data-type='uint' data-ref="8reg">reg</dfn>)</td></tr>
+<tr><th id="176">176</th><td>{</td></tr>
+<tr><th id="177">177</th><td>  <a class="ref" href="x86.h.html#outb" title='outb' data-ref="outb">outb</a>(<a class="macro" href="#123" title="0x70" data-ref="_M/CMOS_PORT">CMOS_PORT</a>,  <a class="local col8 ref" href="#8reg" title='reg' data-ref="8reg">reg</a>);</td></tr>
+<tr><th id="178">178</th><td>  <a class="ref" href="#microdelay" title='microdelay' data-ref="microdelay">microdelay</a>(<var>200</var>);</td></tr>
+<tr><th id="179">179</th><td></td></tr>
+<tr><th id="180">180</th><td>  <b>return</b> <a class="ref" href="x86.h.html#inb" title='inb' data-ref="inb">inb</a>(<a class="macro" href="#124" title="0x71" data-ref="_M/CMOS_RETURN">CMOS_RETURN</a>);</td></tr>
+<tr><th id="181">181</th><td>}</td></tr>
+<tr><th id="182">182</th><td></td></tr>
+<tr><th id="183">183</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="184">184</th><td><dfn class="tu decl def" id="fill_rtcdate" title='fill_rtcdate' data-type='void fill_rtcdate(struct rtcdate * r)' data-ref="fill_rtcdate">fill_rtcdate</dfn>(<b>struct</b> <a class="type" href="date.h.html#rtcdate" title='rtcdate' data-ref="rtcdate">rtcdate</a> *<dfn class="local col9 decl" id="9r" title='r' data-type='struct rtcdate *' data-ref="9r">r</dfn>)</td></tr>
+<tr><th id="185">185</th><td>{</td></tr>
+<tr><th id="186">186</th><td>  <a class="local col9 ref" href="#9r" title='r' data-ref="9r">r</a>-&gt;<a class="ref" href="date.h.html#rtcdate::second" title='rtcdate::second' data-ref="rtcdate::second">second</a> = <a class="tu ref" href="#cmos_read" title='cmos_read' data-use='c' data-ref="cmos_read">cmos_read</a>(<a class="macro" href="#167" title="0x00" data-ref="_M/SECS">SECS</a>);</td></tr>
+<tr><th id="187">187</th><td>  <a class="local col9 ref" href="#9r" title='r' data-ref="9r">r</a>-&gt;<a class="ref" href="date.h.html#rtcdate::minute" title='rtcdate::minute' data-ref="rtcdate::minute">minute</a> = <a class="tu ref" href="#cmos_read" title='cmos_read' data-use='c' data-ref="cmos_read">cmos_read</a>(<a class="macro" href="#168" title="0x02" data-ref="_M/MINS">MINS</a>);</td></tr>
+<tr><th id="188">188</th><td>  <a class="local col9 ref" href="#9r" title='r' data-ref="9r">r</a>-&gt;<a class="ref" href="date.h.html#rtcdate::hour" title='rtcdate::hour' data-ref="rtcdate::hour">hour</a>   = <a class="tu ref" href="#cmos_read" title='cmos_read' data-use='c' data-ref="cmos_read">cmos_read</a>(<a class="macro" href="#169" title="0x04" data-ref="_M/HOURS">HOURS</a>);</td></tr>
+<tr><th id="189">189</th><td>  <a class="local col9 ref" href="#9r" title='r' data-ref="9r">r</a>-&gt;<a class="ref" href="date.h.html#rtcdate::day" title='rtcdate::day' data-ref="rtcdate::day">day</a>    = <a class="tu ref" href="#cmos_read" title='cmos_read' data-use='c' data-ref="cmos_read">cmos_read</a>(<a class="macro" href="#170" title="0x07" data-ref="_M/DAY">DAY</a>);</td></tr>
+<tr><th id="190">190</th><td>  <a class="local col9 ref" href="#9r" title='r' data-ref="9r">r</a>-&gt;<a class="ref" href="date.h.html#rtcdate::month" title='rtcdate::month' data-ref="rtcdate::month">month</a>  = <a class="tu ref" href="#cmos_read" title='cmos_read' data-use='c' data-ref="cmos_read">cmos_read</a>(<a class="macro" href="#171" title="0x08" data-ref="_M/MONTH">MONTH</a>);</td></tr>
+<tr><th id="191">191</th><td>  <a class="local col9 ref" href="#9r" title='r' data-ref="9r">r</a>-&gt;<a class="ref" href="date.h.html#rtcdate::year" title='rtcdate::year' data-ref="rtcdate::year">year</a>   = <a class="tu ref" href="#cmos_read" title='cmos_read' data-use='c' data-ref="cmos_read">cmos_read</a>(<a class="macro" href="#172" title="0x09" data-ref="_M/YEAR">YEAR</a>);</td></tr>
+<tr><th id="192">192</th><td>}</td></tr>
+<tr><th id="193">193</th><td></td></tr>
+<tr><th id="194">194</th><td><i>// qemu seems to use 24-hour GWT and the values are BCD encoded</i></td></tr>
+<tr><th id="195">195</th><td><em>void</em></td></tr>
+<tr><th id="196">196</th><td><dfn class="decl def" id="cmostime" title='cmostime' data-ref="cmostime">cmostime</dfn>(<b>struct</b> <a class="type" href="date.h.html#rtcdate" title='rtcdate' data-ref="rtcdate">rtcdate</a> *<dfn class="local col0 decl" id="10r" title='r' data-type='struct rtcdate *' data-ref="10r">r</dfn>)</td></tr>
+<tr><th id="197">197</th><td>{</td></tr>
+<tr><th id="198">198</th><td>  <b>struct</b> <a class="type" href="date.h.html#rtcdate" title='rtcdate' data-ref="rtcdate">rtcdate</a> <dfn class="local col1 decl" id="11t1" title='t1' data-type='struct rtcdate' data-ref="11t1">t1</dfn>, <dfn class="local col2 decl" id="12t2" title='t2' data-type='struct rtcdate' data-ref="12t2">t2</dfn>;</td></tr>
+<tr><th id="199">199</th><td>  <em>int</em> <dfn class="local col3 decl" id="13sb" title='sb' data-type='int' data-ref="13sb">sb</dfn>, <dfn class="local col4 decl" id="14bcd" title='bcd' data-type='int' data-ref="14bcd">bcd</dfn>;</td></tr>
+<tr><th id="200">200</th><td></td></tr>
+<tr><th id="201">201</th><td>  <a class="local col3 ref" href="#13sb" title='sb' data-ref="13sb">sb</a> = <a class="tu ref" href="#cmos_read" title='cmos_read' data-use='c' data-ref="cmos_read">cmos_read</a>(<a class="macro" href="#164" title="0x0b" data-ref="_M/CMOS_STATB">CMOS_STATB</a>);</td></tr>
+<tr><th id="202">202</th><td></td></tr>
+<tr><th id="203">203</th><td>  <a class="local col4 ref" href="#14bcd" title='bcd' data-ref="14bcd">bcd</a> = (<a class="local col3 ref" href="#13sb" title='sb' data-ref="13sb">sb</a> &amp; (<var>1</var> &lt;&lt; <var>2</var>)) == <var>0</var>;</td></tr>
+<tr><th id="204">204</th><td></td></tr>
+<tr><th id="205">205</th><td>  <i>// make sure CMOS doesn't modify time while we read it</i></td></tr>
+<tr><th id="206">206</th><td>  <b>for</b>(;;) {</td></tr>
+<tr><th id="207">207</th><td>    <a class="tu ref" href="#fill_rtcdate" title='fill_rtcdate' data-use='c' data-ref="fill_rtcdate">fill_rtcdate</a>(&amp;<a class="local col1 ref" href="#11t1" title='t1' data-ref="11t1">t1</a>);</td></tr>
+<tr><th id="208">208</th><td>    <b>if</b>(<a class="tu ref" href="#cmos_read" title='cmos_read' data-use='c' data-ref="cmos_read">cmos_read</a>(<a class="macro" href="#163" title="0x0a" data-ref="_M/CMOS_STATA">CMOS_STATA</a>) &amp; <a class="macro" href="#165" title="(1 &lt;&lt; 7)" data-ref="_M/CMOS_UIP">CMOS_UIP</a>)</td></tr>
+<tr><th id="209">209</th><td>        <b>continue</b>;</td></tr>
+<tr><th id="210">210</th><td>    <a class="tu ref" href="#fill_rtcdate" title='fill_rtcdate' data-use='c' data-ref="fill_rtcdate">fill_rtcdate</a>(&amp;<a class="local col2 ref" href="#12t2" title='t2' data-ref="12t2">t2</a>);</td></tr>
+<tr><th id="211">211</th><td>    <b>if</b>(<a class="ref" href="defs.h.html#memcmp" title='memcmp' data-ref="memcmp">memcmp</a>(&amp;<a class="local col1 ref" href="#11t1" title='t1' data-ref="11t1">t1</a>, &amp;<a class="local col2 ref" href="#12t2" title='t2' data-ref="12t2">t2</a>, <b>sizeof</b>(<a class="local col1 ref" href="#11t1" title='t1' data-ref="11t1">t1</a>)) == <var>0</var>)</td></tr>
+<tr><th id="212">212</th><td>      <b>break</b>;</td></tr>
+<tr><th id="213">213</th><td>  }</td></tr>
+<tr><th id="214">214</th><td></td></tr>
+<tr><th id="215">215</th><td>  <i>// convert</i></td></tr>
+<tr><th id="216">216</th><td>  <b>if</b>(<a class="local col4 ref" href="#14bcd" title='bcd' data-ref="14bcd">bcd</a>) {</td></tr>
+<tr><th id="217">217</th><td><u>#define    <dfn class="macro" id="_M/CONV" data-ref="_M/CONV">CONV</dfn>(x)     (<a class="local col1 ref" href="#11t1" title='t1' data-ref="11t1">t1</a>.x = ((<a class="local col1 ref" href="#11t1" title='t1' data-ref="11t1">t1</a>.x &gt;&gt; 4) * 10) + (<a class="local col1 ref" href="#11t1" title='t1' data-ref="11t1">t1</a>.x &amp; 0xf))</u></td></tr>
+<tr><th id="218">218</th><td>    <a class="macro" href="#217" title="(t1.second = ((t1.second &gt;&gt; 4) * 10) + (t1.second &amp; 0xf))" data-ref="_M/CONV">CONV</a>(<a class="ref" href="date.h.html#rtcdate::second" title='rtcdate::second' data-ref="rtcdate::second">second</a>);</td></tr>
+<tr><th id="219">219</th><td>    <a class="macro" href="#217" title="(t1.minute = ((t1.minute &gt;&gt; 4) * 10) + (t1.minute &amp; 0xf))" data-ref="_M/CONV">CONV</a>(<a class="ref" href="date.h.html#rtcdate::minute" title='rtcdate::minute' data-ref="rtcdate::minute">minute</a>);</td></tr>
+<tr><th id="220">220</th><td>    <a class="macro" href="#217" title="(t1.hour = ((t1.hour &gt;&gt; 4) * 10) + (t1.hour &amp; 0xf))" data-ref="_M/CONV">CONV</a>(<a class="ref" href="date.h.html#rtcdate::hour" title='rtcdate::hour' data-ref="rtcdate::hour">hour</a>  );</td></tr>
+<tr><th id="221">221</th><td>    <a class="macro" href="#217" title="(t1.day = ((t1.day &gt;&gt; 4) * 10) + (t1.day &amp; 0xf))" data-ref="_M/CONV">CONV</a>(<a class="ref" href="date.h.html#rtcdate::day" title='rtcdate::day' data-ref="rtcdate::day">day</a>   );</td></tr>
+<tr><th id="222">222</th><td>    <a class="macro" href="#217" title="(t1.month = ((t1.month &gt;&gt; 4) * 10) + (t1.month &amp; 0xf))" data-ref="_M/CONV">CONV</a>(<a class="ref" href="date.h.html#rtcdate::month" title='rtcdate::month' data-ref="rtcdate::month">month</a> );</td></tr>
+<tr><th id="223">223</th><td>    <a class="macro" href="#217" title="(t1.year = ((t1.year &gt;&gt; 4) * 10) + (t1.year &amp; 0xf))" data-ref="_M/CONV">CONV</a>(<a class="ref" href="date.h.html#rtcdate::year" title='rtcdate::year' data-ref="rtcdate::year">year</a>  );</td></tr>
+<tr><th id="224">224</th><td><u>#undef     <a class="macro" href="#217" data-ref="_M/CONV">CONV</a></u></td></tr>
+<tr><th id="225">225</th><td>  }</td></tr>
+<tr><th id="226">226</th><td></td></tr>
+<tr><th id="227">227</th><td>  *<a class="local col0 ref" href="#10r" title='r' data-ref="10r">r</a> = <a class="local col1 ref" href="#11t1" title='t1' data-ref="11t1">t1</a>;</td></tr>
+<tr><th id="228">228</th><td>  <a class="local col0 ref" href="#10r" title='r' data-ref="10r">r</a>-&gt;<a class="ref" href="date.h.html#rtcdate::year" title='rtcdate::year' data-ref="rtcdate::year">year</a> += <var>2000</var>;</td></tr>
+<tr><th id="229">229</th><td>}</td></tr>
+<tr><th id="230">230</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2019-Mar-13</em> from project xv6<br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

@@ -1,0 +1,186 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>ide.c source code [xv6/ide.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'xv6/ide.c'; var root_path = '..'; var data_path = '../../data';</script>
+<script src='../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='./'>xv6</a>/<a href='ide.c.html'>ide.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// Simple PIO-based (non-DMA) IDE driver code.</i></td></tr>
+<tr><th id="2">2</th><td></td></tr>
+<tr><th id="3">3</th><td><u>#include <a href="types.h.html">"types.h"</a></u></td></tr>
+<tr><th id="4">4</th><td><u>#include <a href="defs.h.html">"defs.h"</a></u></td></tr>
+<tr><th id="5">5</th><td><u>#include <a href="param.h.html">"param.h"</a></u></td></tr>
+<tr><th id="6">6</th><td><u>#include <a href="memlayout.h.html">"memlayout.h"</a></u></td></tr>
+<tr><th id="7">7</th><td><u>#include <a href="mmu.h.html">"mmu.h"</a></u></td></tr>
+<tr><th id="8">8</th><td><u>#include <a href="proc.h.html">"proc.h"</a></u></td></tr>
+<tr><th id="9">9</th><td><u>#include <a href="x86.h.html">"x86.h"</a></u></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="traps.h.html">"traps.h"</a></u></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="spinlock.h.html">"spinlock.h"</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="sleeplock.h.html">"sleeplock.h"</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="fs.h.html">"fs.h"</a></u></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="buf.h.html">"buf.h"</a></u></td></tr>
+<tr><th id="15">15</th><td></td></tr>
+<tr><th id="16">16</th><td><u>#define <dfn class="macro" id="_M/SECTOR_SIZE" data-ref="_M/SECTOR_SIZE">SECTOR_SIZE</dfn>   512</u></td></tr>
+<tr><th id="17">17</th><td><u>#define <dfn class="macro" id="_M/IDE_BSY" data-ref="_M/IDE_BSY">IDE_BSY</dfn>       0x80</u></td></tr>
+<tr><th id="18">18</th><td><u>#define <dfn class="macro" id="_M/IDE_DRDY" data-ref="_M/IDE_DRDY">IDE_DRDY</dfn>      0x40</u></td></tr>
+<tr><th id="19">19</th><td><u>#define <dfn class="macro" id="_M/IDE_DF" data-ref="_M/IDE_DF">IDE_DF</dfn>        0x20</u></td></tr>
+<tr><th id="20">20</th><td><u>#define <dfn class="macro" id="_M/IDE_ERR" data-ref="_M/IDE_ERR">IDE_ERR</dfn>       0x01</u></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td><u>#define <dfn class="macro" id="_M/IDE_CMD_READ" data-ref="_M/IDE_CMD_READ">IDE_CMD_READ</dfn>  0x20</u></td></tr>
+<tr><th id="23">23</th><td><u>#define <dfn class="macro" id="_M/IDE_CMD_WRITE" data-ref="_M/IDE_CMD_WRITE">IDE_CMD_WRITE</dfn> 0x30</u></td></tr>
+<tr><th id="24">24</th><td><u>#define <dfn class="macro" id="_M/IDE_CMD_RDMUL" data-ref="_M/IDE_CMD_RDMUL">IDE_CMD_RDMUL</dfn> 0xc4</u></td></tr>
+<tr><th id="25">25</th><td><u>#define <dfn class="macro" id="_M/IDE_CMD_WRMUL" data-ref="_M/IDE_CMD_WRMUL">IDE_CMD_WRMUL</dfn> 0xc5</u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><i  data-doc="idelock">// idequeue points to the buf now being read/written to the disk.</i></td></tr>
+<tr><th id="28">28</th><td><i  data-doc="idelock">// idequeue-&gt;qnext points to the next buf to be processed.</i></td></tr>
+<tr><th id="29">29</th><td><i  data-doc="idelock">// You must hold idelock while manipulating queue.</i></td></tr>
+<tr><th id="30">30</th><td></td></tr>
+<tr><th id="31">31</th><td><em>static</em> <b>struct</b> <a class="type" href="spinlock.h.html#spinlock" title='spinlock' data-ref="spinlock">spinlock</a> <dfn class="tu decl def" id="idelock" title='idelock' data-type='struct spinlock' data-ref="idelock">idelock</dfn>;</td></tr>
+<tr><th id="32">32</th><td><em>static</em> <b>struct</b> <a class="type" href="buf.h.html#buf" title='buf' data-ref="buf">buf</a> *<dfn class="tu decl def" id="idequeue" title='idequeue' data-type='struct buf *' data-ref="idequeue">idequeue</dfn>;</td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td><em>static</em> <em>int</em> <dfn class="tu decl def" id="havedisk1" title='havedisk1' data-type='int' data-ref="havedisk1">havedisk1</dfn>;</td></tr>
+<tr><th id="35">35</th><td><em>static</em> <em>void</em> <a class="tu decl" href="#idestart" title='idestart' data-type='void idestart(struct buf * )' data-ref="idestart">idestart</a>(<b>struct</b> <a class="type" href="buf.h.html#buf" title='buf' data-ref="buf">buf</a>*);</td></tr>
+<tr><th id="36">36</th><td></td></tr>
+<tr><th id="37">37</th><td><i  data-doc="idewait">// Wait for IDE disk to become ready.</i></td></tr>
+<tr><th id="38">38</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="39">39</th><td><dfn class="tu decl def" id="idewait" title='idewait' data-type='int idewait(int checkerr)' data-ref="idewait">idewait</dfn>(<em>int</em> <dfn class="local col1 decl" id="1checkerr" title='checkerr' data-type='int' data-ref="1checkerr">checkerr</dfn>)</td></tr>
+<tr><th id="40">40</th><td>{</td></tr>
+<tr><th id="41">41</th><td>  <em>int</em> <dfn class="local col2 decl" id="2r" title='r' data-type='int' data-ref="2r">r</dfn>;</td></tr>
+<tr><th id="42">42</th><td></td></tr>
+<tr><th id="43">43</th><td>  <b>while</b>(((<a class="local col2 ref" href="#2r" title='r' data-ref="2r">r</a> = <a class="ref" href="x86.h.html#inb" title='inb' data-ref="inb">inb</a>(<var>0x1f7</var>)) &amp; (<a class="macro" href="#17" title="0x80" data-ref="_M/IDE_BSY">IDE_BSY</a>|<a class="macro" href="#18" title="0x40" data-ref="_M/IDE_DRDY">IDE_DRDY</a>)) != <a class="macro" href="#18" title="0x40" data-ref="_M/IDE_DRDY">IDE_DRDY</a>)</td></tr>
+<tr><th id="44">44</th><td>    ;</td></tr>
+<tr><th id="45">45</th><td>  <b>if</b>(<a class="local col1 ref" href="#1checkerr" title='checkerr' data-ref="1checkerr">checkerr</a> &amp;&amp; (<a class="local col2 ref" href="#2r" title='r' data-ref="2r">r</a> &amp; (<a class="macro" href="#19" title="0x20" data-ref="_M/IDE_DF">IDE_DF</a>|<a class="macro" href="#20" title="0x01" data-ref="_M/IDE_ERR">IDE_ERR</a>)) != <var>0</var>)</td></tr>
+<tr><th id="46">46</th><td>    <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="47">47</th><td>  <b>return</b> <var>0</var>;</td></tr>
+<tr><th id="48">48</th><td>}</td></tr>
+<tr><th id="49">49</th><td></td></tr>
+<tr><th id="50">50</th><td><em>void</em></td></tr>
+<tr><th id="51">51</th><td><dfn class="decl def" id="ideinit" title='ideinit' data-ref="ideinit">ideinit</dfn>(<em>void</em>)</td></tr>
+<tr><th id="52">52</th><td>{</td></tr>
+<tr><th id="53">53</th><td>  <em>int</em> <dfn class="local col3 decl" id="3i" title='i' data-type='int' data-ref="3i">i</dfn>;</td></tr>
+<tr><th id="54">54</th><td></td></tr>
+<tr><th id="55">55</th><td>  <a class="ref" href="defs.h.html#initlock" title='initlock' data-ref="initlock">initlock</a>(&amp;<a class="tu ref" href="#idelock" title='idelock' data-use='a' data-ref="idelock">idelock</a>, <q>"ide"</q>);</td></tr>
+<tr><th id="56">56</th><td>  <a class="ref" href="defs.h.html#ioapicenable" title='ioapicenable' data-ref="ioapicenable">ioapicenable</a>(<a class="macro" href="traps.h.html#35" title="14" data-ref="_M/IRQ_IDE">IRQ_IDE</a>, <a class="ref" href="proc.h.html#ncpu" title='ncpu' data-ref="ncpu">ncpu</a> - <var>1</var>);</td></tr>
+<tr><th id="57">57</th><td>  <a class="tu ref" href="#idewait" title='idewait' data-use='c' data-ref="idewait">idewait</a>(<var>0</var>);</td></tr>
+<tr><th id="58">58</th><td></td></tr>
+<tr><th id="59">59</th><td>  <i>// Check if disk 1 is present</i></td></tr>
+<tr><th id="60">60</th><td>  <a class="ref" href="x86.h.html#outb" title='outb' data-ref="outb">outb</a>(<var>0x1f6</var>, <var>0xe0</var> | (<var>1</var>&lt;&lt;<var>4</var>));</td></tr>
+<tr><th id="61">61</th><td>  <b>for</b>(<a class="local col3 ref" href="#3i" title='i' data-ref="3i">i</a>=<var>0</var>; <a class="local col3 ref" href="#3i" title='i' data-ref="3i">i</a>&lt;<var>1000</var>; <a class="local col3 ref" href="#3i" title='i' data-ref="3i">i</a>++){</td></tr>
+<tr><th id="62">62</th><td>    <b>if</b>(<a class="ref" href="x86.h.html#inb" title='inb' data-ref="inb">inb</a>(<var>0x1f7</var>) != <var>0</var>){</td></tr>
+<tr><th id="63">63</th><td>      <a class="tu ref" href="#havedisk1" title='havedisk1' data-use='w' data-ref="havedisk1">havedisk1</a> = <var>1</var>;</td></tr>
+<tr><th id="64">64</th><td>      <b>break</b>;</td></tr>
+<tr><th id="65">65</th><td>    }</td></tr>
+<tr><th id="66">66</th><td>  }</td></tr>
+<tr><th id="67">67</th><td></td></tr>
+<tr><th id="68">68</th><td>  <i>// Switch back to disk 0.</i></td></tr>
+<tr><th id="69">69</th><td>  <a class="ref" href="x86.h.html#outb" title='outb' data-ref="outb">outb</a>(<var>0x1f6</var>, <var>0xe0</var> | (<var>0</var>&lt;&lt;<var>4</var>));</td></tr>
+<tr><th id="70">70</th><td>}</td></tr>
+<tr><th id="71">71</th><td></td></tr>
+<tr><th id="72">72</th><td><i  data-doc="idestart">// Start the request for b.  Caller must hold idelock.</i></td></tr>
+<tr><th id="73">73</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="74">74</th><td><dfn class="tu decl def" id="idestart" title='idestart' data-type='void idestart(struct buf * b)' data-ref="idestart">idestart</dfn>(<b>struct</b> <a class="type" href="buf.h.html#buf" title='buf' data-ref="buf">buf</a> *<dfn class="local col4 decl" id="4b" title='b' data-type='struct buf *' data-ref="4b">b</dfn>)</td></tr>
+<tr><th id="75">75</th><td>{</td></tr>
+<tr><th id="76">76</th><td>  <b>if</b>(<a class="local col4 ref" href="#4b" title='b' data-ref="4b">b</a> == <var>0</var>)</td></tr>
+<tr><th id="77">77</th><td>    <a class="ref" href="defs.h.html#panic" title='panic' data-ref="panic">panic</a>(<q>"idestart"</q>);</td></tr>
+<tr><th id="78">78</th><td>  <b>if</b>(<a class="local col4 ref" href="#4b" title='b' data-ref="4b">b</a>-&gt;<a class="ref" href="buf.h.html#buf::blockno" title='buf::blockno' data-ref="buf::blockno">blockno</a> &gt;= <a class="macro" href="param.h.html#13" title="1000" data-ref="_M/FSSIZE">FSSIZE</a>)</td></tr>
+<tr><th id="79">79</th><td>    <a class="ref" href="defs.h.html#panic" title='panic' data-ref="panic">panic</a>(<q>"incorrect blockno"</q>);</td></tr>
+<tr><th id="80">80</th><td>  <em>int</em> <dfn class="local col5 decl" id="5sector_per_block" title='sector_per_block' data-type='int' data-ref="5sector_per_block">sector_per_block</dfn> =  <a class="macro" href="fs.h.html#6" title="512" data-ref="_M/BSIZE">BSIZE</a>/<a class="macro" href="#16" title="512" data-ref="_M/SECTOR_SIZE">SECTOR_SIZE</a>;</td></tr>
+<tr><th id="81">81</th><td>  <em>int</em> <dfn class="local col6 decl" id="6sector" title='sector' data-type='int' data-ref="6sector">sector</dfn> = <a class="local col4 ref" href="#4b" title='b' data-ref="4b">b</a>-&gt;<a class="ref" href="buf.h.html#buf::blockno" title='buf::blockno' data-ref="buf::blockno">blockno</a> * <a class="local col5 ref" href="#5sector_per_block" title='sector_per_block' data-ref="5sector_per_block">sector_per_block</a>;</td></tr>
+<tr><th id="82">82</th><td>  <em>int</em> <dfn class="local col7 decl" id="7read_cmd" title='read_cmd' data-type='int' data-ref="7read_cmd">read_cmd</dfn> = (<a class="local col5 ref" href="#5sector_per_block" title='sector_per_block' data-ref="5sector_per_block">sector_per_block</a> == <var>1</var>) ? <a class="macro" href="#22" title="0x20" data-ref="_M/IDE_CMD_READ">IDE_CMD_READ</a> :  <a class="macro" href="#24" title="0xc4" data-ref="_M/IDE_CMD_RDMUL">IDE_CMD_RDMUL</a>;</td></tr>
+<tr><th id="83">83</th><td>  <em>int</em> <dfn class="local col8 decl" id="8write_cmd" title='write_cmd' data-type='int' data-ref="8write_cmd">write_cmd</dfn> = (<a class="local col5 ref" href="#5sector_per_block" title='sector_per_block' data-ref="5sector_per_block">sector_per_block</a> == <var>1</var>) ? <a class="macro" href="#23" title="0x30" data-ref="_M/IDE_CMD_WRITE">IDE_CMD_WRITE</a> : <a class="macro" href="#25" title="0xc5" data-ref="_M/IDE_CMD_WRMUL">IDE_CMD_WRMUL</a>;</td></tr>
+<tr><th id="84">84</th><td></td></tr>
+<tr><th id="85">85</th><td>  <b>if</b> (<a class="local col5 ref" href="#5sector_per_block" title='sector_per_block' data-ref="5sector_per_block">sector_per_block</a> &gt; <var>7</var>) <a class="ref" href="defs.h.html#panic" title='panic' data-ref="panic">panic</a>(<q>"idestart"</q>);</td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td>  <a class="tu ref" href="#idewait" title='idewait' data-use='c' data-ref="idewait">idewait</a>(<var>0</var>);</td></tr>
+<tr><th id="88">88</th><td>  <a class="ref" href="x86.h.html#outb" title='outb' data-ref="outb">outb</a>(<var>0x3f6</var>, <var>0</var>);  <i>// generate interrupt</i></td></tr>
+<tr><th id="89">89</th><td>  <a class="ref" href="x86.h.html#outb" title='outb' data-ref="outb">outb</a>(<var>0x1f2</var>, <a class="local col5 ref" href="#5sector_per_block" title='sector_per_block' data-ref="5sector_per_block">sector_per_block</a>);  <i>// number of sectors</i></td></tr>
+<tr><th id="90">90</th><td>  <a class="ref" href="x86.h.html#outb" title='outb' data-ref="outb">outb</a>(<var>0x1f3</var>, <a class="local col6 ref" href="#6sector" title='sector' data-ref="6sector">sector</a> &amp; <var>0xff</var>);</td></tr>
+<tr><th id="91">91</th><td>  <a class="ref" href="x86.h.html#outb" title='outb' data-ref="outb">outb</a>(<var>0x1f4</var>, (<a class="local col6 ref" href="#6sector" title='sector' data-ref="6sector">sector</a> &gt;&gt; <var>8</var>) &amp; <var>0xff</var>);</td></tr>
+<tr><th id="92">92</th><td>  <a class="ref" href="x86.h.html#outb" title='outb' data-ref="outb">outb</a>(<var>0x1f5</var>, (<a class="local col6 ref" href="#6sector" title='sector' data-ref="6sector">sector</a> &gt;&gt; <var>16</var>) &amp; <var>0xff</var>);</td></tr>
+<tr><th id="93">93</th><td>  <a class="ref" href="x86.h.html#outb" title='outb' data-ref="outb">outb</a>(<var>0x1f6</var>, <var>0xe0</var> | ((<a class="local col4 ref" href="#4b" title='b' data-ref="4b">b</a>-&gt;<a class="ref" href="buf.h.html#buf::dev" title='buf::dev' data-ref="buf::dev">dev</a>&amp;<var>1</var>)&lt;&lt;<var>4</var>) | ((<a class="local col6 ref" href="#6sector" title='sector' data-ref="6sector">sector</a>&gt;&gt;<var>24</var>)&amp;<var>0x0f</var>));</td></tr>
+<tr><th id="94">94</th><td>  <b>if</b>(<a class="local col4 ref" href="#4b" title='b' data-ref="4b">b</a>-&gt;<a class="ref" href="buf.h.html#buf::flags" title='buf::flags' data-ref="buf::flags">flags</a> &amp; <a class="macro" href="buf.h.html#13" title="0x4" data-ref="_M/B_DIRTY">B_DIRTY</a>){</td></tr>
+<tr><th id="95">95</th><td>    <a class="ref" href="x86.h.html#outb" title='outb' data-ref="outb">outb</a>(<var>0x1f7</var>, <a class="local col8 ref" href="#8write_cmd" title='write_cmd' data-ref="8write_cmd">write_cmd</a>);</td></tr>
+<tr><th id="96">96</th><td>    <a class="ref" href="x86.h.html#outsl" title='outsl' data-ref="outsl">outsl</a>(<var>0x1f0</var>, <a class="local col4 ref" href="#4b" title='b' data-ref="4b">b</a>-&gt;<a class="ref" href="buf.h.html#buf::data" title='buf::data' data-ref="buf::data">data</a>, <a class="macro" href="fs.h.html#6" title="512" data-ref="_M/BSIZE">BSIZE</a>/<var>4</var>);</td></tr>
+<tr><th id="97">97</th><td>  } <b>else</b> {</td></tr>
+<tr><th id="98">98</th><td>    <a class="ref" href="x86.h.html#outb" title='outb' data-ref="outb">outb</a>(<var>0x1f7</var>, <a class="local col7 ref" href="#7read_cmd" title='read_cmd' data-ref="7read_cmd">read_cmd</a>);</td></tr>
+<tr><th id="99">99</th><td>  }</td></tr>
+<tr><th id="100">100</th><td>}</td></tr>
+<tr><th id="101">101</th><td></td></tr>
+<tr><th id="102">102</th><td><i>// Interrupt handler.</i></td></tr>
+<tr><th id="103">103</th><td><em>void</em></td></tr>
+<tr><th id="104">104</th><td><dfn class="decl def" id="ideintr" title='ideintr' data-ref="ideintr">ideintr</dfn>(<em>void</em>)</td></tr>
+<tr><th id="105">105</th><td>{</td></tr>
+<tr><th id="106">106</th><td>  <b>struct</b> <a class="type" href="buf.h.html#buf" title='buf' data-ref="buf">buf</a> *<dfn class="local col9 decl" id="9b" title='b' data-type='struct buf *' data-ref="9b">b</dfn>;</td></tr>
+<tr><th id="107">107</th><td></td></tr>
+<tr><th id="108">108</th><td>  <i>// First queued buffer is the active request.</i></td></tr>
+<tr><th id="109">109</th><td>  <a class="ref" href="defs.h.html#acquire" title='acquire' data-ref="acquire">acquire</a>(&amp;<a class="tu ref" href="#idelock" title='idelock' data-use='a' data-ref="idelock">idelock</a>);</td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td>  <b>if</b>((<a class="local col9 ref" href="#9b" title='b' data-ref="9b">b</a> = <a class="tu ref" href="#idequeue" title='idequeue' data-use='r' data-ref="idequeue">idequeue</a>) == <var>0</var>){</td></tr>
+<tr><th id="112">112</th><td>    <a class="ref" href="defs.h.html#release" title='release' data-ref="release">release</a>(&amp;<a class="tu ref" href="#idelock" title='idelock' data-use='a' data-ref="idelock">idelock</a>);</td></tr>
+<tr><th id="113">113</th><td>    <b>return</b>;</td></tr>
+<tr><th id="114">114</th><td>  }</td></tr>
+<tr><th id="115">115</th><td>  <a class="tu ref" href="#idequeue" title='idequeue' data-use='w' data-ref="idequeue">idequeue</a> = <a class="local col9 ref" href="#9b" title='b' data-ref="9b">b</a>-&gt;<a class="ref" href="buf.h.html#buf::qnext" title='buf::qnext' data-ref="buf::qnext">qnext</a>;</td></tr>
+<tr><th id="116">116</th><td></td></tr>
+<tr><th id="117">117</th><td>  <i>// Read data if needed.</i></td></tr>
+<tr><th id="118">118</th><td>  <b>if</b>(!(<a class="local col9 ref" href="#9b" title='b' data-ref="9b">b</a>-&gt;<a class="ref" href="buf.h.html#buf::flags" title='buf::flags' data-ref="buf::flags">flags</a> &amp; <a class="macro" href="buf.h.html#13" title="0x4" data-ref="_M/B_DIRTY">B_DIRTY</a>) &amp;&amp; <a class="tu ref" href="#idewait" title='idewait' data-use='c' data-ref="idewait">idewait</a>(<var>1</var>) &gt;= <var>0</var>)</td></tr>
+<tr><th id="119">119</th><td>    <a class="ref" href="x86.h.html#insl" title='insl' data-ref="insl">insl</a>(<var>0x1f0</var>, <a class="local col9 ref" href="#9b" title='b' data-ref="9b">b</a>-&gt;<a class="ref" href="buf.h.html#buf::data" title='buf::data' data-ref="buf::data">data</a>, <a class="macro" href="fs.h.html#6" title="512" data-ref="_M/BSIZE">BSIZE</a>/<var>4</var>);</td></tr>
+<tr><th id="120">120</th><td></td></tr>
+<tr><th id="121">121</th><td>  <i>// Wake process waiting for this buf.</i></td></tr>
+<tr><th id="122">122</th><td>  <a class="local col9 ref" href="#9b" title='b' data-ref="9b">b</a>-&gt;<a class="ref" href="buf.h.html#buf::flags" title='buf::flags' data-ref="buf::flags">flags</a> |= <a class="macro" href="buf.h.html#12" title="0x2" data-ref="_M/B_VALID">B_VALID</a>;</td></tr>
+<tr><th id="123">123</th><td>  <a class="local col9 ref" href="#9b" title='b' data-ref="9b">b</a>-&gt;<a class="ref" href="buf.h.html#buf::flags" title='buf::flags' data-ref="buf::flags">flags</a> &amp;= ~<a class="macro" href="buf.h.html#13" title="0x4" data-ref="_M/B_DIRTY">B_DIRTY</a>;</td></tr>
+<tr><th id="124">124</th><td>  <a class="ref" href="defs.h.html#wakeup" title='wakeup' data-ref="wakeup">wakeup</a>(<a class="local col9 ref" href="#9b" title='b' data-ref="9b">b</a>);</td></tr>
+<tr><th id="125">125</th><td></td></tr>
+<tr><th id="126">126</th><td>  <i>// Start disk on next buf in queue.</i></td></tr>
+<tr><th id="127">127</th><td>  <b>if</b>(<a class="tu ref" href="#idequeue" title='idequeue' data-use='r' data-ref="idequeue">idequeue</a> != <var>0</var>)</td></tr>
+<tr><th id="128">128</th><td>    <a class="tu ref" href="#idestart" title='idestart' data-use='c' data-ref="idestart">idestart</a>(<a class="tu ref" href="#idequeue" title='idequeue' data-use='r' data-ref="idequeue">idequeue</a>);</td></tr>
+<tr><th id="129">129</th><td></td></tr>
+<tr><th id="130">130</th><td>  <a class="ref" href="defs.h.html#release" title='release' data-ref="release">release</a>(&amp;<a class="tu ref" href="#idelock" title='idelock' data-use='a' data-ref="idelock">idelock</a>);</td></tr>
+<tr><th id="131">131</th><td>}</td></tr>
+<tr><th id="132">132</th><td></td></tr>
+<tr><th id="133">133</th><td><i>//PAGEBREAK!</i></td></tr>
+<tr><th id="134">134</th><td><i>// Sync buf with disk.</i></td></tr>
+<tr><th id="135">135</th><td><i>// If B_DIRTY is set, write buf to disk, clear B_DIRTY, set B_VALID.</i></td></tr>
+<tr><th id="136">136</th><td><i>// Else if B_VALID is not set, read buf from disk, set B_VALID.</i></td></tr>
+<tr><th id="137">137</th><td><em>void</em></td></tr>
+<tr><th id="138">138</th><td><dfn class="decl def" id="iderw" title='iderw' data-ref="iderw">iderw</dfn>(<b>struct</b> <a class="type" href="buf.h.html#buf" title='buf' data-ref="buf">buf</a> *<dfn class="local col0 decl" id="10b" title='b' data-type='struct buf *' data-ref="10b">b</dfn>)</td></tr>
+<tr><th id="139">139</th><td>{</td></tr>
+<tr><th id="140">140</th><td>  <b>struct</b> <a class="type" href="buf.h.html#buf" title='buf' data-ref="buf">buf</a> **<dfn class="local col1 decl" id="11pp" title='pp' data-type='struct buf **' data-ref="11pp">pp</dfn>;</td></tr>
+<tr><th id="141">141</th><td></td></tr>
+<tr><th id="142">142</th><td>  <b>if</b>(!<a class="ref" href="defs.h.html#holdingsleep" title='holdingsleep' data-ref="holdingsleep">holdingsleep</a>(&amp;<a class="local col0 ref" href="#10b" title='b' data-ref="10b">b</a>-&gt;<a class="ref" href="buf.h.html#buf::lock" title='buf::lock' data-ref="buf::lock">lock</a>))</td></tr>
+<tr><th id="143">143</th><td>    <a class="ref" href="defs.h.html#panic" title='panic' data-ref="panic">panic</a>(<q>"iderw: buf not locked"</q>);</td></tr>
+<tr><th id="144">144</th><td>  <b>if</b>((<a class="local col0 ref" href="#10b" title='b' data-ref="10b">b</a>-&gt;<a class="ref" href="buf.h.html#buf::flags" title='buf::flags' data-ref="buf::flags">flags</a> &amp; (<a class="macro" href="buf.h.html#12" title="0x2" data-ref="_M/B_VALID">B_VALID</a>|<a class="macro" href="buf.h.html#13" title="0x4" data-ref="_M/B_DIRTY">B_DIRTY</a>)) == <a class="macro" href="buf.h.html#12" title="0x2" data-ref="_M/B_VALID">B_VALID</a>)</td></tr>
+<tr><th id="145">145</th><td>    <a class="ref" href="defs.h.html#panic" title='panic' data-ref="panic">panic</a>(<q>"iderw: nothing to do"</q>);</td></tr>
+<tr><th id="146">146</th><td>  <b>if</b>(<a class="local col0 ref" href="#10b" title='b' data-ref="10b">b</a>-&gt;<a class="ref" href="buf.h.html#buf::dev" title='buf::dev' data-ref="buf::dev">dev</a> != <var>0</var> &amp;&amp; !<a class="tu ref" href="#havedisk1" title='havedisk1' data-use='r' data-ref="havedisk1">havedisk1</a>)</td></tr>
+<tr><th id="147">147</th><td>    <a class="ref" href="defs.h.html#panic" title='panic' data-ref="panic">panic</a>(<q>"iderw: ide disk 1 not present"</q>);</td></tr>
+<tr><th id="148">148</th><td></td></tr>
+<tr><th id="149">149</th><td>  <a class="ref" href="defs.h.html#acquire" title='acquire' data-ref="acquire">acquire</a>(&amp;<a class="tu ref" href="#idelock" title='idelock' data-use='a' data-ref="idelock">idelock</a>);  <i>//DOC:acquire-lock</i></td></tr>
+<tr><th id="150">150</th><td></td></tr>
+<tr><th id="151">151</th><td>  <i>// Append b to idequeue.</i></td></tr>
+<tr><th id="152">152</th><td>  <a class="local col0 ref" href="#10b" title='b' data-ref="10b">b</a>-&gt;<a class="ref" href="buf.h.html#buf::qnext" title='buf::qnext' data-ref="buf::qnext">qnext</a> = <var>0</var>;</td></tr>
+<tr><th id="153">153</th><td>  <b>for</b>(<a class="local col1 ref" href="#11pp" title='pp' data-ref="11pp">pp</a>=&amp;<a class="tu ref" href="#idequeue" title='idequeue' data-use='a' data-ref="idequeue">idequeue</a>; *<a class="local col1 ref" href="#11pp" title='pp' data-ref="11pp">pp</a>; <a class="local col1 ref" href="#11pp" title='pp' data-ref="11pp">pp</a>=&amp;(*<a class="local col1 ref" href="#11pp" title='pp' data-ref="11pp">pp</a>)-&gt;<a class="ref" href="buf.h.html#buf::qnext" title='buf::qnext' data-ref="buf::qnext">qnext</a>)  <i>//DOC:insert-queue</i></td></tr>
+<tr><th id="154">154</th><td>    ;</td></tr>
+<tr><th id="155">155</th><td>  *<a class="local col1 ref" href="#11pp" title='pp' data-ref="11pp">pp</a> = <a class="local col0 ref" href="#10b" title='b' data-ref="10b">b</a>;</td></tr>
+<tr><th id="156">156</th><td></td></tr>
+<tr><th id="157">157</th><td>  <i>// Start disk if necessary.</i></td></tr>
+<tr><th id="158">158</th><td>  <b>if</b>(<a class="tu ref" href="#idequeue" title='idequeue' data-use='r' data-ref="idequeue">idequeue</a> == <a class="local col0 ref" href="#10b" title='b' data-ref="10b">b</a>)</td></tr>
+<tr><th id="159">159</th><td>    <a class="tu ref" href="#idestart" title='idestart' data-use='c' data-ref="idestart">idestart</a>(<a class="local col0 ref" href="#10b" title='b' data-ref="10b">b</a>);</td></tr>
+<tr><th id="160">160</th><td></td></tr>
+<tr><th id="161">161</th><td>  <i>// Wait for request to finish.</i></td></tr>
+<tr><th id="162">162</th><td>  <b>while</b>((<a class="local col0 ref" href="#10b" title='b' data-ref="10b">b</a>-&gt;<a class="ref" href="buf.h.html#buf::flags" title='buf::flags' data-ref="buf::flags">flags</a> &amp; (<a class="macro" href="buf.h.html#12" title="0x2" data-ref="_M/B_VALID">B_VALID</a>|<a class="macro" href="buf.h.html#13" title="0x4" data-ref="_M/B_DIRTY">B_DIRTY</a>)) != <a class="macro" href="buf.h.html#12" title="0x2" data-ref="_M/B_VALID">B_VALID</a>){</td></tr>
+<tr><th id="163">163</th><td>    <a class="ref" href="defs.h.html#sleep" title='sleep' data-ref="sleep">sleep</a>(<a class="local col0 ref" href="#10b" title='b' data-ref="10b">b</a>, &amp;<a class="tu ref" href="#idelock" title='idelock' data-use='a' data-ref="idelock">idelock</a>);</td></tr>
+<tr><th id="164">164</th><td>  }</td></tr>
+<tr><th id="165">165</th><td></td></tr>
+<tr><th id="166">166</th><td></td></tr>
+<tr><th id="167">167</th><td>  <a class="ref" href="defs.h.html#release" title='release' data-ref="release">release</a>(&amp;<a class="tu ref" href="#idelock" title='idelock' data-use='a' data-ref="idelock">idelock</a>);</td></tr>
+<tr><th id="168">168</th><td>}</td></tr>
+<tr><th id="169">169</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2019-Mar-13</em> from project xv6<br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

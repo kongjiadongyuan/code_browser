@@ -1,0 +1,82 @@
+<def f='xv6/fs.c' l='167' ll='170' type='struct (anonymous struct at /root/xv6-public/fs.c:167:1)'/>
+<use f='xv6/fs.c' l='177' u='m' c='iinit'/>
+<use f='xv6/fs.c' l='179' u='m' c='iinit'/>
+<use f='xv6/fs.c' l='247' u='m' c='iget'/>
+<use f='xv6/fs.c' l='251' u='m' c='iget'/>
+<use f='xv6/fs.c' l='251' u='m' c='iget'/>
+<use f='xv6/fs.c' l='254' u='m' c='iget'/>
+<use f='xv6/fs.c' l='270' u='m' c='iget'/>
+<use f='xv6/fs.c' l='280' u='m' c='idup'/>
+<use f='xv6/fs.c' l='282' u='m' c='idup'/>
+<use f='xv6/fs.c' l='337' u='m' c='iput'/>
+<use f='xv6/fs.c' l='339' u='m' c='iput'/>
+<use f='xv6/fs.c' l='350' u='m' c='iput'/>
+<use f='xv6/fs.c' l='352' u='m' c='iput'/>
+<doc f='xv6/fs.c' l='98'>// Inodes.
+//
+// An inode describes a single unnamed file.
+// The inode disk structure holds metadata: the file&apos;s type,
+// its size, the number of links referring to it, and the
+// list of blocks holding the file&apos;s content.
+//
+// The inodes are laid out sequentially on disk at
+// sb.startinode. Each inode has a number, indicating its
+// position on the disk.
+//
+// The kernel keeps a cache of in-use inodes in memory
+// to provide a place for synchronizing access
+// to inodes used by multiple processes. The cached
+// inodes include book-keeping information that is
+// not stored on disk: ip-&gt;ref and ip-&gt;valid.
+//
+// An inode and its in-memory representation go through a
+// sequence of states before they can be used by the
+// rest of the file system code.
+//
+// * Allocation: an inode is allocated if its type (on disk)
+//   is non-zero. ialloc() allocates, and iput() frees if
+//   the reference and link counts have fallen to zero.
+//
+// * Referencing in cache: an entry in the inode cache
+//   is free if ip-&gt;ref is zero. Otherwise ip-&gt;ref tracks
+//   the number of in-memory pointers to the entry (open
+//   files and current directories). iget() finds or
+//   creates a cache entry and increments its ref; iput()
+//   decrements ref.
+//
+// * Valid: the information (type, size, &amp;c) in an inode
+//   cache entry is only correct when ip-&gt;valid is 1.
+//   ilock() reads the inode from
+//   the disk and sets ip-&gt;valid, while iput() clears
+//   ip-&gt;valid if ip-&gt;ref has fallen to zero.
+//
+// * Locked: file system code may only examine and modify
+//   the information in an inode and its content if it
+//   has first locked the inode.
+//
+// Thus a typical sequence is:
+//   ip = iget(dev, inum)
+//   ilock(ip)
+//   ... examine and modify ip-&gt;xxx ...
+//   iunlock(ip)
+//   iput(ip)
+//
+// ilock() is separate from iget() so that system calls can
+// get a long-term reference to an inode (as for an open file)
+// and only lock it for short periods (e.g., in read()).
+// The separation also helps avoid deadlock and races during
+// pathname lookup. iget() increments ip-&gt;ref so that the inode
+// stays cached and pointers to it remain valid.
+//
+// Many internal file system functions expect the caller to
+// have locked the inodes involved; this lets callers create
+// multi-step atomic operations.
+//
+// The icache.lock spin-lock protects the allocation of icache
+// entries. Since ip-&gt;ref indicates whether an entry is free,
+// and ip-&gt;dev and ip-&gt;inum indicate which i-node an entry
+// holds, one must hold icache.lock while using any of those fields.
+//
+// An ip-&gt;lock sleep-lock protects all ip-&gt; fields other than ref,
+// dev, and inum.  One must hold ip-&gt;lock in order to
+// read or write that inode&apos;s ip-&gt;valid, ip-&gt;size, ip-&gt;type, &amp;c.</doc>

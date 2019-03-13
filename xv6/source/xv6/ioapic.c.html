@@ -1,0 +1,94 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>ioapic.c source code [xv6/ioapic.c] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="ioapic "/>
+<link rel="stylesheet" href="../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'xv6/ioapic.c'; var root_path = '..'; var data_path = '../../data';</script>
+<script src='../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='./'>xv6</a>/<a href='ioapic.c.html'>ioapic.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// The I/O APIC manages hardware interrupts for an SMP system.</i></td></tr>
+<tr><th id="2">2</th><td><i>// <a href="http://www.intel.com/design/chipsets/datashts/29056601.pdf">http://www.intel.com/design/chipsets/datashts/29056601.pdf</a></i></td></tr>
+<tr><th id="3">3</th><td><i>// See also picirq.c.</i></td></tr>
+<tr><th id="4">4</th><td></td></tr>
+<tr><th id="5">5</th><td><u>#include <a href="types.h.html">"types.h"</a></u></td></tr>
+<tr><th id="6">6</th><td><u>#include <a href="defs.h.html">"defs.h"</a></u></td></tr>
+<tr><th id="7">7</th><td><u>#include <a href="traps.h.html">"traps.h"</a></u></td></tr>
+<tr><th id="8">8</th><td></td></tr>
+<tr><th id="9">9</th><td><u>#define <dfn class="macro" id="_M/IOAPIC" data-ref="_M/IOAPIC">IOAPIC</dfn>  0xFEC00000   // Default physical address of IO APIC</u></td></tr>
+<tr><th id="10">10</th><td></td></tr>
+<tr><th id="11">11</th><td><u>#define <dfn class="macro" id="_M/REG_ID" data-ref="_M/REG_ID">REG_ID</dfn>     0x00  // Register index: ID</u></td></tr>
+<tr><th id="12">12</th><td><u>#define <dfn class="macro" id="_M/REG_VER" data-ref="_M/REG_VER">REG_VER</dfn>    0x01  // Register index: version</u></td></tr>
+<tr><th id="13">13</th><td><u>#define <dfn class="macro" id="_M/REG_TABLE" data-ref="_M/REG_TABLE">REG_TABLE</dfn>  0x10  // Redirection table base</u></td></tr>
+<tr><th id="14">14</th><td></td></tr>
+<tr><th id="15">15</th><td><i>// The redirection table starts at REG_TABLE and uses</i></td></tr>
+<tr><th id="16">16</th><td><i>// two registers to configure each interrupt.</i></td></tr>
+<tr><th id="17">17</th><td><i>// The first (low) register in a pair contains configuration bits.</i></td></tr>
+<tr><th id="18">18</th><td><i>// The second (high) register contains a bitmask telling which</i></td></tr>
+<tr><th id="19">19</th><td><i>// CPUs can serve that interrupt.</i></td></tr>
+<tr><th id="20">20</th><td><u>#define <dfn class="macro" id="_M/INT_DISABLED" data-ref="_M/INT_DISABLED">INT_DISABLED</dfn>   0x00010000  // Interrupt disabled</u></td></tr>
+<tr><th id="21">21</th><td><u>#define <dfn class="macro" id="_M/INT_LEVEL" data-ref="_M/INT_LEVEL">INT_LEVEL</dfn>      0x00008000  // Level-triggered (vs edge-)</u></td></tr>
+<tr><th id="22">22</th><td><u>#define <dfn class="macro" id="_M/INT_ACTIVELOW" data-ref="_M/INT_ACTIVELOW">INT_ACTIVELOW</dfn>  0x00002000  // Active low (vs high)</u></td></tr>
+<tr><th id="23">23</th><td><u>#define <dfn class="macro" id="_M/INT_LOGICAL" data-ref="_M/INT_LOGICAL">INT_LOGICAL</dfn>    0x00000800  // Destination is CPU id (vs APIC ID)</u></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><em>volatile</em> <b>struct</b> <a class="type" href="#ioapic" title='ioapic' data-ref="ioapic">ioapic</a> *<dfn class="decl def" id="ioapic" title='ioapic' data-ref="ioapic">ioapic</dfn>;</td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><i>// IO APIC MMIO structure: write reg, then read or write data.</i></td></tr>
+<tr><th id="28">28</th><td><b>struct</b> <dfn class="type def" id="ioapic" title='ioapic' data-ref="ioapic">ioapic</dfn> {</td></tr>
+<tr><th id="29">29</th><td>  <a class="typedef" href="types.h.html#uint" title='uint' data-type='unsigned int' data-ref="uint">uint</a> <dfn class="tu decl" id="ioapic::reg" title='ioapic::reg' data-type='uint' data-ref="ioapic::reg">reg</dfn>;</td></tr>
+<tr><th id="30">30</th><td>  <a class="typedef" href="types.h.html#uint" title='uint' data-type='unsigned int' data-ref="uint">uint</a> <dfn class="tu decl" id="ioapic::pad" title='ioapic::pad' data-type='uint [3]' data-ref="ioapic::pad">pad</dfn>[<var>3</var>];</td></tr>
+<tr><th id="31">31</th><td>  <a class="typedef" href="types.h.html#uint" title='uint' data-type='unsigned int' data-ref="uint">uint</a> <dfn class="tu decl" id="ioapic::data" title='ioapic::data' data-type='uint' data-ref="ioapic::data">data</dfn>;</td></tr>
+<tr><th id="32">32</th><td>};</td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td><em>static</em> <a class="typedef" href="types.h.html#uint" title='uint' data-type='unsigned int' data-ref="uint">uint</a></td></tr>
+<tr><th id="35">35</th><td><dfn class="tu decl def" id="ioapicread" title='ioapicread' data-type='uint ioapicread(int reg)' data-ref="ioapicread">ioapicread</dfn>(<em>int</em> <dfn class="local col1 decl" id="1reg" title='reg' data-type='int' data-ref="1reg">reg</dfn>)</td></tr>
+<tr><th id="36">36</th><td>{</td></tr>
+<tr><th id="37">37</th><td>  <a class="ref" href="#ioapic" title='ioapic' data-ref="ioapic">ioapic</a>-&gt;<a class="tu ref" href="#ioapic::reg" title='ioapic::reg' data-use='w' data-ref="ioapic::reg">reg</a> = <a class="local col1 ref" href="#1reg" title='reg' data-ref="1reg">reg</a>;</td></tr>
+<tr><th id="38">38</th><td>  <b>return</b> <a class="ref" href="#ioapic" title='ioapic' data-ref="ioapic">ioapic</a>-&gt;<a class="tu ref" href="#ioapic::data" title='ioapic::data' data-use='r' data-ref="ioapic::data">data</a>;</td></tr>
+<tr><th id="39">39</th><td>}</td></tr>
+<tr><th id="40">40</th><td></td></tr>
+<tr><th id="41">41</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="42">42</th><td><dfn class="tu decl def" id="ioapicwrite" title='ioapicwrite' data-type='void ioapicwrite(int reg, uint data)' data-ref="ioapicwrite">ioapicwrite</dfn>(<em>int</em> <dfn class="local col2 decl" id="2reg" title='reg' data-type='int' data-ref="2reg">reg</dfn>, <a class="typedef" href="types.h.html#uint" title='uint' data-type='unsigned int' data-ref="uint">uint</a> <dfn class="local col3 decl" id="3data" title='data' data-type='uint' data-ref="3data">data</dfn>)</td></tr>
+<tr><th id="43">43</th><td>{</td></tr>
+<tr><th id="44">44</th><td>  <a class="ref" href="#ioapic" title='ioapic' data-ref="ioapic">ioapic</a>-&gt;<a class="tu ref" href="#ioapic::reg" title='ioapic::reg' data-use='w' data-ref="ioapic::reg">reg</a> = <a class="local col2 ref" href="#2reg" title='reg' data-ref="2reg">reg</a>;</td></tr>
+<tr><th id="45">45</th><td>  <a class="ref" href="#ioapic" title='ioapic' data-ref="ioapic">ioapic</a>-&gt;<a class="tu ref" href="#ioapic::data" title='ioapic::data' data-use='w' data-ref="ioapic::data">data</a> = <a class="local col3 ref" href="#3data" title='data' data-ref="3data">data</a>;</td></tr>
+<tr><th id="46">46</th><td>}</td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td><em>void</em></td></tr>
+<tr><th id="49">49</th><td><dfn class="decl def" id="ioapicinit" title='ioapicinit' data-ref="ioapicinit">ioapicinit</dfn>(<em>void</em>)</td></tr>
+<tr><th id="50">50</th><td>{</td></tr>
+<tr><th id="51">51</th><td>  <em>int</em> <dfn class="local col4 decl" id="4i" title='i' data-type='int' data-ref="4i">i</dfn>, <dfn class="local col5 decl" id="5id" title='id' data-type='int' data-ref="5id">id</dfn>, <dfn class="local col6 decl" id="6maxintr" title='maxintr' data-type='int' data-ref="6maxintr">maxintr</dfn>;</td></tr>
+<tr><th id="52">52</th><td></td></tr>
+<tr><th id="53">53</th><td>  <a class="ref" href="#ioapic" title='ioapic' data-ref="ioapic">ioapic</a> = (<em>volatile</em> <b>struct</b> <a class="type" href="#ioapic" title='ioapic' data-ref="ioapic">ioapic</a>*)<a class="macro" href="#9" title="0xFEC00000" data-ref="_M/IOAPIC">IOAPIC</a>;</td></tr>
+<tr><th id="54">54</th><td>  <a class="local col6 ref" href="#6maxintr" title='maxintr' data-ref="6maxintr">maxintr</a> = (<a class="tu ref" href="#ioapicread" title='ioapicread' data-use='c' data-ref="ioapicread">ioapicread</a>(<a class="macro" href="#12" title="0x01" data-ref="_M/REG_VER">REG_VER</a>) &gt;&gt; <var>16</var>) &amp; <var>0xFF</var>;</td></tr>
+<tr><th id="55">55</th><td>  <a class="local col5 ref" href="#5id" title='id' data-ref="5id">id</a> = <a class="tu ref" href="#ioapicread" title='ioapicread' data-use='c' data-ref="ioapicread">ioapicread</a>(<a class="macro" href="#11" title="0x00" data-ref="_M/REG_ID">REG_ID</a>) &gt;&gt; <var>24</var>;</td></tr>
+<tr><th id="56">56</th><td>  <b>if</b>(<a class="local col5 ref" href="#5id" title='id' data-ref="5id">id</a> != <a class="ref" href="defs.h.html#ioapicid" title='ioapicid' data-ref="ioapicid">ioapicid</a>)</td></tr>
+<tr><th id="57">57</th><td>    <a class="ref" href="defs.h.html#cprintf" title='cprintf' data-ref="cprintf">cprintf</a>(<q>"ioapicinit: id isn't equal to ioapicid; not a MP\n"</q>);</td></tr>
+<tr><th id="58">58</th><td></td></tr>
+<tr><th id="59">59</th><td>  <i>// Mark all interrupts edge-triggered, active high, disabled,</i></td></tr>
+<tr><th id="60">60</th><td><i>  // and not routed to any CPUs.</i></td></tr>
+<tr><th id="61">61</th><td>  <b>for</b>(<a class="local col4 ref" href="#4i" title='i' data-ref="4i">i</a> = <var>0</var>; <a class="local col4 ref" href="#4i" title='i' data-ref="4i">i</a> &lt;= <a class="local col6 ref" href="#6maxintr" title='maxintr' data-ref="6maxintr">maxintr</a>; <a class="local col4 ref" href="#4i" title='i' data-ref="4i">i</a>++){</td></tr>
+<tr><th id="62">62</th><td>    <a class="tu ref" href="#ioapicwrite" title='ioapicwrite' data-use='c' data-ref="ioapicwrite">ioapicwrite</a>(<a class="macro" href="#13" title="0x10" data-ref="_M/REG_TABLE">REG_TABLE</a>+<var>2</var>*<a class="local col4 ref" href="#4i" title='i' data-ref="4i">i</a>, <a class="macro" href="#20" title="0x00010000" data-ref="_M/INT_DISABLED">INT_DISABLED</a> | (<a class="macro" href="traps.h.html#30" title="32" data-ref="_M/T_IRQ0">T_IRQ0</a> + <a class="local col4 ref" href="#4i" title='i' data-ref="4i">i</a>));</td></tr>
+<tr><th id="63">63</th><td>    <a class="tu ref" href="#ioapicwrite" title='ioapicwrite' data-use='c' data-ref="ioapicwrite">ioapicwrite</a>(<a class="macro" href="#13" title="0x10" data-ref="_M/REG_TABLE">REG_TABLE</a>+<var>2</var>*<a class="local col4 ref" href="#4i" title='i' data-ref="4i">i</a>+<var>1</var>, <var>0</var>);</td></tr>
+<tr><th id="64">64</th><td>  }</td></tr>
+<tr><th id="65">65</th><td>}</td></tr>
+<tr><th id="66">66</th><td></td></tr>
+<tr><th id="67">67</th><td><em>void</em></td></tr>
+<tr><th id="68">68</th><td><dfn class="decl def" id="ioapicenable" title='ioapicenable' data-ref="ioapicenable">ioapicenable</dfn>(<em>int</em> <dfn class="local col7 decl" id="7irq" title='irq' data-type='int' data-ref="7irq">irq</dfn>, <em>int</em> <dfn class="local col8 decl" id="8cpunum" title='cpunum' data-type='int' data-ref="8cpunum">cpunum</dfn>)</td></tr>
+<tr><th id="69">69</th><td>{</td></tr>
+<tr><th id="70">70</th><td>  <i>// Mark interrupt edge-triggered, active high,</i></td></tr>
+<tr><th id="71">71</th><td><i>  // enabled, and routed to the given cpunum,</i></td></tr>
+<tr><th id="72">72</th><td><i>  // which happens to be that cpu's APIC ID.</i></td></tr>
+<tr><th id="73">73</th><td>  <a class="tu ref" href="#ioapicwrite" title='ioapicwrite' data-use='c' data-ref="ioapicwrite">ioapicwrite</a>(<a class="macro" href="#13" title="0x10" data-ref="_M/REG_TABLE">REG_TABLE</a>+<var>2</var>*<a class="local col7 ref" href="#7irq" title='irq' data-ref="7irq">irq</a>, <a class="macro" href="traps.h.html#30" title="32" data-ref="_M/T_IRQ0">T_IRQ0</a> + <a class="local col7 ref" href="#7irq" title='irq' data-ref="7irq">irq</a>);</td></tr>
+<tr><th id="74">74</th><td>  <a class="tu ref" href="#ioapicwrite" title='ioapicwrite' data-use='c' data-ref="ioapicwrite">ioapicwrite</a>(<a class="macro" href="#13" title="0x10" data-ref="_M/REG_TABLE">REG_TABLE</a>+<var>2</var>*<a class="local col7 ref" href="#7irq" title='irq' data-ref="7irq">irq</a>+<var>1</var>, <a class="local col8 ref" href="#8cpunum" title='cpunum' data-ref="8cpunum">cpunum</a> &lt;&lt; <var>24</var>);</td></tr>
+<tr><th id="75">75</th><td>}</td></tr>
+<tr><th id="76">76</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2019-Mar-13</em> from project xv6<br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

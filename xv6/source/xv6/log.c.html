@@ -1,0 +1,253 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>log.c source code [xv6/log.c] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="log,logheader "/>
+<link rel="stylesheet" href="../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'xv6/log.c'; var root_path = '..'; var data_path = '../../data';</script>
+<script src='../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='./'>xv6</a>/<a href='log.c.html'>log.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><u>#include <a href="types.h.html">"types.h"</a></u></td></tr>
+<tr><th id="2">2</th><td><u>#include <a href="defs.h.html">"defs.h"</a></u></td></tr>
+<tr><th id="3">3</th><td><u>#include <a href="param.h.html">"param.h"</a></u></td></tr>
+<tr><th id="4">4</th><td><u>#include <a href="spinlock.h.html">"spinlock.h"</a></u></td></tr>
+<tr><th id="5">5</th><td><u>#include <a href="sleeplock.h.html">"sleeplock.h"</a></u></td></tr>
+<tr><th id="6">6</th><td><u>#include <a href="fs.h.html">"fs.h"</a></u></td></tr>
+<tr><th id="7">7</th><td><u>#include <a href="buf.h.html">"buf.h"</a></u></td></tr>
+<tr><th id="8">8</th><td></td></tr>
+<tr><th id="9">9</th><td><i>// Simple logging that allows concurrent FS system calls.</i></td></tr>
+<tr><th id="10">10</th><td><i>//</i></td></tr>
+<tr><th id="11">11</th><td><i>// A log transaction contains the updates of multiple FS system</i></td></tr>
+<tr><th id="12">12</th><td><i>// calls. The logging system only commits when there are</i></td></tr>
+<tr><th id="13">13</th><td><i>// no FS system calls active. Thus there is never</i></td></tr>
+<tr><th id="14">14</th><td><i>// any reasoning required about whether a commit might</i></td></tr>
+<tr><th id="15">15</th><td><i>// write an uncommitted system call's updates to disk.</i></td></tr>
+<tr><th id="16">16</th><td><i>//</i></td></tr>
+<tr><th id="17">17</th><td><i>// A system call should call begin_op()/end_op() to mark</i></td></tr>
+<tr><th id="18">18</th><td><i>// its start and end. Usually begin_op() just increments</i></td></tr>
+<tr><th id="19">19</th><td><i>// the count of in-progress FS system calls and returns.</i></td></tr>
+<tr><th id="20">20</th><td><i>// But if it thinks the log is close to running out, it</i></td></tr>
+<tr><th id="21">21</th><td><i>// sleeps until the last outstanding end_op() commits.</i></td></tr>
+<tr><th id="22">22</th><td><i>//</i></td></tr>
+<tr><th id="23">23</th><td><i>// The log is a physical re-do log containing disk blocks.</i></td></tr>
+<tr><th id="24">24</th><td><i>// The on-disk log format:</i></td></tr>
+<tr><th id="25">25</th><td><i>//   header block, containing block #s for block A, B, C, ...</i></td></tr>
+<tr><th id="26">26</th><td><i>//   block A</i></td></tr>
+<tr><th id="27">27</th><td><i>//   block B</i></td></tr>
+<tr><th id="28">28</th><td><i>//   block C</i></td></tr>
+<tr><th id="29">29</th><td><i>//   ...</i></td></tr>
+<tr><th id="30">30</th><td><i>// Log appends are synchronous.</i></td></tr>
+<tr><th id="31">31</th><td><i></i></td></tr>
+<tr><th id="32">32</th><td><i>// Contents of the header block, used for both the on-disk header block</i></td></tr>
+<tr><th id="33">33</th><td><i>// and to keep track in memory of logged block# before commit.</i></td></tr>
+<tr><th id="34">34</th><td><b>struct</b> <dfn class="type def" id="logheader" title='logheader' data-ref="logheader">logheader</dfn> {</td></tr>
+<tr><th id="35">35</th><td>  <em>int</em> <dfn class="tu decl" id="logheader::n" title='logheader::n' data-type='int' data-ref="logheader::n">n</dfn>;</td></tr>
+<tr><th id="36">36</th><td>  <em>int</em> <dfn class="tu decl" id="logheader::block" title='logheader::block' data-type='int [30]' data-ref="logheader::block">block</dfn>[<a class="macro" href="param.h.html#11" title="(10*3)" data-ref="_M/LOGSIZE">LOGSIZE</a>];</td></tr>
+<tr><th id="37">37</th><td>};</td></tr>
+<tr><th id="38">38</th><td></td></tr>
+<tr><th id="39">39</th><td><b>struct</b> <dfn class="type def" id="log" title='log' data-ref="log">log</dfn> {</td></tr>
+<tr><th id="40">40</th><td>  <b>struct</b> <a class="type" href="spinlock.h.html#spinlock" title='spinlock' data-ref="spinlock">spinlock</a> <dfn class="tu decl" id="log::lock" title='log::lock' data-type='struct spinlock' data-ref="log::lock">lock</dfn>;</td></tr>
+<tr><th id="41">41</th><td>  <em>int</em> <dfn class="tu decl" id="log::start" title='log::start' data-type='int' data-ref="log::start">start</dfn>;</td></tr>
+<tr><th id="42">42</th><td>  <em>int</em> <dfn class="tu decl" id="log::size" title='log::size' data-type='int' data-ref="log::size">size</dfn>;</td></tr>
+<tr><th id="43">43</th><td>  <em>int</em> <dfn class="tu decl" id="log::outstanding" title='log::outstanding' data-type='int' data-ref="log::outstanding">outstanding</dfn>; <i  data-doc="log::outstanding">// how many FS sys calls are executing.</i></td></tr>
+<tr><th id="44">44</th><td>  <em>int</em> <dfn class="tu decl" id="log::committing" title='log::committing' data-type='int' data-ref="log::committing">committing</dfn>;  <i  data-doc="log::committing">// in commit(), please wait.</i></td></tr>
+<tr><th id="45">45</th><td>  <em>int</em> <dfn class="tu decl" id="log::dev" title='log::dev' data-type='int' data-ref="log::dev">dev</dfn>;</td></tr>
+<tr><th id="46">46</th><td>  <b>struct</b> <a class="type" href="#logheader" title='logheader' data-ref="logheader">logheader</a> <dfn class="tu decl" id="log::lh" title='log::lh' data-type='struct logheader' data-ref="log::lh">lh</dfn>;</td></tr>
+<tr><th id="47">47</th><td>};</td></tr>
+<tr><th id="48">48</th><td><b>struct</b> <a class="type" href="#log" title='log' data-ref="log">log</a> <dfn class="decl def" id="log" title='log' data-ref="log">log</dfn>;</td></tr>
+<tr><th id="49">49</th><td></td></tr>
+<tr><th id="50">50</th><td><em>static</em> <em>void</em> <a class="tu decl" href="#recover_from_log" title='recover_from_log' data-type='void recover_from_log()' data-ref="recover_from_log">recover_from_log</a>(<em>void</em>);</td></tr>
+<tr><th id="51">51</th><td><em>static</em> <em>void</em> <a class="tu decl" href="#commit" title='commit' data-type='void commit()' data-ref="commit">commit</a>();</td></tr>
+<tr><th id="52">52</th><td></td></tr>
+<tr><th id="53">53</th><td><em>void</em></td></tr>
+<tr><th id="54">54</th><td><dfn class="decl def" id="initlog" title='initlog' data-ref="initlog">initlog</dfn>(<em>int</em> <dfn class="local col1 decl" id="1dev" title='dev' data-type='int' data-ref="1dev">dev</dfn>)</td></tr>
+<tr><th id="55">55</th><td>{</td></tr>
+<tr><th id="56">56</th><td>  <b>if</b> (<b>sizeof</b>(<b>struct</b> <a class="type" href="#logheader" title='logheader' data-ref="logheader">logheader</a>) &gt;= <a class="macro" href="fs.h.html#6" title="512" data-ref="_M/BSIZE">BSIZE</a>)</td></tr>
+<tr><th id="57">57</th><td>    <a class="ref" href="defs.h.html#panic" title='panic' data-ref="panic">panic</a>(<q>"initlog: too big logheader"</q>);</td></tr>
+<tr><th id="58">58</th><td></td></tr>
+<tr><th id="59">59</th><td>  <b>struct</b> <a class="type" href="fs.h.html#superblock" title='superblock' data-ref="superblock">superblock</a> <dfn class="local col2 decl" id="2sb" title='sb' data-type='struct superblock' data-ref="2sb">sb</dfn>;</td></tr>
+<tr><th id="60">60</th><td>  <a class="ref" href="defs.h.html#initlock" title='initlock' data-ref="initlock">initlock</a>(&amp;<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lock" title='log::lock' data-use='a' data-ref="log::lock">lock</a>, <q>"log"</q>);</td></tr>
+<tr><th id="61">61</th><td>  <a class="ref" href="defs.h.html#readsb" title='readsb' data-ref="readsb">readsb</a>(<a class="local col1 ref" href="#1dev" title='dev' data-ref="1dev">dev</a>, &amp;<a class="local col2 ref" href="#2sb" title='sb' data-ref="2sb">sb</a>);</td></tr>
+<tr><th id="62">62</th><td>  <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::start" title='log::start' data-use='w' data-ref="log::start">start</a> = <a class="local col2 ref" href="#2sb" title='sb' data-ref="2sb">sb</a>.<a class="ref" href="fs.h.html#superblock::logstart" title='superblock::logstart' data-ref="superblock::logstart">logstart</a>;</td></tr>
+<tr><th id="63">63</th><td>  <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::size" title='log::size' data-use='w' data-ref="log::size">size</a> = <a class="local col2 ref" href="#2sb" title='sb' data-ref="2sb">sb</a>.<a class="ref" href="fs.h.html#superblock::nlog" title='superblock::nlog' data-ref="superblock::nlog">nlog</a>;</td></tr>
+<tr><th id="64">64</th><td>  <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::dev" title='log::dev' data-use='w' data-ref="log::dev">dev</a> = <a class="local col1 ref" href="#1dev" title='dev' data-ref="1dev">dev</a>;</td></tr>
+<tr><th id="65">65</th><td>  <a class="tu ref" href="#recover_from_log" title='recover_from_log' data-use='c' data-ref="recover_from_log">recover_from_log</a>();</td></tr>
+<tr><th id="66">66</th><td>}</td></tr>
+<tr><th id="67">67</th><td></td></tr>
+<tr><th id="68">68</th><td><i  data-doc="install_trans">// Copy committed blocks from log to their home location</i></td></tr>
+<tr><th id="69">69</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="70">70</th><td><dfn class="tu decl def" id="install_trans" title='install_trans' data-type='void install_trans()' data-ref="install_trans">install_trans</dfn>(<em>void</em>)</td></tr>
+<tr><th id="71">71</th><td>{</td></tr>
+<tr><th id="72">72</th><td>  <em>int</em> <dfn class="local col3 decl" id="3tail" title='tail' data-type='int' data-ref="3tail">tail</dfn>;</td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td>  <b>for</b> (<a class="local col3 ref" href="#3tail" title='tail' data-ref="3tail">tail</a> = <var>0</var>; <a class="local col3 ref" href="#3tail" title='tail' data-ref="3tail">tail</a> &lt; <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lh" title='log::lh' data-use='m' data-ref="log::lh">lh</a>.<a class="tu ref" href="#logheader::n" title='logheader::n' data-use='r' data-ref="logheader::n">n</a>; <a class="local col3 ref" href="#3tail" title='tail' data-ref="3tail">tail</a>++) {</td></tr>
+<tr><th id="75">75</th><td>    <b>struct</b> <a class="type" href="buf.h.html#buf" title='buf' data-ref="buf">buf</a> *<dfn class="local col4 decl" id="4lbuf" title='lbuf' data-type='struct buf *' data-ref="4lbuf">lbuf</dfn> = <a class="ref" href="defs.h.html#bread" title='bread' data-ref="bread">bread</a>(<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::dev" title='log::dev' data-use='r' data-ref="log::dev">dev</a>, <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::start" title='log::start' data-use='r' data-ref="log::start">start</a>+<a class="local col3 ref" href="#3tail" title='tail' data-ref="3tail">tail</a>+<var>1</var>); <i>// read log block</i></td></tr>
+<tr><th id="76">76</th><td>    <b>struct</b> <a class="type" href="buf.h.html#buf" title='buf' data-ref="buf">buf</a> *<dfn class="local col5 decl" id="5dbuf" title='dbuf' data-type='struct buf *' data-ref="5dbuf">dbuf</dfn> = <a class="ref" href="defs.h.html#bread" title='bread' data-ref="bread">bread</a>(<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::dev" title='log::dev' data-use='r' data-ref="log::dev">dev</a>, <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lh" title='log::lh' data-use='m' data-ref="log::lh">lh</a>.<a class="tu ref" href="#logheader::block" title='logheader::block' data-use='r' data-ref="logheader::block">block</a>[<a class="local col3 ref" href="#3tail" title='tail' data-ref="3tail">tail</a>]); <i>// read dst</i></td></tr>
+<tr><th id="77">77</th><td>    <a class="ref" href="defs.h.html#memmove" title='memmove' data-ref="memmove">memmove</a>(<a class="local col5 ref" href="#5dbuf" title='dbuf' data-ref="5dbuf">dbuf</a>-&gt;<a class="ref" href="buf.h.html#buf::data" title='buf::data' data-ref="buf::data">data</a>, <a class="local col4 ref" href="#4lbuf" title='lbuf' data-ref="4lbuf">lbuf</a>-&gt;<a class="ref" href="buf.h.html#buf::data" title='buf::data' data-ref="buf::data">data</a>, <a class="macro" href="fs.h.html#6" title="512" data-ref="_M/BSIZE">BSIZE</a>);  <i>// copy block to dst</i></td></tr>
+<tr><th id="78">78</th><td>    <a class="ref" href="defs.h.html#bwrite" title='bwrite' data-ref="bwrite">bwrite</a>(<a class="local col5 ref" href="#5dbuf" title='dbuf' data-ref="5dbuf">dbuf</a>);  <i>// write dst to disk</i></td></tr>
+<tr><th id="79">79</th><td>    <a class="ref" href="defs.h.html#brelse" title='brelse' data-ref="brelse">brelse</a>(<a class="local col4 ref" href="#4lbuf" title='lbuf' data-ref="4lbuf">lbuf</a>);</td></tr>
+<tr><th id="80">80</th><td>    <a class="ref" href="defs.h.html#brelse" title='brelse' data-ref="brelse">brelse</a>(<a class="local col5 ref" href="#5dbuf" title='dbuf' data-ref="5dbuf">dbuf</a>);</td></tr>
+<tr><th id="81">81</th><td>  }</td></tr>
+<tr><th id="82">82</th><td>}</td></tr>
+<tr><th id="83">83</th><td></td></tr>
+<tr><th id="84">84</th><td><i  data-doc="read_head">// Read the log header from disk into the in-memory log header</i></td></tr>
+<tr><th id="85">85</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="86">86</th><td><dfn class="tu decl def" id="read_head" title='read_head' data-type='void read_head()' data-ref="read_head">read_head</dfn>(<em>void</em>)</td></tr>
+<tr><th id="87">87</th><td>{</td></tr>
+<tr><th id="88">88</th><td>  <b>struct</b> <a class="type" href="buf.h.html#buf" title='buf' data-ref="buf">buf</a> *<dfn class="local col6 decl" id="6buf" title='buf' data-type='struct buf *' data-ref="6buf">buf</dfn> = <a class="ref" href="defs.h.html#bread" title='bread' data-ref="bread">bread</a>(<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::dev" title='log::dev' data-use='r' data-ref="log::dev">dev</a>, <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::start" title='log::start' data-use='r' data-ref="log::start">start</a>);</td></tr>
+<tr><th id="89">89</th><td>  <b>struct</b> <a class="type" href="#logheader" title='logheader' data-ref="logheader">logheader</a> *<dfn class="local col7 decl" id="7lh" title='lh' data-type='struct logheader *' data-ref="7lh">lh</dfn> = (<b>struct</b> <a class="type" href="#logheader" title='logheader' data-ref="logheader">logheader</a> *) (<a class="local col6 ref" href="#6buf" title='buf' data-ref="6buf">buf</a>-&gt;<a class="ref" href="buf.h.html#buf::data" title='buf::data' data-ref="buf::data">data</a>);</td></tr>
+<tr><th id="90">90</th><td>  <em>int</em> <dfn class="local col8 decl" id="8i" title='i' data-type='int' data-ref="8i">i</dfn>;</td></tr>
+<tr><th id="91">91</th><td>  <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lh" title='log::lh' data-use='m' data-ref="log::lh">lh</a>.<a class="tu ref" href="#logheader::n" title='logheader::n' data-use='w' data-ref="logheader::n">n</a> = <a class="local col7 ref" href="#7lh" title='lh' data-ref="7lh">lh</a>-&gt;<a class="tu ref" href="#logheader::n" title='logheader::n' data-use='r' data-ref="logheader::n">n</a>;</td></tr>
+<tr><th id="92">92</th><td>  <b>for</b> (<a class="local col8 ref" href="#8i" title='i' data-ref="8i">i</a> = <var>0</var>; <a class="local col8 ref" href="#8i" title='i' data-ref="8i">i</a> &lt; <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lh" title='log::lh' data-use='m' data-ref="log::lh">lh</a>.<a class="tu ref" href="#logheader::n" title='logheader::n' data-use='r' data-ref="logheader::n">n</a>; <a class="local col8 ref" href="#8i" title='i' data-ref="8i">i</a>++) {</td></tr>
+<tr><th id="93">93</th><td>    <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lh" title='log::lh' data-use='m' data-ref="log::lh">lh</a>.<a class="tu ref" href="#logheader::block" title='logheader::block' data-use='w' data-ref="logheader::block">block</a>[<a class="local col8 ref" href="#8i" title='i' data-ref="8i">i</a>] = <a class="local col7 ref" href="#7lh" title='lh' data-ref="7lh">lh</a>-&gt;<a class="tu ref" href="#logheader::block" title='logheader::block' data-use='r' data-ref="logheader::block">block</a>[<a class="local col8 ref" href="#8i" title='i' data-ref="8i">i</a>];</td></tr>
+<tr><th id="94">94</th><td>  }</td></tr>
+<tr><th id="95">95</th><td>  <a class="ref" href="defs.h.html#brelse" title='brelse' data-ref="brelse">brelse</a>(<a class="local col6 ref" href="#6buf" title='buf' data-ref="6buf">buf</a>);</td></tr>
+<tr><th id="96">96</th><td>}</td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td><i  data-doc="write_head">// Write in-memory log header to disk.</i></td></tr>
+<tr><th id="99">99</th><td><i  data-doc="write_head">// This is the true point at which the</i></td></tr>
+<tr><th id="100">100</th><td><i  data-doc="write_head">// current transaction commits.</i></td></tr>
+<tr><th id="101">101</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="102">102</th><td><dfn class="tu decl def" id="write_head" title='write_head' data-type='void write_head()' data-ref="write_head">write_head</dfn>(<em>void</em>)</td></tr>
+<tr><th id="103">103</th><td>{</td></tr>
+<tr><th id="104">104</th><td>  <b>struct</b> <a class="type" href="buf.h.html#buf" title='buf' data-ref="buf">buf</a> *<dfn class="local col9 decl" id="9buf" title='buf' data-type='struct buf *' data-ref="9buf">buf</dfn> = <a class="ref" href="defs.h.html#bread" title='bread' data-ref="bread">bread</a>(<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::dev" title='log::dev' data-use='r' data-ref="log::dev">dev</a>, <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::start" title='log::start' data-use='r' data-ref="log::start">start</a>);</td></tr>
+<tr><th id="105">105</th><td>  <b>struct</b> <a class="type" href="#logheader" title='logheader' data-ref="logheader">logheader</a> *<dfn class="local col0 decl" id="10hb" title='hb' data-type='struct logheader *' data-ref="10hb">hb</dfn> = (<b>struct</b> <a class="type" href="#logheader" title='logheader' data-ref="logheader">logheader</a> *) (<a class="local col9 ref" href="#9buf" title='buf' data-ref="9buf">buf</a>-&gt;<a class="ref" href="buf.h.html#buf::data" title='buf::data' data-ref="buf::data">data</a>);</td></tr>
+<tr><th id="106">106</th><td>  <em>int</em> <dfn class="local col1 decl" id="11i" title='i' data-type='int' data-ref="11i">i</dfn>;</td></tr>
+<tr><th id="107">107</th><td>  <a class="local col0 ref" href="#10hb" title='hb' data-ref="10hb">hb</a>-&gt;<a class="tu ref" href="#logheader::n" title='logheader::n' data-use='w' data-ref="logheader::n">n</a> = <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lh" title='log::lh' data-use='m' data-ref="log::lh">lh</a>.<a class="tu ref" href="#logheader::n" title='logheader::n' data-use='r' data-ref="logheader::n">n</a>;</td></tr>
+<tr><th id="108">108</th><td>  <b>for</b> (<a class="local col1 ref" href="#11i" title='i' data-ref="11i">i</a> = <var>0</var>; <a class="local col1 ref" href="#11i" title='i' data-ref="11i">i</a> &lt; <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lh" title='log::lh' data-use='m' data-ref="log::lh">lh</a>.<a class="tu ref" href="#logheader::n" title='logheader::n' data-use='r' data-ref="logheader::n">n</a>; <a class="local col1 ref" href="#11i" title='i' data-ref="11i">i</a>++) {</td></tr>
+<tr><th id="109">109</th><td>    <a class="local col0 ref" href="#10hb" title='hb' data-ref="10hb">hb</a>-&gt;<a class="tu ref" href="#logheader::block" title='logheader::block' data-use='w' data-ref="logheader::block">block</a>[<a class="local col1 ref" href="#11i" title='i' data-ref="11i">i</a>] = <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lh" title='log::lh' data-use='m' data-ref="log::lh">lh</a>.<a class="tu ref" href="#logheader::block" title='logheader::block' data-use='r' data-ref="logheader::block">block</a>[<a class="local col1 ref" href="#11i" title='i' data-ref="11i">i</a>];</td></tr>
+<tr><th id="110">110</th><td>  }</td></tr>
+<tr><th id="111">111</th><td>  <a class="ref" href="defs.h.html#bwrite" title='bwrite' data-ref="bwrite">bwrite</a>(<a class="local col9 ref" href="#9buf" title='buf' data-ref="9buf">buf</a>);</td></tr>
+<tr><th id="112">112</th><td>  <a class="ref" href="defs.h.html#brelse" title='brelse' data-ref="brelse">brelse</a>(<a class="local col9 ref" href="#9buf" title='buf' data-ref="9buf">buf</a>);</td></tr>
+<tr><th id="113">113</th><td>}</td></tr>
+<tr><th id="114">114</th><td></td></tr>
+<tr><th id="115">115</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="116">116</th><td><dfn class="tu decl def" id="recover_from_log" title='recover_from_log' data-type='void recover_from_log()' data-ref="recover_from_log">recover_from_log</dfn>(<em>void</em>)</td></tr>
+<tr><th id="117">117</th><td>{</td></tr>
+<tr><th id="118">118</th><td>  <a class="tu ref" href="#read_head" title='read_head' data-use='c' data-ref="read_head">read_head</a>();</td></tr>
+<tr><th id="119">119</th><td>  <a class="tu ref" href="#install_trans" title='install_trans' data-use='c' data-ref="install_trans">install_trans</a>(); <i>// if committed, copy from log to disk</i></td></tr>
+<tr><th id="120">120</th><td>  <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lh" title='log::lh' data-use='m' data-ref="log::lh">lh</a>.<a class="tu ref" href="#logheader::n" title='logheader::n' data-use='w' data-ref="logheader::n">n</a> = <var>0</var>;</td></tr>
+<tr><th id="121">121</th><td>  <a class="tu ref" href="#write_head" title='write_head' data-use='c' data-ref="write_head">write_head</a>(); <i>// clear the log</i></td></tr>
+<tr><th id="122">122</th><td>}</td></tr>
+<tr><th id="123">123</th><td></td></tr>
+<tr><th id="124">124</th><td><i>// called at the start of each FS system call.</i></td></tr>
+<tr><th id="125">125</th><td><em>void</em></td></tr>
+<tr><th id="126">126</th><td><dfn class="decl def" id="begin_op" title='begin_op' data-ref="begin_op">begin_op</dfn>(<em>void</em>)</td></tr>
+<tr><th id="127">127</th><td>{</td></tr>
+<tr><th id="128">128</th><td>  <a class="ref" href="defs.h.html#acquire" title='acquire' data-ref="acquire">acquire</a>(&amp;<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lock" title='log::lock' data-use='a' data-ref="log::lock">lock</a>);</td></tr>
+<tr><th id="129">129</th><td>  <b>while</b>(<var>1</var>){</td></tr>
+<tr><th id="130">130</th><td>    <b>if</b>(<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::committing" title='log::committing' data-use='r' data-ref="log::committing">committing</a>){</td></tr>
+<tr><th id="131">131</th><td>      <a class="ref" href="defs.h.html#sleep" title='sleep' data-ref="sleep">sleep</a>(&amp;<a class="ref" href="#log" title='log' data-ref="log">log</a>, &amp;<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lock" title='log::lock' data-use='a' data-ref="log::lock">lock</a>);</td></tr>
+<tr><th id="132">132</th><td>    } <b>else</b> <b>if</b>(<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lh" title='log::lh' data-use='m' data-ref="log::lh">lh</a>.<a class="tu ref" href="#logheader::n" title='logheader::n' data-use='r' data-ref="logheader::n">n</a> + (<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::outstanding" title='log::outstanding' data-use='r' data-ref="log::outstanding">outstanding</a>+<var>1</var>)*<a class="macro" href="param.h.html#10" title="10" data-ref="_M/MAXOPBLOCKS">MAXOPBLOCKS</a> &gt; <a class="macro" href="param.h.html#11" title="(10*3)" data-ref="_M/LOGSIZE">LOGSIZE</a>){</td></tr>
+<tr><th id="133">133</th><td>      <i>// this op might exhaust log space; wait for commit.</i></td></tr>
+<tr><th id="134">134</th><td>      <a class="ref" href="defs.h.html#sleep" title='sleep' data-ref="sleep">sleep</a>(&amp;<a class="ref" href="#log" title='log' data-ref="log">log</a>, &amp;<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lock" title='log::lock' data-use='a' data-ref="log::lock">lock</a>);</td></tr>
+<tr><th id="135">135</th><td>    } <b>else</b> {</td></tr>
+<tr><th id="136">136</th><td>      <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::outstanding" title='log::outstanding' data-use='w' data-ref="log::outstanding">outstanding</a> += <var>1</var>;</td></tr>
+<tr><th id="137">137</th><td>      <a class="ref" href="defs.h.html#release" title='release' data-ref="release">release</a>(&amp;<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lock" title='log::lock' data-use='a' data-ref="log::lock">lock</a>);</td></tr>
+<tr><th id="138">138</th><td>      <b>break</b>;</td></tr>
+<tr><th id="139">139</th><td>    }</td></tr>
+<tr><th id="140">140</th><td>  }</td></tr>
+<tr><th id="141">141</th><td>}</td></tr>
+<tr><th id="142">142</th><td></td></tr>
+<tr><th id="143">143</th><td><i>// called at the end of each FS system call.</i></td></tr>
+<tr><th id="144">144</th><td><i>// commits if this was the last outstanding operation.</i></td></tr>
+<tr><th id="145">145</th><td><em>void</em></td></tr>
+<tr><th id="146">146</th><td><dfn class="decl def" id="end_op" title='end_op' data-ref="end_op">end_op</dfn>(<em>void</em>)</td></tr>
+<tr><th id="147">147</th><td>{</td></tr>
+<tr><th id="148">148</th><td>  <em>int</em> <dfn class="local col2 decl" id="12do_commit" title='do_commit' data-type='int' data-ref="12do_commit">do_commit</dfn> = <var>0</var>;</td></tr>
+<tr><th id="149">149</th><td></td></tr>
+<tr><th id="150">150</th><td>  <a class="ref" href="defs.h.html#acquire" title='acquire' data-ref="acquire">acquire</a>(&amp;<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lock" title='log::lock' data-use='a' data-ref="log::lock">lock</a>);</td></tr>
+<tr><th id="151">151</th><td>  <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::outstanding" title='log::outstanding' data-use='w' data-ref="log::outstanding">outstanding</a> -= <var>1</var>;</td></tr>
+<tr><th id="152">152</th><td>  <b>if</b>(<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::committing" title='log::committing' data-use='r' data-ref="log::committing">committing</a>)</td></tr>
+<tr><th id="153">153</th><td>    <a class="ref" href="defs.h.html#panic" title='panic' data-ref="panic">panic</a>(<q>"log.committing"</q>);</td></tr>
+<tr><th id="154">154</th><td>  <b>if</b>(<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::outstanding" title='log::outstanding' data-use='r' data-ref="log::outstanding">outstanding</a> == <var>0</var>){</td></tr>
+<tr><th id="155">155</th><td>    <a class="local col2 ref" href="#12do_commit" title='do_commit' data-ref="12do_commit">do_commit</a> = <var>1</var>;</td></tr>
+<tr><th id="156">156</th><td>    <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::committing" title='log::committing' data-use='w' data-ref="log::committing">committing</a> = <var>1</var>;</td></tr>
+<tr><th id="157">157</th><td>  } <b>else</b> {</td></tr>
+<tr><th id="158">158</th><td>    <i>// begin_op() may be waiting for log space,</i></td></tr>
+<tr><th id="159">159</th><td><i>    // and decrementing log.outstanding has decreased</i></td></tr>
+<tr><th id="160">160</th><td><i>    // the amount of reserved space.</i></td></tr>
+<tr><th id="161">161</th><td>    <a class="ref" href="defs.h.html#wakeup" title='wakeup' data-ref="wakeup">wakeup</a>(&amp;<a class="ref" href="#log" title='log' data-ref="log">log</a>);</td></tr>
+<tr><th id="162">162</th><td>  }</td></tr>
+<tr><th id="163">163</th><td>  <a class="ref" href="defs.h.html#release" title='release' data-ref="release">release</a>(&amp;<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lock" title='log::lock' data-use='a' data-ref="log::lock">lock</a>);</td></tr>
+<tr><th id="164">164</th><td></td></tr>
+<tr><th id="165">165</th><td>  <b>if</b>(<a class="local col2 ref" href="#12do_commit" title='do_commit' data-ref="12do_commit">do_commit</a>){</td></tr>
+<tr><th id="166">166</th><td>    <i>// call commit w/o holding locks, since not allowed</i></td></tr>
+<tr><th id="167">167</th><td><i>    // to sleep with locks.</i></td></tr>
+<tr><th id="168">168</th><td>    <a class="tu ref" href="#commit" title='commit' data-use='c' data-ref="commit">commit</a>();</td></tr>
+<tr><th id="169">169</th><td>    <a class="ref" href="defs.h.html#acquire" title='acquire' data-ref="acquire">acquire</a>(&amp;<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lock" title='log::lock' data-use='a' data-ref="log::lock">lock</a>);</td></tr>
+<tr><th id="170">170</th><td>    <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::committing" title='log::committing' data-use='w' data-ref="log::committing">committing</a> = <var>0</var>;</td></tr>
+<tr><th id="171">171</th><td>    <a class="ref" href="defs.h.html#wakeup" title='wakeup' data-ref="wakeup">wakeup</a>(&amp;<a class="ref" href="#log" title='log' data-ref="log">log</a>);</td></tr>
+<tr><th id="172">172</th><td>    <a class="ref" href="defs.h.html#release" title='release' data-ref="release">release</a>(&amp;<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lock" title='log::lock' data-use='a' data-ref="log::lock">lock</a>);</td></tr>
+<tr><th id="173">173</th><td>  }</td></tr>
+<tr><th id="174">174</th><td>}</td></tr>
+<tr><th id="175">175</th><td></td></tr>
+<tr><th id="176">176</th><td><i  data-doc="write_log">// Copy modified blocks from cache to log.</i></td></tr>
+<tr><th id="177">177</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="178">178</th><td><dfn class="tu decl def" id="write_log" title='write_log' data-type='void write_log()' data-ref="write_log">write_log</dfn>(<em>void</em>)</td></tr>
+<tr><th id="179">179</th><td>{</td></tr>
+<tr><th id="180">180</th><td>  <em>int</em> <dfn class="local col3 decl" id="13tail" title='tail' data-type='int' data-ref="13tail">tail</dfn>;</td></tr>
+<tr><th id="181">181</th><td></td></tr>
+<tr><th id="182">182</th><td>  <b>for</b> (<a class="local col3 ref" href="#13tail" title='tail' data-ref="13tail">tail</a> = <var>0</var>; <a class="local col3 ref" href="#13tail" title='tail' data-ref="13tail">tail</a> &lt; <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lh" title='log::lh' data-use='m' data-ref="log::lh">lh</a>.<a class="tu ref" href="#logheader::n" title='logheader::n' data-use='r' data-ref="logheader::n">n</a>; <a class="local col3 ref" href="#13tail" title='tail' data-ref="13tail">tail</a>++) {</td></tr>
+<tr><th id="183">183</th><td>    <b>struct</b> <a class="type" href="buf.h.html#buf" title='buf' data-ref="buf">buf</a> *<dfn class="local col4 decl" id="14to" title='to' data-type='struct buf *' data-ref="14to">to</dfn> = <a class="ref" href="defs.h.html#bread" title='bread' data-ref="bread">bread</a>(<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::dev" title='log::dev' data-use='r' data-ref="log::dev">dev</a>, <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::start" title='log::start' data-use='r' data-ref="log::start">start</a>+<a class="local col3 ref" href="#13tail" title='tail' data-ref="13tail">tail</a>+<var>1</var>); <i>// log block</i></td></tr>
+<tr><th id="184">184</th><td>    <b>struct</b> <a class="type" href="buf.h.html#buf" title='buf' data-ref="buf">buf</a> *<dfn class="local col5 decl" id="15from" title='from' data-type='struct buf *' data-ref="15from">from</dfn> = <a class="ref" href="defs.h.html#bread" title='bread' data-ref="bread">bread</a>(<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::dev" title='log::dev' data-use='r' data-ref="log::dev">dev</a>, <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lh" title='log::lh' data-use='m' data-ref="log::lh">lh</a>.<a class="tu ref" href="#logheader::block" title='logheader::block' data-use='r' data-ref="logheader::block">block</a>[<a class="local col3 ref" href="#13tail" title='tail' data-ref="13tail">tail</a>]); <i>// cache block</i></td></tr>
+<tr><th id="185">185</th><td>    <a class="ref" href="defs.h.html#memmove" title='memmove' data-ref="memmove">memmove</a>(<a class="local col4 ref" href="#14to" title='to' data-ref="14to">to</a>-&gt;<a class="ref" href="buf.h.html#buf::data" title='buf::data' data-ref="buf::data">data</a>, <a class="local col5 ref" href="#15from" title='from' data-ref="15from">from</a>-&gt;<a class="ref" href="buf.h.html#buf::data" title='buf::data' data-ref="buf::data">data</a>, <a class="macro" href="fs.h.html#6" title="512" data-ref="_M/BSIZE">BSIZE</a>);</td></tr>
+<tr><th id="186">186</th><td>    <a class="ref" href="defs.h.html#bwrite" title='bwrite' data-ref="bwrite">bwrite</a>(<a class="local col4 ref" href="#14to" title='to' data-ref="14to">to</a>);  <i>// write the log</i></td></tr>
+<tr><th id="187">187</th><td>    <a class="ref" href="defs.h.html#brelse" title='brelse' data-ref="brelse">brelse</a>(<a class="local col5 ref" href="#15from" title='from' data-ref="15from">from</a>);</td></tr>
+<tr><th id="188">188</th><td>    <a class="ref" href="defs.h.html#brelse" title='brelse' data-ref="brelse">brelse</a>(<a class="local col4 ref" href="#14to" title='to' data-ref="14to">to</a>);</td></tr>
+<tr><th id="189">189</th><td>  }</td></tr>
+<tr><th id="190">190</th><td>}</td></tr>
+<tr><th id="191">191</th><td></td></tr>
+<tr><th id="192">192</th><td><em>static</em> <em>void</em></td></tr>
+<tr><th id="193">193</th><td><dfn class="tu decl def" id="commit" title='commit' data-type='void commit()' data-ref="commit">commit</dfn>()</td></tr>
+<tr><th id="194">194</th><td>{</td></tr>
+<tr><th id="195">195</th><td>  <b>if</b> (<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lh" title='log::lh' data-use='m' data-ref="log::lh">lh</a>.<a class="tu ref" href="#logheader::n" title='logheader::n' data-use='r' data-ref="logheader::n">n</a> &gt; <var>0</var>) {</td></tr>
+<tr><th id="196">196</th><td>    <a class="tu ref" href="#write_log" title='write_log' data-use='c' data-ref="write_log">write_log</a>();     <i>// Write modified blocks from cache to log</i></td></tr>
+<tr><th id="197">197</th><td>    <a class="tu ref" href="#write_head" title='write_head' data-use='c' data-ref="write_head">write_head</a>();    <i>// Write header to disk -- the real commit</i></td></tr>
+<tr><th id="198">198</th><td>    <a class="tu ref" href="#install_trans" title='install_trans' data-use='c' data-ref="install_trans">install_trans</a>(); <i>// Now install writes to home locations</i></td></tr>
+<tr><th id="199">199</th><td>    <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lh" title='log::lh' data-use='m' data-ref="log::lh">lh</a>.<a class="tu ref" href="#logheader::n" title='logheader::n' data-use='w' data-ref="logheader::n">n</a> = <var>0</var>;</td></tr>
+<tr><th id="200">200</th><td>    <a class="tu ref" href="#write_head" title='write_head' data-use='c' data-ref="write_head">write_head</a>();    <i>// Erase the transaction from the log</i></td></tr>
+<tr><th id="201">201</th><td>  }</td></tr>
+<tr><th id="202">202</th><td>}</td></tr>
+<tr><th id="203">203</th><td></td></tr>
+<tr><th id="204">204</th><td><i>// Caller has modified b-&gt;data and is done with the buffer.</i></td></tr>
+<tr><th id="205">205</th><td><i>// Record the block number and pin in the cache with B_DIRTY.</i></td></tr>
+<tr><th id="206">206</th><td><i>// commit()/write_log() will do the disk write.</i></td></tr>
+<tr><th id="207">207</th><td><i>//</i></td></tr>
+<tr><th id="208">208</th><td><i>// log_write() replaces bwrite(); a typical use is:</i></td></tr>
+<tr><th id="209">209</th><td><i>//   bp = bread(...)</i></td></tr>
+<tr><th id="210">210</th><td><i>//   modify bp-&gt;data[]</i></td></tr>
+<tr><th id="211">211</th><td><i>//   log_write(bp)</i></td></tr>
+<tr><th id="212">212</th><td><i>//   brelse(bp)</i></td></tr>
+<tr><th id="213">213</th><td><em>void</em></td></tr>
+<tr><th id="214">214</th><td><dfn class="decl def" id="log_write" title='log_write' data-ref="log_write">log_write</dfn>(<b>struct</b> <a class="type" href="buf.h.html#buf" title='buf' data-ref="buf">buf</a> *<dfn class="local col6 decl" id="16b" title='b' data-type='struct buf *' data-ref="16b">b</dfn>)</td></tr>
+<tr><th id="215">215</th><td>{</td></tr>
+<tr><th id="216">216</th><td>  <em>int</em> <dfn class="local col7 decl" id="17i" title='i' data-type='int' data-ref="17i">i</dfn>;</td></tr>
+<tr><th id="217">217</th><td></td></tr>
+<tr><th id="218">218</th><td>  <b>if</b> (<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lh" title='log::lh' data-use='m' data-ref="log::lh">lh</a>.<a class="tu ref" href="#logheader::n" title='logheader::n' data-use='r' data-ref="logheader::n">n</a> &gt;= <a class="macro" href="param.h.html#11" title="(10*3)" data-ref="_M/LOGSIZE">LOGSIZE</a> || <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lh" title='log::lh' data-use='m' data-ref="log::lh">lh</a>.<a class="tu ref" href="#logheader::n" title='logheader::n' data-use='r' data-ref="logheader::n">n</a> &gt;= <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::size" title='log::size' data-use='r' data-ref="log::size">size</a> - <var>1</var>)</td></tr>
+<tr><th id="219">219</th><td>    <a class="ref" href="defs.h.html#panic" title='panic' data-ref="panic">panic</a>(<q>"too big a transaction"</q>);</td></tr>
+<tr><th id="220">220</th><td>  <b>if</b> (<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::outstanding" title='log::outstanding' data-use='r' data-ref="log::outstanding">outstanding</a> &lt; <var>1</var>)</td></tr>
+<tr><th id="221">221</th><td>    <a class="ref" href="defs.h.html#panic" title='panic' data-ref="panic">panic</a>(<q>"log_write outside of trans"</q>);</td></tr>
+<tr><th id="222">222</th><td></td></tr>
+<tr><th id="223">223</th><td>  <a class="ref" href="defs.h.html#acquire" title='acquire' data-ref="acquire">acquire</a>(&amp;<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lock" title='log::lock' data-use='a' data-ref="log::lock">lock</a>);</td></tr>
+<tr><th id="224">224</th><td>  <b>for</b> (<a class="local col7 ref" href="#17i" title='i' data-ref="17i">i</a> = <var>0</var>; <a class="local col7 ref" href="#17i" title='i' data-ref="17i">i</a> &lt; <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lh" title='log::lh' data-use='m' data-ref="log::lh">lh</a>.<a class="tu ref" href="#logheader::n" title='logheader::n' data-use='r' data-ref="logheader::n">n</a>; <a class="local col7 ref" href="#17i" title='i' data-ref="17i">i</a>++) {</td></tr>
+<tr><th id="225">225</th><td>    <b>if</b> (<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lh" title='log::lh' data-use='m' data-ref="log::lh">lh</a>.<a class="tu ref" href="#logheader::block" title='logheader::block' data-use='r' data-ref="logheader::block">block</a>[<a class="local col7 ref" href="#17i" title='i' data-ref="17i">i</a>] == <a class="local col6 ref" href="#16b" title='b' data-ref="16b">b</a>-&gt;<a class="ref" href="buf.h.html#buf::blockno" title='buf::blockno' data-ref="buf::blockno">blockno</a>)   <i>// log absorbtion</i></td></tr>
+<tr><th id="226">226</th><td>      <b>break</b>;</td></tr>
+<tr><th id="227">227</th><td>  }</td></tr>
+<tr><th id="228">228</th><td>  <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lh" title='log::lh' data-use='m' data-ref="log::lh">lh</a>.<a class="tu ref" href="#logheader::block" title='logheader::block' data-use='w' data-ref="logheader::block">block</a>[<a class="local col7 ref" href="#17i" title='i' data-ref="17i">i</a>] = <a class="local col6 ref" href="#16b" title='b' data-ref="16b">b</a>-&gt;<a class="ref" href="buf.h.html#buf::blockno" title='buf::blockno' data-ref="buf::blockno">blockno</a>;</td></tr>
+<tr><th id="229">229</th><td>  <b>if</b> (<a class="local col7 ref" href="#17i" title='i' data-ref="17i">i</a> == <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lh" title='log::lh' data-use='m' data-ref="log::lh">lh</a>.<a class="tu ref" href="#logheader::n" title='logheader::n' data-use='r' data-ref="logheader::n">n</a>)</td></tr>
+<tr><th id="230">230</th><td>    <a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lh" title='log::lh' data-use='m' data-ref="log::lh">lh</a>.<a class="tu ref" href="#logheader::n" title='logheader::n' data-use='w' data-ref="logheader::n">n</a>++;</td></tr>
+<tr><th id="231">231</th><td>  <a class="local col6 ref" href="#16b" title='b' data-ref="16b">b</a>-&gt;<a class="ref" href="buf.h.html#buf::flags" title='buf::flags' data-ref="buf::flags">flags</a> |= <a class="macro" href="buf.h.html#13" title="0x4" data-ref="_M/B_DIRTY">B_DIRTY</a>; <i>// prevent eviction</i></td></tr>
+<tr><th id="232">232</th><td>  <a class="ref" href="defs.h.html#release" title='release' data-ref="release">release</a>(&amp;<a class="ref" href="#log" title='log' data-ref="log">log</a>.<a class="tu ref" href="#log::lock" title='log::lock' data-use='a' data-ref="log::lock">lock</a>);</td></tr>
+<tr><th id="233">233</th><td>}</td></tr>
+<tr><th id="234">234</th><td></td></tr>
+<tr><th id="235">235</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2019-Mar-13</em> from project xv6<br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

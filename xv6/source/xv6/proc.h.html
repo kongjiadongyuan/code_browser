@@ -1,0 +1,77 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>proc.h source code [xv6/proc.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="context,cpu,proc,procstate "/>
+<link rel="stylesheet" href="../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'xv6/proc.h'; var root_path = '..'; var data_path = '../../data';</script>
+<script src='../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='./'>xv6</a>/<a href='proc.h.html'>proc.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// Per-CPU state</i></td></tr>
+<tr><th id="2">2</th><td><b>struct</b> <dfn class="type def" id="cpu" title='cpu' data-ref="cpu">cpu</dfn> {</td></tr>
+<tr><th id="3">3</th><td>  <a class="typedef" href="types.h.html#uchar" title='uchar' data-type='unsigned char' data-ref="uchar">uchar</a> <dfn class="decl" id="cpu::apicid" title='cpu::apicid' data-ref="cpu::apicid">apicid</dfn>;                <i>// Local APIC ID</i></td></tr>
+<tr><th id="4">4</th><td>  <b>struct</b> <a class="type" href="#context" title='context' data-ref="context">context</a> *<dfn class="decl" id="cpu::scheduler" title='cpu::scheduler' data-ref="cpu::scheduler">scheduler</dfn>;   <i>// swtch() here to enter scheduler</i></td></tr>
+<tr><th id="5">5</th><td>  <b>struct</b> <a class="type" href="mmu.h.html#taskstate" title='taskstate' data-ref="taskstate">taskstate</a> <dfn class="decl" id="cpu::ts" title='cpu::ts' data-ref="cpu::ts">ts</dfn>;         <i>// Used by x86 to find stack for interrupt</i></td></tr>
+<tr><th id="6">6</th><td>  <b>struct</b> <a class="type" href="mmu.h.html#segdesc" title='segdesc' data-ref="segdesc">segdesc</a> <dfn class="decl" id="cpu::gdt" title='cpu::gdt' data-ref="cpu::gdt">gdt</dfn>[<a class="macro" href="mmu.h.html#22" title="6" data-ref="_M/NSEGS">NSEGS</a>];   <i>// x86 global descriptor table</i></td></tr>
+<tr><th id="7">7</th><td>  <em>volatile</em> <a class="typedef" href="types.h.html#uint" title='uint' data-type='unsigned int' data-ref="uint">uint</a> <dfn class="decl" id="cpu::started" title='cpu::started' data-ref="cpu::started">started</dfn>;       <i>// Has the CPU started?</i></td></tr>
+<tr><th id="8">8</th><td>  <em>int</em> <dfn class="decl" id="cpu::ncli" title='cpu::ncli' data-ref="cpu::ncli">ncli</dfn>;                    <i>// Depth of pushcli nesting.</i></td></tr>
+<tr><th id="9">9</th><td>  <em>int</em> <dfn class="decl" id="cpu::intena" title='cpu::intena' data-ref="cpu::intena">intena</dfn>;                  <i>// Were interrupts enabled before pushcli?</i></td></tr>
+<tr><th id="10">10</th><td>  <b>struct</b> <a class="type" href="#proc" title='proc' data-ref="proc">proc</a> *<dfn class="decl" id="cpu::proc" title='cpu::proc' data-ref="cpu::proc">proc</dfn>;           <i>// The process running on this cpu or null</i></td></tr>
+<tr><th id="11">11</th><td>};</td></tr>
+<tr><th id="12">12</th><td></td></tr>
+<tr><th id="13">13</th><td><b>extern</b> <b>struct</b> <a class="type" href="#cpu" title='cpu' data-ref="cpu">cpu</a> <dfn class="decl" id="cpus" title='cpus' data-ref="cpus">cpus</dfn>[<a class="macro" href="param.h.html#3" title="8" data-ref="_M/NCPU">NCPU</a>];</td></tr>
+<tr><th id="14">14</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="ncpu" title='ncpu' data-ref="ncpu">ncpu</dfn>;</td></tr>
+<tr><th id="15">15</th><td></td></tr>
+<tr><th id="16">16</th><td><i>//PAGEBREAK: 17</i></td></tr>
+<tr><th id="17">17</th><td><i>// Saved registers for kernel context switches.</i></td></tr>
+<tr><th id="18">18</th><td><i>// Don't need to save all the segment registers (%cs, etc),</i></td></tr>
+<tr><th id="19">19</th><td><i>// because they are constant across kernel contexts.</i></td></tr>
+<tr><th id="20">20</th><td><i>// Don't need to save %eax, %ecx, %edx, because the</i></td></tr>
+<tr><th id="21">21</th><td><i>// x86 convention is that the caller has saved them.</i></td></tr>
+<tr><th id="22">22</th><td><i>// Contexts are stored at the bottom of the stack they</i></td></tr>
+<tr><th id="23">23</th><td><i>// describe; the stack pointer is the address of the context.</i></td></tr>
+<tr><th id="24">24</th><td><i>// The layout of the context matches the layout of the stack in swtch.S</i></td></tr>
+<tr><th id="25">25</th><td><i>// at the "Switch stacks" comment. Switch doesn't save eip explicitly,</i></td></tr>
+<tr><th id="26">26</th><td><i>// but it is on the stack and allocproc() manipulates it.</i></td></tr>
+<tr><th id="27">27</th><td><b>struct</b> <dfn class="type def" id="context" title='context' data-ref="context">context</dfn> {</td></tr>
+<tr><th id="28">28</th><td>  <a class="typedef" href="types.h.html#uint" title='uint' data-type='unsigned int' data-ref="uint">uint</a> <dfn class="decl" id="context::edi" title='context::edi' data-ref="context::edi">edi</dfn>;</td></tr>
+<tr><th id="29">29</th><td>  <a class="typedef" href="types.h.html#uint" title='uint' data-type='unsigned int' data-ref="uint">uint</a> <dfn class="decl" id="context::esi" title='context::esi' data-ref="context::esi">esi</dfn>;</td></tr>
+<tr><th id="30">30</th><td>  <a class="typedef" href="types.h.html#uint" title='uint' data-type='unsigned int' data-ref="uint">uint</a> <dfn class="decl" id="context::ebx" title='context::ebx' data-ref="context::ebx">ebx</dfn>;</td></tr>
+<tr><th id="31">31</th><td>  <a class="typedef" href="types.h.html#uint" title='uint' data-type='unsigned int' data-ref="uint">uint</a> <dfn class="decl" id="context::ebp" title='context::ebp' data-ref="context::ebp">ebp</dfn>;</td></tr>
+<tr><th id="32">32</th><td>  <a class="typedef" href="types.h.html#uint" title='uint' data-type='unsigned int' data-ref="uint">uint</a> <dfn class="decl" id="context::eip" title='context::eip' data-ref="context::eip">eip</dfn>;</td></tr>
+<tr><th id="33">33</th><td>};</td></tr>
+<tr><th id="34">34</th><td></td></tr>
+<tr><th id="35">35</th><td><b>enum</b> <dfn class="type def" id="procstate" title='procstate' data-ref="procstate">procstate</dfn> { <dfn class="enum" id="procstate::UNUSED" title='procstate::UNUSED' data-ref="procstate::UNUSED">UNUSED</dfn>, <dfn class="enum" id="procstate::EMBRYO" title='procstate::EMBRYO' data-ref="procstate::EMBRYO">EMBRYO</dfn>, <dfn class="enum" id="procstate::SLEEPING" title='procstate::SLEEPING' data-ref="procstate::SLEEPING">SLEEPING</dfn>, <dfn class="enum" id="procstate::RUNNABLE" title='procstate::RUNNABLE' data-ref="procstate::RUNNABLE">RUNNABLE</dfn>, <dfn class="enum" id="procstate::RUNNING" title='procstate::RUNNING' data-ref="procstate::RUNNING">RUNNING</dfn>, <dfn class="enum" id="procstate::ZOMBIE" title='procstate::ZOMBIE' data-ref="procstate::ZOMBIE">ZOMBIE</dfn> };</td></tr>
+<tr><th id="36">36</th><td></td></tr>
+<tr><th id="37">37</th><td><i>// Per-process state</i></td></tr>
+<tr><th id="38">38</th><td><b>struct</b> <dfn class="type def" id="proc" title='proc' data-ref="proc">proc</dfn> {</td></tr>
+<tr><th id="39">39</th><td>  <a class="typedef" href="types.h.html#uint" title='uint' data-type='unsigned int' data-ref="uint">uint</a> <dfn class="decl" id="proc::sz" title='proc::sz' data-ref="proc::sz">sz</dfn>;                     <i>// Size of process memory (bytes)</i></td></tr>
+<tr><th id="40">40</th><td>  <a class="typedef" href="types.h.html#pde_t" title='pde_t' data-type='uint' data-ref="pde_t">pde_t</a>* <dfn class="decl" id="proc::pgdir" title='proc::pgdir' data-ref="proc::pgdir">pgdir</dfn>;                <i>// Page table</i></td></tr>
+<tr><th id="41">41</th><td>  <em>char</em> *<dfn class="decl" id="proc::kstack" title='proc::kstack' data-ref="proc::kstack">kstack</dfn>;                <i>// Bottom of kernel stack for this process</i></td></tr>
+<tr><th id="42">42</th><td>  <b>enum</b> <a class="type" href="#procstate" title='procstate' data-ref="procstate">procstate</a> <dfn class="decl" id="proc::state" title='proc::state' data-ref="proc::state">state</dfn>;        <i>// Process state</i></td></tr>
+<tr><th id="43">43</th><td>  <em>int</em> <dfn class="decl" id="proc::pid" title='proc::pid' data-ref="proc::pid">pid</dfn>;                     <i>// Process ID</i></td></tr>
+<tr><th id="44">44</th><td>  <b>struct</b> <a class="type" href="#proc" title='proc' data-ref="proc">proc</a> *<dfn class="decl" id="proc::parent" title='proc::parent' data-ref="proc::parent">parent</dfn>;         <i>// Parent process</i></td></tr>
+<tr><th id="45">45</th><td>  <b>struct</b> <a class="type" href="x86.h.html#trapframe" title='trapframe' data-ref="trapframe" id="trapframe"><a class="type" href="x86.h.html#trapframe" title='trapframe' data-ref="trapframe">trapframe</a></a> *<dfn class="decl" id="proc::tf" title='proc::tf' data-ref="proc::tf">tf</dfn>;        <i>// Trap frame for current syscall</i></td></tr>
+<tr><th id="46">46</th><td>  <b>struct</b> <a class="type" href="#context" title='context' data-ref="context">context</a> *<dfn class="decl" id="proc::context" title='proc::context' data-ref="proc::context">context</dfn>;     <i>// swtch() here to run process</i></td></tr>
+<tr><th id="47">47</th><td>  <em>void</em> *<dfn class="decl" id="proc::chan" title='proc::chan' data-ref="proc::chan">chan</dfn>;                  <i>// If non-zero, sleeping on chan</i></td></tr>
+<tr><th id="48">48</th><td>  <em>int</em> <dfn class="decl" id="proc::killed" title='proc::killed' data-ref="proc::killed">killed</dfn>;                  <i>// If non-zero, have been killed</i></td></tr>
+<tr><th id="49">49</th><td>  <b>struct</b> <a class="type" href="file.h.html#file" title='file' data-ref="file">file</a> *<dfn class="decl" id="proc::ofile" title='proc::ofile' data-ref="proc::ofile">ofile</dfn>[<a class="macro" href="param.h.html#4" title="16" data-ref="_M/NOFILE">NOFILE</a>];  <i>// Open files</i></td></tr>
+<tr><th id="50">50</th><td>  <b>struct</b> <a class="type" href="file.h.html#inode" title='inode' data-ref="inode">inode</a> *<dfn class="decl" id="proc::cwd" title='proc::cwd' data-ref="proc::cwd">cwd</dfn>;           <i>// Current directory</i></td></tr>
+<tr><th id="51">51</th><td>  <em>char</em> <dfn class="decl" id="proc::name" title='proc::name' data-ref="proc::name">name</dfn>[<var>16</var>];               <i>// Process name (debugging)</i></td></tr>
+<tr><th id="52">52</th><td>};</td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td><i>// Process memory is laid out contiguously, low addresses first:</i></td></tr>
+<tr><th id="55">55</th><td><i>//   text</i></td></tr>
+<tr><th id="56">56</th><td><i>//   original data and bss</i></td></tr>
+<tr><th id="57">57</th><td><i>//   fixed-size stack</i></td></tr>
+<tr><th id="58">58</th><td><i>//   expandable heap</i></td></tr>
+<tr><th id="59">59</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='console.c.html'>xv6/console.c</a><br/>Generated on <em>2019-Mar-13</em> from project xv6<br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

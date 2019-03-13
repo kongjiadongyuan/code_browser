@@ -1,0 +1,115 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>kalloc.c source code [xv6/kalloc.c] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="run "/>
+<link rel="stylesheet" href="../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'xv6/kalloc.c'; var root_path = '..'; var data_path = '../../data';</script>
+<script src='../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='./'>xv6</a>/<a href='kalloc.c.html'>kalloc.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// Physical memory allocator, intended to allocate</i></td></tr>
+<tr><th id="2">2</th><td><i>// memory for user processes, kernel stacks, page table pages,</i></td></tr>
+<tr><th id="3">3</th><td><i>// and pipe buffers. Allocates 4096-byte pages.</i></td></tr>
+<tr><th id="4">4</th><td></td></tr>
+<tr><th id="5">5</th><td><u>#include <a href="types.h.html">"types.h"</a></u></td></tr>
+<tr><th id="6">6</th><td><u>#include <a href="defs.h.html">"defs.h"</a></u></td></tr>
+<tr><th id="7">7</th><td><u>#include <a href="param.h.html">"param.h"</a></u></td></tr>
+<tr><th id="8">8</th><td><u>#include <a href="memlayout.h.html">"memlayout.h"</a></u></td></tr>
+<tr><th id="9">9</th><td><u>#include <a href="mmu.h.html">"mmu.h"</a></u></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="spinlock.h.html">"spinlock.h"</a></u></td></tr>
+<tr><th id="11">11</th><td></td></tr>
+<tr><th id="12">12</th><td><em>void</em> <a class="decl" href="#freerange" title='freerange' data-ref="freerange">freerange</a>(<em>void</em> *<dfn class="local col1 decl" id="1vstart" title='vstart' data-type='void *' data-ref="1vstart">vstart</dfn>, <em>void</em> *<dfn class="local col2 decl" id="2vend" title='vend' data-type='void *' data-ref="2vend">vend</dfn>);</td></tr>
+<tr><th id="13">13</th><td><b>extern</b> <em>char</em> <dfn class="decl" id="end" title='end' data-ref="end">end</dfn>[]; <i>// first address after kernel loaded from ELF file</i></td></tr>
+<tr><th id="14">14</th><td>                   <i>// defined by the kernel linker script in kernel.ld</i></td></tr>
+<tr><th id="15">15</th><td></td></tr>
+<tr><th id="16">16</th><td><b>struct</b> <dfn class="type def" id="run" title='run' data-ref="run">run</dfn> {</td></tr>
+<tr><th id="17">17</th><td>  <b>struct</b> <a class="type" href="#run" title='run' data-ref="run">run</a> *<dfn class="tu decl" id="run::next" title='run::next' data-type='struct run *' data-ref="run::next">next</dfn>;</td></tr>
+<tr><th id="18">18</th><td>};</td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><b>struct</b> {</td></tr>
+<tr><th id="21">21</th><td>  <b>struct</b> <a class="type" href="spinlock.h.html#spinlock" title='spinlock' data-ref="spinlock">spinlock</a> <dfn class="local col3 decl" id="3lock" title='lock' data-type='struct spinlock' data-ref="3lock">lock</dfn>;</td></tr>
+<tr><th id="22">22</th><td>  <em>int</em> <dfn class="local col4 decl" id="4use_lock" title='use_lock' data-type='int' data-ref="4use_lock">use_lock</dfn>;</td></tr>
+<tr><th id="23">23</th><td>  <b>struct</b> <a class="type" href="#run" title='run' data-ref="run">run</a> *<dfn class="local col5 decl" id="5freelist" title='freelist' data-type='struct run *' data-ref="5freelist">freelist</dfn>;</td></tr>
+<tr><th id="24">24</th><td>} <dfn class="decl def" id="kmem" title='kmem' data-ref="kmem">kmem</dfn>;</td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td><i>// Initialization happens in two phases.</i></td></tr>
+<tr><th id="27">27</th><td><i>// 1. main() calls kinit1() while still using entrypgdir to place just</i></td></tr>
+<tr><th id="28">28</th><td><i>// the pages mapped by entrypgdir on free list.</i></td></tr>
+<tr><th id="29">29</th><td><i>// 2. main() calls kinit2() with the rest of the physical pages</i></td></tr>
+<tr><th id="30">30</th><td><i>// after installing a full page table that maps them on all cores.</i></td></tr>
+<tr><th id="31">31</th><td><em>void</em></td></tr>
+<tr><th id="32">32</th><td><dfn class="decl def" id="kinit1" title='kinit1' data-ref="kinit1">kinit1</dfn>(<em>void</em> *<dfn class="local col6 decl" id="6vstart" title='vstart' data-type='void *' data-ref="6vstart">vstart</dfn>, <em>void</em> *<dfn class="local col7 decl" id="7vend" title='vend' data-type='void *' data-ref="7vend">vend</dfn>)</td></tr>
+<tr><th id="33">33</th><td>{</td></tr>
+<tr><th id="34">34</th><td>  <a class="ref" href="defs.h.html#initlock" title='initlock' data-ref="initlock">initlock</a>(&amp;<a class="ref" href="#kmem" title='kmem' data-ref="kmem">kmem</a>.<a class="local col3 ref" href="#3lock" title='lock' data-ref="3lock">lock</a>, <q>"kmem"</q>);</td></tr>
+<tr><th id="35">35</th><td>  <a class="ref" href="#kmem" title='kmem' data-ref="kmem">kmem</a>.<a class="local col4 ref" href="#4use_lock" title='use_lock' data-ref="4use_lock">use_lock</a> = <var>0</var>;</td></tr>
+<tr><th id="36">36</th><td>  <a class="ref" href="#freerange" title='freerange' data-ref="freerange">freerange</a>(<a class="local col6 ref" href="#6vstart" title='vstart' data-ref="6vstart">vstart</a>, <a class="local col7 ref" href="#7vend" title='vend' data-ref="7vend">vend</a>);</td></tr>
+<tr><th id="37">37</th><td>}</td></tr>
+<tr><th id="38">38</th><td></td></tr>
+<tr><th id="39">39</th><td><em>void</em></td></tr>
+<tr><th id="40">40</th><td><dfn class="decl def" id="kinit2" title='kinit2' data-ref="kinit2">kinit2</dfn>(<em>void</em> *<dfn class="local col8 decl" id="8vstart" title='vstart' data-type='void *' data-ref="8vstart">vstart</dfn>, <em>void</em> *<dfn class="local col9 decl" id="9vend" title='vend' data-type='void *' data-ref="9vend">vend</dfn>)</td></tr>
+<tr><th id="41">41</th><td>{</td></tr>
+<tr><th id="42">42</th><td>  <a class="ref" href="#freerange" title='freerange' data-ref="freerange">freerange</a>(<a class="local col8 ref" href="#8vstart" title='vstart' data-ref="8vstart">vstart</a>, <a class="local col9 ref" href="#9vend" title='vend' data-ref="9vend">vend</a>);</td></tr>
+<tr><th id="43">43</th><td>  <a class="ref" href="#kmem" title='kmem' data-ref="kmem">kmem</a>.<a class="local col4 ref" href="#4use_lock" title='use_lock' data-ref="4use_lock">use_lock</a> = <var>1</var>;</td></tr>
+<tr><th id="44">44</th><td>}</td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td><em>void</em></td></tr>
+<tr><th id="47">47</th><td><dfn class="decl def" id="freerange" title='freerange' data-ref="freerange">freerange</dfn>(<em>void</em> *<dfn class="local col0 decl" id="10vstart" title='vstart' data-type='void *' data-ref="10vstart">vstart</dfn>, <em>void</em> *<dfn class="local col1 decl" id="11vend" title='vend' data-type='void *' data-ref="11vend">vend</dfn>)</td></tr>
+<tr><th id="48">48</th><td>{</td></tr>
+<tr><th id="49">49</th><td>  <em>char</em> *<dfn class="local col2 decl" id="12p" title='p' data-type='char *' data-ref="12p">p</dfn>;</td></tr>
+<tr><th id="50">50</th><td>  <a class="local col2 ref" href="#12p" title='p' data-ref="12p">p</a> = (<em>char</em>*)<a class="macro" href="mmu.h.html#90" title="((((uint)vstart)+4096-1) &amp; ~(4096-1))" data-ref="_M/PGROUNDUP">PGROUNDUP</a>((<a class="typedef" href="types.h.html#uint" title='uint' data-type='unsigned int' data-ref="uint">uint</a>)<a class="local col0 ref" href="#10vstart" title='vstart' data-ref="10vstart">vstart</a>);</td></tr>
+<tr><th id="51">51</th><td>  <b>for</b>(; <a class="local col2 ref" href="#12p" title='p' data-ref="12p">p</a> + <a class="macro" href="mmu.h.html#85" title="4096" data-ref="_M/PGSIZE">PGSIZE</a> &lt;= (<em>char</em>*)<a class="local col1 ref" href="#11vend" title='vend' data-ref="11vend">vend</a>; <a class="local col2 ref" href="#12p" title='p' data-ref="12p">p</a> += <a class="macro" href="mmu.h.html#85" title="4096" data-ref="_M/PGSIZE">PGSIZE</a>)</td></tr>
+<tr><th id="52">52</th><td>    <a class="ref" href="#kfree" title='kfree' data-ref="kfree">kfree</a>(<a class="local col2 ref" href="#12p" title='p' data-ref="12p">p</a>);</td></tr>
+<tr><th id="53">53</th><td>}</td></tr>
+<tr><th id="54">54</th><td><i>//PAGEBREAK: 21</i></td></tr>
+<tr><th id="55">55</th><td><i>// Free the page of physical memory pointed at by v,</i></td></tr>
+<tr><th id="56">56</th><td><i>// which normally should have been returned by a</i></td></tr>
+<tr><th id="57">57</th><td><i>// call to kalloc().  (The exception is when</i></td></tr>
+<tr><th id="58">58</th><td><i>// initializing the allocator; see kinit above.)</i></td></tr>
+<tr><th id="59">59</th><td><em>void</em></td></tr>
+<tr><th id="60">60</th><td><dfn class="decl def" id="kfree" title='kfree' data-ref="kfree">kfree</dfn>(<em>char</em> *<dfn class="local col3 decl" id="13v" title='v' data-type='char *' data-ref="13v">v</dfn>)</td></tr>
+<tr><th id="61">61</th><td>{</td></tr>
+<tr><th id="62">62</th><td>  <b>struct</b> <a class="type" href="#run" title='run' data-ref="run">run</a> *<dfn class="local col4 decl" id="14r" title='r' data-type='struct run *' data-ref="14r">r</dfn>;</td></tr>
+<tr><th id="63">63</th><td></td></tr>
+<tr><th id="64">64</th><td>  <b>if</b>((<a class="typedef" href="types.h.html#uint" title='uint' data-type='unsigned int' data-ref="uint">uint</a>)<a class="local col3 ref" href="#13v" title='v' data-ref="13v">v</a> % <a class="macro" href="mmu.h.html#85" title="4096" data-ref="_M/PGSIZE">PGSIZE</a> || <a class="local col3 ref" href="#13v" title='v' data-ref="13v">v</a> &lt; <a class="ref" href="#end" title='end' data-ref="end">end</a> || <a class="macro" href="memlayout.h.html#11" title="(((uint) (v)) - 0x80000000)" data-ref="_M/V2P">V2P</a>(<a class="local col3 ref" href="#13v" title='v' data-ref="13v">v</a>) &gt;= <a class="macro" href="memlayout.h.html#4" title="0xE000000" data-ref="_M/PHYSTOP">PHYSTOP</a>)</td></tr>
+<tr><th id="65">65</th><td>    <a class="ref" href="defs.h.html#panic" title='panic' data-ref="panic">panic</a>(<q>"kfree"</q>);</td></tr>
+<tr><th id="66">66</th><td></td></tr>
+<tr><th id="67">67</th><td>  <i>// Fill with junk to catch dangling refs.</i></td></tr>
+<tr><th id="68">68</th><td>  <a class="ref" href="defs.h.html#memset" title='memset' data-ref="memset">memset</a>(<a class="local col3 ref" href="#13v" title='v' data-ref="13v">v</a>, <var>1</var>, <a class="macro" href="mmu.h.html#85" title="4096" data-ref="_M/PGSIZE">PGSIZE</a>);</td></tr>
+<tr><th id="69">69</th><td></td></tr>
+<tr><th id="70">70</th><td>  <b>if</b>(<a class="ref" href="#kmem" title='kmem' data-ref="kmem">kmem</a>.<a class="local col4 ref" href="#4use_lock" title='use_lock' data-ref="4use_lock">use_lock</a>)</td></tr>
+<tr><th id="71">71</th><td>    <a class="ref" href="defs.h.html#acquire" title='acquire' data-ref="acquire">acquire</a>(&amp;<a class="ref" href="#kmem" title='kmem' data-ref="kmem">kmem</a>.<a class="local col3 ref" href="#3lock" title='lock' data-ref="3lock">lock</a>);</td></tr>
+<tr><th id="72">72</th><td>  <a class="local col4 ref" href="#14r" title='r' data-ref="14r">r</a> = (<b>struct</b> <a class="type" href="#run" title='run' data-ref="run">run</a>*)<a class="local col3 ref" href="#13v" title='v' data-ref="13v">v</a>;</td></tr>
+<tr><th id="73">73</th><td>  <a class="local col4 ref" href="#14r" title='r' data-ref="14r">r</a>-&gt;<a class="tu ref" href="#run::next" title='run::next' data-use='w' data-ref="run::next">next</a> = <a class="ref" href="#kmem" title='kmem' data-ref="kmem">kmem</a>.<a class="local col5 ref" href="#5freelist" title='freelist' data-ref="5freelist">freelist</a>;</td></tr>
+<tr><th id="74">74</th><td>  <a class="ref" href="#kmem" title='kmem' data-ref="kmem">kmem</a>.<a class="local col5 ref" href="#5freelist" title='freelist' data-ref="5freelist">freelist</a> = <a class="local col4 ref" href="#14r" title='r' data-ref="14r">r</a>;</td></tr>
+<tr><th id="75">75</th><td>  <b>if</b>(<a class="ref" href="#kmem" title='kmem' data-ref="kmem">kmem</a>.<a class="local col4 ref" href="#4use_lock" title='use_lock' data-ref="4use_lock">use_lock</a>)</td></tr>
+<tr><th id="76">76</th><td>    <a class="ref" href="defs.h.html#release" title='release' data-ref="release">release</a>(&amp;<a class="ref" href="#kmem" title='kmem' data-ref="kmem">kmem</a>.<a class="local col3 ref" href="#3lock" title='lock' data-ref="3lock">lock</a>);</td></tr>
+<tr><th id="77">77</th><td>}</td></tr>
+<tr><th id="78">78</th><td></td></tr>
+<tr><th id="79">79</th><td><i>// Allocate one 4096-byte page of physical memory.</i></td></tr>
+<tr><th id="80">80</th><td><i>// Returns a pointer that the kernel can use.</i></td></tr>
+<tr><th id="81">81</th><td><i>// Returns 0 if the memory cannot be allocated.</i></td></tr>
+<tr><th id="82">82</th><td><em>char</em>*</td></tr>
+<tr><th id="83">83</th><td><dfn class="decl def" id="kalloc" title='kalloc' data-ref="kalloc">kalloc</dfn>(<em>void</em>)</td></tr>
+<tr><th id="84">84</th><td>{</td></tr>
+<tr><th id="85">85</th><td>  <b>struct</b> <a class="type" href="#run" title='run' data-ref="run">run</a> *<dfn class="local col5 decl" id="15r" title='r' data-type='struct run *' data-ref="15r">r</dfn>;</td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td>  <b>if</b>(<a class="ref" href="#kmem" title='kmem' data-ref="kmem">kmem</a>.<a class="local col4 ref" href="#4use_lock" title='use_lock' data-ref="4use_lock">use_lock</a>)</td></tr>
+<tr><th id="88">88</th><td>    <a class="ref" href="defs.h.html#acquire" title='acquire' data-ref="acquire">acquire</a>(&amp;<a class="ref" href="#kmem" title='kmem' data-ref="kmem">kmem</a>.<a class="local col3 ref" href="#3lock" title='lock' data-ref="3lock">lock</a>);</td></tr>
+<tr><th id="89">89</th><td>  <a class="local col5 ref" href="#15r" title='r' data-ref="15r">r</a> = <a class="ref" href="#kmem" title='kmem' data-ref="kmem">kmem</a>.<a class="local col5 ref" href="#5freelist" title='freelist' data-ref="5freelist">freelist</a>;</td></tr>
+<tr><th id="90">90</th><td>  <b>if</b>(<a class="local col5 ref" href="#15r" title='r' data-ref="15r">r</a>)</td></tr>
+<tr><th id="91">91</th><td>    <a class="ref" href="#kmem" title='kmem' data-ref="kmem">kmem</a>.<a class="local col5 ref" href="#5freelist" title='freelist' data-ref="5freelist">freelist</a> = <a class="local col5 ref" href="#15r" title='r' data-ref="15r">r</a>-&gt;<a class="tu ref" href="#run::next" title='run::next' data-use='r' data-ref="run::next">next</a>;</td></tr>
+<tr><th id="92">92</th><td>  <b>if</b>(<a class="ref" href="#kmem" title='kmem' data-ref="kmem">kmem</a>.<a class="local col4 ref" href="#4use_lock" title='use_lock' data-ref="4use_lock">use_lock</a>)</td></tr>
+<tr><th id="93">93</th><td>    <a class="ref" href="defs.h.html#release" title='release' data-ref="release">release</a>(&amp;<a class="ref" href="#kmem" title='kmem' data-ref="kmem">kmem</a>.<a class="local col3 ref" href="#3lock" title='lock' data-ref="3lock">lock</a>);</td></tr>
+<tr><th id="94">94</th><td>  <b>return</b> (<em>char</em>*)<a class="local col5 ref" href="#15r" title='r' data-ref="15r">r</a>;</td></tr>
+<tr><th id="95">95</th><td>}</td></tr>
+<tr><th id="96">96</th><td></td></tr>
+<tr><th id="97">97</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2019-Mar-13</em> from project xv6<br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>
