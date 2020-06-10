@@ -1,0 +1,62 @@
+<dec f='linux-5.3.1/include/linux/mod_devicetable.h' l='666' type='__u16'/>
+<offset>48</offset>
+<doc f='linux-5.3.1/include/linux/mod_devicetable.h' l='666'>/* bit index */</doc>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='37' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/match.c' l='44' u='r' c='x86_match_cpu'/>
+<use f='linux-5.3.1/arch/x86/kernel/tsc_msr.c' l='62' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/tsc_msr.c' l='63' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/tsc_msr.c' l='64' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/tsc_msr.c' l='65' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/tsc_msr.c' l='66' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/tsc_msr.c' l='67' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/tsc_msr.c' l='62' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/tsc_msr.c' l='63' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/tsc_msr.c' l='64' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/tsc_msr.c' l='65' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/tsc_msr.c' l='66' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/tsc_msr.c' l='67' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/power/cpu.c' l='486' u='w'/>
+<use f='linux-5.3.1/arch/x86/power/cpu.c' l='493' u='w'/>
+<use f='linux-5.3.1/arch/x86/power/cpu.c' l='486' u='w'/>
+<use f='linux-5.3.1/arch/x86/power/cpu.c' l='493' u='w'/>
+<use f='linux-5.3.1/scripts/mod/file2alias.c' l='1147' c='do_x86cpu_entry'/>

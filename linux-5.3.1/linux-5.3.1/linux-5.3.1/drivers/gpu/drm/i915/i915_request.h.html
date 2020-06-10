@@ -1,0 +1,453 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>i915_request.h source code [linux-5.3.1/drivers/gpu/drm/i915/i915_request.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="i915_capture_list,i915_request "/>
+<link rel="stylesheet" href="../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/drivers/gpu/drm/i915/i915_request.h'; var root_path = '../../../../..'; var data_path = '../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../..'>linux-5.3.1</a>/<a href='../../..'>drivers</a>/<a href='../..'>gpu</a>/<a href='..'>drm</a>/<a href='./'>i915</a>/<a href='i915_request.h.html'>i915_request.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*</i></td></tr>
+<tr><th id="2">2</th><td><i> * Copyright © 2008-2018 Intel Corporation</i></td></tr>
+<tr><th id="3">3</th><td><i> *</i></td></tr>
+<tr><th id="4">4</th><td><i> * Permission is hereby granted, free of charge, to any person obtaining a</i></td></tr>
+<tr><th id="5">5</th><td><i> * copy of this software and associated documentation files (the "Software"),</i></td></tr>
+<tr><th id="6">6</th><td><i> * to deal in the Software without restriction, including without limitation</i></td></tr>
+<tr><th id="7">7</th><td><i> * the rights to use, copy, modify, merge, publish, distribute, sublicense,</i></td></tr>
+<tr><th id="8">8</th><td><i> * and/or sell copies of the Software, and to permit persons to whom the</i></td></tr>
+<tr><th id="9">9</th><td><i> * Software is furnished to do so, subject to the following conditions:</i></td></tr>
+<tr><th id="10">10</th><td><i> *</i></td></tr>
+<tr><th id="11">11</th><td><i> * The above copyright notice and this permission notice (including the next</i></td></tr>
+<tr><th id="12">12</th><td><i> * paragraph) shall be included in all copies or substantial portions of the</i></td></tr>
+<tr><th id="13">13</th><td><i> * Software.</i></td></tr>
+<tr><th id="14">14</th><td><i> *</i></td></tr>
+<tr><th id="15">15</th><td><i> * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR</i></td></tr>
+<tr><th id="16">16</th><td><i> * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,</i></td></tr>
+<tr><th id="17">17</th><td><i> * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL</i></td></tr>
+<tr><th id="18">18</th><td><i> * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER</i></td></tr>
+<tr><th id="19">19</th><td><i> * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING</i></td></tr>
+<tr><th id="20">20</th><td><i> * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS</i></td></tr>
+<tr><th id="21">21</th><td><i> * IN THE SOFTWARE.</i></td></tr>
+<tr><th id="22">22</th><td><i> *</i></td></tr>
+<tr><th id="23">23</th><td><i> */</i></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><u>#<span data-ppcond="25">ifndef</span> <span class="macro" data-ref="_M/I915_REQUEST_H">I915_REQUEST_H</span></u></td></tr>
+<tr><th id="26">26</th><td><u>#define <dfn class="macro" id="_M/I915_REQUEST_H" data-ref="_M/I915_REQUEST_H">I915_REQUEST_H</dfn></u></td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../../../../include/linux/dma-fence.h.html">&lt;linux/dma-fence.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="../../../../include/linux/lockdep.h.html">&lt;linux/lockdep.h&gt;</a></u></td></tr>
+<tr><th id="30">30</th><td></td></tr>
+<tr><th id="31">31</th><td><u>#include <a href="gt/intel_engine_types.h.html">"gt/intel_engine_types.h"</a></u></td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td><u>#include <a href="i915_gem.h.html">"i915_gem.h"</a></u></td></tr>
+<tr><th id="34">34</th><td><u>#include <a href="i915_scheduler.h.html">"i915_scheduler.h"</a></u></td></tr>
+<tr><th id="35">35</th><td><u>#include <a href="i915_selftest.h.html">"i915_selftest.h"</a></u></td></tr>
+<tr><th id="36">36</th><td><u>#include <a href="i915_sw_fence.h.html">"i915_sw_fence.h"</a></u></td></tr>
+<tr><th id="37">37</th><td></td></tr>
+<tr><th id="38">38</th><td><u>#include <a href="../../../../include/uapi/drm/i915_drm.h.html">&lt;uapi/drm/i915_drm.h&gt;</a></u></td></tr>
+<tr><th id="39">39</th><td></td></tr>
+<tr><th id="40">40</th><td><b>struct</b> <a class="type" href="../../../../include/drm/drm_file.h.html#drm_file" title='drm_file' data-ref="drm_file" data-ref-filename="drm_file" id="drm_file">drm_file</a>;</td></tr>
+<tr><th id="41">41</th><td><b>struct</b> <a class="type" href="gem/i915_gem_object_types.h.html#drm_i915_gem_object" title='drm_i915_gem_object' data-ref="drm_i915_gem_object" data-ref-filename="drm_i915_gem_object" id="drm_i915_gem_object">drm_i915_gem_object</a>;</td></tr>
+<tr><th id="42">42</th><td><b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a>;</td></tr>
+<tr><th id="43">43</th><td><b>struct</b> <a class="type" href="i915_timeline_types.h.html#i915_timeline" title='i915_timeline' data-ref="i915_timeline" data-ref-filename="i915_timeline" id="i915_timeline">i915_timeline</a>;</td></tr>
+<tr><th id="44">44</th><td><b>struct</b> <a class="type" href="i915_timeline_types.h.html#i915_timeline_cacheline" title='i915_timeline_cacheline' data-ref="i915_timeline_cacheline" data-ref-filename="i915_timeline_cacheline" id="i915_timeline_cacheline">i915_timeline_cacheline</a>;</td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td><b>struct</b> <dfn class="type def" id="i915_capture_list" title='i915_capture_list' data-ref="i915_capture_list" data-ref-filename="i915_capture_list">i915_capture_list</dfn> {</td></tr>
+<tr><th id="47">47</th><td>	<b>struct</b> <a class="type" href="#i915_capture_list" title='i915_capture_list' data-ref="i915_capture_list" data-ref-filename="i915_capture_list">i915_capture_list</a> *<dfn class="decl field" id="i915_capture_list::next" title='i915_capture_list::next' data-ref="i915_capture_list::next" data-ref-filename="i915_capture_list..next">next</dfn>;</td></tr>
+<tr><th id="48">48</th><td>	<b>struct</b> <a class="type" href="i915_vma.h.html#i915_vma" title='i915_vma' data-ref="i915_vma" data-ref-filename="i915_vma">i915_vma</a> *<dfn class="decl field" id="i915_capture_list::vma" title='i915_capture_list::vma' data-ref="i915_capture_list::vma" data-ref-filename="i915_capture_list..vma">vma</dfn>;</td></tr>
+<tr><th id="49">49</th><td>};</td></tr>
+<tr><th id="50">50</th><td></td></tr>
+<tr><th id="51">51</th><td><b>enum</b> {</td></tr>
+<tr><th id="52">52</th><td>	<i>/*</i></td></tr>
+<tr><th id="53">53</th><td><i>	 * I915_FENCE_FLAG_ACTIVE - this request is currently submitted to HW.</i></td></tr>
+<tr><th id="54">54</th><td><i>	 *</i></td></tr>
+<tr><th id="55">55</th><td><i>	 * Set by __i915_request_submit() on handing over to HW, and cleared</i></td></tr>
+<tr><th id="56">56</th><td><i>	 * by __i915_request_unsubmit() if we preempt this request.</i></td></tr>
+<tr><th id="57">57</th><td><i>	 *</i></td></tr>
+<tr><th id="58">58</th><td><i>	 * Finally cleared for consistency on retiring the request, when</i></td></tr>
+<tr><th id="59">59</th><td><i>	 * we know the HW is no longer running this request.</i></td></tr>
+<tr><th id="60">60</th><td><i>	 *</i></td></tr>
+<tr><th id="61">61</th><td><i>	 * See i915_request_is_active()</i></td></tr>
+<tr><th id="62">62</th><td><i>	 */</i></td></tr>
+<tr><th id="63">63</th><td>	<dfn class="enum" id="I915_FENCE_FLAG_ACTIVE" title='I915_FENCE_FLAG_ACTIVE' data-ref="I915_FENCE_FLAG_ACTIVE" data-ref-filename="I915_FENCE_FLAG_ACTIVE">I915_FENCE_FLAG_ACTIVE</dfn> = <a class="enum" href="../../../../include/linux/dma-fence.h.html#DMA_FENCE_FLAG_USER_BITS" title='DMA_FENCE_FLAG_USER_BITS' data-ref="DMA_FENCE_FLAG_USER_BITS" data-ref-filename="DMA_FENCE_FLAG_USER_BITS">DMA_FENCE_FLAG_USER_BITS</a>,</td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td>	<i>/*</i></td></tr>
+<tr><th id="66">66</th><td><i>	 * I915_FENCE_FLAG_SIGNAL - this request is currently on signal_list</i></td></tr>
+<tr><th id="67">67</th><td><i>	 *</i></td></tr>
+<tr><th id="68">68</th><td><i>	 * Internal bookkeeping used by the breadcrumb code to track when</i></td></tr>
+<tr><th id="69">69</th><td><i>	 * a request is on the various signal_list.</i></td></tr>
+<tr><th id="70">70</th><td><i>	 */</i></td></tr>
+<tr><th id="71">71</th><td>	<dfn class="enum" id="I915_FENCE_FLAG_SIGNAL" title='I915_FENCE_FLAG_SIGNAL' data-ref="I915_FENCE_FLAG_SIGNAL" data-ref-filename="I915_FENCE_FLAG_SIGNAL">I915_FENCE_FLAG_SIGNAL</dfn>,</td></tr>
+<tr><th id="72">72</th><td>};</td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="75">75</th><td><i class="doc"> * Request queue structure.</i></td></tr>
+<tr><th id="76">76</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="77">77</th><td><i class="doc"> * The request queue allows us to note sequence numbers that have been emitted</i></td></tr>
+<tr><th id="78">78</th><td><i class="doc"> * and may be associated with active buffers to be retired.</i></td></tr>
+<tr><th id="79">79</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="80">80</th><td><i class="doc"> * By keeping this list, we can avoid having to do questionable sequence</i></td></tr>
+<tr><th id="81">81</th><td><i class="doc"> * number comparisons on buffer last_read|write_seqno. It also allows an</i></td></tr>
+<tr><th id="82">82</th><td><i class="doc"> * emission time to be associated with the request for tracking how far ahead</i></td></tr>
+<tr><th id="83">83</th><td><i class="doc"> * of the GPU the submission is.</i></td></tr>
+<tr><th id="84">84</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="85">85</th><td><i class="doc"> * When modifying this structure be very aware that we perform a lockless</i></td></tr>
+<tr><th id="86">86</th><td><i class="doc"> * RCU lookup of it that may race against reallocation of the struct</i></td></tr>
+<tr><th id="87">87</th><td><i class="doc"> * from the slab freelist. We intentionally do not zero the structure on</i></td></tr>
+<tr><th id="88">88</th><td><i class="doc"> * allocation so that the lookup can use the dangling pointers (and is</i></td></tr>
+<tr><th id="89">89</th><td><i class="doc"> * cogniscent that those pointers may be wrong). Instead, everything that</i></td></tr>
+<tr><th id="90">90</th><td><i class="doc"> * needs to be initialised must be done so explicitly.</i></td></tr>
+<tr><th id="91">91</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="92">92</th><td><i class="doc"> * The requests are reference counted.</i></td></tr>
+<tr><th id="93">93</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="94">94</th><td><b>struct</b> <dfn class="type def" id="i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</dfn> {</td></tr>
+<tr><th id="95">95</th><td>	<b>struct</b> <a class="type" href="../../../../include/linux/dma-fence.h.html#dma_fence" title='dma_fence' data-ref="dma_fence" data-ref-filename="dma_fence">dma_fence</a> <dfn class="decl field" id="i915_request::fence" title='i915_request::fence' data-ref="i915_request::fence" data-ref-filename="i915_request..fence">fence</dfn>;</td></tr>
+<tr><th id="96">96</th><td>	<a class="typedef" href="../../../../include/linux/spinlock_types.h.html#spinlock_t" title='spinlock_t' data-type='struct spinlock' data-ref="spinlock_t" data-ref-filename="spinlock_t">spinlock_t</a> <dfn class="decl field" id="i915_request::lock" title='i915_request::lock' data-ref="i915_request::lock" data-ref-filename="i915_request..lock">lock</dfn>;</td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td>	<i class="doc">/** On Which ring this request was generated */</i></td></tr>
+<tr><th id="99">99</th><td>	<b>struct</b> <a class="type" href="i915_drv.h.html#drm_i915_private" title='drm_i915_private' data-ref="drm_i915_private" data-ref-filename="drm_i915_private">drm_i915_private</a> *<dfn class="decl field" id="i915_request::i915" title='i915_request::i915' data-ref="i915_request::i915" data-ref-filename="i915_request..i915">i915</dfn>;</td></tr>
+<tr><th id="100">100</th><td></td></tr>
+<tr><th id="101">101</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="102">102</th><td><i class="doc">	 * Context and ring buffer related to this request</i></td></tr>
+<tr><th id="103">103</th><td><i class="doc">	 * Contexts are refcounted, so when this request is associated with a</i></td></tr>
+<tr><th id="104">104</th><td><i class="doc">	 * context, we must increment the context's refcount, to guarantee that</i></td></tr>
+<tr><th id="105">105</th><td><i class="doc">	 * it persists while any request is linked to it. Requests themselves</i></td></tr>
+<tr><th id="106">106</th><td><i class="doc">	 * are also refcounted, so the request will only be freed when the last</i></td></tr>
+<tr><th id="107">107</th><td><i class="doc">	 * reference to it is dismissed, and the code in</i></td></tr>
+<tr><th id="108">108</th><td><i class="doc">	 * i915_request_free() will then decrement the refcount on the</i></td></tr>
+<tr><th id="109">109</th><td><i class="doc">	 * context.</i></td></tr>
+<tr><th id="110">110</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="111">111</th><td>	<b>struct</b> <a class="type" href="gem/i915_gem_context_types.h.html#i915_gem_context" title='i915_gem_context' data-ref="i915_gem_context" data-ref-filename="i915_gem_context">i915_gem_context</a> *<dfn class="decl field" id="i915_request::gem_context" title='i915_request::gem_context' data-ref="i915_request::gem_context" data-ref-filename="i915_request..gem_context">gem_context</dfn>;</td></tr>
+<tr><th id="112">112</th><td>	<b>struct</b> <a class="type" href="gt/intel_engine_types.h.html#intel_engine_cs" title='intel_engine_cs' data-ref="intel_engine_cs" data-ref-filename="intel_engine_cs">intel_engine_cs</a> *<dfn class="decl field" id="i915_request::engine" title='i915_request::engine' data-ref="i915_request::engine" data-ref-filename="i915_request..engine">engine</dfn>;</td></tr>
+<tr><th id="113">113</th><td>	<b>struct</b> <a class="type" href="gt/intel_context_types.h.html#intel_context" title='intel_context' data-ref="intel_context" data-ref-filename="intel_context">intel_context</a> *<dfn class="decl field" id="i915_request::hw_context" title='i915_request::hw_context' data-ref="i915_request::hw_context" data-ref-filename="i915_request..hw_context">hw_context</dfn>;</td></tr>
+<tr><th id="114">114</th><td>	<b>struct</b> <a class="type" href="gt/intel_engine_types.h.html#intel_ring" title='intel_ring' data-ref="intel_ring" data-ref-filename="intel_ring">intel_ring</a> *<dfn class="decl field" id="i915_request::ring" title='i915_request::ring' data-ref="i915_request::ring" data-ref-filename="i915_request..ring">ring</dfn>;</td></tr>
+<tr><th id="115">115</th><td>	<b>struct</b> <a class="type" href="i915_timeline_types.h.html#i915_timeline" title='i915_timeline' data-ref="i915_timeline" data-ref-filename="i915_timeline">i915_timeline</a> *<dfn class="decl field" id="i915_request::timeline" title='i915_request::timeline' data-ref="i915_request::timeline" data-ref-filename="i915_request..timeline">timeline</dfn>;</td></tr>
+<tr><th id="116">116</th><td>	<b>struct</b> <a class="type" href="../../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="i915_request::signal_link" title='i915_request::signal_link' data-ref="i915_request::signal_link" data-ref-filename="i915_request..signal_link">signal_link</dfn>;</td></tr>
+<tr><th id="117">117</th><td></td></tr>
+<tr><th id="118">118</th><td>	<i>/*</i></td></tr>
+<tr><th id="119">119</th><td><i>	 * The rcu epoch of when this request was allocated. Used to judiciously</i></td></tr>
+<tr><th id="120">120</th><td><i>	 * apply backpressure on future allocations to ensure that under</i></td></tr>
+<tr><th id="121">121</th><td><i>	 * mempressure there is sufficient RCU ticks for us to reclaim our</i></td></tr>
+<tr><th id="122">122</th><td><i>	 * RCU protected slabs.</i></td></tr>
+<tr><th id="123">123</th><td><i>	 */</i></td></tr>
+<tr><th id="124">124</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="i915_request::rcustate" title='i915_request::rcustate' data-ref="i915_request::rcustate" data-ref-filename="i915_request..rcustate">rcustate</dfn>;</td></tr>
+<tr><th id="125">125</th><td></td></tr>
+<tr><th id="126">126</th><td>	<i>/*</i></td></tr>
+<tr><th id="127">127</th><td><i>	 * We pin the timeline-&gt;mutex while constructing the request to</i></td></tr>
+<tr><th id="128">128</th><td><i>	 * ensure that no caller accidentally drops it during construction.</i></td></tr>
+<tr><th id="129">129</th><td><i>	 * The timeline-&gt;mutex must be held to ensure that only this caller</i></td></tr>
+<tr><th id="130">130</th><td><i>	 * can use the ring and manipulate the associated timeline during</i></td></tr>
+<tr><th id="131">131</th><td><i>	 * construction.</i></td></tr>
+<tr><th id="132">132</th><td><i>	 */</i></td></tr>
+<tr><th id="133">133</th><td>	<b>struct</b> <a class="type" href="../../../../include/linux/lockdep.h.html#pin_cookie" title='pin_cookie' data-ref="pin_cookie" data-ref-filename="pin_cookie">pin_cookie</a> <dfn class="decl field" id="i915_request::cookie" title='i915_request::cookie' data-ref="i915_request::cookie" data-ref-filename="i915_request..cookie">cookie</dfn>;</td></tr>
+<tr><th id="134">134</th><td></td></tr>
+<tr><th id="135">135</th><td>	<i>/*</i></td></tr>
+<tr><th id="136">136</th><td><i>	 * Fences for the various phases in the request's lifetime.</i></td></tr>
+<tr><th id="137">137</th><td><i>	 *</i></td></tr>
+<tr><th id="138">138</th><td><i>	 * The submit fence is used to await upon all of the request's</i></td></tr>
+<tr><th id="139">139</th><td><i>	 * dependencies. When it is signaled, the request is ready to run.</i></td></tr>
+<tr><th id="140">140</th><td><i>	 * It is used by the driver to then queue the request for execution.</i></td></tr>
+<tr><th id="141">141</th><td><i>	 */</i></td></tr>
+<tr><th id="142">142</th><td>	<b>struct</b> <a class="type" href="i915_sw_fence.h.html#i915_sw_fence" title='i915_sw_fence' data-ref="i915_sw_fence" data-ref-filename="i915_sw_fence">i915_sw_fence</a> <dfn class="decl field" id="i915_request::submit" title='i915_request::submit' data-ref="i915_request::submit" data-ref-filename="i915_request..submit">submit</dfn>;</td></tr>
+<tr><th id="143">143</th><td>	<b>union</b> {</td></tr>
+<tr><th id="144">144</th><td>		<a class="typedef" href="../../../../include/linux/wait.h.html#wait_queue_entry_t" title='wait_queue_entry_t' data-type='struct wait_queue_entry' data-ref="wait_queue_entry_t" data-ref-filename="wait_queue_entry_t">wait_queue_entry_t</a> <dfn class="decl field" id="i915_request::(anonymous)::submitq" title='i915_request::(anonymous union)::submitq' data-ref="i915_request::(anonymous)::submitq" data-ref-filename="i915_request..(anonymous)..submitq">submitq</dfn>;</td></tr>
+<tr><th id="145">145</th><td>		<b>struct</b> <a class="type" href="i915_sw_fence.h.html#i915_sw_dma_fence_cb" title='i915_sw_dma_fence_cb' data-ref="i915_sw_dma_fence_cb" data-ref-filename="i915_sw_dma_fence_cb">i915_sw_dma_fence_cb</a> <dfn class="decl field" id="i915_request::(anonymous)::dmaq" title='i915_request::(anonymous union)::dmaq' data-ref="i915_request::(anonymous)::dmaq" data-ref-filename="i915_request..(anonymous)..dmaq">dmaq</dfn>;</td></tr>
+<tr><th id="146">146</th><td>	};</td></tr>
+<tr><th id="147">147</th><td>	<b>struct</b> <a class="type" href="../../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="i915_request::execute_cb" title='i915_request::execute_cb' data-ref="i915_request::execute_cb" data-ref-filename="i915_request..execute_cb">execute_cb</dfn>;</td></tr>
+<tr><th id="148">148</th><td>	<b>struct</b> <a class="type" href="i915_sw_fence.h.html#i915_sw_fence" title='i915_sw_fence' data-ref="i915_sw_fence" data-ref-filename="i915_sw_fence">i915_sw_fence</a> <dfn class="decl field" id="i915_request::semaphore" title='i915_request::semaphore' data-ref="i915_request::semaphore" data-ref-filename="i915_request..semaphore">semaphore</dfn>;</td></tr>
+<tr><th id="149">149</th><td></td></tr>
+<tr><th id="150">150</th><td>	<i>/*</i></td></tr>
+<tr><th id="151">151</th><td><i>	 * A list of everyone we wait upon, and everyone who waits upon us.</i></td></tr>
+<tr><th id="152">152</th><td><i>	 * Even though we will not be submitted to the hardware before the</i></td></tr>
+<tr><th id="153">153</th><td><i>	 * submit fence is signaled (it waits for all external events as well</i></td></tr>
+<tr><th id="154">154</th><td><i>	 * as our own requests), the scheduler still needs to know the</i></td></tr>
+<tr><th id="155">155</th><td><i>	 * dependency tree for the lifetime of the request (from execbuf</i></td></tr>
+<tr><th id="156">156</th><td><i>	 * to retirement), i.e. bidirectional dependency information for the</i></td></tr>
+<tr><th id="157">157</th><td><i>	 * request not tied to individual fences.</i></td></tr>
+<tr><th id="158">158</th><td><i>	 */</i></td></tr>
+<tr><th id="159">159</th><td>	<b>struct</b> <a class="type" href="i915_scheduler_types.h.html#i915_sched_node" title='i915_sched_node' data-ref="i915_sched_node" data-ref-filename="i915_sched_node">i915_sched_node</a> <dfn class="decl field" id="i915_request::sched" title='i915_request::sched' data-ref="i915_request::sched" data-ref-filename="i915_request..sched">sched</dfn>;</td></tr>
+<tr><th id="160">160</th><td>	<b>struct</b> <a class="type" href="i915_scheduler_types.h.html#i915_dependency" title='i915_dependency' data-ref="i915_dependency" data-ref-filename="i915_dependency">i915_dependency</a> <dfn class="decl field" id="i915_request::dep" title='i915_request::dep' data-ref="i915_request::dep" data-ref-filename="i915_request..dep">dep</dfn>;</td></tr>
+<tr><th id="161">161</th><td>	<a class="typedef" href="gt/intel_engine_types.h.html#intel_engine_mask_t" title='intel_engine_mask_t' data-type='u8' data-ref="intel_engine_mask_t" data-ref-filename="intel_engine_mask_t">intel_engine_mask_t</a> <dfn class="decl field" id="i915_request::execution_mask" title='i915_request::execution_mask' data-ref="i915_request::execution_mask" data-ref-filename="i915_request..execution_mask">execution_mask</dfn>;</td></tr>
+<tr><th id="162">162</th><td></td></tr>
+<tr><th id="163">163</th><td>	<i>/*</i></td></tr>
+<tr><th id="164">164</th><td><i>	 * A convenience pointer to the current breadcrumb value stored in</i></td></tr>
+<tr><th id="165">165</th><td><i>	 * the HW status page (or our timeline's local equivalent). The full</i></td></tr>
+<tr><th id="166">166</th><td><i>	 * path would be rq-&gt;hw_context-&gt;ring-&gt;timeline-&gt;hwsp_seqno.</i></td></tr>
+<tr><th id="167">167</th><td><i>	 */</i></td></tr>
+<tr><th id="168">168</th><td>	<em>const</em> <a class="typedef" href="../../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> *<dfn class="decl field" id="i915_request::hwsp_seqno" title='i915_request::hwsp_seqno' data-ref="i915_request::hwsp_seqno" data-ref-filename="i915_request..hwsp_seqno">hwsp_seqno</dfn>;</td></tr>
+<tr><th id="169">169</th><td></td></tr>
+<tr><th id="170">170</th><td>	<i>/*</i></td></tr>
+<tr><th id="171">171</th><td><i>	 * If we need to access the timeline's seqno for this request in</i></td></tr>
+<tr><th id="172">172</th><td><i>	 * another request, we need to keep a read reference to this associated</i></td></tr>
+<tr><th id="173">173</th><td><i>	 * cacheline, so that we do not free and recycle it before the foreign</i></td></tr>
+<tr><th id="174">174</th><td><i>	 * observers have completed. Hence, we keep a pointer to the cacheline</i></td></tr>
+<tr><th id="175">175</th><td><i>	 * inside the timeline's HWSP vma, but it is only valid while this</i></td></tr>
+<tr><th id="176">176</th><td><i>	 * request has not completed and guarded by the timeline mutex.</i></td></tr>
+<tr><th id="177">177</th><td><i>	 */</i></td></tr>
+<tr><th id="178">178</th><td>	<b>struct</b> <a class="type" href="i915_timeline_types.h.html#i915_timeline_cacheline" title='i915_timeline_cacheline' data-ref="i915_timeline_cacheline" data-ref-filename="i915_timeline_cacheline">i915_timeline_cacheline</a> *<dfn class="decl field" id="i915_request::hwsp_cacheline" title='i915_request::hwsp_cacheline' data-ref="i915_request::hwsp_cacheline" data-ref-filename="i915_request..hwsp_cacheline">hwsp_cacheline</dfn>;</td></tr>
+<tr><th id="179">179</th><td></td></tr>
+<tr><th id="180">180</th><td>	<i class="doc">/** Position in the ring of the start of the request */</i></td></tr>
+<tr><th id="181">181</th><td>	<a class="typedef" href="../../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl field" id="i915_request::head" title='i915_request::head' data-ref="i915_request::head" data-ref-filename="i915_request..head">head</dfn>;</td></tr>
+<tr><th id="182">182</th><td></td></tr>
+<tr><th id="183">183</th><td>	<i class="doc">/** Position in the ring of the start of the user packets */</i></td></tr>
+<tr><th id="184">184</th><td>	<a class="typedef" href="../../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl field" id="i915_request::infix" title='i915_request::infix' data-ref="i915_request::infix" data-ref-filename="i915_request..infix">infix</dfn>;</td></tr>
+<tr><th id="185">185</th><td></td></tr>
+<tr><th id="186">186</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="187">187</th><td><i class="doc">	 * Position in the ring of the start of the postfix.</i></td></tr>
+<tr><th id="188">188</th><td><i class="doc">	 * This is required to calculate the maximum available ring space</i></td></tr>
+<tr><th id="189">189</th><td><i class="doc">	 * without overwriting the postfix.</i></td></tr>
+<tr><th id="190">190</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="191">191</th><td>	<a class="typedef" href="../../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl field" id="i915_request::postfix" title='i915_request::postfix' data-ref="i915_request::postfix" data-ref-filename="i915_request..postfix">postfix</dfn>;</td></tr>
+<tr><th id="192">192</th><td></td></tr>
+<tr><th id="193">193</th><td>	<i class="doc">/** Position in the ring of the end of the whole request */</i></td></tr>
+<tr><th id="194">194</th><td>	<a class="typedef" href="../../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl field" id="i915_request::tail" title='i915_request::tail' data-ref="i915_request::tail" data-ref-filename="i915_request..tail">tail</dfn>;</td></tr>
+<tr><th id="195">195</th><td></td></tr>
+<tr><th id="196">196</th><td>	<i class="doc">/** Position in the ring of the end of any workarounds after the tail */</i></td></tr>
+<tr><th id="197">197</th><td>	<a class="typedef" href="../../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl field" id="i915_request::wa_tail" title='i915_request::wa_tail' data-ref="i915_request::wa_tail" data-ref-filename="i915_request..wa_tail">wa_tail</dfn>;</td></tr>
+<tr><th id="198">198</th><td></td></tr>
+<tr><th id="199">199</th><td>	<i class="doc">/** Preallocate space in the ring for the emitting the request */</i></td></tr>
+<tr><th id="200">200</th><td>	<a class="typedef" href="../../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl field" id="i915_request::reserved_space" title='i915_request::reserved_space' data-ref="i915_request::reserved_space" data-ref-filename="i915_request..reserved_space">reserved_space</dfn>;</td></tr>
+<tr><th id="201">201</th><td></td></tr>
+<tr><th id="202">202</th><td>	<i class="doc">/** Batch buffer related to this request if any (used for</i></td></tr>
+<tr><th id="203">203</th><td><i class="doc">	 * error state dump only).</i></td></tr>
+<tr><th id="204">204</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="205">205</th><td>	<b>struct</b> <a class="type" href="i915_vma.h.html#i915_vma" title='i915_vma' data-ref="i915_vma" data-ref-filename="i915_vma">i915_vma</a> *<dfn class="decl field" id="i915_request::batch" title='i915_request::batch' data-ref="i915_request::batch" data-ref-filename="i915_request..batch">batch</dfn>;</td></tr>
+<tr><th id="206">206</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="207">207</th><td><i class="doc">	 * Additional buffers requested by userspace to be captured upon</i></td></tr>
+<tr><th id="208">208</th><td><i class="doc">	 * a GPU hang. The vma/obj on this list are protected by their</i></td></tr>
+<tr><th id="209">209</th><td><i class="doc">	 * active reference - all objects on this list must also be</i></td></tr>
+<tr><th id="210">210</th><td><i class="doc">	 * on the active_list (of their final request).</i></td></tr>
+<tr><th id="211">211</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="212">212</th><td>	<b>struct</b> <a class="type" href="#i915_capture_list" title='i915_capture_list' data-ref="i915_capture_list" data-ref-filename="i915_capture_list">i915_capture_list</a> *<dfn class="decl field" id="i915_request::capture_list" title='i915_request::capture_list' data-ref="i915_request::capture_list" data-ref-filename="i915_request..capture_list">capture_list</dfn>;</td></tr>
+<tr><th id="213">213</th><td>	<b>struct</b> <a class="type" href="../../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="i915_request::active_list" title='i915_request::active_list' data-ref="i915_request::active_list" data-ref-filename="i915_request..active_list">active_list</dfn>;</td></tr>
+<tr><th id="214">214</th><td></td></tr>
+<tr><th id="215">215</th><td>	<i class="doc">/** Time at which this request was emitted, in jiffies. */</i></td></tr>
+<tr><th id="216">216</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="i915_request::emitted_jiffies" title='i915_request::emitted_jiffies' data-ref="i915_request::emitted_jiffies" data-ref-filename="i915_request..emitted_jiffies">emitted_jiffies</dfn>;</td></tr>
+<tr><th id="217">217</th><td></td></tr>
+<tr><th id="218">218</th><td>	<a class="typedef" href="../../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="i915_request::waitboost" title='i915_request::waitboost' data-ref="i915_request::waitboost" data-ref-filename="i915_request..waitboost">waitboost</dfn>;</td></tr>
+<tr><th id="219">219</th><td></td></tr>
+<tr><th id="220">220</th><td>	<i class="doc">/** timeline-&gt;request entry for this request */</i></td></tr>
+<tr><th id="221">221</th><td>	<b>struct</b> <a class="type" href="../../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="i915_request::link" title='i915_request::link' data-ref="i915_request::link" data-ref-filename="i915_request..link">link</dfn>;</td></tr>
+<tr><th id="222">222</th><td></td></tr>
+<tr><th id="223">223</th><td>	<i class="doc">/** ring-&gt;request_list entry for this request */</i></td></tr>
+<tr><th id="224">224</th><td>	<b>struct</b> <a class="type" href="../../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="i915_request::ring_link" title='i915_request::ring_link' data-ref="i915_request::ring_link" data-ref-filename="i915_request..ring_link">ring_link</dfn>;</td></tr>
+<tr><th id="225">225</th><td></td></tr>
+<tr><th id="226">226</th><td>	<b>struct</b> <a class="type" href="i915_drv.h.html#drm_i915_file_private" title='drm_i915_file_private' data-ref="drm_i915_file_private" data-ref-filename="drm_i915_file_private" id="drm_i915_file_private"><a class="type" href="i915_drv.h.html#drm_i915_file_private" title='drm_i915_file_private' data-ref="drm_i915_file_private" data-ref-filename="drm_i915_file_private">drm_i915_file_private</a></a> *<dfn class="decl field" id="i915_request::file_priv" title='i915_request::file_priv' data-ref="i915_request::file_priv" data-ref-filename="i915_request..file_priv">file_priv</dfn>;</td></tr>
+<tr><th id="227">227</th><td>	<i class="doc">/** file_priv list entry for this request */</i></td></tr>
+<tr><th id="228">228</th><td>	<b>struct</b> <a class="type" href="../../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="i915_request::client_link" title='i915_request::client_link' data-ref="i915_request::client_link" data-ref-filename="i915_request..client_link">client_link</dfn>;</td></tr>
+<tr><th id="229">229</th><td></td></tr>
+<tr><th id="230">230</th><td>	<a class="macro" href="i915_selftest.h.html#86" title="" data-ref="_M/I915_SELFTEST_DECLARE">I915_SELFTEST_DECLARE</a>(<b>struct</b> {</td></tr>
+<tr><th id="231">231</th><td>		<b>struct</b> list_head link;</td></tr>
+<tr><th id="232">232</th><td>		<em>unsigned</em> <em>long</em> delay;</td></tr>
+<tr><th id="233">233</th><td>	} mock;)</td></tr>
+<tr><th id="234">234</th><td>};</td></tr>
+<tr><th id="235">235</th><td></td></tr>
+<tr><th id="236">236</th><td><u>#define <dfn class="macro" id="_M/I915_FENCE_GFP" data-ref="_M/I915_FENCE_GFP">I915_FENCE_GFP</dfn> (GFP_KERNEL | __GFP_RETRY_MAYFAIL | __GFP_NOWARN)</u></td></tr>
+<tr><th id="237">237</th><td></td></tr>
+<tr><th id="238">238</th><td><b>extern</b> <em>const</em> <b>struct</b> <a class="type" href="../../../../include/linux/dma-fence.h.html#dma_fence_ops" title='dma_fence_ops' data-ref="dma_fence_ops" data-ref-filename="dma_fence_ops">dma_fence_ops</a> <dfn class="decl" id="i915_fence_ops" title='i915_fence_ops' data-ref="i915_fence_ops" data-ref-filename="i915_fence_ops">i915_fence_ops</dfn>;</td></tr>
+<tr><th id="239">239</th><td></td></tr>
+<tr><th id="240">240</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="dma_fence_is_i915" title='dma_fence_is_i915' data-ref="dma_fence_is_i915" data-ref-filename="dma_fence_is_i915">dma_fence_is_i915</dfn>(<em>const</em> <b>struct</b> <a class="type" href="../../../../include/linux/dma-fence.h.html#dma_fence" title='dma_fence' data-ref="dma_fence" data-ref-filename="dma_fence">dma_fence</a> *<dfn class="local col1 decl" id="1541fence" title='fence' data-type='const struct dma_fence *' data-ref="1541fence" data-ref-filename="1541fence">fence</dfn>)</td></tr>
+<tr><th id="241">241</th><td>{</td></tr>
+<tr><th id="242">242</th><td>	<b>return</b> <a class="local col1 ref" href="#1541fence" title='fence' data-ref="1541fence" data-ref-filename="1541fence">fence</a>-&gt;<a class="ref field" href="../../../../include/linux/dma-fence.h.html#dma_fence::ops" title='dma_fence::ops' data-ref="dma_fence::ops" data-ref-filename="dma_fence..ops">ops</a> == &amp;<a class="ref" href="#i915_fence_ops" title='i915_fence_ops' data-ref="i915_fence_ops" data-ref-filename="i915_fence_ops">i915_fence_ops</a>;</td></tr>
+<tr><th id="243">243</th><td>}</td></tr>
+<tr><th id="244">244</th><td></td></tr>
+<tr><th id="245">245</th><td><b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> * <a class="macro" href="../../../../include/linux/compiler_types.h.html#108" title="__attribute__((__warn_unused_result__))" data-ref="_M/__must_check">__must_check</a></td></tr>
+<tr><th id="246">246</th><td><dfn class="decl fn" id="__i915_request_create" title='__i915_request_create' data-ref="__i915_request_create" data-ref-filename="__i915_request_create">__i915_request_create</dfn>(<b>struct</b> <a class="type" href="gt/intel_context_types.h.html#intel_context" title='intel_context' data-ref="intel_context" data-ref-filename="intel_context">intel_context</a> *<dfn class="local col2 decl" id="1542ce" title='ce' data-type='struct intel_context *' data-ref="1542ce" data-ref-filename="1542ce">ce</dfn>, <a class="typedef" href="../../../../include/linux/types.h.html#gfp_t" title='gfp_t' data-type='unsigned int' data-ref="gfp_t" data-ref-filename="gfp_t">gfp_t</a> <dfn class="local col3 decl" id="1543gfp" title='gfp' data-type='gfp_t' data-ref="1543gfp" data-ref-filename="1543gfp">gfp</dfn>);</td></tr>
+<tr><th id="247">247</th><td><b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> * <a class="macro" href="../../../../include/linux/compiler_types.h.html#108" title="__attribute__((__warn_unused_result__))" data-ref="_M/__must_check">__must_check</a></td></tr>
+<tr><th id="248">248</th><td><dfn class="decl fn" id="i915_request_create" title='i915_request_create' data-ref="i915_request_create" data-ref-filename="i915_request_create">i915_request_create</dfn>(<b>struct</b> <a class="type" href="gt/intel_context_types.h.html#intel_context" title='intel_context' data-ref="intel_context" data-ref-filename="intel_context">intel_context</a> *<dfn class="local col4 decl" id="1544ce" title='ce' data-type='struct intel_context *' data-ref="1544ce" data-ref-filename="1544ce">ce</dfn>);</td></tr>
+<tr><th id="249">249</th><td></td></tr>
+<tr><th id="250">250</th><td><b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="decl fn" id="__i915_request_commit" title='__i915_request_commit' data-ref="__i915_request_commit" data-ref-filename="__i915_request_commit">__i915_request_commit</dfn>(<b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col5 decl" id="1545request" title='request' data-type='struct i915_request *' data-ref="1545request" data-ref-filename="1545request">request</dfn>);</td></tr>
+<tr><th id="251">251</th><td></td></tr>
+<tr><th id="252">252</th><td><em>void</em> <dfn class="decl fn" id="i915_request_retire_upto" title='i915_request_retire_upto' data-ref="i915_request_retire_upto" data-ref-filename="i915_request_retire_upto">i915_request_retire_upto</dfn>(<b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col6 decl" id="1546rq" title='rq' data-type='struct i915_request *' data-ref="1546rq" data-ref-filename="1546rq">rq</dfn>);</td></tr>
+<tr><th id="253">253</th><td></td></tr>
+<tr><th id="254">254</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *</td></tr>
+<tr><th id="255">255</th><td><dfn class="decl def fn" id="to_request" title='to_request' data-ref="to_request" data-ref-filename="to_request">to_request</dfn>(<b>struct</b> <a class="type" href="../../../../include/linux/dma-fence.h.html#dma_fence" title='dma_fence' data-ref="dma_fence" data-ref-filename="dma_fence">dma_fence</a> *<dfn class="local col7 decl" id="1547fence" title='fence' data-type='struct dma_fence *' data-ref="1547fence" data-ref-filename="1547fence">fence</dfn>)</td></tr>
+<tr><th id="256">256</th><td>{</td></tr>
+<tr><th id="257">257</th><td>	<i>/* We assume that NULL fence/request are interoperable */</i></td></tr>
+<tr><th id="258">258</th><td>	<a class="macro" href="../../../../include/linux/build_bug.h.html#49" title="do { extern void __compiletime_assert_258(void) ; if (!(!(__builtin_offsetof(struct i915_request, fence) != 0))) __compiletime_assert_258(); } while (0)" data-ref="_M/BUILD_BUG_ON">BUILD_BUG_ON</a>(<a class="macro" href="../../../../include/linux/stddef.h.html#17" title="__builtin_offsetof(struct i915_request, fence)" data-ref="_M/offsetof">offsetof</a>(<b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a>, fence) != <var>0</var>);</td></tr>
+<tr><th id="259">259</th><td>	<a class="macro" href="i915_gem.h.html#56" title="((void)(sizeof(( long)(fence &amp;&amp; !dma_fence_is_i915(fence)))))" data-ref="_M/GEM_BUG_ON">GEM_BUG_ON</a>(<a class="local col7 ref" href="#1547fence" title='fence' data-ref="1547fence" data-ref-filename="1547fence">fence</a> &amp;&amp; !<a class="ref fn" href="#dma_fence_is_i915" title='dma_fence_is_i915' data-ref="dma_fence_is_i915" data-ref-filename="dma_fence_is_i915">dma_fence_is_i915</a>(<a class="local col7 ref" href="#1547fence" title='fence' data-ref="1547fence" data-ref-filename="1547fence">fence</a>));</td></tr>
+<tr><th id="260">260</th><td>	<b>return</b> <a class="macro" href="../../../../include/linux/kernel.h.html#971" title="({ void *__mptr = (void *)(fence); do { extern void __compiletime_assert_260(void) ; if (!(!(!__builtin_types_compatible_p(typeof(*(fence)), typeof(((struct i915_request *)0)-&gt;fence)) &amp;&amp; !__builtin_types_compatible_p(typeof(*(fence)), typeof(void))))) __compiletime_assert_260(); } while (0); ((struct i915_request *)(__mptr - __builtin_offsetof(struct i915_request, fence))); })" data-ref="_M/container_of">container_of</a>(<a class="local col7 ref" href="#1547fence" title='fence' data-ref="1547fence" data-ref-filename="1547fence">fence</a>, <b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a>, <a class="ref field" href="#i915_request::fence" title='i915_request::fence' data-ref="i915_request::fence" data-ref-filename="i915_request..fence">fence</a>);</td></tr>
+<tr><th id="261">261</th><td>}</td></tr>
+<tr><th id="262">262</th><td></td></tr>
+<tr><th id="263">263</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *</td></tr>
+<tr><th id="264">264</th><td><dfn class="decl def fn" id="i915_request_get" title='i915_request_get' data-ref="i915_request_get" data-ref-filename="i915_request_get">i915_request_get</dfn>(<b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col8 decl" id="1548rq" title='rq' data-type='struct i915_request *' data-ref="1548rq" data-ref-filename="1548rq">rq</dfn>)</td></tr>
+<tr><th id="265">265</th><td>{</td></tr>
+<tr><th id="266">266</th><td>	<b>return</b> <a class="ref fn" href="#to_request" title='to_request' data-ref="to_request" data-ref-filename="to_request">to_request</a>(<a class="ref fn" href="../../../../include/linux/dma-fence.h.html#dma_fence_get" title='dma_fence_get' data-ref="dma_fence_get" data-ref-filename="dma_fence_get">dma_fence_get</a>(&amp;<a class="local col8 ref" href="#1548rq" title='rq' data-ref="1548rq" data-ref-filename="1548rq">rq</a>-&gt;<a class="ref field" href="#i915_request::fence" title='i915_request::fence' data-ref="i915_request::fence" data-ref-filename="i915_request..fence">fence</a>));</td></tr>
+<tr><th id="267">267</th><td>}</td></tr>
+<tr><th id="268">268</th><td></td></tr>
+<tr><th id="269">269</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *</td></tr>
+<tr><th id="270">270</th><td><dfn class="decl def fn" id="i915_request_get_rcu" title='i915_request_get_rcu' data-ref="i915_request_get_rcu" data-ref-filename="i915_request_get_rcu">i915_request_get_rcu</dfn>(<b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col9 decl" id="1549rq" title='rq' data-type='struct i915_request *' data-ref="1549rq" data-ref-filename="1549rq">rq</dfn>)</td></tr>
+<tr><th id="271">271</th><td>{</td></tr>
+<tr><th id="272">272</th><td>	<b>return</b> <a class="ref fn" href="#to_request" title='to_request' data-ref="to_request" data-ref-filename="to_request">to_request</a>(<a class="ref fn" href="../../../../include/linux/dma-fence.h.html#dma_fence_get_rcu" title='dma_fence_get_rcu' data-ref="dma_fence_get_rcu" data-ref-filename="dma_fence_get_rcu">dma_fence_get_rcu</a>(&amp;<a class="local col9 ref" href="#1549rq" title='rq' data-ref="1549rq" data-ref-filename="1549rq">rq</a>-&gt;<a class="ref field" href="#i915_request::fence" title='i915_request::fence' data-ref="i915_request::fence" data-ref-filename="i915_request..fence">fence</a>));</td></tr>
+<tr><th id="273">273</th><td>}</td></tr>
+<tr><th id="274">274</th><td></td></tr>
+<tr><th id="275">275</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em></td></tr>
+<tr><th id="276">276</th><td><dfn class="decl def fn" id="i915_request_put" title='i915_request_put' data-ref="i915_request_put" data-ref-filename="i915_request_put">i915_request_put</dfn>(<b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col0 decl" id="1550rq" title='rq' data-type='struct i915_request *' data-ref="1550rq" data-ref-filename="1550rq">rq</dfn>)</td></tr>
+<tr><th id="277">277</th><td>{</td></tr>
+<tr><th id="278">278</th><td>	<a class="ref fn" href="../../../../include/linux/dma-fence.h.html#dma_fence_put" title='dma_fence_put' data-ref="dma_fence_put" data-ref-filename="dma_fence_put">dma_fence_put</a>(&amp;<a class="local col0 ref" href="#1550rq" title='rq' data-ref="1550rq" data-ref-filename="1550rq">rq</a>-&gt;<a class="ref field" href="#i915_request::fence" title='i915_request::fence' data-ref="i915_request::fence" data-ref-filename="i915_request..fence">fence</a>);</td></tr>
+<tr><th id="279">279</th><td>}</td></tr>
+<tr><th id="280">280</th><td></td></tr>
+<tr><th id="281">281</th><td><em>int</em> <dfn class="decl fn" id="i915_request_await_object" title='i915_request_await_object' data-ref="i915_request_await_object" data-ref-filename="i915_request_await_object">i915_request_await_object</dfn>(<b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col1 decl" id="1551to" title='to' data-type='struct i915_request *' data-ref="1551to" data-ref-filename="1551to">to</dfn>,</td></tr>
+<tr><th id="282">282</th><td>			      <b>struct</b> <a class="type" href="gem/i915_gem_object_types.h.html#drm_i915_gem_object" title='drm_i915_gem_object' data-ref="drm_i915_gem_object" data-ref-filename="drm_i915_gem_object">drm_i915_gem_object</a> *<dfn class="local col2 decl" id="1552obj" title='obj' data-type='struct drm_i915_gem_object *' data-ref="1552obj" data-ref-filename="1552obj">obj</dfn>,</td></tr>
+<tr><th id="283">283</th><td>			      <a class="typedef" href="../../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col3 decl" id="1553write" title='write' data-type='bool' data-ref="1553write" data-ref-filename="1553write">write</dfn>);</td></tr>
+<tr><th id="284">284</th><td><em>int</em> <dfn class="decl fn" id="i915_request_await_dma_fence" title='i915_request_await_dma_fence' data-ref="i915_request_await_dma_fence" data-ref-filename="i915_request_await_dma_fence">i915_request_await_dma_fence</dfn>(<b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col4 decl" id="1554rq" title='rq' data-type='struct i915_request *' data-ref="1554rq" data-ref-filename="1554rq">rq</dfn>,</td></tr>
+<tr><th id="285">285</th><td>				 <b>struct</b> <a class="type" href="../../../../include/linux/dma-fence.h.html#dma_fence" title='dma_fence' data-ref="dma_fence" data-ref-filename="dma_fence">dma_fence</a> *<dfn class="local col5 decl" id="1555fence" title='fence' data-type='struct dma_fence *' data-ref="1555fence" data-ref-filename="1555fence">fence</dfn>);</td></tr>
+<tr><th id="286">286</th><td><em>int</em> <dfn class="decl fn" id="i915_request_await_execution" title='i915_request_await_execution' data-ref="i915_request_await_execution" data-ref-filename="i915_request_await_execution">i915_request_await_execution</dfn>(<b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col6 decl" id="1556rq" title='rq' data-type='struct i915_request *' data-ref="1556rq" data-ref-filename="1556rq">rq</dfn>,</td></tr>
+<tr><th id="287">287</th><td>				 <b>struct</b> <a class="type" href="../../../../include/linux/dma-fence.h.html#dma_fence" title='dma_fence' data-ref="dma_fence" data-ref-filename="dma_fence">dma_fence</a> *<dfn class="local col7 decl" id="1557fence" title='fence' data-type='struct dma_fence *' data-ref="1557fence" data-ref-filename="1557fence">fence</dfn>,</td></tr>
+<tr><th id="288">288</th><td>				 <em>void</em> (*<dfn class="local col8 decl" id="1558hook" title='hook' data-type='void (*)(struct i915_request *, struct dma_fence *)' data-ref="1558hook" data-ref-filename="1558hook">hook</dfn>)(<b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col9 decl" id="1559rq" title='rq' data-type='struct i915_request *' data-ref="1559rq" data-ref-filename="1559rq">rq</dfn>,</td></tr>
+<tr><th id="289">289</th><td>					      <b>struct</b> <a class="type" href="../../../../include/linux/dma-fence.h.html#dma_fence" title='dma_fence' data-ref="dma_fence" data-ref-filename="dma_fence">dma_fence</a> *<dfn class="local col0 decl" id="1560signal" title='signal' data-type='struct dma_fence *' data-ref="1560signal" data-ref-filename="1560signal">signal</dfn>));</td></tr>
+<tr><th id="290">290</th><td></td></tr>
+<tr><th id="291">291</th><td><em>void</em> <dfn class="decl fn" id="i915_request_add" title='i915_request_add' data-ref="i915_request_add" data-ref-filename="i915_request_add">i915_request_add</dfn>(<b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col1 decl" id="1561rq" title='rq' data-type='struct i915_request *' data-ref="1561rq" data-ref-filename="1561rq">rq</dfn>);</td></tr>
+<tr><th id="292">292</th><td></td></tr>
+<tr><th id="293">293</th><td><em>void</em> <dfn class="decl fn" id="__i915_request_submit" title='__i915_request_submit' data-ref="__i915_request_submit" data-ref-filename="__i915_request_submit">__i915_request_submit</dfn>(<b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col2 decl" id="1562request" title='request' data-type='struct i915_request *' data-ref="1562request" data-ref-filename="1562request">request</dfn>);</td></tr>
+<tr><th id="294">294</th><td><em>void</em> <dfn class="decl fn" id="i915_request_submit" title='i915_request_submit' data-ref="i915_request_submit" data-ref-filename="i915_request_submit">i915_request_submit</dfn>(<b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col3 decl" id="1563request" title='request' data-type='struct i915_request *' data-ref="1563request" data-ref-filename="1563request">request</dfn>);</td></tr>
+<tr><th id="295">295</th><td></td></tr>
+<tr><th id="296">296</th><td><em>void</em> <dfn class="decl fn" id="i915_request_skip" title='i915_request_skip' data-ref="i915_request_skip" data-ref-filename="i915_request_skip">i915_request_skip</dfn>(<b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col4 decl" id="1564request" title='request' data-type='struct i915_request *' data-ref="1564request" data-ref-filename="1564request">request</dfn>, <em>int</em> <dfn class="local col5 decl" id="1565error" title='error' data-type='int' data-ref="1565error" data-ref-filename="1565error">error</dfn>);</td></tr>
+<tr><th id="297">297</th><td></td></tr>
+<tr><th id="298">298</th><td><em>void</em> <dfn class="decl fn" id="__i915_request_unsubmit" title='__i915_request_unsubmit' data-ref="__i915_request_unsubmit" data-ref-filename="__i915_request_unsubmit">__i915_request_unsubmit</dfn>(<b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col6 decl" id="1566request" title='request' data-type='struct i915_request *' data-ref="1566request" data-ref-filename="1566request">request</dfn>);</td></tr>
+<tr><th id="299">299</th><td><em>void</em> <dfn class="decl fn" id="i915_request_unsubmit" title='i915_request_unsubmit' data-ref="i915_request_unsubmit" data-ref-filename="i915_request_unsubmit">i915_request_unsubmit</dfn>(<b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col7 decl" id="1567request" title='request' data-type='struct i915_request *' data-ref="1567request" data-ref-filename="1567request">request</dfn>);</td></tr>
+<tr><th id="300">300</th><td></td></tr>
+<tr><th id="301">301</th><td><i>/* Note: part of the intel_breadcrumbs family */</i></td></tr>
+<tr><th id="302">302</th><td><a class="typedef" href="../../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl fn" id="i915_request_enable_breadcrumb" title='i915_request_enable_breadcrumb' data-ref="i915_request_enable_breadcrumb" data-ref-filename="i915_request_enable_breadcrumb">i915_request_enable_breadcrumb</dfn>(<b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col8 decl" id="1568request" title='request' data-type='struct i915_request *' data-ref="1568request" data-ref-filename="1568request">request</dfn>);</td></tr>
+<tr><th id="303">303</th><td><em>void</em> <dfn class="decl fn" id="i915_request_cancel_breadcrumb" title='i915_request_cancel_breadcrumb' data-ref="i915_request_cancel_breadcrumb" data-ref-filename="i915_request_cancel_breadcrumb">i915_request_cancel_breadcrumb</dfn>(<b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col9 decl" id="1569request" title='request' data-type='struct i915_request *' data-ref="1569request" data-ref-filename="1569request">request</dfn>);</td></tr>
+<tr><th id="304">304</th><td></td></tr>
+<tr><th id="305">305</th><td><em>long</em> <dfn class="decl fn" id="i915_request_wait" title='i915_request_wait' data-ref="i915_request_wait" data-ref-filename="i915_request_wait">i915_request_wait</dfn>(<b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col0 decl" id="1570rq" title='rq' data-type='struct i915_request *' data-ref="1570rq" data-ref-filename="1570rq">rq</dfn>,</td></tr>
+<tr><th id="306">306</th><td>		       <em>unsigned</em> <em>int</em> <dfn class="local col1 decl" id="1571flags" title='flags' data-type='unsigned int' data-ref="1571flags" data-ref-filename="1571flags">flags</dfn>,</td></tr>
+<tr><th id="307">307</th><td>		       <em>long</em> <dfn class="local col2 decl" id="1572timeout" title='timeout' data-type='long' data-ref="1572timeout" data-ref-filename="1572timeout">timeout</dfn>)</td></tr>
+<tr><th id="308">308</th><td>	<b>__attribute__</b>((nonnull(<var>1</var>)));</td></tr>
+<tr><th id="309">309</th><td><u>#define <dfn class="macro" id="_M/I915_WAIT_INTERRUPTIBLE" data-ref="_M/I915_WAIT_INTERRUPTIBLE">I915_WAIT_INTERRUPTIBLE</dfn>	BIT(0)</u></td></tr>
+<tr><th id="310">310</th><td><u>#define <dfn class="macro" id="_M/I915_WAIT_LOCKED" data-ref="_M/I915_WAIT_LOCKED">I915_WAIT_LOCKED</dfn>	BIT(1) /* struct_mutex held, handle GPU reset */</u></td></tr>
+<tr><th id="311">311</th><td><u>#define <dfn class="macro" id="_M/I915_WAIT_PRIORITY" data-ref="_M/I915_WAIT_PRIORITY">I915_WAIT_PRIORITY</dfn>	BIT(2) /* small priority bump for the request */</u></td></tr>
+<tr><th id="312">312</th><td><u>#define <dfn class="macro" id="_M/I915_WAIT_ALL" data-ref="_M/I915_WAIT_ALL">I915_WAIT_ALL</dfn>		BIT(3) /* used by i915_gem_object_wait() */</u></td></tr>
+<tr><th id="313">313</th><td><u>#define <dfn class="macro" id="_M/I915_WAIT_FOR_IDLE_BOOST" data-ref="_M/I915_WAIT_FOR_IDLE_BOOST">I915_WAIT_FOR_IDLE_BOOST</dfn> BIT(4)</u></td></tr>
+<tr><th id="314">314</th><td></td></tr>
+<tr><th id="315">315</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="i915_request_signaled" title='i915_request_signaled' data-ref="i915_request_signaled" data-ref-filename="i915_request_signaled">i915_request_signaled</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col3 decl" id="1573rq" title='rq' data-type='const struct i915_request *' data-ref="1573rq" data-ref-filename="1573rq">rq</dfn>)</td></tr>
+<tr><th id="316">316</th><td>{</td></tr>
+<tr><th id="317">317</th><td>	<i>/* The request may live longer than its HWSP, so check flags first! */</i></td></tr>
+<tr><th id="318">318</th><td>	<b>return</b> <a class="ref fn" href="../../../../include/asm-generic/bitops-instrumented.h.html#test_bit" title='test_bit' data-ref="test_bit" data-ref-filename="test_bit">test_bit</a>(<a class="enum" href="../../../../include/linux/dma-fence.h.html#DMA_FENCE_FLAG_SIGNALED_BIT" title='DMA_FENCE_FLAG_SIGNALED_BIT' data-ref="DMA_FENCE_FLAG_SIGNALED_BIT" data-ref-filename="DMA_FENCE_FLAG_SIGNALED_BIT">DMA_FENCE_FLAG_SIGNALED_BIT</a>, &amp;<a class="local col3 ref" href="#1573rq" title='rq' data-ref="1573rq" data-ref-filename="1573rq">rq</a>-&gt;<a class="ref field" href="#i915_request::fence" title='i915_request::fence' data-ref="i915_request::fence" data-ref-filename="i915_request..fence">fence</a>.<a class="ref field" href="../../../../include/linux/dma-fence.h.html#dma_fence::flags" title='dma_fence::flags' data-ref="dma_fence::flags" data-ref-filename="dma_fence..flags">flags</a>);</td></tr>
+<tr><th id="319">319</th><td>}</td></tr>
+<tr><th id="320">320</th><td></td></tr>
+<tr><th id="321">321</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="i915_request_is_active" title='i915_request_is_active' data-ref="i915_request_is_active" data-ref-filename="i915_request_is_active">i915_request_is_active</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col4 decl" id="1574rq" title='rq' data-type='const struct i915_request *' data-ref="1574rq" data-ref-filename="1574rq">rq</dfn>)</td></tr>
+<tr><th id="322">322</th><td>{</td></tr>
+<tr><th id="323">323</th><td>	<b>return</b> <a class="ref fn" href="../../../../include/asm-generic/bitops-instrumented.h.html#test_bit" title='test_bit' data-ref="test_bit" data-ref-filename="test_bit">test_bit</a>(<a class="enum" href="#I915_FENCE_FLAG_ACTIVE" title='I915_FENCE_FLAG_ACTIVE' data-ref="I915_FENCE_FLAG_ACTIVE" data-ref-filename="I915_FENCE_FLAG_ACTIVE">I915_FENCE_FLAG_ACTIVE</a>, &amp;<a class="local col4 ref" href="#1574rq" title='rq' data-ref="1574rq" data-ref-filename="1574rq">rq</a>-&gt;<a class="ref field" href="#i915_request::fence" title='i915_request::fence' data-ref="i915_request::fence" data-ref-filename="i915_request..fence">fence</a>.<a class="ref field" href="../../../../include/linux/dma-fence.h.html#dma_fence::flags" title='dma_fence::flags' data-ref="dma_fence::flags" data-ref-filename="dma_fence..flags">flags</a>);</td></tr>
+<tr><th id="324">324</th><td>}</td></tr>
+<tr><th id="325">325</th><td></td></tr>
+<tr><th id="326">326</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="327">327</th><td><i class="doc"> * Returns true if seq1 is later than seq2.</i></td></tr>
+<tr><th id="328">328</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="329">329</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="i915_seqno_passed" title='i915_seqno_passed' data-ref="i915_seqno_passed" data-ref-filename="i915_seqno_passed">i915_seqno_passed</dfn>(<a class="typedef" href="../../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col5 decl" id="1575seq1" title='seq1' data-type='u32' data-ref="1575seq1" data-ref-filename="1575seq1">seq1</dfn>, <a class="typedef" href="../../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col6 decl" id="1576seq2" title='seq2' data-type='u32' data-ref="1576seq2" data-ref-filename="1576seq2">seq2</dfn>)</td></tr>
+<tr><th id="330">330</th><td>{</td></tr>
+<tr><th id="331">331</th><td>	<b>return</b> (<a class="typedef" href="../../../../include/asm-generic/int-ll64.h.html#s32" title='s32' data-type='__s32' data-ref="s32" data-ref-filename="s32">s32</a>)(<a class="local col5 ref" href="#1575seq1" title='seq1' data-ref="1575seq1" data-ref-filename="1575seq1">seq1</a> - <a class="local col6 ref" href="#1576seq2" title='seq2' data-ref="1576seq2" data-ref-filename="1576seq2">seq2</a>) &gt;= <var>0</var>;</td></tr>
+<tr><th id="332">332</th><td>}</td></tr>
+<tr><th id="333">333</th><td></td></tr>
+<tr><th id="334">334</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl def fn" id="__hwsp_seqno" title='__hwsp_seqno' data-ref="__hwsp_seqno" data-ref-filename="__hwsp_seqno">__hwsp_seqno</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col7 decl" id="1577rq" title='rq' data-type='const struct i915_request *' data-ref="1577rq" data-ref-filename="1577rq">rq</dfn>)</td></tr>
+<tr><th id="335">335</th><td>{</td></tr>
+<tr><th id="336">336</th><td>	<b>return</b> <a class="macro" href="../../../../include/linux/compiler.h.html#269" title="({ union { typeof(*rq-&gt;hwsp_seqno) __val; char __c[1]; } __u; if (1) __read_once_size(&amp;(*rq-&gt;hwsp_seqno), __u.__c, sizeof(*rq-&gt;hwsp_seqno)); else __read_once_size_nocheck(&amp;(*rq-&gt;hwsp_seqno), __u.__c, sizeof(*rq-&gt;hwsp_seqno)); do { } while (0); __u.__val; })" data-ref="_M/READ_ONCE">READ_ONCE</a>(*<a class="local col7 ref" href="#1577rq" title='rq' data-ref="1577rq" data-ref-filename="1577rq">rq</a>-&gt;<a class="ref field" href="#i915_request::hwsp_seqno" title='i915_request::hwsp_seqno' data-ref="i915_request::hwsp_seqno" data-ref-filename="i915_request..hwsp_seqno">hwsp_seqno</a>);</td></tr>
+<tr><th id="337">337</th><td>}</td></tr>
+<tr><th id="338">338</th><td></td></tr>
+<tr><th id="339">339</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="340">340</th><td><i class="doc"> * hwsp_seqno - the current breadcrumb value in the HW status page</i></td></tr>
+<tr><th id="341">341</th><td><i class="doc"> *<span class="command"> @rq</span>: the request, to chase the relevant HW status page</i></td></tr>
+<tr><th id="342">342</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="343">343</th><td><i class="doc"> * The emphasis in naming here is that hwsp_seqno() is not a property of the</i></td></tr>
+<tr><th id="344">344</th><td><i class="doc"> * request, but an indication of the current HW state (associated with this</i></td></tr>
+<tr><th id="345">345</th><td><i class="doc"> * request). Its value will change as the GPU executes more requests.</i></td></tr>
+<tr><th id="346">346</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="347">347</th><td><i class="doc"> * Returns the current breadcrumb value in the associated HW status page (or</i></td></tr>
+<tr><th id="348">348</th><td><i class="doc"> * the local timeline's equivalent) for this request. The request itself</i></td></tr>
+<tr><th id="349">349</th><td><i class="doc"> * has the associated breadcrumb value of rq-&gt;fence.seqno, when the HW</i></td></tr>
+<tr><th id="350">350</th><td><i class="doc"> * status page has that breadcrumb or later, this request is complete.</i></td></tr>
+<tr><th id="351">351</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="352">352</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl def fn" id="hwsp_seqno" title='hwsp_seqno' data-ref="hwsp_seqno" data-ref-filename="hwsp_seqno">hwsp_seqno</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col8 decl" id="1578rq" title='rq' data-type='const struct i915_request *' data-ref="1578rq" data-ref-filename="1578rq">rq</dfn>)</td></tr>
+<tr><th id="353">353</th><td>{</td></tr>
+<tr><th id="354">354</th><td>	<a class="typedef" href="../../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col9 decl" id="1579seqno" title='seqno' data-type='u32' data-ref="1579seqno" data-ref-filename="1579seqno">seqno</dfn>;</td></tr>
+<tr><th id="355">355</th><td></td></tr>
+<tr><th id="356">356</th><td>	<a class="ref fn" href="../../../../include/linux/rcupdate.h.html#rcu_read_lock" title='rcu_read_lock' data-ref="rcu_read_lock" data-ref-filename="rcu_read_lock">rcu_read_lock</a>(); <i>/* the HWSP may be freed at runtime */</i></td></tr>
+<tr><th id="357">357</th><td>	<a class="local col9 ref" href="#1579seqno" title='seqno' data-ref="1579seqno" data-ref-filename="1579seqno">seqno</a> = <a class="ref fn" href="#__hwsp_seqno" title='__hwsp_seqno' data-ref="__hwsp_seqno" data-ref-filename="__hwsp_seqno">__hwsp_seqno</a>(<a class="local col8 ref" href="#1578rq" title='rq' data-ref="1578rq" data-ref-filename="1578rq">rq</a>);</td></tr>
+<tr><th id="358">358</th><td>	<a class="ref fn" href="../../../../include/linux/rcupdate.h.html#rcu_read_unlock" title='rcu_read_unlock' data-ref="rcu_read_unlock" data-ref-filename="rcu_read_unlock">rcu_read_unlock</a>();</td></tr>
+<tr><th id="359">359</th><td></td></tr>
+<tr><th id="360">360</th><td>	<b>return</b> <a class="local col9 ref" href="#1579seqno" title='seqno' data-ref="1579seqno" data-ref-filename="1579seqno">seqno</a>;</td></tr>
+<tr><th id="361">361</th><td>}</td></tr>
+<tr><th id="362">362</th><td></td></tr>
+<tr><th id="363">363</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="__i915_request_has_started" title='__i915_request_has_started' data-ref="__i915_request_has_started" data-ref-filename="__i915_request_has_started">__i915_request_has_started</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col0 decl" id="1580rq" title='rq' data-type='const struct i915_request *' data-ref="1580rq" data-ref-filename="1580rq">rq</dfn>)</td></tr>
+<tr><th id="364">364</th><td>{</td></tr>
+<tr><th id="365">365</th><td>	<b>return</b> <a class="ref fn" href="#i915_seqno_passed" title='i915_seqno_passed' data-ref="i915_seqno_passed" data-ref-filename="i915_seqno_passed">i915_seqno_passed</a>(<a class="ref fn" href="#hwsp_seqno" title='hwsp_seqno' data-ref="hwsp_seqno" data-ref-filename="hwsp_seqno">hwsp_seqno</a>(<a class="local col0 ref" href="#1580rq" title='rq' data-ref="1580rq" data-ref-filename="1580rq">rq</a>), <a class="local col0 ref" href="#1580rq" title='rq' data-ref="1580rq" data-ref-filename="1580rq">rq</a>-&gt;<a class="ref field" href="#i915_request::fence" title='i915_request::fence' data-ref="i915_request::fence" data-ref-filename="i915_request..fence">fence</a>.<a class="ref field" href="../../../../include/linux/dma-fence.h.html#dma_fence::seqno" title='dma_fence::seqno' data-ref="dma_fence::seqno" data-ref-filename="dma_fence..seqno">seqno</a> - <var>1</var>);</td></tr>
+<tr><th id="366">366</th><td>}</td></tr>
+<tr><th id="367">367</th><td></td></tr>
+<tr><th id="368">368</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="369">369</th><td><i class="doc"> * i915_request_started - check if the request has begun being executed</i></td></tr>
+<tr><th id="370">370</th><td><i class="doc"> *<span class="command"> @rq</span>: the request</i></td></tr>
+<tr><th id="371">371</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="372">372</th><td><i class="doc"> * If the timeline is not using initial breadcrumbs, a request is</i></td></tr>
+<tr><th id="373">373</th><td><i class="doc"> * considered started if the previous request on its timeline (i.e.</i></td></tr>
+<tr><th id="374">374</th><td><i class="doc"> * context) has been signaled.</i></td></tr>
+<tr><th id="375">375</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="376">376</th><td><i class="doc"> * If the timeline is using semaphores, it will also be emitting an</i></td></tr>
+<tr><th id="377">377</th><td><i class="doc"> * "initial breadcrumb" after the semaphores are complete and just before</i></td></tr>
+<tr><th id="378">378</th><td><i class="doc"> * it began executing the user payload. A request can therefore be active</i></td></tr>
+<tr><th id="379">379</th><td><i class="doc"> * on the HW and not yet started as it is still busywaiting on its</i></td></tr>
+<tr><th id="380">380</th><td><i class="doc"> * dependencies (via HW semaphores).</i></td></tr>
+<tr><th id="381">381</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="382">382</th><td><i class="doc"> * If the request has started, its dependencies will have been signaled</i></td></tr>
+<tr><th id="383">383</th><td><i class="doc"> * (either by fences or by semaphores) and it will have begun processing</i></td></tr>
+<tr><th id="384">384</th><td><i class="doc"> * the user payload.</i></td></tr>
+<tr><th id="385">385</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="386">386</th><td><i class="doc"> * However, even if a request has started, it may have been preempted and</i></td></tr>
+<tr><th id="387">387</th><td><i class="doc"> * so no longer active, or it may have already completed.</i></td></tr>
+<tr><th id="388">388</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="389">389</th><td><i class="doc"> * See also i915_request_is_active().</i></td></tr>
+<tr><th id="390">390</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="391">391</th><td><i class="doc"> * Returns true if the request has begun executing the user payload, or</i></td></tr>
+<tr><th id="392">392</th><td><i class="doc"> * has completed:</i></td></tr>
+<tr><th id="393">393</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="394">394</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="i915_request_started" title='i915_request_started' data-ref="i915_request_started" data-ref-filename="i915_request_started">i915_request_started</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col1 decl" id="1581rq" title='rq' data-type='const struct i915_request *' data-ref="1581rq" data-ref-filename="1581rq">rq</dfn>)</td></tr>
+<tr><th id="395">395</th><td>{</td></tr>
+<tr><th id="396">396</th><td>	<b>if</b> (<a class="ref fn" href="#i915_request_signaled" title='i915_request_signaled' data-ref="i915_request_signaled" data-ref-filename="i915_request_signaled">i915_request_signaled</a>(<a class="local col1 ref" href="#1581rq" title='rq' data-ref="1581rq" data-ref-filename="1581rq">rq</a>))</td></tr>
+<tr><th id="397">397</th><td>		<b>return</b> <a class="enum" href="../../../../include/linux/stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>;</td></tr>
+<tr><th id="398">398</th><td></td></tr>
+<tr><th id="399">399</th><td>	<i>/* Remember: started but may have since been preempted! */</i></td></tr>
+<tr><th id="400">400</th><td>	<b>return</b> <a class="ref fn" href="#__i915_request_has_started" title='__i915_request_has_started' data-ref="__i915_request_has_started" data-ref-filename="__i915_request_has_started">__i915_request_has_started</a>(<a class="local col1 ref" href="#1581rq" title='rq' data-ref="1581rq" data-ref-filename="1581rq">rq</a>);</td></tr>
+<tr><th id="401">401</th><td>}</td></tr>
+<tr><th id="402">402</th><td></td></tr>
+<tr><th id="403">403</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="404">404</th><td><i class="doc"> * i915_request_is_running - check if the request may actually be executing</i></td></tr>
+<tr><th id="405">405</th><td><i class="doc"> *<span class="command"> @rq</span>: the request</i></td></tr>
+<tr><th id="406">406</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="407">407</th><td><i class="doc"> * Returns true if the request is currently submitted to hardware, has passed</i></td></tr>
+<tr><th id="408">408</th><td><i class="doc"> * its start point (i.e. the context is setup and not busywaiting). Note that</i></td></tr>
+<tr><th id="409">409</th><td><i class="doc"> * it may no longer be running by the time the function returns!</i></td></tr>
+<tr><th id="410">410</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="411">411</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="i915_request_is_running" title='i915_request_is_running' data-ref="i915_request_is_running" data-ref-filename="i915_request_is_running">i915_request_is_running</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col2 decl" id="1582rq" title='rq' data-type='const struct i915_request *' data-ref="1582rq" data-ref-filename="1582rq">rq</dfn>)</td></tr>
+<tr><th id="412">412</th><td>{</td></tr>
+<tr><th id="413">413</th><td>	<b>if</b> (!<a class="ref fn" href="#i915_request_is_active" title='i915_request_is_active' data-ref="i915_request_is_active" data-ref-filename="i915_request_is_active">i915_request_is_active</a>(<a class="local col2 ref" href="#1582rq" title='rq' data-ref="1582rq" data-ref-filename="1582rq">rq</a>))</td></tr>
+<tr><th id="414">414</th><td>		<b>return</b> <a class="enum" href="../../../../include/linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="415">415</th><td></td></tr>
+<tr><th id="416">416</th><td>	<b>return</b> <a class="ref fn" href="#__i915_request_has_started" title='__i915_request_has_started' data-ref="__i915_request_has_started" data-ref-filename="__i915_request_has_started">__i915_request_has_started</a>(<a class="local col2 ref" href="#1582rq" title='rq' data-ref="1582rq" data-ref-filename="1582rq">rq</a>);</td></tr>
+<tr><th id="417">417</th><td>}</td></tr>
+<tr><th id="418">418</th><td></td></tr>
+<tr><th id="419">419</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="i915_request_completed" title='i915_request_completed' data-ref="i915_request_completed" data-ref-filename="i915_request_completed">i915_request_completed</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col3 decl" id="1583rq" title='rq' data-type='const struct i915_request *' data-ref="1583rq" data-ref-filename="1583rq">rq</dfn>)</td></tr>
+<tr><th id="420">420</th><td>{</td></tr>
+<tr><th id="421">421</th><td>	<b>if</b> (<a class="ref fn" href="#i915_request_signaled" title='i915_request_signaled' data-ref="i915_request_signaled" data-ref-filename="i915_request_signaled">i915_request_signaled</a>(<a class="local col3 ref" href="#1583rq" title='rq' data-ref="1583rq" data-ref-filename="1583rq">rq</a>))</td></tr>
+<tr><th id="422">422</th><td>		<b>return</b> <a class="enum" href="../../../../include/linux/stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>;</td></tr>
+<tr><th id="423">423</th><td></td></tr>
+<tr><th id="424">424</th><td>	<b>return</b> <a class="ref fn" href="#i915_seqno_passed" title='i915_seqno_passed' data-ref="i915_seqno_passed" data-ref-filename="i915_seqno_passed">i915_seqno_passed</a>(<a class="ref fn" href="#hwsp_seqno" title='hwsp_seqno' data-ref="hwsp_seqno" data-ref-filename="hwsp_seqno">hwsp_seqno</a>(<a class="local col3 ref" href="#1583rq" title='rq' data-ref="1583rq" data-ref-filename="1583rq">rq</a>), <a class="local col3 ref" href="#1583rq" title='rq' data-ref="1583rq" data-ref-filename="1583rq">rq</a>-&gt;<a class="ref field" href="#i915_request::fence" title='i915_request::fence' data-ref="i915_request::fence" data-ref-filename="i915_request..fence">fence</a>.<a class="ref field" href="../../../../include/linux/dma-fence.h.html#dma_fence::seqno" title='dma_fence::seqno' data-ref="dma_fence::seqno" data-ref-filename="dma_fence..seqno">seqno</a>);</td></tr>
+<tr><th id="425">425</th><td>}</td></tr>
+<tr><th id="426">426</th><td></td></tr>
+<tr><th id="427">427</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="i915_request_mark_complete" title='i915_request_mark_complete' data-ref="i915_request_mark_complete" data-ref-filename="i915_request_mark_complete">i915_request_mark_complete</dfn>(<b>struct</b> <a class="type" href="#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col4 decl" id="1584rq" title='rq' data-type='struct i915_request *' data-ref="1584rq" data-ref-filename="1584rq">rq</dfn>)</td></tr>
+<tr><th id="428">428</th><td>{</td></tr>
+<tr><th id="429">429</th><td>	<a class="local col4 ref" href="#1584rq" title='rq' data-ref="1584rq" data-ref-filename="1584rq">rq</a>-&gt;<a class="ref field" href="#i915_request::hwsp_seqno" title='i915_request::hwsp_seqno' data-ref="i915_request::hwsp_seqno" data-ref-filename="i915_request..hwsp_seqno">hwsp_seqno</a> = (<a class="typedef" href="../../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> *)&amp;<a class="local col4 ref" href="#1584rq" title='rq' data-ref="1584rq" data-ref-filename="1584rq">rq</a>-&gt;<a class="ref field" href="#i915_request::fence" title='i915_request::fence' data-ref="i915_request::fence" data-ref-filename="i915_request..fence">fence</a>.<a class="ref field" href="../../../../include/linux/dma-fence.h.html#dma_fence::seqno" title='dma_fence::seqno' data-ref="dma_fence::seqno" data-ref-filename="dma_fence..seqno">seqno</a>; <i>/* decouple from HWSP */</i></td></tr>
+<tr><th id="430">430</th><td>}</td></tr>
+<tr><th id="431">431</th><td></td></tr>
+<tr><th id="432">432</th><td><a class="typedef" href="../../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl fn" id="i915_retire_requests" title='i915_retire_requests' data-ref="i915_retire_requests" data-ref-filename="i915_retire_requests">i915_retire_requests</dfn>(<b>struct</b> <a class="type" href="i915_drv.h.html#drm_i915_private" title='drm_i915_private' data-ref="drm_i915_private" data-ref-filename="drm_i915_private">drm_i915_private</a> *<dfn class="local col5 decl" id="1585i915" title='i915' data-type='struct drm_i915_private *' data-ref="1585i915" data-ref-filename="1585i915">i915</dfn>);</td></tr>
+<tr><th id="433">433</th><td></td></tr>
+<tr><th id="434">434</th><td><u>#<span data-ppcond="25">endif</span> /* I915_REQUEST_H */</u></td></tr>
+<tr><th id="435">435</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='display/dvo_ch7017.c.html'>linux-5.3.1/drivers/gpu/drm/i915/display/dvo_ch7017.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

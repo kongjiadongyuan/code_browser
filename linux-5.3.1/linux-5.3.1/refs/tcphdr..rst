@@ -1,0 +1,35 @@
+<dec f='linux-5.3.1/include/uapi/linux/tcp.h' l='35' type='__u16'/>
+<offset>106</offset>
+<use f='linux-5.3.1/net/core/filter.c' l='5803' u='r' c='____bpf_tcp_check_syncookie'/>
+<use f='linux-5.3.1/net/core/tso.c' l='42' u='w' c='tso_build_hdr'/>
+<use f='linux-5.3.1/net/ipv4/netfilter/nf_reject_ipv4.c' l='33' u='r' c='nf_reject_ip_tcphdr_get'/>
+<use f='linux-5.3.1/net/ipv4/netfilter/nf_reject_ipv4.c' l='90' u='w' c='nf_reject_ip_tcphdr_put'/>
+<use f='linux-5.3.1/net/ipv4/route.c' l='2980' u='w' c='inet_rtm_getroute_build_skb'/>
+<use f='linux-5.3.1/net/ipv4/syncookies.c' l='300' u='r' c='cookie_v4_check'/>
+<use f='linux-5.3.1/net/ipv4/tcp_input.c' l='5377' u='r' c='tcp_validate_incoming'/>
+<use f='linux-5.3.1/net/ipv4/tcp_input.c' l='5396' u='r' c='tcp_validate_incoming'/>
+<use f='linux-5.3.1/net/ipv4/tcp_input.c' l='5410' u='r' c='tcp_validate_incoming'/>
+<use f='linux-5.3.1/net/ipv4/tcp_input.c' l='5641' u='r' c='tcp_rcv_established'/>
+<use f='linux-5.3.1/net/ipv4/tcp_input.c' l='5860' u='r' c='tcp_rcv_synsent_state_process'/>
+<use f='linux-5.3.1/net/ipv4/tcp_input.c' l='5963' u='r' c='tcp_rcv_synsent_state_process'/>
+<use f='linux-5.3.1/net/ipv4/tcp_input.c' l='6092' u='r' c='tcp_rcv_state_process'/>
+<use f='linux-5.3.1/net/ipv4/tcp_input.c' l='6141' u='r' c='tcp_rcv_state_process'/>
+<use f='linux-5.3.1/net/ipv4/tcp_ipv4.c' l='670' u='r' c='tcp_v4_send_reset'/>
+<use f='linux-5.3.1/net/ipv4/tcp_ipv4.c' l='684' u='w' c='tcp_v4_send_reset'/>
+<use f='linux-5.3.1/net/ipv4/tcp_minisocks.c' l='108' u='r' c='tcp_timewait_state_process'/>
+<use f='linux-5.3.1/net/ipv4/tcp_minisocks.c' l='123' u='r' c='tcp_timewait_state_process'/>
+<use f='linux-5.3.1/net/ipv4/tcp_minisocks.c' l='175' u='r' c='tcp_timewait_state_process'/>
+<use f='linux-5.3.1/net/ipv4/tcp_minisocks.c' l='178' u='r' c='tcp_timewait_state_process'/>
+<use f='linux-5.3.1/net/ipv4/tcp_minisocks.c' l='218' u='r' c='tcp_timewait_state_process'/>
+<use f='linux-5.3.1/net/ipv4/tcp_minisocks.c' l='232' u='r' c='tcp_timewait_state_process'/>
+<use f='linux-5.3.1/net/ipv4/tcp_minisocks.c' l='586' u='r' c='tcp_check_req'/>
+<use f='linux-5.3.1/net/ipv6/netfilter/nf_reject_ipv6.c' l='48' u='r' c='nf_reject_ip6_tcphdr_get'/>
+<use f='linux-5.3.1/net/ipv6/netfilter/nf_reject_ipv6.c' l='114' u='w' c='nf_reject_ip6_tcphdr_put'/>
+<use f='linux-5.3.1/net/ipv6/syncookies.c' l='144' u='r' c='cookie_v6_check'/>
+<use f='linux-5.3.1/net/ipv6/tcp_ipv6.c' l='844' u='w' c='tcp_v6_send_response'/>
+<use f='linux-5.3.1/net/ipv6/tcp_ipv6.c' l='936' u='r' c='tcp_v6_send_reset'/>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_proto_tcp.c' l='285' u='r' c='get_conntrack_index'/>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_proto_tcp.c' l='584' u='r' c='tcp_in_window'/>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_proto_tcp.c' l='1105' u='r' c='nf_conntrack_tcp_packet'/>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_proto_tcp.c' l='1141' u='r' c='nf_conntrack_tcp_packet'/>
+<use f='linux-5.3.1/net/netfilter/nf_log_common.c' l='98' u='r' c='nf_log_dump_tcp_header'/>

@@ -1,0 +1,612 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>zlib.h source code [linux-5.3.1/include/linux/zlib.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="z_stream_s "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/include/linux/zlib.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>include</a>/<a href='./'>linux</a>/<a href='zlib.h.html'>zlib.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* zlib.h -- interface of the 'zlib' general purpose compression library</i></td></tr>
+<tr><th id="2">2</th><td><i></i></td></tr>
+<tr><th id="3">3</th><td><i>  Copyright (C) 1995-2005 Jean-loup Gailly and Mark Adler</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>  This software is provided 'as-is', without any express or implied</i></td></tr>
+<tr><th id="6">6</th><td><i>  warranty.  In no event will the authors be held liable for any damages</i></td></tr>
+<tr><th id="7">7</th><td><i>  arising from the use of this software.</i></td></tr>
+<tr><th id="8">8</th><td><i></i></td></tr>
+<tr><th id="9">9</th><td><i>  Permission is granted to anyone to use this software for any purpose,</i></td></tr>
+<tr><th id="10">10</th><td><i>  including commercial applications, and to alter it and redistribute it</i></td></tr>
+<tr><th id="11">11</th><td><i>  freely, subject to the following restrictions:</i></td></tr>
+<tr><th id="12">12</th><td><i></i></td></tr>
+<tr><th id="13">13</th><td><i>  1. The origin of this software must not be misrepresented; you must not</i></td></tr>
+<tr><th id="14">14</th><td><i>     claim that you wrote the original software. If you use this software</i></td></tr>
+<tr><th id="15">15</th><td><i>     in a product, an acknowledgment in the product documentation would be</i></td></tr>
+<tr><th id="16">16</th><td><i>     appreciated but is not required.</i></td></tr>
+<tr><th id="17">17</th><td><i>  2. Altered source versions must be plainly marked as such, and must not be</i></td></tr>
+<tr><th id="18">18</th><td><i>     misrepresented as being the original software.</i></td></tr>
+<tr><th id="19">19</th><td><i>  3. This notice may not be removed or altered from any source distribution.</i></td></tr>
+<tr><th id="20">20</th><td><i></i></td></tr>
+<tr><th id="21">21</th><td><i>  Jean-loup Gailly        Mark Adler</i></td></tr>
+<tr><th id="22">22</th><td><i>  jloup@gzip.org          madler@alumni.caltech.edu</i></td></tr>
+<tr><th id="23">23</th><td><i></i></td></tr>
+<tr><th id="24">24</th><td><i></i></td></tr>
+<tr><th id="25">25</th><td><i>  The data format used by the zlib library is described by RFCs (Request for</i></td></tr>
+<tr><th id="26">26</th><td><i>  Comments) 1950 to 1952 in the files <a href="http://www.ietf.org/rfc/rfc1950.txt">http://www.ietf.org/rfc/rfc1950.txt</a></i></td></tr>
+<tr><th id="27">27</th><td><i>  (zlib format), rfc1951.txt (deflate format) and rfc1952.txt (gzip format).</i></td></tr>
+<tr><th id="28">28</th><td><i>*/</i></td></tr>
+<tr><th id="29">29</th><td></td></tr>
+<tr><th id="30">30</th><td><u>#<span data-ppcond="30">ifndef</span> <span class="macro" data-ref="_M/_ZLIB_H">_ZLIB_H</span></u></td></tr>
+<tr><th id="31">31</th><td><u>#define <dfn class="macro" id="_M/_ZLIB_H" data-ref="_M/_ZLIB_H">_ZLIB_H</dfn></u></td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td><u>#include <a href="zconf.h.html">&lt;linux/zconf.h&gt;</a></u></td></tr>
+<tr><th id="34">34</th><td></td></tr>
+<tr><th id="35">35</th><td><i>/* zlib deflate based on ZLIB_VERSION "1.1.3" */</i></td></tr>
+<tr><th id="36">36</th><td><i>/* zlib inflate based on ZLIB_VERSION "1.2.3" */</i></td></tr>
+<tr><th id="37">37</th><td></td></tr>
+<tr><th id="38">38</th><td><i>/*</i></td></tr>
+<tr><th id="39">39</th><td><i>  This is a modified version of zlib for use inside the Linux kernel.</i></td></tr>
+<tr><th id="40">40</th><td><i>  The main changes are to perform all memory allocation in advance.</i></td></tr>
+<tr><th id="41">41</th><td><i></i></td></tr>
+<tr><th id="42">42</th><td><i>  Inflation Changes:</i></td></tr>
+<tr><th id="43">43</th><td><i>    * Z_PACKET_FLUSH is added and used by ppp_deflate. Before returning</i></td></tr>
+<tr><th id="44">44</th><td><i>      this checks there is no more input data available and the next data</i></td></tr>
+<tr><th id="45">45</th><td><i>      is a STORED block. It also resets the mode to be read for the next</i></td></tr>
+<tr><th id="46">46</th><td><i>      data, all as per PPP requirements.</i></td></tr>
+<tr><th id="47">47</th><td><i>    * Addition of zlib_inflateIncomp which copies incompressible data into</i></td></tr>
+<tr><th id="48">48</th><td><i>      the history window and adjusts the accoutning without calling</i></td></tr>
+<tr><th id="49">49</th><td><i>      zlib_inflate itself to inflate the data.</i></td></tr>
+<tr><th id="50">50</th><td><i>*/</i></td></tr>
+<tr><th id="51">51</th><td></td></tr>
+<tr><th id="52">52</th><td><i>/* </i></td></tr>
+<tr><th id="53">53</th><td><i>     The 'zlib' compression library provides in-memory compression and</i></td></tr>
+<tr><th id="54">54</th><td><i>  decompression functions, including integrity checks of the uncompressed</i></td></tr>
+<tr><th id="55">55</th><td><i>  data.  This version of the library supports only one compression method</i></td></tr>
+<tr><th id="56">56</th><td><i>  (deflation) but other algorithms will be added later and will have the same</i></td></tr>
+<tr><th id="57">57</th><td><i>  stream interface.</i></td></tr>
+<tr><th id="58">58</th><td><i></i></td></tr>
+<tr><th id="59">59</th><td><i>     Compression can be done in a single step if the buffers are large</i></td></tr>
+<tr><th id="60">60</th><td><i>  enough (for example if an input file is mmap'ed), or can be done by</i></td></tr>
+<tr><th id="61">61</th><td><i>  repeated calls of the compression function.  In the latter case, the</i></td></tr>
+<tr><th id="62">62</th><td><i>  application must provide more input and/or consume the output</i></td></tr>
+<tr><th id="63">63</th><td><i>  (providing more output space) before each call.</i></td></tr>
+<tr><th id="64">64</th><td><i></i></td></tr>
+<tr><th id="65">65</th><td><i>     The compressed data format used by default by the in-memory functions is</i></td></tr>
+<tr><th id="66">66</th><td><i>  the zlib format, which is a zlib wrapper documented in RFC 1950, wrapped</i></td></tr>
+<tr><th id="67">67</th><td><i>  around a deflate stream, which is itself documented in RFC 1951.</i></td></tr>
+<tr><th id="68">68</th><td><i></i></td></tr>
+<tr><th id="69">69</th><td><i>     The library also supports reading and writing files in gzip (.gz) format</i></td></tr>
+<tr><th id="70">70</th><td><i>  with an interface similar to that of stdio.</i></td></tr>
+<tr><th id="71">71</th><td><i></i></td></tr>
+<tr><th id="72">72</th><td><i>     The zlib format was designed to be compact and fast for use in memory</i></td></tr>
+<tr><th id="73">73</th><td><i>  and on communications channels.  The gzip format was designed for single-</i></td></tr>
+<tr><th id="74">74</th><td><i>  file compression on file systems, has a larger header than zlib to maintain</i></td></tr>
+<tr><th id="75">75</th><td><i>  directory information, and uses a different, slower check method than zlib.</i></td></tr>
+<tr><th id="76">76</th><td><i></i></td></tr>
+<tr><th id="77">77</th><td><i>     The library does not install any signal handler. The decoder checks</i></td></tr>
+<tr><th id="78">78</th><td><i>  the consistency of the compressed data, so the library should never</i></td></tr>
+<tr><th id="79">79</th><td><i>  crash even in case of corrupted input.</i></td></tr>
+<tr><th id="80">80</th><td><i>*/</i></td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td><b>struct</b> <dfn class="type" id="internal_state" title='internal_state' data-ref="internal_state" data-ref-filename="internal_state">internal_state</dfn>;</td></tr>
+<tr><th id="83">83</th><td></td></tr>
+<tr><th id="84">84</th><td><b>typedef</b> <b>struct</b> <dfn class="type def" id="z_stream_s" title='z_stream_s' data-ref="z_stream_s" data-ref-filename="z_stream_s"><a class="type" href="#z_stream_s" title='z_stream_s' data-ref="z_stream_s" data-ref-filename="z_stream_s">z_stream_s</a></dfn> {</td></tr>
+<tr><th id="85">85</th><td>    <em>const</em> <a class="typedef" href="zconf.h.html#Byte" title='Byte' data-type='unsigned char' data-ref="Byte" data-ref-filename="Byte">Byte</a> *<dfn class="decl field" id="z_stream_s::next_in" title='z_stream_s::next_in' data-ref="z_stream_s::next_in" data-ref-filename="z_stream_s..next_in">next_in</dfn>;   <i>/* next input byte */</i></td></tr>
+<tr><th id="86">86</th><td>	<a class="typedef" href="zconf.h.html#uLong" title='uLong' data-type='unsigned long' data-ref="uLong" data-ref-filename="uLong">uLong</a> <dfn class="decl field" id="z_stream_s::avail_in" title='z_stream_s::avail_in' data-ref="z_stream_s::avail_in" data-ref-filename="z_stream_s..avail_in">avail_in</dfn>;  <i>/* number of bytes available at next_in */</i></td></tr>
+<tr><th id="87">87</th><td>    <a class="typedef" href="zconf.h.html#uLong" title='uLong' data-type='unsigned long' data-ref="uLong" data-ref-filename="uLong">uLong</a>    <dfn class="decl field" id="z_stream_s::total_in" title='z_stream_s::total_in' data-ref="z_stream_s::total_in" data-ref-filename="z_stream_s..total_in">total_in</dfn>;  <i>/* total nb of input bytes read so far */</i></td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td>    <a class="typedef" href="zconf.h.html#Byte" title='Byte' data-type='unsigned char' data-ref="Byte" data-ref-filename="Byte">Byte</a>    *<dfn class="decl field" id="z_stream_s::next_out" title='z_stream_s::next_out' data-ref="z_stream_s::next_out" data-ref-filename="z_stream_s..next_out">next_out</dfn>;  <i>/* next output byte should be put there */</i></td></tr>
+<tr><th id="90">90</th><td>	<a class="typedef" href="zconf.h.html#uLong" title='uLong' data-type='unsigned long' data-ref="uLong" data-ref-filename="uLong">uLong</a> <dfn class="decl field" id="z_stream_s::avail_out" title='z_stream_s::avail_out' data-ref="z_stream_s::avail_out" data-ref-filename="z_stream_s..avail_out">avail_out</dfn>; <i>/* remaining free space at next_out */</i></td></tr>
+<tr><th id="91">91</th><td>    <a class="typedef" href="zconf.h.html#uLong" title='uLong' data-type='unsigned long' data-ref="uLong" data-ref-filename="uLong">uLong</a>    <dfn class="decl field" id="z_stream_s::total_out" title='z_stream_s::total_out' data-ref="z_stream_s::total_out" data-ref-filename="z_stream_s..total_out">total_out</dfn>; <i>/* total nb of bytes output so far */</i></td></tr>
+<tr><th id="92">92</th><td></td></tr>
+<tr><th id="93">93</th><td>    <em>char</em>     *<dfn class="decl field" id="z_stream_s::msg" title='z_stream_s::msg' data-ref="z_stream_s::msg" data-ref-filename="z_stream_s..msg">msg</dfn>;      <i>/* last error message, NULL if no error */</i></td></tr>
+<tr><th id="94">94</th><td>    <b>struct</b> <a class="type" href="#internal_state" title='internal_state' data-ref="internal_state" data-ref-filename="internal_state">internal_state</a> *<dfn class="decl field" id="z_stream_s::state" title='z_stream_s::state' data-ref="z_stream_s::state" data-ref-filename="z_stream_s..state">state</dfn>; <i>/* not visible by applications */</i></td></tr>
+<tr><th id="95">95</th><td></td></tr>
+<tr><th id="96">96</th><td>    <em>void</em>     *<dfn class="decl field" id="z_stream_s::workspace" title='z_stream_s::workspace' data-ref="z_stream_s::workspace" data-ref-filename="z_stream_s..workspace">workspace</dfn>; <i>/* memory allocated for this stream */</i></td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td>    <em>int</em>     <dfn class="decl field" id="z_stream_s::data_type" title='z_stream_s::data_type' data-ref="z_stream_s::data_type" data-ref-filename="z_stream_s..data_type">data_type</dfn>;  <i>/* best guess about the data type: ascii or binary */</i></td></tr>
+<tr><th id="99">99</th><td>    <a class="typedef" href="zconf.h.html#uLong" title='uLong' data-type='unsigned long' data-ref="uLong" data-ref-filename="uLong">uLong</a>   <dfn class="decl field" id="z_stream_s::adler" title='z_stream_s::adler' data-ref="z_stream_s::adler" data-ref-filename="z_stream_s..adler">adler</dfn>;      <i>/* adler32 value of the uncompressed data */</i></td></tr>
+<tr><th id="100">100</th><td>    <a class="typedef" href="zconf.h.html#uLong" title='uLong' data-type='unsigned long' data-ref="uLong" data-ref-filename="uLong">uLong</a>   <dfn class="decl field" id="z_stream_s::reserved" title='z_stream_s::reserved' data-ref="z_stream_s::reserved" data-ref-filename="z_stream_s..reserved">reserved</dfn>;   <i>/* reserved for future use */</i></td></tr>
+<tr><th id="101">101</th><td>} <dfn class="typedef" id="z_stream" title='z_stream' data-type='struct z_stream_s' data-ref="z_stream" data-ref-filename="z_stream">z_stream</dfn>;</td></tr>
+<tr><th id="102">102</th><td></td></tr>
+<tr><th id="103">103</th><td><b>typedef</b> <a class="typedef" href="#z_stream" title='z_stream' data-type='struct z_stream_s' data-ref="z_stream" data-ref-filename="z_stream">z_stream</a> *<dfn class="typedef" id="z_streamp" title='z_streamp' data-type='z_stream *' data-ref="z_streamp" data-ref-filename="z_streamp">z_streamp</dfn>;</td></tr>
+<tr><th id="104">104</th><td></td></tr>
+<tr><th id="105">105</th><td><i>/*</i></td></tr>
+<tr><th id="106">106</th><td><i>   The application must update next_in and avail_in when avail_in has</i></td></tr>
+<tr><th id="107">107</th><td><i>   dropped to zero. It must update next_out and avail_out when avail_out</i></td></tr>
+<tr><th id="108">108</th><td><i>   has dropped to zero. The application must initialize zalloc, zfree and</i></td></tr>
+<tr><th id="109">109</th><td><i>   opaque before calling the init function. All other fields are set by the</i></td></tr>
+<tr><th id="110">110</th><td><i>   compression library and must not be updated by the application.</i></td></tr>
+<tr><th id="111">111</th><td><i></i></td></tr>
+<tr><th id="112">112</th><td><i>   The opaque value provided by the application will be passed as the first</i></td></tr>
+<tr><th id="113">113</th><td><i>   parameter for calls of zalloc and zfree. This can be useful for custom</i></td></tr>
+<tr><th id="114">114</th><td><i>   memory management. The compression library attaches no meaning to the</i></td></tr>
+<tr><th id="115">115</th><td><i>   opaque value.</i></td></tr>
+<tr><th id="116">116</th><td><i></i></td></tr>
+<tr><th id="117">117</th><td><i>   zalloc must return NULL if there is not enough memory for the object.</i></td></tr>
+<tr><th id="118">118</th><td><i>   If zlib is used in a multi-threaded application, zalloc and zfree must be</i></td></tr>
+<tr><th id="119">119</th><td><i>   thread safe.</i></td></tr>
+<tr><th id="120">120</th><td><i></i></td></tr>
+<tr><th id="121">121</th><td><i>   On 16-bit systems, the functions zalloc and zfree must be able to allocate</i></td></tr>
+<tr><th id="122">122</th><td><i>   exactly 65536 bytes, but will not be required to allocate more than this</i></td></tr>
+<tr><th id="123">123</th><td><i>   if the symbol MAXSEG_64K is defined (see zconf.h). WARNING: On MSDOS,</i></td></tr>
+<tr><th id="124">124</th><td><i>   pointers returned by zalloc for objects of exactly 65536 bytes *must*</i></td></tr>
+<tr><th id="125">125</th><td><i>   have their offset normalized to zero. The default allocation function</i></td></tr>
+<tr><th id="126">126</th><td><i>   provided by this library ensures this (see zutil.c). To reduce memory</i></td></tr>
+<tr><th id="127">127</th><td><i>   requirements and avoid any allocation of 64K objects, at the expense of</i></td></tr>
+<tr><th id="128">128</th><td><i>   compression ratio, compile the library with -DMAX_WBITS=14 (see zconf.h).</i></td></tr>
+<tr><th id="129">129</th><td><i></i></td></tr>
+<tr><th id="130">130</th><td><i>   The fields total_in and total_out can be used for statistics or</i></td></tr>
+<tr><th id="131">131</th><td><i>   progress reports. After compression, total_in holds the total size of</i></td></tr>
+<tr><th id="132">132</th><td><i>   the uncompressed data and may be saved for use in the decompressor</i></td></tr>
+<tr><th id="133">133</th><td><i>   (particularly if the decompressor wants to decompress everything in</i></td></tr>
+<tr><th id="134">134</th><td><i>   a single step).</i></td></tr>
+<tr><th id="135">135</th><td><i>*/</i></td></tr>
+<tr><th id="136">136</th><td></td></tr>
+<tr><th id="137">137</th><td>                        <i>/* constants */</i></td></tr>
+<tr><th id="138">138</th><td></td></tr>
+<tr><th id="139">139</th><td><u>#define <dfn class="macro" id="_M/Z_NO_FLUSH" data-ref="_M/Z_NO_FLUSH">Z_NO_FLUSH</dfn>      0</u></td></tr>
+<tr><th id="140">140</th><td><u>#define <dfn class="macro" id="_M/Z_PARTIAL_FLUSH" data-ref="_M/Z_PARTIAL_FLUSH">Z_PARTIAL_FLUSH</dfn> 1 /* will be removed, use Z_SYNC_FLUSH instead */</u></td></tr>
+<tr><th id="141">141</th><td><u>#define <dfn class="macro" id="_M/Z_PACKET_FLUSH" data-ref="_M/Z_PACKET_FLUSH">Z_PACKET_FLUSH</dfn>  2</u></td></tr>
+<tr><th id="142">142</th><td><u>#define <dfn class="macro" id="_M/Z_SYNC_FLUSH" data-ref="_M/Z_SYNC_FLUSH">Z_SYNC_FLUSH</dfn>    3</u></td></tr>
+<tr><th id="143">143</th><td><u>#define <dfn class="macro" id="_M/Z_FULL_FLUSH" data-ref="_M/Z_FULL_FLUSH">Z_FULL_FLUSH</dfn>    4</u></td></tr>
+<tr><th id="144">144</th><td><u>#define <dfn class="macro" id="_M/Z_FINISH" data-ref="_M/Z_FINISH">Z_FINISH</dfn>        5</u></td></tr>
+<tr><th id="145">145</th><td><u>#define <dfn class="macro" id="_M/Z_BLOCK" data-ref="_M/Z_BLOCK">Z_BLOCK</dfn>         6 /* Only for inflate at present */</u></td></tr>
+<tr><th id="146">146</th><td><i>/* Allowed flush values; see deflate() and inflate() below for details */</i></td></tr>
+<tr><th id="147">147</th><td></td></tr>
+<tr><th id="148">148</th><td><u>#define <dfn class="macro" id="_M/Z_OK" data-ref="_M/Z_OK">Z_OK</dfn>            0</u></td></tr>
+<tr><th id="149">149</th><td><u>#define <dfn class="macro" id="_M/Z_STREAM_END" data-ref="_M/Z_STREAM_END">Z_STREAM_END</dfn>    1</u></td></tr>
+<tr><th id="150">150</th><td><u>#define <dfn class="macro" id="_M/Z_NEED_DICT" data-ref="_M/Z_NEED_DICT">Z_NEED_DICT</dfn>     2</u></td></tr>
+<tr><th id="151">151</th><td><u>#define <dfn class="macro" id="_M/Z_ERRNO" data-ref="_M/Z_ERRNO">Z_ERRNO</dfn>        (-1)</u></td></tr>
+<tr><th id="152">152</th><td><u>#define <dfn class="macro" id="_M/Z_STREAM_ERROR" data-ref="_M/Z_STREAM_ERROR">Z_STREAM_ERROR</dfn> (-2)</u></td></tr>
+<tr><th id="153">153</th><td><u>#define <dfn class="macro" id="_M/Z_DATA_ERROR" data-ref="_M/Z_DATA_ERROR">Z_DATA_ERROR</dfn>   (-3)</u></td></tr>
+<tr><th id="154">154</th><td><u>#define <dfn class="macro" id="_M/Z_MEM_ERROR" data-ref="_M/Z_MEM_ERROR">Z_MEM_ERROR</dfn>    (-4)</u></td></tr>
+<tr><th id="155">155</th><td><u>#define <dfn class="macro" id="_M/Z_BUF_ERROR" data-ref="_M/Z_BUF_ERROR">Z_BUF_ERROR</dfn>    (-5)</u></td></tr>
+<tr><th id="156">156</th><td><u>#define <dfn class="macro" id="_M/Z_VERSION_ERROR" data-ref="_M/Z_VERSION_ERROR">Z_VERSION_ERROR</dfn> (-6)</u></td></tr>
+<tr><th id="157">157</th><td><i>/* Return codes for the compression/decompression functions. Negative</i></td></tr>
+<tr><th id="158">158</th><td><i> * values are errors, positive values are used for special but normal events.</i></td></tr>
+<tr><th id="159">159</th><td><i> */</i></td></tr>
+<tr><th id="160">160</th><td></td></tr>
+<tr><th id="161">161</th><td><u>#define <dfn class="macro" id="_M/Z_NO_COMPRESSION" data-ref="_M/Z_NO_COMPRESSION">Z_NO_COMPRESSION</dfn>         0</u></td></tr>
+<tr><th id="162">162</th><td><u>#define <dfn class="macro" id="_M/Z_BEST_SPEED" data-ref="_M/Z_BEST_SPEED">Z_BEST_SPEED</dfn>             1</u></td></tr>
+<tr><th id="163">163</th><td><u>#define <dfn class="macro" id="_M/Z_BEST_COMPRESSION" data-ref="_M/Z_BEST_COMPRESSION">Z_BEST_COMPRESSION</dfn>       9</u></td></tr>
+<tr><th id="164">164</th><td><u>#define <dfn class="macro" id="_M/Z_DEFAULT_COMPRESSION" data-ref="_M/Z_DEFAULT_COMPRESSION">Z_DEFAULT_COMPRESSION</dfn>  (-1)</u></td></tr>
+<tr><th id="165">165</th><td><i>/* compression levels */</i></td></tr>
+<tr><th id="166">166</th><td></td></tr>
+<tr><th id="167">167</th><td><u>#define <dfn class="macro" id="_M/Z_FILTERED" data-ref="_M/Z_FILTERED">Z_FILTERED</dfn>            1</u></td></tr>
+<tr><th id="168">168</th><td><u>#define <dfn class="macro" id="_M/Z_HUFFMAN_ONLY" data-ref="_M/Z_HUFFMAN_ONLY">Z_HUFFMAN_ONLY</dfn>        2</u></td></tr>
+<tr><th id="169">169</th><td><u>#define <dfn class="macro" id="_M/Z_DEFAULT_STRATEGY" data-ref="_M/Z_DEFAULT_STRATEGY">Z_DEFAULT_STRATEGY</dfn>    0</u></td></tr>
+<tr><th id="170">170</th><td><i>/* compression strategy; see deflateInit2() below for details */</i></td></tr>
+<tr><th id="171">171</th><td></td></tr>
+<tr><th id="172">172</th><td><u>#define <dfn class="macro" id="_M/Z_BINARY" data-ref="_M/Z_BINARY">Z_BINARY</dfn>   0</u></td></tr>
+<tr><th id="173">173</th><td><u>#define <dfn class="macro" id="_M/Z_ASCII" data-ref="_M/Z_ASCII">Z_ASCII</dfn>    1</u></td></tr>
+<tr><th id="174">174</th><td><u>#define <dfn class="macro" id="_M/Z_UNKNOWN" data-ref="_M/Z_UNKNOWN">Z_UNKNOWN</dfn>  2</u></td></tr>
+<tr><th id="175">175</th><td><i>/* Possible values of the data_type field */</i></td></tr>
+<tr><th id="176">176</th><td></td></tr>
+<tr><th id="177">177</th><td><u>#define <dfn class="macro" id="_M/Z_DEFLATED" data-ref="_M/Z_DEFLATED">Z_DEFLATED</dfn>   8</u></td></tr>
+<tr><th id="178">178</th><td><i>/* The deflate compression method (the only one supported in this version) */</i></td></tr>
+<tr><th id="179">179</th><td></td></tr>
+<tr><th id="180">180</th><td>                        <i>/* basic functions */</i></td></tr>
+<tr><th id="181">181</th><td></td></tr>
+<tr><th id="182">182</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="zlib_deflate_workspacesize" title='zlib_deflate_workspacesize' data-ref="zlib_deflate_workspacesize" data-ref-filename="zlib_deflate_workspacesize">zlib_deflate_workspacesize</dfn> (<em>int</em> <dfn class="local col0 decl" id="10windowBits" title='windowBits' data-type='int' data-ref="10windowBits" data-ref-filename="10windowBits">windowBits</dfn>, <em>int</em> <dfn class="local col1 decl" id="11memLevel" title='memLevel' data-type='int' data-ref="11memLevel" data-ref-filename="11memLevel">memLevel</dfn>);</td></tr>
+<tr><th id="183">183</th><td><i>/*</i></td></tr>
+<tr><th id="184">184</th><td><i>   Returns the number of bytes that needs to be allocated for a per-</i></td></tr>
+<tr><th id="185">185</th><td><i>   stream workspace with the specified parameters.  A pointer to this</i></td></tr>
+<tr><th id="186">186</th><td><i>   number of bytes should be returned in stream-&gt;workspace before</i></td></tr>
+<tr><th id="187">187</th><td><i>   you call zlib_deflateInit() or zlib_deflateInit2().  If you call</i></td></tr>
+<tr><th id="188">188</th><td><i>   zlib_deflateInit(), specify windowBits = MAX_WBITS and memLevel =</i></td></tr>
+<tr><th id="189">189</th><td><i>   MAX_MEM_LEVEL here.  If you call zlib_deflateInit2(), the windowBits</i></td></tr>
+<tr><th id="190">190</th><td><i>   and memLevel parameters passed to zlib_deflateInit2() must not</i></td></tr>
+<tr><th id="191">191</th><td><i>   exceed those passed here.</i></td></tr>
+<tr><th id="192">192</th><td><i>*/</i></td></tr>
+<tr><th id="193">193</th><td></td></tr>
+<tr><th id="194">194</th><td><i>/* </i></td></tr>
+<tr><th id="195">195</th><td><i>extern int deflateInit (z_streamp strm, int level);</i></td></tr>
+<tr><th id="196">196</th><td><i></i></td></tr>
+<tr><th id="197">197</th><td><i>     Initializes the internal stream state for compression. The fields</i></td></tr>
+<tr><th id="198">198</th><td><i>   zalloc, zfree and opaque must be initialized before by the caller.</i></td></tr>
+<tr><th id="199">199</th><td><i>   If zalloc and zfree are set to NULL, deflateInit updates them to</i></td></tr>
+<tr><th id="200">200</th><td><i>   use default allocation functions.</i></td></tr>
+<tr><th id="201">201</th><td><i></i></td></tr>
+<tr><th id="202">202</th><td><i>     The compression level must be Z_DEFAULT_COMPRESSION, or between 0 and 9:</i></td></tr>
+<tr><th id="203">203</th><td><i>   1 gives best speed, 9 gives best compression, 0 gives no compression at</i></td></tr>
+<tr><th id="204">204</th><td><i>   all (the input data is simply copied a block at a time).</i></td></tr>
+<tr><th id="205">205</th><td><i>   Z_DEFAULT_COMPRESSION requests a default compromise between speed and</i></td></tr>
+<tr><th id="206">206</th><td><i>   compression (currently equivalent to level 6).</i></td></tr>
+<tr><th id="207">207</th><td><i></i></td></tr>
+<tr><th id="208">208</th><td><i>     deflateInit returns Z_OK if success, Z_MEM_ERROR if there was not</i></td></tr>
+<tr><th id="209">209</th><td><i>   enough memory, Z_STREAM_ERROR if level is not a valid compression level,</i></td></tr>
+<tr><th id="210">210</th><td><i>   Z_VERSION_ERROR if the zlib library version (zlib_version) is incompatible</i></td></tr>
+<tr><th id="211">211</th><td><i>   with the version assumed by the caller (ZLIB_VERSION).</i></td></tr>
+<tr><th id="212">212</th><td><i>   msg is set to null if there is no error message.  deflateInit does not</i></td></tr>
+<tr><th id="213">213</th><td><i>   perform any compression: this will be done by deflate().</i></td></tr>
+<tr><th id="214">214</th><td><i>*/</i></td></tr>
+<tr><th id="215">215</th><td></td></tr>
+<tr><th id="216">216</th><td></td></tr>
+<tr><th id="217">217</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="zlib_deflate" title='zlib_deflate' data-ref="zlib_deflate" data-ref-filename="zlib_deflate">zlib_deflate</dfn> (<a class="typedef" href="#z_streamp" title='z_streamp' data-type='z_stream *' data-ref="z_streamp" data-ref-filename="z_streamp">z_streamp</a> <dfn class="local col2 decl" id="12strm" title='strm' data-type='z_streamp' data-ref="12strm" data-ref-filename="12strm">strm</dfn>, <em>int</em> <dfn class="local col3 decl" id="13flush" title='flush' data-type='int' data-ref="13flush" data-ref-filename="13flush">flush</dfn>);</td></tr>
+<tr><th id="218">218</th><td><i>/*</i></td></tr>
+<tr><th id="219">219</th><td><i>    deflate compresses as much data as possible, and stops when the input</i></td></tr>
+<tr><th id="220">220</th><td><i>  buffer becomes empty or the output buffer becomes full. It may introduce some</i></td></tr>
+<tr><th id="221">221</th><td><i>  output latency (reading input without producing any output) except when</i></td></tr>
+<tr><th id="222">222</th><td><i>  forced to flush.</i></td></tr>
+<tr><th id="223">223</th><td><i></i></td></tr>
+<tr><th id="224">224</th><td><i>    The detailed semantics are as follows. deflate performs one or both of the</i></td></tr>
+<tr><th id="225">225</th><td><i>  following actions:</i></td></tr>
+<tr><th id="226">226</th><td><i></i></td></tr>
+<tr><th id="227">227</th><td><i>  - Compress more input starting at next_in and update next_in and avail_in</i></td></tr>
+<tr><th id="228">228</th><td><i>    accordingly. If not all input can be processed (because there is not</i></td></tr>
+<tr><th id="229">229</th><td><i>    enough room in the output buffer), next_in and avail_in are updated and</i></td></tr>
+<tr><th id="230">230</th><td><i>    processing will resume at this point for the next call of deflate().</i></td></tr>
+<tr><th id="231">231</th><td><i></i></td></tr>
+<tr><th id="232">232</th><td><i>  - Provide more output starting at next_out and update next_out and avail_out</i></td></tr>
+<tr><th id="233">233</th><td><i>    accordingly. This action is forced if the parameter flush is non zero.</i></td></tr>
+<tr><th id="234">234</th><td><i>    Forcing flush frequently degrades the compression ratio, so this parameter</i></td></tr>
+<tr><th id="235">235</th><td><i>    should be set only when necessary (in interactive applications).</i></td></tr>
+<tr><th id="236">236</th><td><i>    Some output may be provided even if flush is not set.</i></td></tr>
+<tr><th id="237">237</th><td><i></i></td></tr>
+<tr><th id="238">238</th><td><i>  Before the call of deflate(), the application should ensure that at least</i></td></tr>
+<tr><th id="239">239</th><td><i>  one of the actions is possible, by providing more input and/or consuming</i></td></tr>
+<tr><th id="240">240</th><td><i>  more output, and updating avail_in or avail_out accordingly; avail_out</i></td></tr>
+<tr><th id="241">241</th><td><i>  should never be zero before the call. The application can consume the</i></td></tr>
+<tr><th id="242">242</th><td><i>  compressed output when it wants, for example when the output buffer is full</i></td></tr>
+<tr><th id="243">243</th><td><i>  (avail_out == 0), or after each call of deflate(). If deflate returns Z_OK</i></td></tr>
+<tr><th id="244">244</th><td><i>  and with zero avail_out, it must be called again after making room in the</i></td></tr>
+<tr><th id="245">245</th><td><i>  output buffer because there might be more output pending.</i></td></tr>
+<tr><th id="246">246</th><td><i></i></td></tr>
+<tr><th id="247">247</th><td><i>    If the parameter flush is set to Z_SYNC_FLUSH, all pending output is</i></td></tr>
+<tr><th id="248">248</th><td><i>  flushed to the output buffer and the output is aligned on a byte boundary, so</i></td></tr>
+<tr><th id="249">249</th><td><i>  that the decompressor can get all input data available so far. (In particular</i></td></tr>
+<tr><th id="250">250</th><td><i>  avail_in is zero after the call if enough output space has been provided</i></td></tr>
+<tr><th id="251">251</th><td><i>  before the call.)  Flushing may degrade compression for some compression</i></td></tr>
+<tr><th id="252">252</th><td><i>  algorithms and so it should be used only when necessary.</i></td></tr>
+<tr><th id="253">253</th><td><i></i></td></tr>
+<tr><th id="254">254</th><td><i>    If flush is set to Z_FULL_FLUSH, all output is flushed as with</i></td></tr>
+<tr><th id="255">255</th><td><i>  Z_SYNC_FLUSH, and the compression state is reset so that decompression can</i></td></tr>
+<tr><th id="256">256</th><td><i>  restart from this point if previous compressed data has been damaged or if</i></td></tr>
+<tr><th id="257">257</th><td><i>  random access is desired. Using Z_FULL_FLUSH too often can seriously degrade</i></td></tr>
+<tr><th id="258">258</th><td><i>  the compression.</i></td></tr>
+<tr><th id="259">259</th><td><i></i></td></tr>
+<tr><th id="260">260</th><td><i>    If deflate returns with avail_out == 0, this function must be called again</i></td></tr>
+<tr><th id="261">261</th><td><i>  with the same value of the flush parameter and more output space (updated</i></td></tr>
+<tr><th id="262">262</th><td><i>  avail_out), until the flush is complete (deflate returns with non-zero</i></td></tr>
+<tr><th id="263">263</th><td><i>  avail_out).</i></td></tr>
+<tr><th id="264">264</th><td><i></i></td></tr>
+<tr><th id="265">265</th><td><i>    If the parameter flush is set to Z_FINISH, pending input is processed,</i></td></tr>
+<tr><th id="266">266</th><td><i>  pending output is flushed and deflate returns with Z_STREAM_END if there</i></td></tr>
+<tr><th id="267">267</th><td><i>  was enough output space; if deflate returns with Z_OK, this function must be</i></td></tr>
+<tr><th id="268">268</th><td><i>  called again with Z_FINISH and more output space (updated avail_out) but no</i></td></tr>
+<tr><th id="269">269</th><td><i>  more input data, until it returns with Z_STREAM_END or an error. After</i></td></tr>
+<tr><th id="270">270</th><td><i>  deflate has returned Z_STREAM_END, the only possible operations on the</i></td></tr>
+<tr><th id="271">271</th><td><i>  stream are deflateReset or deflateEnd.</i></td></tr>
+<tr><th id="272">272</th><td><i>  </i></td></tr>
+<tr><th id="273">273</th><td><i>    Z_FINISH can be used immediately after deflateInit if all the compression</i></td></tr>
+<tr><th id="274">274</th><td><i>  is to be done in a single step. In this case, avail_out must be at least</i></td></tr>
+<tr><th id="275">275</th><td><i>  0.1% larger than avail_in plus 12 bytes.  If deflate does not return</i></td></tr>
+<tr><th id="276">276</th><td><i>  Z_STREAM_END, then it must be called again as described above.</i></td></tr>
+<tr><th id="277">277</th><td><i></i></td></tr>
+<tr><th id="278">278</th><td><i>    deflate() sets strm-&gt;adler to the adler32 checksum of all input read</i></td></tr>
+<tr><th id="279">279</th><td><i>  so far (that is, total_in bytes).</i></td></tr>
+<tr><th id="280">280</th><td><i></i></td></tr>
+<tr><th id="281">281</th><td><i>    deflate() may update data_type if it can make a good guess about</i></td></tr>
+<tr><th id="282">282</th><td><i>  the input data type (Z_ASCII or Z_BINARY). In doubt, the data is considered</i></td></tr>
+<tr><th id="283">283</th><td><i>  binary. This field is only for information purposes and does not affect</i></td></tr>
+<tr><th id="284">284</th><td><i>  the compression algorithm in any manner.</i></td></tr>
+<tr><th id="285">285</th><td><i></i></td></tr>
+<tr><th id="286">286</th><td><i>    deflate() returns Z_OK if some progress has been made (more input</i></td></tr>
+<tr><th id="287">287</th><td><i>  processed or more output produced), Z_STREAM_END if all input has been</i></td></tr>
+<tr><th id="288">288</th><td><i>  consumed and all output has been produced (only when flush is set to</i></td></tr>
+<tr><th id="289">289</th><td><i>  Z_FINISH), Z_STREAM_ERROR if the stream state was inconsistent (for example</i></td></tr>
+<tr><th id="290">290</th><td><i>  if next_in or next_out was NULL), Z_BUF_ERROR if no progress is possible</i></td></tr>
+<tr><th id="291">291</th><td><i>  (for example avail_in or avail_out was zero).</i></td></tr>
+<tr><th id="292">292</th><td><i>*/</i></td></tr>
+<tr><th id="293">293</th><td></td></tr>
+<tr><th id="294">294</th><td></td></tr>
+<tr><th id="295">295</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="zlib_deflateEnd" title='zlib_deflateEnd' data-ref="zlib_deflateEnd" data-ref-filename="zlib_deflateEnd">zlib_deflateEnd</dfn> (<a class="typedef" href="#z_streamp" title='z_streamp' data-type='z_stream *' data-ref="z_streamp" data-ref-filename="z_streamp">z_streamp</a> <dfn class="local col4 decl" id="14strm" title='strm' data-type='z_streamp' data-ref="14strm" data-ref-filename="14strm">strm</dfn>);</td></tr>
+<tr><th id="296">296</th><td><i>/*</i></td></tr>
+<tr><th id="297">297</th><td><i>     All dynamically allocated data structures for this stream are freed.</i></td></tr>
+<tr><th id="298">298</th><td><i>   This function discards any unprocessed input and does not flush any</i></td></tr>
+<tr><th id="299">299</th><td><i>   pending output.</i></td></tr>
+<tr><th id="300">300</th><td><i></i></td></tr>
+<tr><th id="301">301</th><td><i>     deflateEnd returns Z_OK if success, Z_STREAM_ERROR if the</i></td></tr>
+<tr><th id="302">302</th><td><i>   stream state was inconsistent, Z_DATA_ERROR if the stream was freed</i></td></tr>
+<tr><th id="303">303</th><td><i>   prematurely (some input or output was discarded). In the error case,</i></td></tr>
+<tr><th id="304">304</th><td><i>   msg may be set but then points to a static string (which must not be</i></td></tr>
+<tr><th id="305">305</th><td><i>   deallocated).</i></td></tr>
+<tr><th id="306">306</th><td><i>*/</i></td></tr>
+<tr><th id="307">307</th><td></td></tr>
+<tr><th id="308">308</th><td></td></tr>
+<tr><th id="309">309</th><td><b>extern</b> <em>int</em> <a class="decl fn" href="../../lib/zlib_inflate/inflate.c.html#zlib_inflate_workspacesize" title='zlib_inflate_workspacesize' data-ref="zlib_inflate_workspacesize" data-ref-filename="zlib_inflate_workspacesize" id="zlib_inflate_workspacesize">zlib_inflate_workspacesize</a> (<em>void</em>);</td></tr>
+<tr><th id="310">310</th><td><i>/*</i></td></tr>
+<tr><th id="311">311</th><td><i>   Returns the number of bytes that needs to be allocated for a per-</i></td></tr>
+<tr><th id="312">312</th><td><i>   stream workspace.  A pointer to this number of bytes should be</i></td></tr>
+<tr><th id="313">313</th><td><i>   returned in stream-&gt;workspace before calling zlib_inflateInit().</i></td></tr>
+<tr><th id="314">314</th><td><i>*/</i></td></tr>
+<tr><th id="315">315</th><td></td></tr>
+<tr><th id="316">316</th><td><i>/* </i></td></tr>
+<tr><th id="317">317</th><td><i>extern int zlib_inflateInit (z_streamp strm);</i></td></tr>
+<tr><th id="318">318</th><td><i></i></td></tr>
+<tr><th id="319">319</th><td><i>     Initializes the internal stream state for decompression. The fields</i></td></tr>
+<tr><th id="320">320</th><td><i>   next_in, avail_in, and workspace must be initialized before by</i></td></tr>
+<tr><th id="321">321</th><td><i>   the caller. If next_in is not NULL and avail_in is large enough (the exact</i></td></tr>
+<tr><th id="322">322</th><td><i>   value depends on the compression method), inflateInit determines the</i></td></tr>
+<tr><th id="323">323</th><td><i>   compression method from the zlib header and allocates all data structures</i></td></tr>
+<tr><th id="324">324</th><td><i>   accordingly; otherwise the allocation will be deferred to the first call of</i></td></tr>
+<tr><th id="325">325</th><td><i>   inflate.  If zalloc and zfree are set to NULL, inflateInit updates them to</i></td></tr>
+<tr><th id="326">326</th><td><i>   use default allocation functions.</i></td></tr>
+<tr><th id="327">327</th><td><i></i></td></tr>
+<tr><th id="328">328</th><td><i>     inflateInit returns Z_OK if success, Z_MEM_ERROR if there was not enough</i></td></tr>
+<tr><th id="329">329</th><td><i>   memory, Z_VERSION_ERROR if the zlib library version is incompatible with the</i></td></tr>
+<tr><th id="330">330</th><td><i>   version assumed by the caller.  msg is set to null if there is no error</i></td></tr>
+<tr><th id="331">331</th><td><i>   message. inflateInit does not perform any decompression apart from reading</i></td></tr>
+<tr><th id="332">332</th><td><i>   the zlib header if present: this will be done by inflate().  (So next_in and</i></td></tr>
+<tr><th id="333">333</th><td><i>   avail_in may be modified, but next_out and avail_out are unchanged.)</i></td></tr>
+<tr><th id="334">334</th><td><i>*/</i></td></tr>
+<tr><th id="335">335</th><td></td></tr>
+<tr><th id="336">336</th><td></td></tr>
+<tr><th id="337">337</th><td><b>extern</b> <em>int</em> <a class="decl fn" href="../../lib/zlib_inflate/inflate.c.html#zlib_inflate" title='zlib_inflate' data-ref="zlib_inflate" data-ref-filename="zlib_inflate" id="zlib_inflate">zlib_inflate</a> (<a class="typedef" href="#z_streamp" title='z_streamp' data-type='z_stream *' data-ref="z_streamp" data-ref-filename="z_streamp">z_streamp</a> <dfn class="local col5 decl" id="15strm" title='strm' data-type='z_streamp' data-ref="15strm" data-ref-filename="15strm">strm</dfn>, <em>int</em> <dfn class="local col6 decl" id="16flush" title='flush' data-type='int' data-ref="16flush" data-ref-filename="16flush">flush</dfn>);</td></tr>
+<tr><th id="338">338</th><td><i>/*</i></td></tr>
+<tr><th id="339">339</th><td><i>    inflate decompresses as much data as possible, and stops when the input</i></td></tr>
+<tr><th id="340">340</th><td><i>  buffer becomes empty or the output buffer becomes full. It may introduce</i></td></tr>
+<tr><th id="341">341</th><td><i>  some output latency (reading input without producing any output) except when</i></td></tr>
+<tr><th id="342">342</th><td><i>  forced to flush.</i></td></tr>
+<tr><th id="343">343</th><td><i></i></td></tr>
+<tr><th id="344">344</th><td><i>  The detailed semantics are as follows. inflate performs one or both of the</i></td></tr>
+<tr><th id="345">345</th><td><i>  following actions:</i></td></tr>
+<tr><th id="346">346</th><td><i></i></td></tr>
+<tr><th id="347">347</th><td><i>  - Decompress more input starting at next_in and update next_in and avail_in</i></td></tr>
+<tr><th id="348">348</th><td><i>    accordingly. If not all input can be processed (because there is not</i></td></tr>
+<tr><th id="349">349</th><td><i>    enough room in the output buffer), next_in is updated and processing</i></td></tr>
+<tr><th id="350">350</th><td><i>    will resume at this point for the next call of inflate().</i></td></tr>
+<tr><th id="351">351</th><td><i></i></td></tr>
+<tr><th id="352">352</th><td><i>  - Provide more output starting at next_out and update next_out and avail_out</i></td></tr>
+<tr><th id="353">353</th><td><i>    accordingly.  inflate() provides as much output as possible, until there</i></td></tr>
+<tr><th id="354">354</th><td><i>    is no more input data or no more space in the output buffer (see below</i></td></tr>
+<tr><th id="355">355</th><td><i>    about the flush parameter).</i></td></tr>
+<tr><th id="356">356</th><td><i></i></td></tr>
+<tr><th id="357">357</th><td><i>  Before the call of inflate(), the application should ensure that at least</i></td></tr>
+<tr><th id="358">358</th><td><i>  one of the actions is possible, by providing more input and/or consuming</i></td></tr>
+<tr><th id="359">359</th><td><i>  more output, and updating the next_* and avail_* values accordingly.</i></td></tr>
+<tr><th id="360">360</th><td><i>  The application can consume the uncompressed output when it wants, for</i></td></tr>
+<tr><th id="361">361</th><td><i>  example when the output buffer is full (avail_out == 0), or after each</i></td></tr>
+<tr><th id="362">362</th><td><i>  call of inflate(). If inflate returns Z_OK and with zero avail_out, it</i></td></tr>
+<tr><th id="363">363</th><td><i>  must be called again after making room in the output buffer because there</i></td></tr>
+<tr><th id="364">364</th><td><i>  might be more output pending.</i></td></tr>
+<tr><th id="365">365</th><td><i></i></td></tr>
+<tr><th id="366">366</th><td><i>    The flush parameter of inflate() can be Z_NO_FLUSH, Z_SYNC_FLUSH,</i></td></tr>
+<tr><th id="367">367</th><td><i>  Z_FINISH, or Z_BLOCK. Z_SYNC_FLUSH requests that inflate() flush as much</i></td></tr>
+<tr><th id="368">368</th><td><i>  output as possible to the output buffer. Z_BLOCK requests that inflate() stop</i></td></tr>
+<tr><th id="369">369</th><td><i>  if and when it gets to the next deflate block boundary. When decoding the</i></td></tr>
+<tr><th id="370">370</th><td><i>  zlib or gzip format, this will cause inflate() to return immediately after</i></td></tr>
+<tr><th id="371">371</th><td><i>  the header and before the first block. When doing a raw inflate, inflate()</i></td></tr>
+<tr><th id="372">372</th><td><i>  will go ahead and process the first block, and will return when it gets to</i></td></tr>
+<tr><th id="373">373</th><td><i>  the end of that block, or when it runs out of data.</i></td></tr>
+<tr><th id="374">374</th><td><i></i></td></tr>
+<tr><th id="375">375</th><td><i>    The Z_BLOCK option assists in appending to or combining deflate streams.</i></td></tr>
+<tr><th id="376">376</th><td><i>  Also to assist in this, on return inflate() will set strm-&gt;data_type to the</i></td></tr>
+<tr><th id="377">377</th><td><i>  number of unused bits in the last byte taken from strm-&gt;next_in, plus 64</i></td></tr>
+<tr><th id="378">378</th><td><i>  if inflate() is currently decoding the last block in the deflate stream,</i></td></tr>
+<tr><th id="379">379</th><td><i>  plus 128 if inflate() returned immediately after decoding an end-of-block</i></td></tr>
+<tr><th id="380">380</th><td><i>  code or decoding the complete header up to just before the first byte of the</i></td></tr>
+<tr><th id="381">381</th><td><i>  deflate stream. The end-of-block will not be indicated until all of the</i></td></tr>
+<tr><th id="382">382</th><td><i>  uncompressed data from that block has been written to strm-&gt;next_out.  The</i></td></tr>
+<tr><th id="383">383</th><td><i>  number of unused bits may in general be greater than seven, except when</i></td></tr>
+<tr><th id="384">384</th><td><i>  bit 7 of data_type is set, in which case the number of unused bits will be</i></td></tr>
+<tr><th id="385">385</th><td><i>  less than eight.</i></td></tr>
+<tr><th id="386">386</th><td><i></i></td></tr>
+<tr><th id="387">387</th><td><i>    inflate() should normally be called until it returns Z_STREAM_END or an</i></td></tr>
+<tr><th id="388">388</th><td><i>  error. However if all decompression is to be performed in a single step</i></td></tr>
+<tr><th id="389">389</th><td><i>  (a single call of inflate), the parameter flush should be set to</i></td></tr>
+<tr><th id="390">390</th><td><i>  Z_FINISH. In this case all pending input is processed and all pending</i></td></tr>
+<tr><th id="391">391</th><td><i>  output is flushed; avail_out must be large enough to hold all the</i></td></tr>
+<tr><th id="392">392</th><td><i>  uncompressed data. (The size of the uncompressed data may have been saved</i></td></tr>
+<tr><th id="393">393</th><td><i>  by the compressor for this purpose.) The next operation on this stream must</i></td></tr>
+<tr><th id="394">394</th><td><i>  be inflateEnd to deallocate the decompression state. The use of Z_FINISH</i></td></tr>
+<tr><th id="395">395</th><td><i>  is never required, but can be used to inform inflate that a faster approach</i></td></tr>
+<tr><th id="396">396</th><td><i>  may be used for the single inflate() call.</i></td></tr>
+<tr><th id="397">397</th><td><i></i></td></tr>
+<tr><th id="398">398</th><td><i>     In this implementation, inflate() always flushes as much output as</i></td></tr>
+<tr><th id="399">399</th><td><i>  possible to the output buffer, and always uses the faster approach on the</i></td></tr>
+<tr><th id="400">400</th><td><i>  first call. So the only effect of the flush parameter in this implementation</i></td></tr>
+<tr><th id="401">401</th><td><i>  is on the return value of inflate(), as noted below, or when it returns early</i></td></tr>
+<tr><th id="402">402</th><td><i>  because Z_BLOCK is used.</i></td></tr>
+<tr><th id="403">403</th><td><i></i></td></tr>
+<tr><th id="404">404</th><td><i>     If a preset dictionary is needed after this call (see inflateSetDictionary</i></td></tr>
+<tr><th id="405">405</th><td><i>  below), inflate sets strm-&gt;adler to the adler32 checksum of the dictionary</i></td></tr>
+<tr><th id="406">406</th><td><i>  chosen by the compressor and returns Z_NEED_DICT; otherwise it sets</i></td></tr>
+<tr><th id="407">407</th><td><i>  strm-&gt;adler to the adler32 checksum of all output produced so far (that is,</i></td></tr>
+<tr><th id="408">408</th><td><i>  total_out bytes) and returns Z_OK, Z_STREAM_END or an error code as described</i></td></tr>
+<tr><th id="409">409</th><td><i>  below. At the end of the stream, inflate() checks that its computed adler32</i></td></tr>
+<tr><th id="410">410</th><td><i>  checksum is equal to that saved by the compressor and returns Z_STREAM_END</i></td></tr>
+<tr><th id="411">411</th><td><i>  only if the checksum is correct.</i></td></tr>
+<tr><th id="412">412</th><td><i></i></td></tr>
+<tr><th id="413">413</th><td><i>    inflate() will decompress and check either zlib-wrapped or gzip-wrapped</i></td></tr>
+<tr><th id="414">414</th><td><i>  deflate data.  The header type is detected automatically.  Any information</i></td></tr>
+<tr><th id="415">415</th><td><i>  contained in the gzip header is not retained, so applications that need that</i></td></tr>
+<tr><th id="416">416</th><td><i>  information should instead use raw inflate, see inflateInit2() below, or</i></td></tr>
+<tr><th id="417">417</th><td><i>  inflateBack() and perform their own processing of the gzip header and</i></td></tr>
+<tr><th id="418">418</th><td><i>  trailer.</i></td></tr>
+<tr><th id="419">419</th><td><i></i></td></tr>
+<tr><th id="420">420</th><td><i>    inflate() returns Z_OK if some progress has been made (more input processed</i></td></tr>
+<tr><th id="421">421</th><td><i>  or more output produced), Z_STREAM_END if the end of the compressed data has</i></td></tr>
+<tr><th id="422">422</th><td><i>  been reached and all uncompressed output has been produced, Z_NEED_DICT if a</i></td></tr>
+<tr><th id="423">423</th><td><i>  preset dictionary is needed at this point, Z_DATA_ERROR if the input data was</i></td></tr>
+<tr><th id="424">424</th><td><i>  corrupted (input stream not conforming to the zlib format or incorrect check</i></td></tr>
+<tr><th id="425">425</th><td><i>  value), Z_STREAM_ERROR if the stream structure was inconsistent (for example</i></td></tr>
+<tr><th id="426">426</th><td><i>  if next_in or next_out was NULL), Z_MEM_ERROR if there was not enough memory,</i></td></tr>
+<tr><th id="427">427</th><td><i>  Z_BUF_ERROR if no progress is possible or if there was not enough room in the</i></td></tr>
+<tr><th id="428">428</th><td><i>  output buffer when Z_FINISH is used. Note that Z_BUF_ERROR is not fatal, and</i></td></tr>
+<tr><th id="429">429</th><td><i>  inflate() can be called again with more input and more output space to</i></td></tr>
+<tr><th id="430">430</th><td><i>  continue decompressing. If Z_DATA_ERROR is returned, the application may then</i></td></tr>
+<tr><th id="431">431</th><td><i>  call inflateSync() to look for a good compression block if a partial recovery</i></td></tr>
+<tr><th id="432">432</th><td><i>  of the data is desired.</i></td></tr>
+<tr><th id="433">433</th><td><i>*/</i></td></tr>
+<tr><th id="434">434</th><td></td></tr>
+<tr><th id="435">435</th><td></td></tr>
+<tr><th id="436">436</th><td><b>extern</b> <em>int</em> <a class="decl fn" href="../../lib/zlib_inflate/inflate.c.html#zlib_inflateEnd" title='zlib_inflateEnd' data-ref="zlib_inflateEnd" data-ref-filename="zlib_inflateEnd" id="zlib_inflateEnd">zlib_inflateEnd</a> (<a class="typedef" href="#z_streamp" title='z_streamp' data-type='z_stream *' data-ref="z_streamp" data-ref-filename="z_streamp">z_streamp</a> <dfn class="local col7 decl" id="17strm" title='strm' data-type='z_streamp' data-ref="17strm" data-ref-filename="17strm">strm</dfn>);</td></tr>
+<tr><th id="437">437</th><td><i>/*</i></td></tr>
+<tr><th id="438">438</th><td><i>     All dynamically allocated data structures for this stream are freed.</i></td></tr>
+<tr><th id="439">439</th><td><i>   This function discards any unprocessed input and does not flush any</i></td></tr>
+<tr><th id="440">440</th><td><i>   pending output.</i></td></tr>
+<tr><th id="441">441</th><td><i></i></td></tr>
+<tr><th id="442">442</th><td><i>     inflateEnd returns Z_OK if success, Z_STREAM_ERROR if the stream state</i></td></tr>
+<tr><th id="443">443</th><td><i>   was inconsistent. In the error case, msg may be set but then points to a</i></td></tr>
+<tr><th id="444">444</th><td><i>   static string (which must not be deallocated).</i></td></tr>
+<tr><th id="445">445</th><td><i>*/</i></td></tr>
+<tr><th id="446">446</th><td></td></tr>
+<tr><th id="447">447</th><td>                        <i>/* Advanced functions */</i></td></tr>
+<tr><th id="448">448</th><td></td></tr>
+<tr><th id="449">449</th><td><i>/*</i></td></tr>
+<tr><th id="450">450</th><td><i>    The following functions are needed only in some special applications.</i></td></tr>
+<tr><th id="451">451</th><td><i>*/</i></td></tr>
+<tr><th id="452">452</th><td></td></tr>
+<tr><th id="453">453</th><td><i>/*   </i></td></tr>
+<tr><th id="454">454</th><td><i>extern int deflateInit2 (z_streamp strm,</i></td></tr>
+<tr><th id="455">455</th><td><i>                                     int  level,</i></td></tr>
+<tr><th id="456">456</th><td><i>                                     int  method,</i></td></tr>
+<tr><th id="457">457</th><td><i>                                     int  windowBits,</i></td></tr>
+<tr><th id="458">458</th><td><i>                                     int  memLevel,</i></td></tr>
+<tr><th id="459">459</th><td><i>                                     int  strategy);</i></td></tr>
+<tr><th id="460">460</th><td><i></i></td></tr>
+<tr><th id="461">461</th><td><i>     This is another version of deflateInit with more compression options. The</i></td></tr>
+<tr><th id="462">462</th><td><i>   fields next_in, zalloc, zfree and opaque must be initialized before by</i></td></tr>
+<tr><th id="463">463</th><td><i>   the caller.</i></td></tr>
+<tr><th id="464">464</th><td><i></i></td></tr>
+<tr><th id="465">465</th><td><i>     The method parameter is the compression method. It must be Z_DEFLATED in</i></td></tr>
+<tr><th id="466">466</th><td><i>   this version of the library.</i></td></tr>
+<tr><th id="467">467</th><td><i></i></td></tr>
+<tr><th id="468">468</th><td><i>     The windowBits parameter is the base two logarithm of the window size</i></td></tr>
+<tr><th id="469">469</th><td><i>   (the size of the history buffer).  It should be in the range 8..15 for this</i></td></tr>
+<tr><th id="470">470</th><td><i>   version of the library. Larger values of this parameter result in better</i></td></tr>
+<tr><th id="471">471</th><td><i>   compression at the expense of memory usage. The default value is 15 if</i></td></tr>
+<tr><th id="472">472</th><td><i>   deflateInit is used instead.</i></td></tr>
+<tr><th id="473">473</th><td><i></i></td></tr>
+<tr><th id="474">474</th><td><i>     The memLevel parameter specifies how much memory should be allocated</i></td></tr>
+<tr><th id="475">475</th><td><i>   for the internal compression state. memLevel=1 uses minimum memory but</i></td></tr>
+<tr><th id="476">476</th><td><i>   is slow and reduces compression ratio; memLevel=9 uses maximum memory</i></td></tr>
+<tr><th id="477">477</th><td><i>   for optimal speed. The default value is 8. See zconf.h for total memory</i></td></tr>
+<tr><th id="478">478</th><td><i>   usage as a function of windowBits and memLevel.</i></td></tr>
+<tr><th id="479">479</th><td><i></i></td></tr>
+<tr><th id="480">480</th><td><i>     The strategy parameter is used to tune the compression algorithm. Use the</i></td></tr>
+<tr><th id="481">481</th><td><i>   value Z_DEFAULT_STRATEGY for normal data, Z_FILTERED for data produced by a</i></td></tr>
+<tr><th id="482">482</th><td><i>   filter (or predictor), or Z_HUFFMAN_ONLY to force Huffman encoding only (no</i></td></tr>
+<tr><th id="483">483</th><td><i>   string match).  Filtered data consists mostly of small values with a</i></td></tr>
+<tr><th id="484">484</th><td><i>   somewhat random distribution. In this case, the compression algorithm is</i></td></tr>
+<tr><th id="485">485</th><td><i>   tuned to compress them better. The effect of Z_FILTERED is to force more</i></td></tr>
+<tr><th id="486">486</th><td><i>   Huffman coding and less string matching; it is somewhat intermediate</i></td></tr>
+<tr><th id="487">487</th><td><i>   between Z_DEFAULT and Z_HUFFMAN_ONLY. The strategy parameter only affects</i></td></tr>
+<tr><th id="488">488</th><td><i>   the compression ratio but not the correctness of the compressed output even</i></td></tr>
+<tr><th id="489">489</th><td><i>   if it is not set appropriately.</i></td></tr>
+<tr><th id="490">490</th><td><i></i></td></tr>
+<tr><th id="491">491</th><td><i>      deflateInit2 returns Z_OK if success, Z_MEM_ERROR if there was not enough</i></td></tr>
+<tr><th id="492">492</th><td><i>   memory, Z_STREAM_ERROR if a parameter is invalid (such as an invalid</i></td></tr>
+<tr><th id="493">493</th><td><i>   method). msg is set to null if there is no error message.  deflateInit2 does</i></td></tr>
+<tr><th id="494">494</th><td><i>   not perform any compression: this will be done by deflate().</i></td></tr>
+<tr><th id="495">495</th><td><i>*/</i></td></tr>
+<tr><th id="496">496</th><td></td></tr>
+<tr><th id="497">497</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="zlib_deflateReset" title='zlib_deflateReset' data-ref="zlib_deflateReset" data-ref-filename="zlib_deflateReset">zlib_deflateReset</dfn> (<a class="typedef" href="#z_streamp" title='z_streamp' data-type='z_stream *' data-ref="z_streamp" data-ref-filename="z_streamp">z_streamp</a> <dfn class="local col8 decl" id="18strm" title='strm' data-type='z_streamp' data-ref="18strm" data-ref-filename="18strm">strm</dfn>);</td></tr>
+<tr><th id="498">498</th><td><i>/*</i></td></tr>
+<tr><th id="499">499</th><td><i>     This function is equivalent to deflateEnd followed by deflateInit,</i></td></tr>
+<tr><th id="500">500</th><td><i>   but does not free and reallocate all the internal compression state.</i></td></tr>
+<tr><th id="501">501</th><td><i>   The stream will keep the same compression level and any other attributes</i></td></tr>
+<tr><th id="502">502</th><td><i>   that may have been set by deflateInit2.</i></td></tr>
+<tr><th id="503">503</th><td><i></i></td></tr>
+<tr><th id="504">504</th><td><i>      deflateReset returns Z_OK if success, or Z_STREAM_ERROR if the source</i></td></tr>
+<tr><th id="505">505</th><td><i>   stream state was inconsistent (such as zalloc or state being NULL).</i></td></tr>
+<tr><th id="506">506</th><td><i>*/</i></td></tr>
+<tr><th id="507">507</th><td></td></tr>
+<tr><th id="508">508</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>long</em> <dfn class="decl def fn" id="deflateBound" title='deflateBound' data-ref="deflateBound" data-ref-filename="deflateBound">deflateBound</dfn>(<em>unsigned</em> <em>long</em> <dfn class="local col9 decl" id="19s" title='s' data-type='unsigned long' data-ref="19s" data-ref-filename="19s">s</dfn>)</td></tr>
+<tr><th id="509">509</th><td>{</td></tr>
+<tr><th id="510">510</th><td>	<b>return</b> <a class="local col9 ref" href="#19s" title='s' data-ref="19s" data-ref-filename="19s">s</a> + ((<a class="local col9 ref" href="#19s" title='s' data-ref="19s" data-ref-filename="19s">s</a> + <var>7</var>) &gt;&gt; <var>3</var>) + ((<a class="local col9 ref" href="#19s" title='s' data-ref="19s" data-ref-filename="19s">s</a> + <var>63</var>) &gt;&gt; <var>6</var>) + <var>11</var>;</td></tr>
+<tr><th id="511">511</th><td>}</td></tr>
+<tr><th id="512">512</th><td></td></tr>
+<tr><th id="513">513</th><td><i>/*   </i></td></tr>
+<tr><th id="514">514</th><td><i>extern int inflateInit2 (z_streamp strm, int  windowBits);</i></td></tr>
+<tr><th id="515">515</th><td><i></i></td></tr>
+<tr><th id="516">516</th><td><i>     This is another version of inflateInit with an extra parameter. The</i></td></tr>
+<tr><th id="517">517</th><td><i>   fields next_in, avail_in, zalloc, zfree and opaque must be initialized</i></td></tr>
+<tr><th id="518">518</th><td><i>   before by the caller.</i></td></tr>
+<tr><th id="519">519</th><td><i></i></td></tr>
+<tr><th id="520">520</th><td><i>     The windowBits parameter is the base two logarithm of the maximum window</i></td></tr>
+<tr><th id="521">521</th><td><i>   size (the size of the history buffer).  It should be in the range 8..15 for</i></td></tr>
+<tr><th id="522">522</th><td><i>   this version of the library. The default value is 15 if inflateInit is used</i></td></tr>
+<tr><th id="523">523</th><td><i>   instead. windowBits must be greater than or equal to the windowBits value</i></td></tr>
+<tr><th id="524">524</th><td><i>   provided to deflateInit2() while compressing, or it must be equal to 15 if</i></td></tr>
+<tr><th id="525">525</th><td><i>   deflateInit2() was not used. If a compressed stream with a larger window</i></td></tr>
+<tr><th id="526">526</th><td><i>   size is given as input, inflate() will return with the error code</i></td></tr>
+<tr><th id="527">527</th><td><i>   Z_DATA_ERROR instead of trying to allocate a larger window.</i></td></tr>
+<tr><th id="528">528</th><td><i></i></td></tr>
+<tr><th id="529">529</th><td><i>     windowBits can also be -8..-15 for raw inflate. In this case, -windowBits</i></td></tr>
+<tr><th id="530">530</th><td><i>   determines the window size. inflate() will then process raw deflate data,</i></td></tr>
+<tr><th id="531">531</th><td><i>   not looking for a zlib or gzip header, not generating a check value, and not</i></td></tr>
+<tr><th id="532">532</th><td><i>   looking for any check values for comparison at the end of the stream. This</i></td></tr>
+<tr><th id="533">533</th><td><i>   is for use with other formats that use the deflate compressed data format</i></td></tr>
+<tr><th id="534">534</th><td><i>   such as zip.  Those formats provide their own check values. If a custom</i></td></tr>
+<tr><th id="535">535</th><td><i>   format is developed using the raw deflate format for compressed data, it is</i></td></tr>
+<tr><th id="536">536</th><td><i>   recommended that a check value such as an adler32 or a crc32 be applied to</i></td></tr>
+<tr><th id="537">537</th><td><i>   the uncompressed data as is done in the zlib, gzip, and zip formats.  For</i></td></tr>
+<tr><th id="538">538</th><td><i>   most applications, the zlib format should be used as is. Note that comments</i></td></tr>
+<tr><th id="539">539</th><td><i>   above on the use in deflateInit2() applies to the magnitude of windowBits.</i></td></tr>
+<tr><th id="540">540</th><td><i></i></td></tr>
+<tr><th id="541">541</th><td><i>     windowBits can also be greater than 15 for optional gzip decoding. Add</i></td></tr>
+<tr><th id="542">542</th><td><i>   32 to windowBits to enable zlib and gzip decoding with automatic header</i></td></tr>
+<tr><th id="543">543</th><td><i>   detection, or add 16 to decode only the gzip format (the zlib format will</i></td></tr>
+<tr><th id="544">544</th><td><i>   return a Z_DATA_ERROR).  If a gzip stream is being decoded, strm-&gt;adler is</i></td></tr>
+<tr><th id="545">545</th><td><i>   a crc32 instead of an adler32.</i></td></tr>
+<tr><th id="546">546</th><td><i></i></td></tr>
+<tr><th id="547">547</th><td><i>     inflateInit2 returns Z_OK if success, Z_MEM_ERROR if there was not enough</i></td></tr>
+<tr><th id="548">548</th><td><i>   memory, Z_STREAM_ERROR if a parameter is invalid (such as a null strm). msg</i></td></tr>
+<tr><th id="549">549</th><td><i>   is set to null if there is no error message.  inflateInit2 does not perform</i></td></tr>
+<tr><th id="550">550</th><td><i>   any decompression apart from reading the zlib header if present: this will</i></td></tr>
+<tr><th id="551">551</th><td><i>   be done by inflate(). (So next_in and avail_in may be modified, but next_out</i></td></tr>
+<tr><th id="552">552</th><td><i>   and avail_out are unchanged.)</i></td></tr>
+<tr><th id="553">553</th><td><i>*/</i></td></tr>
+<tr><th id="554">554</th><td></td></tr>
+<tr><th id="555">555</th><td><b>extern</b> <em>int</em> <a class="decl fn" href="../../lib/zlib_inflate/inflate.c.html#zlib_inflateReset" title='zlib_inflateReset' data-ref="zlib_inflateReset" data-ref-filename="zlib_inflateReset" id="zlib_inflateReset">zlib_inflateReset</a> (<a class="typedef" href="#z_streamp" title='z_streamp' data-type='z_stream *' data-ref="z_streamp" data-ref-filename="z_streamp">z_streamp</a> <dfn class="local col0 decl" id="20strm" title='strm' data-type='z_streamp' data-ref="20strm" data-ref-filename="20strm">strm</dfn>);</td></tr>
+<tr><th id="556">556</th><td><i>/*</i></td></tr>
+<tr><th id="557">557</th><td><i>     This function is equivalent to inflateEnd followed by inflateInit,</i></td></tr>
+<tr><th id="558">558</th><td><i>   but does not free and reallocate all the internal decompression state.</i></td></tr>
+<tr><th id="559">559</th><td><i>   The stream will keep attributes that may have been set by inflateInit2.</i></td></tr>
+<tr><th id="560">560</th><td><i></i></td></tr>
+<tr><th id="561">561</th><td><i>      inflateReset returns Z_OK if success, or Z_STREAM_ERROR if the source</i></td></tr>
+<tr><th id="562">562</th><td><i>   stream state was inconsistent (such as zalloc or state being NULL).</i></td></tr>
+<tr><th id="563">563</th><td><i>*/</i></td></tr>
+<tr><th id="564">564</th><td></td></tr>
+<tr><th id="565">565</th><td><b>extern</b> <em>int</em> <a class="decl fn" href="../../lib/zlib_inflate/inflate.c.html#zlib_inflateIncomp" title='zlib_inflateIncomp' data-ref="zlib_inflateIncomp" data-ref-filename="zlib_inflateIncomp" id="zlib_inflateIncomp">zlib_inflateIncomp</a> (<a class="typedef" href="#z_stream" title='z_stream' data-type='struct z_stream_s' data-ref="z_stream" data-ref-filename="z_stream">z_stream</a> *<dfn class="local col1 decl" id="21strm" title='strm' data-type='z_stream *' data-ref="21strm" data-ref-filename="21strm">strm</dfn>);</td></tr>
+<tr><th id="566">566</th><td><i>/*</i></td></tr>
+<tr><th id="567">567</th><td><i>     This function adds the data at next_in (avail_in bytes) to the output</i></td></tr>
+<tr><th id="568">568</th><td><i>   history without performing any output.  There must be no pending output,</i></td></tr>
+<tr><th id="569">569</th><td><i>   and the decompressor must be expecting to see the start of a block.</i></td></tr>
+<tr><th id="570">570</th><td><i>   Calling this function is equivalent to decompressing a stored block</i></td></tr>
+<tr><th id="571">571</th><td><i>   containing the data at next_in (except that the data is not output).</i></td></tr>
+<tr><th id="572">572</th><td><i>*/</i></td></tr>
+<tr><th id="573">573</th><td></td></tr>
+<tr><th id="574">574</th><td><u>#define <dfn class="macro" id="_M/zlib_deflateInit" data-ref="_M/zlib_deflateInit">zlib_deflateInit</dfn>(strm, level) \</u></td></tr>
+<tr><th id="575">575</th><td><u>	zlib_deflateInit2((strm), (level), Z_DEFLATED, MAX_WBITS, \</u></td></tr>
+<tr><th id="576">576</th><td><u>			      DEF_MEM_LEVEL, Z_DEFAULT_STRATEGY)</u></td></tr>
+<tr><th id="577">577</th><td><u>#define <dfn class="macro" id="_M/zlib_inflateInit" data-ref="_M/zlib_inflateInit">zlib_inflateInit</dfn>(strm) \</u></td></tr>
+<tr><th id="578">578</th><td><u>	zlib_inflateInit2((strm), DEF_WBITS)</u></td></tr>
+<tr><th id="579">579</th><td></td></tr>
+<tr><th id="580">580</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="zlib_deflateInit2" title='zlib_deflateInit2' data-ref="zlib_deflateInit2" data-ref-filename="zlib_deflateInit2">zlib_deflateInit2</dfn>(<a class="typedef" href="#z_streamp" title='z_streamp' data-type='z_stream *' data-ref="z_streamp" data-ref-filename="z_streamp">z_streamp</a> <dfn class="local col2 decl" id="22strm" title='strm' data-type='z_streamp' data-ref="22strm" data-ref-filename="22strm">strm</dfn>, <em>int</em>  <dfn class="local col3 decl" id="23level" title='level' data-type='int' data-ref="23level" data-ref-filename="23level">level</dfn>, <em>int</em>  <dfn class="local col4 decl" id="24method" title='method' data-type='int' data-ref="24method" data-ref-filename="24method">method</dfn>,</td></tr>
+<tr><th id="581">581</th><td>                                      <em>int</em> <dfn class="local col5 decl" id="25windowBits" title='windowBits' data-type='int' data-ref="25windowBits" data-ref-filename="25windowBits">windowBits</dfn>, <em>int</em> <dfn class="local col6 decl" id="26memLevel" title='memLevel' data-type='int' data-ref="26memLevel" data-ref-filename="26memLevel">memLevel</dfn>,</td></tr>
+<tr><th id="582">582</th><td>                                      <em>int</em> <dfn class="local col7 decl" id="27strategy" title='strategy' data-type='int' data-ref="27strategy" data-ref-filename="27strategy">strategy</dfn>);</td></tr>
+<tr><th id="583">583</th><td><b>extern</b> <em>int</em> <a class="decl fn" href="../../lib/zlib_inflate/inflate.c.html#zlib_inflateInit2" title='zlib_inflateInit2' data-ref="zlib_inflateInit2" data-ref-filename="zlib_inflateInit2" id="zlib_inflateInit2">zlib_inflateInit2</a>(<a class="typedef" href="#z_streamp" title='z_streamp' data-type='z_stream *' data-ref="z_streamp" data-ref-filename="z_streamp">z_streamp</a> <dfn class="local col8 decl" id="28strm" title='strm' data-type='z_streamp' data-ref="28strm" data-ref-filename="28strm">strm</dfn>, <em>int</em>  <dfn class="local col9 decl" id="29windowBits" title='windowBits' data-type='int' data-ref="29windowBits" data-ref-filename="29windowBits">windowBits</dfn>);</td></tr>
+<tr><th id="584">584</th><td></td></tr>
+<tr><th id="585">585</th><td><u>#<span data-ppcond="585">if</span> !defined(<a class="macro" href="zutil.h.html#14" data-ref="_M/_Z_UTIL_H">_Z_UTIL_H</a>) &amp;&amp; !defined(<span class="macro" data-ref="_M/NO_DUMMY_DECL">NO_DUMMY_DECL</span>)</u></td></tr>
+<tr><th id="586">586</th><td>    <b>struct</b> internal_state {<em>int</em> dummy;}; <i>/* hack for buggy compilers */</i></td></tr>
+<tr><th id="587">587</th><td><u>#<span data-ppcond="585">endif</span></u></td></tr>
+<tr><th id="588">588</th><td></td></tr>
+<tr><th id="589">589</th><td><i>/* Utility function: initialize zlib, unpack binary blob, clean up zlib,</i></td></tr>
+<tr><th id="590">590</th><td><i> * return len or negative error code. */</i></td></tr>
+<tr><th id="591">591</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="zlib_inflate_blob" title='zlib_inflate_blob' data-ref="zlib_inflate_blob" data-ref-filename="zlib_inflate_blob">zlib_inflate_blob</dfn>(<em>void</em> *<dfn class="local col0 decl" id="30dst" title='dst' data-type='void *' data-ref="30dst" data-ref-filename="30dst">dst</dfn>, <em>unsigned</em> <dfn class="local col1 decl" id="31dst_sz" title='dst_sz' data-type='unsigned int' data-ref="31dst_sz" data-ref-filename="31dst_sz">dst_sz</dfn>, <em>const</em> <em>void</em> *<dfn class="local col2 decl" id="32src" title='src' data-type='const void *' data-ref="32src" data-ref-filename="32src">src</dfn>, <em>unsigned</em> <dfn class="local col3 decl" id="33src_sz" title='src_sz' data-type='unsigned int' data-ref="33src_sz" data-ref-filename="33src_sz">src_sz</dfn>);</td></tr>
+<tr><th id="592">592</th><td></td></tr>
+<tr><th id="593">593</th><td><u>#<span data-ppcond="30">endif</span> /* _ZLIB_H */</u></td></tr>
+<tr><th id="594">594</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../arch/x86/boot/compressed/misc.c.html'>linux-5.3.1/arch/x86/boot/compressed/misc.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

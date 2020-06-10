@@ -1,0 +1,1006 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>cleanup.c source code [linux-5.3.1/arch/x86/kernel/cpu/mtrr/cleanup.c] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="var_mtrr_range_state,var_mtrr_state "/>
+<link rel="stylesheet" href="../../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/arch/x86/kernel/cpu/mtrr/cleanup.c'; var root_path = '../../../../../..'; var data_path = '../../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../../..'>linux-5.3.1</a>/<a href='../../../..'>arch</a>/<a href='../../..'>x86</a>/<a href='../..'>kernel</a>/<a href='..'>cpu</a>/<a href='./'>mtrr</a>/<a href='cleanup.c.html'>cleanup.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*</i></td></tr>
+<tr><th id="2">2</th><td><i> * MTRR (Memory Type Range Register) cleanup</i></td></tr>
+<tr><th id="3">3</th><td><i> *</i></td></tr>
+<tr><th id="4">4</th><td><i> *  Copyright (C) 2009 Yinghai Lu</i></td></tr>
+<tr><th id="5">5</th><td><i> *</i></td></tr>
+<tr><th id="6">6</th><td><i> * This library is free software; you can redistribute it and/or</i></td></tr>
+<tr><th id="7">7</th><td><i> * modify it under the terms of the GNU Library General Public</i></td></tr>
+<tr><th id="8">8</th><td><i> * License as published by the Free Software Foundation; either</i></td></tr>
+<tr><th id="9">9</th><td><i> * version 2 of the License, or (at your option) any later version.</i></td></tr>
+<tr><th id="10">10</th><td><i> *</i></td></tr>
+<tr><th id="11">11</th><td><i> * This library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="12">12</th><td><i> * but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="13">13</th><td><i> * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU</i></td></tr>
+<tr><th id="14">14</th><td><i> * Library General Public License for more details.</i></td></tr>
+<tr><th id="15">15</th><td><i> *</i></td></tr>
+<tr><th id="16">16</th><td><i> * You should have received a copy of the GNU Library General Public</i></td></tr>
+<tr><th id="17">17</th><td><i> * License along with this library; if not, write to the Free</i></td></tr>
+<tr><th id="18">18</th><td><i> * Software Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.</i></td></tr>
+<tr><th id="19">19</th><td><i> */</i></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../../../../include/linux/init.h.html">&lt;linux/init.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../../../../include/linux/pci.h.html">&lt;linux/pci.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../../../../../include/linux/smp.h.html">&lt;linux/smp.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../../../../../include/linux/cpu.h.html">&lt;linux/cpu.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../../../../../include/linux/mutex.h.html">&lt;linux/mutex.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../../../../../include/linux/uaccess.h.html">&lt;linux/uaccess.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../../../../../include/linux/kvm_para.h.html">&lt;linux/kvm_para.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../../../../../include/linux/range.h.html">&lt;linux/range.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="../../../include/asm/processor.h.html">&lt;asm/processor.h&gt;</a></u></td></tr>
+<tr><th id="30">30</th><td><u>#include <a href="../../../include/asm/e820/api.h.html">&lt;asm/e820/api.h&gt;</a></u></td></tr>
+<tr><th id="31">31</th><td><u>#include <a href="../../../include/asm/mtrr.h.html">&lt;asm/mtrr.h&gt;</a></u></td></tr>
+<tr><th id="32">32</th><td><u>#include <a href="../../../include/asm/msr.h.html">&lt;asm/msr.h&gt;</a></u></td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td><u>#include <a href="mtrr.h.html">"mtrr.h"</a></u></td></tr>
+<tr><th id="35">35</th><td></td></tr>
+<tr><th id="36">36</th><td><b>struct</b> <dfn class="type def" id="var_mtrr_range_state" title='var_mtrr_range_state' data-ref="var_mtrr_range_state" data-ref-filename="var_mtrr_range_state">var_mtrr_range_state</dfn> {</td></tr>
+<tr><th id="37">37</th><td>	<em>unsigned</em> <em>long</em>	<dfn class="tu decl field" id="var_mtrr_range_state::base_pfn" title='var_mtrr_range_state::base_pfn' data-type='unsigned long' data-ref="var_mtrr_range_state::base_pfn" data-ref-filename="var_mtrr_range_state..base_pfn">base_pfn</dfn>;</td></tr>
+<tr><th id="38">38</th><td>	<em>unsigned</em> <em>long</em>	<dfn class="tu decl field" id="var_mtrr_range_state::size_pfn" title='var_mtrr_range_state::size_pfn' data-type='unsigned long' data-ref="var_mtrr_range_state::size_pfn" data-ref-filename="var_mtrr_range_state..size_pfn">size_pfn</dfn>;</td></tr>
+<tr><th id="39">39</th><td>	<a class="typedef" href="../../../include/uapi/asm/mtrr.h.html#mtrr_type" title='mtrr_type' data-type='__u8' data-ref="mtrr_type" data-ref-filename="mtrr_type">mtrr_type</a>	<dfn class="tu decl field" id="var_mtrr_range_state::type" title='var_mtrr_range_state::type' data-type='mtrr_type' data-ref="var_mtrr_range_state::type" data-ref-filename="var_mtrr_range_state..type">type</dfn>;</td></tr>
+<tr><th id="40">40</th><td>};</td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td><b>struct</b> <dfn class="type def" id="var_mtrr_state" title='var_mtrr_state' data-ref="var_mtrr_state" data-ref-filename="var_mtrr_state">var_mtrr_state</dfn> {</td></tr>
+<tr><th id="43">43</th><td>	<em>unsigned</em> <em>long</em>	<dfn class="tu decl field" id="var_mtrr_state::range_startk" title='var_mtrr_state::range_startk' data-type='unsigned long' data-ref="var_mtrr_state::range_startk" data-ref-filename="var_mtrr_state..range_startk">range_startk</dfn>;</td></tr>
+<tr><th id="44">44</th><td>	<em>unsigned</em> <em>long</em>	<dfn class="tu decl field" id="var_mtrr_state::range_sizek" title='var_mtrr_state::range_sizek' data-type='unsigned long' data-ref="var_mtrr_state::range_sizek" data-ref-filename="var_mtrr_state..range_sizek">range_sizek</dfn>;</td></tr>
+<tr><th id="45">45</th><td>	<em>unsigned</em> <em>long</em>	<dfn class="tu decl field" id="var_mtrr_state::chunk_sizek" title='var_mtrr_state::chunk_sizek' data-type='unsigned long' data-ref="var_mtrr_state::chunk_sizek" data-ref-filename="var_mtrr_state..chunk_sizek">chunk_sizek</dfn>;</td></tr>
+<tr><th id="46">46</th><td>	<em>unsigned</em> <em>long</em>	<dfn class="tu decl field" id="var_mtrr_state::gran_sizek" title='var_mtrr_state::gran_sizek' data-type='unsigned long' data-ref="var_mtrr_state::gran_sizek" data-ref-filename="var_mtrr_state..gran_sizek">gran_sizek</dfn>;</td></tr>
+<tr><th id="47">47</th><td>	<em>unsigned</em> <em>int</em>	<dfn class="tu decl field" id="var_mtrr_state::reg" title='var_mtrr_state::reg' data-type='unsigned int' data-ref="var_mtrr_state::reg" data-ref-filename="var_mtrr_state..reg">reg</dfn>;</td></tr>
+<tr><th id="48">48</th><td>};</td></tr>
+<tr><th id="49">49</th><td></td></tr>
+<tr><th id="50">50</th><td><i>/* Should be related to MTRR_VAR_RANGES nums */</i></td></tr>
+<tr><th id="51">51</th><td><u>#define <dfn class="macro" id="_M/RANGE_NUM" data-ref="_M/RANGE_NUM">RANGE_NUM</dfn>				256</u></td></tr>
+<tr><th id="52">52</th><td></td></tr>
+<tr><th id="53">53</th><td><em>static</em> <b>struct</b> <a class="type" href="../../../../../include/linux/range.h.html#range" title='range' data-ref="range" data-ref-filename="range">range</a> <a class="macro" href="../../../../../include/linux/init.h.html#51" title="__attribute__((__section__(&quot;.init.data&quot;)))" data-ref="_M/__initdata">__initdata</a>		<dfn class="tu decl def" id="range" title='range' data-type='struct range [256]' data-ref="range" data-ref-filename="range">range</dfn>[<a class="macro" href="#51" title="256" data-ref="_M/RANGE_NUM">RANGE_NUM</a>];</td></tr>
+<tr><th id="54">54</th><td><em>static</em> <em>int</em> <a class="macro" href="../../../../../include/linux/init.h.html#51" title="__attribute__((__section__(&quot;.init.data&quot;)))" data-ref="_M/__initdata">__initdata</a>				<dfn class="tu decl def" id="nr_range" title='nr_range' data-type='int' data-ref="nr_range" data-ref-filename="nr_range">nr_range</dfn>;</td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td><em>static</em> <b>struct</b> <a class="type" href="#var_mtrr_range_state" title='var_mtrr_range_state' data-ref="var_mtrr_range_state" data-ref-filename="var_mtrr_range_state">var_mtrr_range_state</a> <a class="macro" href="../../../../../include/linux/init.h.html#51" title="__attribute__((__section__(&quot;.init.data&quot;)))" data-ref="_M/__initdata">__initdata</a>	<dfn class="tu decl def" id="range_state" title='range_state' data-type='struct var_mtrr_range_state [256]' data-ref="range_state" data-ref-filename="range_state">range_state</dfn>[<a class="macro" href="#51" title="256" data-ref="_M/RANGE_NUM">RANGE_NUM</a>];</td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td><em>static</em> <em>int</em> <a class="macro" href="../../../../../include/linux/init.h.html#51" title="__attribute__((__section__(&quot;.init.data&quot;)))" data-ref="_M/__initdata">__initdata</a> <dfn class="tu decl def" id="debug_print" title='debug_print' data-type='int' data-ref="debug_print" data-ref-filename="debug_print">debug_print</dfn>;</td></tr>
+<tr><th id="59">59</th><td><u>#define <dfn class="macro" id="_M/Dprintk" data-ref="_M/Dprintk">Dprintk</dfn>(x...) do { if (debug_print) pr_debug(x); } while (0)</u></td></tr>
+<tr><th id="60">60</th><td></td></tr>
+<tr><th id="61">61</th><td><u>#define <dfn class="macro" id="_M/BIOS_BUG_MSG" data-ref="_M/BIOS_BUG_MSG">BIOS_BUG_MSG</dfn> \</u></td></tr>
+<tr><th id="62">62</th><td><u>	"WARNING: BIOS bug: VAR MTRR %d contains strange UC entry under 1M, check with your system vendor!\n"</u></td></tr>
+<tr><th id="63">63</th><td></td></tr>
+<tr><th id="64">64</th><td><em>static</em> <em>int</em> <a class="macro" href="../../../../../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a></td></tr>
+<tr><th id="65">65</th><td><dfn class="tu decl def fn" id="x86_get_mtrr_mem_range" title='x86_get_mtrr_mem_range' data-type='int x86_get_mtrr_mem_range(struct range * range, int nr_range, unsigned long extra_remove_base, unsigned long extra_remove_size)' data-ref="x86_get_mtrr_mem_range" data-ref-filename="x86_get_mtrr_mem_range">x86_get_mtrr_mem_range</dfn>(<b>struct</b> <a class="type" href="../../../../../include/linux/range.h.html#range" title='range' data-ref="range" data-ref-filename="range">range</a> *<dfn class="local col4 decl" id="54range" title='range' data-type='struct range *' data-ref="54range" data-ref-filename="54range">range</dfn>, <em>int</em> <dfn class="local col5 decl" id="55nr_range" title='nr_range' data-type='int' data-ref="55nr_range" data-ref-filename="55nr_range">nr_range</dfn>,</td></tr>
+<tr><th id="66">66</th><td>		       <em>unsigned</em> <em>long</em> <dfn class="local col6 decl" id="56extra_remove_base" title='extra_remove_base' data-type='unsigned long' data-ref="56extra_remove_base" data-ref-filename="56extra_remove_base">extra_remove_base</dfn>,</td></tr>
+<tr><th id="67">67</th><td>		       <em>unsigned</em> <em>long</em> <dfn class="local col7 decl" id="57extra_remove_size" title='extra_remove_size' data-type='unsigned long' data-ref="57extra_remove_size" data-ref-filename="57extra_remove_size">extra_remove_size</dfn>)</td></tr>
+<tr><th id="68">68</th><td>{</td></tr>
+<tr><th id="69">69</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col8 decl" id="58base" title='base' data-type='unsigned long' data-ref="58base" data-ref-filename="58base">base</dfn>, <dfn class="local col9 decl" id="59size" title='size' data-type='unsigned long' data-ref="59size" data-ref-filename="59size">size</dfn>;</td></tr>
+<tr><th id="70">70</th><td>	<a class="typedef" href="../../../include/uapi/asm/mtrr.h.html#mtrr_type" title='mtrr_type' data-type='__u8' data-ref="mtrr_type" data-ref-filename="mtrr_type">mtrr_type</a> <dfn class="local col0 decl" id="60type" title='type' data-type='mtrr_type' data-ref="60type" data-ref-filename="60type">type</dfn>;</td></tr>
+<tr><th id="71">71</th><td>	<em>int</em> <dfn class="local col1 decl" id="61i" title='i' data-type='int' data-ref="61i" data-ref-filename="61i">i</dfn>;</td></tr>
+<tr><th id="72">72</th><td></td></tr>
+<tr><th id="73">73</th><td>	<b>for</b> (<a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a> = <var>0</var>; <a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a> &lt; <a class="ref" href="mtrr.h.html#num_var_ranges" title='num_var_ranges' data-ref="num_var_ranges" data-ref-filename="num_var_ranges">num_var_ranges</a>; <a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>++) {</td></tr>
+<tr><th id="74">74</th><td>		<a class="local col0 ref" href="#60type" title='type' data-ref="60type" data-ref-filename="60type">type</a> = <a class="tu ref" href="#range_state" title='range_state' data-use='m' data-ref="range_state" data-ref-filename="range_state">range_state</a>[<a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>].<a class="tu ref field" href="#var_mtrr_range_state::type" title='var_mtrr_range_state::type' data-use='r' data-ref="var_mtrr_range_state::type" data-ref-filename="var_mtrr_range_state..type">type</a>;</td></tr>
+<tr><th id="75">75</th><td>		<b>if</b> (<a class="local col0 ref" href="#60type" title='type' data-ref="60type" data-ref-filename="60type">type</a> != <a class="macro" href="../../../include/uapi/asm/mtrr.h.html#114" title="6" data-ref="_M/MTRR_TYPE_WRBACK">MTRR_TYPE_WRBACK</a>)</td></tr>
+<tr><th id="76">76</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="77">77</th><td>		<a class="local col8 ref" href="#58base" title='base' data-ref="58base" data-ref-filename="58base">base</a> = <a class="tu ref" href="#range_state" title='range_state' data-use='m' data-ref="range_state" data-ref-filename="range_state">range_state</a>[<a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>].<a class="tu ref field" href="#var_mtrr_range_state::base_pfn" title='var_mtrr_range_state::base_pfn' data-use='r' data-ref="var_mtrr_range_state::base_pfn" data-ref-filename="var_mtrr_range_state..base_pfn">base_pfn</a>;</td></tr>
+<tr><th id="78">78</th><td>		<a class="local col9 ref" href="#59size" title='size' data-ref="59size" data-ref-filename="59size">size</a> = <a class="tu ref" href="#range_state" title='range_state' data-use='m' data-ref="range_state" data-ref-filename="range_state">range_state</a>[<a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>].<a class="tu ref field" href="#var_mtrr_range_state::size_pfn" title='var_mtrr_range_state::size_pfn' data-use='r' data-ref="var_mtrr_range_state::size_pfn" data-ref-filename="var_mtrr_range_state..size_pfn">size_pfn</a>;</td></tr>
+<tr><th id="79">79</th><td>		<a class="local col5 ref" href="#55nr_range" title='nr_range' data-ref="55nr_range" data-ref-filename="55nr_range">nr_range</a> = <a class="ref fn" href="../../../../../include/linux/range.h.html#add_range_with_merge" title='add_range_with_merge' data-ref="add_range_with_merge" data-ref-filename="add_range_with_merge">add_range_with_merge</a>(<a class="local col4 ref" href="#54range" title='range' data-ref="54range" data-ref-filename="54range">range</a>, <a class="macro" href="#51" title="256" data-ref="_M/RANGE_NUM">RANGE_NUM</a>, <a class="local col5 ref" href="#55nr_range" title='nr_range' data-ref="55nr_range" data-ref-filename="55nr_range">nr_range</a>,</td></tr>
+<tr><th id="80">80</th><td>						<a class="local col8 ref" href="#58base" title='base' data-ref="58base" data-ref-filename="58base">base</a>, <a class="local col8 ref" href="#58base" title='base' data-ref="58base" data-ref-filename="58base">base</a> + <a class="local col9 ref" href="#59size" title='size' data-ref="59size" data-ref-filename="59size">size</a>);</td></tr>
+<tr><th id="81">81</th><td>	}</td></tr>
+<tr><th id="82">82</th><td>	<b>if</b> (<a class="tu ref" href="#debug_print" title='debug_print' data-use='r' data-ref="debug_print" data-ref-filename="debug_print">debug_print</a>) {</td></tr>
+<tr><th id="83">83</th><td>		<a class="macro" href="../../../../../include/linux/printk.h.html#341" title="({ if (0) printk(&quot;\001&quot; &quot;7&quot; &quot;After WB checking\n&quot;); 0; })" data-ref="_M/pr_debug">pr_debug</a>(<q>"After WB checking\n"</q>);</td></tr>
+<tr><th id="84">84</th><td>		<b>for</b> (<a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a> = <var>0</var>; <a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a> &lt; <a class="local col5 ref" href="#55nr_range" title='nr_range' data-ref="55nr_range" data-ref-filename="55nr_range">nr_range</a>; <a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>++)</td></tr>
+<tr><th id="85">85</th><td>			<a class="macro" href="../../../../../include/linux/printk.h.html#341" title="({ if (0) printk(&quot;\001&quot; &quot;7&quot; &quot;MTRR MAP PFN: %016llx - %016llx\n&quot;, range[i].start, range[i].end); 0; })" data-ref="_M/pr_debug">pr_debug</a>(<q>"MTRR MAP PFN: %016llx - %016llx\n"</q>,</td></tr>
+<tr><th id="86">86</th><td>				 <a class="local col4 ref" href="#54range" title='range' data-ref="54range" data-ref-filename="54range">range</a>[<a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>].<a class="ref field" href="../../../../../include/linux/range.h.html#range::start" title='range::start' data-ref="range::start" data-ref-filename="range..start">start</a>, <a class="local col4 ref" href="#54range" title='range' data-ref="54range" data-ref-filename="54range">range</a>[<a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>].<a class="ref field" href="../../../../../include/linux/range.h.html#range::end" title='range::end' data-ref="range::end" data-ref-filename="range..end">end</a>);</td></tr>
+<tr><th id="87">87</th><td>	}</td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td>	<i>/* Take out UC ranges: */</i></td></tr>
+<tr><th id="90">90</th><td>	<b>for</b> (<a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a> = <var>0</var>; <a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a> &lt; <a class="ref" href="mtrr.h.html#num_var_ranges" title='num_var_ranges' data-ref="num_var_ranges" data-ref-filename="num_var_ranges">num_var_ranges</a>; <a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>++) {</td></tr>
+<tr><th id="91">91</th><td>		<a class="local col0 ref" href="#60type" title='type' data-ref="60type" data-ref-filename="60type">type</a> = <a class="tu ref" href="#range_state" title='range_state' data-use='m' data-ref="range_state" data-ref-filename="range_state">range_state</a>[<a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>].<a class="tu ref field" href="#var_mtrr_range_state::type" title='var_mtrr_range_state::type' data-use='r' data-ref="var_mtrr_range_state::type" data-ref-filename="var_mtrr_range_state..type">type</a>;</td></tr>
+<tr><th id="92">92</th><td>		<b>if</b> (<a class="local col0 ref" href="#60type" title='type' data-ref="60type" data-ref-filename="60type">type</a> != <a class="macro" href="../../../include/uapi/asm/mtrr.h.html#108" title="0" data-ref="_M/MTRR_TYPE_UNCACHABLE">MTRR_TYPE_UNCACHABLE</a> &amp;&amp;</td></tr>
+<tr><th id="93">93</th><td>		    <a class="local col0 ref" href="#60type" title='type' data-ref="60type" data-ref-filename="60type">type</a> != <a class="macro" href="../../../include/uapi/asm/mtrr.h.html#113" title="5" data-ref="_M/MTRR_TYPE_WRPROT">MTRR_TYPE_WRPROT</a>)</td></tr>
+<tr><th id="94">94</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="95">95</th><td>		<a class="local col9 ref" href="#59size" title='size' data-ref="59size" data-ref-filename="59size">size</a> = <a class="tu ref" href="#range_state" title='range_state' data-use='m' data-ref="range_state" data-ref-filename="range_state">range_state</a>[<a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>].<a class="tu ref field" href="#var_mtrr_range_state::size_pfn" title='var_mtrr_range_state::size_pfn' data-use='r' data-ref="var_mtrr_range_state::size_pfn" data-ref-filename="var_mtrr_range_state..size_pfn">size_pfn</a>;</td></tr>
+<tr><th id="96">96</th><td>		<b>if</b> (!<a class="local col9 ref" href="#59size" title='size' data-ref="59size" data-ref-filename="59size">size</a>)</td></tr>
+<tr><th id="97">97</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="98">98</th><td>		<a class="local col8 ref" href="#58base" title='base' data-ref="58base" data-ref-filename="58base">base</a> = <a class="tu ref" href="#range_state" title='range_state' data-use='m' data-ref="range_state" data-ref-filename="range_state">range_state</a>[<a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>].<a class="tu ref field" href="#var_mtrr_range_state::base_pfn" title='var_mtrr_range_state::base_pfn' data-use='r' data-ref="var_mtrr_range_state::base_pfn" data-ref-filename="var_mtrr_range_state..base_pfn">base_pfn</a>;</td></tr>
+<tr><th id="99">99</th><td>		<b>if</b> (<a class="local col8 ref" href="#58base" title='base' data-ref="58base" data-ref-filename="58base">base</a> &lt; (<var>1</var>&lt;&lt;(<var>20</var>-<a class="macro" href="../../../include/asm/page_types.h.html#10" title="12" data-ref="_M/PAGE_SHIFT">PAGE_SHIFT</a>)) &amp;&amp; <a class="ref" href="mtrr.h.html#mtrr_state" title='mtrr_state' data-ref="mtrr_state" data-ref-filename="mtrr_state">mtrr_state</a>.<a class="ref field" href="../../../include/uapi/asm/mtrr.h.html#mtrr_state_type::have_fixed" title='mtrr_state_type::have_fixed' data-ref="mtrr_state_type::have_fixed" data-ref-filename="mtrr_state_type..have_fixed">have_fixed</a> &amp;&amp;</td></tr>
+<tr><th id="100">100</th><td>		    (<a class="ref" href="mtrr.h.html#mtrr_state" title='mtrr_state' data-ref="mtrr_state" data-ref-filename="mtrr_state">mtrr_state</a>.<a class="ref field" href="../../../include/uapi/asm/mtrr.h.html#mtrr_state_type::enabled" title='mtrr_state_type::enabled' data-ref="mtrr_state_type::enabled" data-ref-filename="mtrr_state_type..enabled">enabled</a> &amp; <a class="macro" href="../../../include/asm/mtrr.h.html#131" title="0x02" data-ref="_M/MTRR_STATE_MTRR_ENABLED">MTRR_STATE_MTRR_ENABLED</a>) &amp;&amp;</td></tr>
+<tr><th id="101">101</th><td>		    (<a class="ref" href="mtrr.h.html#mtrr_state" title='mtrr_state' data-ref="mtrr_state" data-ref-filename="mtrr_state">mtrr_state</a>.<a class="ref field" href="../../../include/uapi/asm/mtrr.h.html#mtrr_state_type::enabled" title='mtrr_state_type::enabled' data-ref="mtrr_state_type::enabled" data-ref-filename="mtrr_state_type..enabled">enabled</a> &amp; <a class="macro" href="../../../include/asm/mtrr.h.html#130" title="0x01" data-ref="_M/MTRR_STATE_MTRR_FIXED_ENABLED">MTRR_STATE_MTRR_FIXED_ENABLED</a>)) {</td></tr>
+<tr><th id="102">102</th><td>			<i>/* Var MTRR contains UC entry below 1M? Skip it: */</i></td></tr>
+<tr><th id="103">103</th><td>			<a class="macro" href="../../../../../include/linux/printk.h.html#307" title="pr_warning" data-ref="_M/pr_warn">pr_warn</a>(<a class="macro" href="#61" title="&quot;WARNING: BIOS bug: VAR MTRR %d contains strange UC entry under 1M, check with your system vendor!\n&quot;" data-ref="_M/BIOS_BUG_MSG">BIOS_BUG_MSG</a>, <a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>);</td></tr>
+<tr><th id="104">104</th><td>			<b>if</b> (<a class="local col8 ref" href="#58base" title='base' data-ref="58base" data-ref-filename="58base">base</a> + <a class="local col9 ref" href="#59size" title='size' data-ref="59size" data-ref-filename="59size">size</a> &lt;= (<var>1</var>&lt;&lt;(<var>20</var>-<a class="macro" href="../../../include/asm/page_types.h.html#10" title="12" data-ref="_M/PAGE_SHIFT">PAGE_SHIFT</a>)))</td></tr>
+<tr><th id="105">105</th><td>				<b>continue</b>;</td></tr>
+<tr><th id="106">106</th><td>			<a class="local col9 ref" href="#59size" title='size' data-ref="59size" data-ref-filename="59size">size</a> -= (<var>1</var>&lt;&lt;(<var>20</var>-<a class="macro" href="../../../include/asm/page_types.h.html#10" title="12" data-ref="_M/PAGE_SHIFT">PAGE_SHIFT</a>)) - <a class="local col8 ref" href="#58base" title='base' data-ref="58base" data-ref-filename="58base">base</a>;</td></tr>
+<tr><th id="107">107</th><td>			<a class="local col8 ref" href="#58base" title='base' data-ref="58base" data-ref-filename="58base">base</a> = <var>1</var>&lt;&lt;(<var>20</var>-<a class="macro" href="../../../include/asm/page_types.h.html#10" title="12" data-ref="_M/PAGE_SHIFT">PAGE_SHIFT</a>);</td></tr>
+<tr><th id="108">108</th><td>		}</td></tr>
+<tr><th id="109">109</th><td>		<a class="ref fn" href="../../../../../include/linux/range.h.html#subtract_range" title='subtract_range' data-ref="subtract_range" data-ref-filename="subtract_range">subtract_range</a>(<a class="local col4 ref" href="#54range" title='range' data-ref="54range" data-ref-filename="54range">range</a>, <a class="macro" href="#51" title="256" data-ref="_M/RANGE_NUM">RANGE_NUM</a>, <a class="local col8 ref" href="#58base" title='base' data-ref="58base" data-ref-filename="58base">base</a>, <a class="local col8 ref" href="#58base" title='base' data-ref="58base" data-ref-filename="58base">base</a> + <a class="local col9 ref" href="#59size" title='size' data-ref="59size" data-ref-filename="59size">size</a>);</td></tr>
+<tr><th id="110">110</th><td>	}</td></tr>
+<tr><th id="111">111</th><td>	<b>if</b> (<a class="local col7 ref" href="#57extra_remove_size" title='extra_remove_size' data-ref="57extra_remove_size" data-ref-filename="57extra_remove_size">extra_remove_size</a>)</td></tr>
+<tr><th id="112">112</th><td>		<a class="ref fn" href="../../../../../include/linux/range.h.html#subtract_range" title='subtract_range' data-ref="subtract_range" data-ref-filename="subtract_range">subtract_range</a>(<a class="local col4 ref" href="#54range" title='range' data-ref="54range" data-ref-filename="54range">range</a>, <a class="macro" href="#51" title="256" data-ref="_M/RANGE_NUM">RANGE_NUM</a>, <a class="local col6 ref" href="#56extra_remove_base" title='extra_remove_base' data-ref="56extra_remove_base" data-ref-filename="56extra_remove_base">extra_remove_base</a>,</td></tr>
+<tr><th id="113">113</th><td>				 <a class="local col6 ref" href="#56extra_remove_base" title='extra_remove_base' data-ref="56extra_remove_base" data-ref-filename="56extra_remove_base">extra_remove_base</a> + <a class="local col7 ref" href="#57extra_remove_size" title='extra_remove_size' data-ref="57extra_remove_size" data-ref-filename="57extra_remove_size">extra_remove_size</a>);</td></tr>
+<tr><th id="114">114</th><td></td></tr>
+<tr><th id="115">115</th><td>	<b>if</b>  (<a class="tu ref" href="#debug_print" title='debug_print' data-use='r' data-ref="debug_print" data-ref-filename="debug_print">debug_print</a>) {</td></tr>
+<tr><th id="116">116</th><td>		<a class="macro" href="../../../../../include/linux/printk.h.html#341" title="({ if (0) printk(&quot;\001&quot; &quot;7&quot; &quot;After UC checking\n&quot;); 0; })" data-ref="_M/pr_debug">pr_debug</a>(<q>"After UC checking\n"</q>);</td></tr>
+<tr><th id="117">117</th><td>		<b>for</b> (<a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a> = <var>0</var>; <a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a> &lt; <a class="macro" href="#51" title="256" data-ref="_M/RANGE_NUM">RANGE_NUM</a>; <a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>++) {</td></tr>
+<tr><th id="118">118</th><td>			<b>if</b> (!<a class="local col4 ref" href="#54range" title='range' data-ref="54range" data-ref-filename="54range">range</a>[<a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>].<a class="ref field" href="../../../../../include/linux/range.h.html#range::end" title='range::end' data-ref="range::end" data-ref-filename="range..end">end</a>)</td></tr>
+<tr><th id="119">119</th><td>				<b>continue</b>;</td></tr>
+<tr><th id="120">120</th><td>			<a class="macro" href="../../../../../include/linux/printk.h.html#341" title="({ if (0) printk(&quot;\001&quot; &quot;7&quot; &quot;MTRR MAP PFN: %016llx - %016llx\n&quot;, range[i].start, range[i].end); 0; })" data-ref="_M/pr_debug">pr_debug</a>(<q>"MTRR MAP PFN: %016llx - %016llx\n"</q>,</td></tr>
+<tr><th id="121">121</th><td>				 <a class="local col4 ref" href="#54range" title='range' data-ref="54range" data-ref-filename="54range">range</a>[<a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>].<a class="ref field" href="../../../../../include/linux/range.h.html#range::start" title='range::start' data-ref="range::start" data-ref-filename="range..start">start</a>, <a class="local col4 ref" href="#54range" title='range' data-ref="54range" data-ref-filename="54range">range</a>[<a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>].<a class="ref field" href="../../../../../include/linux/range.h.html#range::end" title='range::end' data-ref="range::end" data-ref-filename="range..end">end</a>);</td></tr>
+<tr><th id="122">122</th><td>		}</td></tr>
+<tr><th id="123">123</th><td>	}</td></tr>
+<tr><th id="124">124</th><td></td></tr>
+<tr><th id="125">125</th><td>	<i>/* sort the ranges */</i></td></tr>
+<tr><th id="126">126</th><td>	<a class="local col5 ref" href="#55nr_range" title='nr_range' data-ref="55nr_range" data-ref-filename="55nr_range">nr_range</a> = <a class="ref fn" href="../../../../../include/linux/range.h.html#clean_sort_range" title='clean_sort_range' data-ref="clean_sort_range" data-ref-filename="clean_sort_range">clean_sort_range</a>(<a class="local col4 ref" href="#54range" title='range' data-ref="54range" data-ref-filename="54range">range</a>, <a class="macro" href="#51" title="256" data-ref="_M/RANGE_NUM">RANGE_NUM</a>);</td></tr>
+<tr><th id="127">127</th><td>	<b>if</b>  (<a class="tu ref" href="#debug_print" title='debug_print' data-use='r' data-ref="debug_print" data-ref-filename="debug_print">debug_print</a>) {</td></tr>
+<tr><th id="128">128</th><td>		<a class="macro" href="../../../../../include/linux/printk.h.html#341" title="({ if (0) printk(&quot;\001&quot; &quot;7&quot; &quot;After sorting\n&quot;); 0; })" data-ref="_M/pr_debug">pr_debug</a>(<q>"After sorting\n"</q>);</td></tr>
+<tr><th id="129">129</th><td>		<b>for</b> (<a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a> = <var>0</var>; <a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a> &lt; <a class="local col5 ref" href="#55nr_range" title='nr_range' data-ref="55nr_range" data-ref-filename="55nr_range">nr_range</a>; <a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>++)</td></tr>
+<tr><th id="130">130</th><td>			<a class="macro" href="../../../../../include/linux/printk.h.html#341" title="({ if (0) printk(&quot;\001&quot; &quot;7&quot; &quot;MTRR MAP PFN: %016llx - %016llx\n&quot;, range[i].start, range[i].end); 0; })" data-ref="_M/pr_debug">pr_debug</a>(<q>"MTRR MAP PFN: %016llx - %016llx\n"</q>,</td></tr>
+<tr><th id="131">131</th><td>				 <a class="local col4 ref" href="#54range" title='range' data-ref="54range" data-ref-filename="54range">range</a>[<a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>].<a class="ref field" href="../../../../../include/linux/range.h.html#range::start" title='range::start' data-ref="range::start" data-ref-filename="range..start">start</a>, <a class="local col4 ref" href="#54range" title='range' data-ref="54range" data-ref-filename="54range">range</a>[<a class="local col1 ref" href="#61i" title='i' data-ref="61i" data-ref-filename="61i">i</a>].<a class="ref field" href="../../../../../include/linux/range.h.html#range::end" title='range::end' data-ref="range::end" data-ref-filename="range..end">end</a>);</td></tr>
+<tr><th id="132">132</th><td>	}</td></tr>
+<tr><th id="133">133</th><td></td></tr>
+<tr><th id="134">134</th><td>	<b>return</b> <a class="local col5 ref" href="#55nr_range" title='nr_range' data-ref="55nr_range" data-ref-filename="55nr_range">nr_range</a>;</td></tr>
+<tr><th id="135">135</th><td>}</td></tr>
+<tr><th id="136">136</th><td></td></tr>
+<tr><th id="137">137</th><td><u>#<span data-ppcond="137">ifdef</span> <span class="macro" data-ref="_M/CONFIG_MTRR_SANITIZER">CONFIG_MTRR_SANITIZER</span></u></td></tr>
+<tr><th id="138">138</th><td></td></tr>
+<tr><th id="139">139</th><td><em>static</em> <em>unsigned</em> <em>long</em> __init sum_ranges(<b>struct</b> range *range, <em>int</em> nr_range)</td></tr>
+<tr><th id="140">140</th><td>{</td></tr>
+<tr><th id="141">141</th><td>	<em>unsigned</em> <em>long</em> sum = <var>0</var>;</td></tr>
+<tr><th id="142">142</th><td>	<em>int</em> i;</td></tr>
+<tr><th id="143">143</th><td></td></tr>
+<tr><th id="144">144</th><td>	<b>for</b> (i = <var>0</var>; i &lt; nr_range; i++)</td></tr>
+<tr><th id="145">145</th><td>		sum += range[i].end - range[i].start;</td></tr>
+<tr><th id="146">146</th><td></td></tr>
+<tr><th id="147">147</th><td>	<b>return</b> sum;</td></tr>
+<tr><th id="148">148</th><td>}</td></tr>
+<tr><th id="149">149</th><td></td></tr>
+<tr><th id="150">150</th><td><em>static</em> <em>int</em> enable_mtrr_cleanup __initdata =</td></tr>
+<tr><th id="151">151</th><td>	CONFIG_MTRR_SANITIZER_ENABLE_DEFAULT;</td></tr>
+<tr><th id="152">152</th><td></td></tr>
+<tr><th id="153">153</th><td><em>static</em> <em>int</em> __init disable_mtrr_cleanup_setup(<em>char</em> *str)</td></tr>
+<tr><th id="154">154</th><td>{</td></tr>
+<tr><th id="155">155</th><td>	enable_mtrr_cleanup = <var>0</var>;</td></tr>
+<tr><th id="156">156</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="157">157</th><td>}</td></tr>
+<tr><th id="158">158</th><td>early_param(<q>"disable_mtrr_cleanup"</q>, disable_mtrr_cleanup_setup);</td></tr>
+<tr><th id="159">159</th><td></td></tr>
+<tr><th id="160">160</th><td><em>static</em> <em>int</em> __init enable_mtrr_cleanup_setup(<em>char</em> *str)</td></tr>
+<tr><th id="161">161</th><td>{</td></tr>
+<tr><th id="162">162</th><td>	enable_mtrr_cleanup = <var>1</var>;</td></tr>
+<tr><th id="163">163</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="164">164</th><td>}</td></tr>
+<tr><th id="165">165</th><td>early_param(<q>"enable_mtrr_cleanup"</q>, enable_mtrr_cleanup_setup);</td></tr>
+<tr><th id="166">166</th><td></td></tr>
+<tr><th id="167">167</th><td><em>static</em> <em>int</em> __init mtrr_cleanup_debug_setup(<em>char</em> *str)</td></tr>
+<tr><th id="168">168</th><td>{</td></tr>
+<tr><th id="169">169</th><td>	debug_print = <var>1</var>;</td></tr>
+<tr><th id="170">170</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="171">171</th><td>}</td></tr>
+<tr><th id="172">172</th><td>early_param(<q>"mtrr_cleanup_debug"</q>, mtrr_cleanup_debug_setup);</td></tr>
+<tr><th id="173">173</th><td></td></tr>
+<tr><th id="174">174</th><td><em>static</em> <em>void</em> __init</td></tr>
+<tr><th id="175">175</th><td>set_var_mtrr(<em>unsigned</em> <em>int</em> reg, <em>unsigned</em> <em>long</em> basek, <em>unsigned</em> <em>long</em> sizek,</td></tr>
+<tr><th id="176">176</th><td>	     <em>unsigned</em> <em>char</em> type, <em>unsigned</em> <em>int</em> address_bits)</td></tr>
+<tr><th id="177">177</th><td>{</td></tr>
+<tr><th id="178">178</th><td>	u32 base_lo, base_hi, mask_lo, mask_hi;</td></tr>
+<tr><th id="179">179</th><td>	u64 base, mask;</td></tr>
+<tr><th id="180">180</th><td></td></tr>
+<tr><th id="181">181</th><td>	<b>if</b> (!sizek) {</td></tr>
+<tr><th id="182">182</th><td>		fill_mtrr_var_range(reg, <var>0</var>, <var>0</var>, <var>0</var>, <var>0</var>);</td></tr>
+<tr><th id="183">183</th><td>		<b>return</b>;</td></tr>
+<tr><th id="184">184</th><td>	}</td></tr>
+<tr><th id="185">185</th><td></td></tr>
+<tr><th id="186">186</th><td>	mask = (<var>1ULL</var> &lt;&lt; address_bits) - <var>1</var>;</td></tr>
+<tr><th id="187">187</th><td>	mask &amp;= ~((((u64)sizek) &lt;&lt; <var>10</var>) - <var>1</var>);</td></tr>
+<tr><th id="188">188</th><td></td></tr>
+<tr><th id="189">189</th><td>	base = ((u64)basek) &lt;&lt; <var>10</var>;</td></tr>
+<tr><th id="190">190</th><td></td></tr>
+<tr><th id="191">191</th><td>	base |= type;</td></tr>
+<tr><th id="192">192</th><td>	mask |= <var>0x800</var>;</td></tr>
+<tr><th id="193">193</th><td></td></tr>
+<tr><th id="194">194</th><td>	base_lo = base &amp; ((<var>1ULL</var>&lt;&lt;<var>32</var>) - <var>1</var>);</td></tr>
+<tr><th id="195">195</th><td>	base_hi = base &gt;&gt; <var>32</var>;</td></tr>
+<tr><th id="196">196</th><td></td></tr>
+<tr><th id="197">197</th><td>	mask_lo = mask &amp; ((<var>1ULL</var>&lt;&lt;<var>32</var>) - <var>1</var>);</td></tr>
+<tr><th id="198">198</th><td>	mask_hi = mask &gt;&gt; <var>32</var>;</td></tr>
+<tr><th id="199">199</th><td></td></tr>
+<tr><th id="200">200</th><td>	fill_mtrr_var_range(reg, base_lo, base_hi, mask_lo, mask_hi);</td></tr>
+<tr><th id="201">201</th><td>}</td></tr>
+<tr><th id="202">202</th><td></td></tr>
+<tr><th id="203">203</th><td><em>static</em> <em>void</em> __init</td></tr>
+<tr><th id="204">204</th><td>save_var_mtrr(<em>unsigned</em> <em>int</em> reg, <em>unsigned</em> <em>long</em> basek, <em>unsigned</em> <em>long</em> sizek,</td></tr>
+<tr><th id="205">205</th><td>	      <em>unsigned</em> <em>char</em> type)</td></tr>
+<tr><th id="206">206</th><td>{</td></tr>
+<tr><th id="207">207</th><td>	range_state[reg].base_pfn = basek &gt;&gt; (PAGE_SHIFT - <var>10</var>);</td></tr>
+<tr><th id="208">208</th><td>	range_state[reg].size_pfn = sizek &gt;&gt; (PAGE_SHIFT - <var>10</var>);</td></tr>
+<tr><th id="209">209</th><td>	range_state[reg].type = type;</td></tr>
+<tr><th id="210">210</th><td>}</td></tr>
+<tr><th id="211">211</th><td></td></tr>
+<tr><th id="212">212</th><td><em>static</em> <em>void</em> __init set_var_mtrr_all(<em>unsigned</em> <em>int</em> address_bits)</td></tr>
+<tr><th id="213">213</th><td>{</td></tr>
+<tr><th id="214">214</th><td>	<em>unsigned</em> <em>long</em> basek, sizek;</td></tr>
+<tr><th id="215">215</th><td>	<em>unsigned</em> <em>char</em> type;</td></tr>
+<tr><th id="216">216</th><td>	<em>unsigned</em> <em>int</em> reg;</td></tr>
+<tr><th id="217">217</th><td></td></tr>
+<tr><th id="218">218</th><td>	<b>for</b> (reg = <var>0</var>; reg &lt; num_var_ranges; reg++) {</td></tr>
+<tr><th id="219">219</th><td>		basek = range_state[reg].base_pfn &lt;&lt; (PAGE_SHIFT - <var>10</var>);</td></tr>
+<tr><th id="220">220</th><td>		sizek = range_state[reg].size_pfn &lt;&lt; (PAGE_SHIFT - <var>10</var>);</td></tr>
+<tr><th id="221">221</th><td>		type = range_state[reg].type;</td></tr>
+<tr><th id="222">222</th><td></td></tr>
+<tr><th id="223">223</th><td>		set_var_mtrr(reg, basek, sizek, type, address_bits);</td></tr>
+<tr><th id="224">224</th><td>	}</td></tr>
+<tr><th id="225">225</th><td>}</td></tr>
+<tr><th id="226">226</th><td></td></tr>
+<tr><th id="227">227</th><td><em>static</em> <em>unsigned</em> <em>long</em> to_size_factor(<em>unsigned</em> <em>long</em> sizek, <em>char</em> *factorp)</td></tr>
+<tr><th id="228">228</th><td>{</td></tr>
+<tr><th id="229">229</th><td>	<em>unsigned</em> <em>long</em> base = sizek;</td></tr>
+<tr><th id="230">230</th><td>	<em>char</em> factor;</td></tr>
+<tr><th id="231">231</th><td></td></tr>
+<tr><th id="232">232</th><td>	<b>if</b> (base &amp; ((<var>1</var>&lt;&lt;<var>10</var>) - <var>1</var>)) {</td></tr>
+<tr><th id="233">233</th><td>		<i>/* Not MB-aligned: */</i></td></tr>
+<tr><th id="234">234</th><td>		factor = <kbd>'K'</kbd>;</td></tr>
+<tr><th id="235">235</th><td>	} <b>else</b> <b>if</b> (base &amp; ((<var>1</var>&lt;&lt;<var>20</var>) - <var>1</var>)) {</td></tr>
+<tr><th id="236">236</th><td>		factor = <kbd>'M'</kbd>;</td></tr>
+<tr><th id="237">237</th><td>		base &gt;&gt;= <var>10</var>;</td></tr>
+<tr><th id="238">238</th><td>	} <b>else</b> {</td></tr>
+<tr><th id="239">239</th><td>		factor = <kbd>'G'</kbd>;</td></tr>
+<tr><th id="240">240</th><td>		base &gt;&gt;= <var>20</var>;</td></tr>
+<tr><th id="241">241</th><td>	}</td></tr>
+<tr><th id="242">242</th><td></td></tr>
+<tr><th id="243">243</th><td>	*factorp = factor;</td></tr>
+<tr><th id="244">244</th><td></td></tr>
+<tr><th id="245">245</th><td>	<b>return</b> base;</td></tr>
+<tr><th id="246">246</th><td>}</td></tr>
+<tr><th id="247">247</th><td></td></tr>
+<tr><th id="248">248</th><td><em>static</em> <em>unsigned</em> <em>int</em> __init</td></tr>
+<tr><th id="249">249</th><td>range_to_mtrr(<em>unsigned</em> <em>int</em> reg, <em>unsigned</em> <em>long</em> range_startk,</td></tr>
+<tr><th id="250">250</th><td>	      <em>unsigned</em> <em>long</em> range_sizek, <em>unsigned</em> <em>char</em> type)</td></tr>
+<tr><th id="251">251</th><td>{</td></tr>
+<tr><th id="252">252</th><td>	<b>if</b> (!range_sizek || (reg &gt;= num_var_ranges))</td></tr>
+<tr><th id="253">253</th><td>		<b>return</b> reg;</td></tr>
+<tr><th id="254">254</th><td></td></tr>
+<tr><th id="255">255</th><td>	<b>while</b> (range_sizek) {</td></tr>
+<tr><th id="256">256</th><td>		<em>unsigned</em> <em>long</em> max_align, align;</td></tr>
+<tr><th id="257">257</th><td>		<em>unsigned</em> <em>long</em> sizek;</td></tr>
+<tr><th id="258">258</th><td></td></tr>
+<tr><th id="259">259</th><td>		<i>/* Compute the maximum size with which we can make a range: */</i></td></tr>
+<tr><th id="260">260</th><td>		<b>if</b> (range_startk)</td></tr>
+<tr><th id="261">261</th><td>			max_align = __ffs(range_startk);</td></tr>
+<tr><th id="262">262</th><td>		<b>else</b></td></tr>
+<tr><th id="263">263</th><td>			max_align = BITS_PER_LONG - <var>1</var>;</td></tr>
+<tr><th id="264">264</th><td></td></tr>
+<tr><th id="265">265</th><td>		align = __fls(range_sizek);</td></tr>
+<tr><th id="266">266</th><td>		<b>if</b> (align &gt; max_align)</td></tr>
+<tr><th id="267">267</th><td>			align = max_align;</td></tr>
+<tr><th id="268">268</th><td></td></tr>
+<tr><th id="269">269</th><td>		sizek = <var>1UL</var> &lt;&lt; align;</td></tr>
+<tr><th id="270">270</th><td>		<b>if</b> (debug_print) {</td></tr>
+<tr><th id="271">271</th><td>			<em>char</em> start_factor = <kbd>'K'</kbd>, size_factor = <kbd>'K'</kbd>;</td></tr>
+<tr><th id="272">272</th><td>			<em>unsigned</em> <em>long</em> start_base, size_base;</td></tr>
+<tr><th id="273">273</th><td></td></tr>
+<tr><th id="274">274</th><td>			start_base = to_size_factor(range_startk, &amp;start_factor);</td></tr>
+<tr><th id="275">275</th><td>			size_base = to_size_factor(sizek, &amp;size_factor);</td></tr>
+<tr><th id="276">276</th><td></td></tr>
+<tr><th id="277">277</th><td>			Dprintk(<q>"Setting variable MTRR %d, "</q></td></tr>
+<tr><th id="278">278</th><td>				<q>"base: %ld%cB, range: %ld%cB, type %s\n"</q>,</td></tr>
+<tr><th id="279">279</th><td>				reg, start_base, start_factor,</td></tr>
+<tr><th id="280">280</th><td>				size_base, size_factor,</td></tr>
+<tr><th id="281">281</th><td>				(type == MTRR_TYPE_UNCACHABLE) ? <q>"UC"</q> :</td></tr>
+<tr><th id="282">282</th><td>				   ((type == MTRR_TYPE_WRBACK) ? <q>"WB"</q> : <q>"Other"</q>)</td></tr>
+<tr><th id="283">283</th><td>				);</td></tr>
+<tr><th id="284">284</th><td>		}</td></tr>
+<tr><th id="285">285</th><td>		save_var_mtrr(reg++, range_startk, sizek, type);</td></tr>
+<tr><th id="286">286</th><td>		range_startk += sizek;</td></tr>
+<tr><th id="287">287</th><td>		range_sizek -= sizek;</td></tr>
+<tr><th id="288">288</th><td>		<b>if</b> (reg &gt;= num_var_ranges)</td></tr>
+<tr><th id="289">289</th><td>			<b>break</b>;</td></tr>
+<tr><th id="290">290</th><td>	}</td></tr>
+<tr><th id="291">291</th><td>	<b>return</b> reg;</td></tr>
+<tr><th id="292">292</th><td>}</td></tr>
+<tr><th id="293">293</th><td></td></tr>
+<tr><th id="294">294</th><td><em>static</em> <em>unsigned</em> __init</td></tr>
+<tr><th id="295">295</th><td>range_to_mtrr_with_hole(<b>struct</b> var_mtrr_state *state, <em>unsigned</em> <em>long</em> basek,</td></tr>
+<tr><th id="296">296</th><td>			<em>unsigned</em> <em>long</em> sizek)</td></tr>
+<tr><th id="297">297</th><td>{</td></tr>
+<tr><th id="298">298</th><td>	<em>unsigned</em> <em>long</em> hole_basek, hole_sizek;</td></tr>
+<tr><th id="299">299</th><td>	<em>unsigned</em> <em>long</em> second_sizek;</td></tr>
+<tr><th id="300">300</th><td>	<em>unsigned</em> <em>long</em> range0_basek, range0_sizek;</td></tr>
+<tr><th id="301">301</th><td>	<em>unsigned</em> <em>long</em> range_basek, range_sizek;</td></tr>
+<tr><th id="302">302</th><td>	<em>unsigned</em> <em>long</em> chunk_sizek;</td></tr>
+<tr><th id="303">303</th><td>	<em>unsigned</em> <em>long</em> gran_sizek;</td></tr>
+<tr><th id="304">304</th><td></td></tr>
+<tr><th id="305">305</th><td>	hole_basek = <var>0</var>;</td></tr>
+<tr><th id="306">306</th><td>	hole_sizek = <var>0</var>;</td></tr>
+<tr><th id="307">307</th><td>	second_sizek = <var>0</var>;</td></tr>
+<tr><th id="308">308</th><td>	chunk_sizek = state-&gt;chunk_sizek;</td></tr>
+<tr><th id="309">309</th><td>	gran_sizek = state-&gt;gran_sizek;</td></tr>
+<tr><th id="310">310</th><td></td></tr>
+<tr><th id="311">311</th><td>	<i>/* Align with gran size, prevent small block used up MTRRs: */</i></td></tr>
+<tr><th id="312">312</th><td>	range_basek = ALIGN(state-&gt;range_startk, gran_sizek);</td></tr>
+<tr><th id="313">313</th><td>	<b>if</b> ((range_basek &gt; basek) &amp;&amp; basek)</td></tr>
+<tr><th id="314">314</th><td>		<b>return</b> second_sizek;</td></tr>
+<tr><th id="315">315</th><td></td></tr>
+<tr><th id="316">316</th><td>	state-&gt;range_sizek -= (range_basek - state-&gt;range_startk);</td></tr>
+<tr><th id="317">317</th><td>	range_sizek = ALIGN(state-&gt;range_sizek, gran_sizek);</td></tr>
+<tr><th id="318">318</th><td></td></tr>
+<tr><th id="319">319</th><td>	<b>while</b> (range_sizek &gt; state-&gt;range_sizek) {</td></tr>
+<tr><th id="320">320</th><td>		range_sizek -= gran_sizek;</td></tr>
+<tr><th id="321">321</th><td>		<b>if</b> (!range_sizek)</td></tr>
+<tr><th id="322">322</th><td>			<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="323">323</th><td>	}</td></tr>
+<tr><th id="324">324</th><td>	state-&gt;range_sizek = range_sizek;</td></tr>
+<tr><th id="325">325</th><td></td></tr>
+<tr><th id="326">326</th><td>	<i>/* Try to append some small hole: */</i></td></tr>
+<tr><th id="327">327</th><td>	range0_basek = state-&gt;range_startk;</td></tr>
+<tr><th id="328">328</th><td>	range0_sizek = ALIGN(state-&gt;range_sizek, chunk_sizek);</td></tr>
+<tr><th id="329">329</th><td></td></tr>
+<tr><th id="330">330</th><td>	<i>/* No increase: */</i></td></tr>
+<tr><th id="331">331</th><td>	<b>if</b> (range0_sizek == state-&gt;range_sizek) {</td></tr>
+<tr><th id="332">332</th><td>		Dprintk(<q>"rangeX: %016lx - %016lx\n"</q>,</td></tr>
+<tr><th id="333">333</th><td>			range0_basek&lt;&lt;<var>10</var>,</td></tr>
+<tr><th id="334">334</th><td>			(range0_basek + state-&gt;range_sizek)&lt;&lt;<var>10</var>);</td></tr>
+<tr><th id="335">335</th><td>		state-&gt;reg = range_to_mtrr(state-&gt;reg, range0_basek,</td></tr>
+<tr><th id="336">336</th><td>				state-&gt;range_sizek, MTRR_TYPE_WRBACK);</td></tr>
+<tr><th id="337">337</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="338">338</th><td>	}</td></tr>
+<tr><th id="339">339</th><td></td></tr>
+<tr><th id="340">340</th><td>	<i>/* Only cut back when it is not the last: */</i></td></tr>
+<tr><th id="341">341</th><td>	<b>if</b> (sizek) {</td></tr>
+<tr><th id="342">342</th><td>		<b>while</b> (range0_basek + range0_sizek &gt; (basek + sizek)) {</td></tr>
+<tr><th id="343">343</th><td>			<b>if</b> (range0_sizek &gt;= chunk_sizek)</td></tr>
+<tr><th id="344">344</th><td>				range0_sizek -= chunk_sizek;</td></tr>
+<tr><th id="345">345</th><td>			<b>else</b></td></tr>
+<tr><th id="346">346</th><td>				range0_sizek = <var>0</var>;</td></tr>
+<tr><th id="347">347</th><td></td></tr>
+<tr><th id="348">348</th><td>			<b>if</b> (!range0_sizek)</td></tr>
+<tr><th id="349">349</th><td>				<b>break</b>;</td></tr>
+<tr><th id="350">350</th><td>		}</td></tr>
+<tr><th id="351">351</th><td>	}</td></tr>
+<tr><th id="352">352</th><td></td></tr>
+<tr><th id="353">353</th><td>second_try:</td></tr>
+<tr><th id="354">354</th><td>	range_basek = range0_basek + range0_sizek;</td></tr>
+<tr><th id="355">355</th><td></td></tr>
+<tr><th id="356">356</th><td>	<i>/* One hole in the middle: */</i></td></tr>
+<tr><th id="357">357</th><td>	<b>if</b> (range_basek &gt; basek &amp;&amp; range_basek &lt;= (basek + sizek))</td></tr>
+<tr><th id="358">358</th><td>		second_sizek = range_basek - basek;</td></tr>
+<tr><th id="359">359</th><td></td></tr>
+<tr><th id="360">360</th><td>	<b>if</b> (range0_sizek &gt; state-&gt;range_sizek) {</td></tr>
+<tr><th id="361">361</th><td></td></tr>
+<tr><th id="362">362</th><td>		<i>/* One hole in middle or at the end: */</i></td></tr>
+<tr><th id="363">363</th><td>		hole_sizek = range0_sizek - state-&gt;range_sizek - second_sizek;</td></tr>
+<tr><th id="364">364</th><td></td></tr>
+<tr><th id="365">365</th><td>		<i>/* Hole size should be less than half of range0 size: */</i></td></tr>
+<tr><th id="366">366</th><td>		<b>if</b> (hole_sizek &gt;= (range0_sizek &gt;&gt; <var>1</var>) &amp;&amp;</td></tr>
+<tr><th id="367">367</th><td>		    range0_sizek &gt;= chunk_sizek) {</td></tr>
+<tr><th id="368">368</th><td>			range0_sizek -= chunk_sizek;</td></tr>
+<tr><th id="369">369</th><td>			second_sizek = <var>0</var>;</td></tr>
+<tr><th id="370">370</th><td>			hole_sizek = <var>0</var>;</td></tr>
+<tr><th id="371">371</th><td></td></tr>
+<tr><th id="372">372</th><td>			<b>goto</b> second_try;</td></tr>
+<tr><th id="373">373</th><td>		}</td></tr>
+<tr><th id="374">374</th><td>	}</td></tr>
+<tr><th id="375">375</th><td></td></tr>
+<tr><th id="376">376</th><td>	<b>if</b> (range0_sizek) {</td></tr>
+<tr><th id="377">377</th><td>		Dprintk(<q>"range0: %016lx - %016lx\n"</q>,</td></tr>
+<tr><th id="378">378</th><td>			range0_basek&lt;&lt;<var>10</var>,</td></tr>
+<tr><th id="379">379</th><td>			(range0_basek + range0_sizek)&lt;&lt;<var>10</var>);</td></tr>
+<tr><th id="380">380</th><td>		state-&gt;reg = range_to_mtrr(state-&gt;reg, range0_basek,</td></tr>
+<tr><th id="381">381</th><td>				range0_sizek, MTRR_TYPE_WRBACK);</td></tr>
+<tr><th id="382">382</th><td>	}</td></tr>
+<tr><th id="383">383</th><td></td></tr>
+<tr><th id="384">384</th><td>	<b>if</b> (range0_sizek &lt; state-&gt;range_sizek) {</td></tr>
+<tr><th id="385">385</th><td>		<i>/* Need to handle left over range: */</i></td></tr>
+<tr><th id="386">386</th><td>		range_sizek = state-&gt;range_sizek - range0_sizek;</td></tr>
+<tr><th id="387">387</th><td></td></tr>
+<tr><th id="388">388</th><td>		Dprintk(<q>"range: %016lx - %016lx\n"</q>,</td></tr>
+<tr><th id="389">389</th><td>			 range_basek&lt;&lt;<var>10</var>,</td></tr>
+<tr><th id="390">390</th><td>			 (range_basek + range_sizek)&lt;&lt;<var>10</var>);</td></tr>
+<tr><th id="391">391</th><td></td></tr>
+<tr><th id="392">392</th><td>		state-&gt;reg = range_to_mtrr(state-&gt;reg, range_basek,</td></tr>
+<tr><th id="393">393</th><td>				 range_sizek, MTRR_TYPE_WRBACK);</td></tr>
+<tr><th id="394">394</th><td>	}</td></tr>
+<tr><th id="395">395</th><td></td></tr>
+<tr><th id="396">396</th><td>	<b>if</b> (hole_sizek) {</td></tr>
+<tr><th id="397">397</th><td>		hole_basek = range_basek - hole_sizek - second_sizek;</td></tr>
+<tr><th id="398">398</th><td>		Dprintk(<q>"hole: %016lx - %016lx\n"</q>,</td></tr>
+<tr><th id="399">399</th><td>			 hole_basek&lt;&lt;<var>10</var>,</td></tr>
+<tr><th id="400">400</th><td>			 (hole_basek + hole_sizek)&lt;&lt;<var>10</var>);</td></tr>
+<tr><th id="401">401</th><td>		state-&gt;reg = range_to_mtrr(state-&gt;reg, hole_basek,</td></tr>
+<tr><th id="402">402</th><td>				 hole_sizek, MTRR_TYPE_UNCACHABLE);</td></tr>
+<tr><th id="403">403</th><td>	}</td></tr>
+<tr><th id="404">404</th><td></td></tr>
+<tr><th id="405">405</th><td>	<b>return</b> second_sizek;</td></tr>
+<tr><th id="406">406</th><td>}</td></tr>
+<tr><th id="407">407</th><td></td></tr>
+<tr><th id="408">408</th><td><em>static</em> <em>void</em> __init</td></tr>
+<tr><th id="409">409</th><td>set_var_mtrr_range(<b>struct</b> var_mtrr_state *state, <em>unsigned</em> <em>long</em> base_pfn,</td></tr>
+<tr><th id="410">410</th><td>		   <em>unsigned</em> <em>long</em> size_pfn)</td></tr>
+<tr><th id="411">411</th><td>{</td></tr>
+<tr><th id="412">412</th><td>	<em>unsigned</em> <em>long</em> basek, sizek;</td></tr>
+<tr><th id="413">413</th><td>	<em>unsigned</em> <em>long</em> second_sizek = <var>0</var>;</td></tr>
+<tr><th id="414">414</th><td></td></tr>
+<tr><th id="415">415</th><td>	<b>if</b> (state-&gt;reg &gt;= num_var_ranges)</td></tr>
+<tr><th id="416">416</th><td>		<b>return</b>;</td></tr>
+<tr><th id="417">417</th><td></td></tr>
+<tr><th id="418">418</th><td>	basek = base_pfn &lt;&lt; (PAGE_SHIFT - <var>10</var>);</td></tr>
+<tr><th id="419">419</th><td>	sizek = size_pfn &lt;&lt; (PAGE_SHIFT - <var>10</var>);</td></tr>
+<tr><th id="420">420</th><td></td></tr>
+<tr><th id="421">421</th><td>	<i>/* See if I can merge with the last range: */</i></td></tr>
+<tr><th id="422">422</th><td>	<b>if</b> ((basek &lt;= <var>1024</var>) ||</td></tr>
+<tr><th id="423">423</th><td>	    (state-&gt;range_startk + state-&gt;range_sizek == basek)) {</td></tr>
+<tr><th id="424">424</th><td>		<em>unsigned</em> <em>long</em> endk = basek + sizek;</td></tr>
+<tr><th id="425">425</th><td>		state-&gt;range_sizek = endk - state-&gt;range_startk;</td></tr>
+<tr><th id="426">426</th><td>		<b>return</b>;</td></tr>
+<tr><th id="427">427</th><td>	}</td></tr>
+<tr><th id="428">428</th><td>	<i>/* Write the range mtrrs: */</i></td></tr>
+<tr><th id="429">429</th><td>	<b>if</b> (state-&gt;range_sizek != <var>0</var>)</td></tr>
+<tr><th id="430">430</th><td>		second_sizek = range_to_mtrr_with_hole(state, basek, sizek);</td></tr>
+<tr><th id="431">431</th><td></td></tr>
+<tr><th id="432">432</th><td>	<i>/* Allocate an msr: */</i></td></tr>
+<tr><th id="433">433</th><td>	state-&gt;range_startk = basek + second_sizek;</td></tr>
+<tr><th id="434">434</th><td>	state-&gt;range_sizek  = sizek - second_sizek;</td></tr>
+<tr><th id="435">435</th><td>}</td></tr>
+<tr><th id="436">436</th><td></td></tr>
+<tr><th id="437">437</th><td><i>/* Mininum size of mtrr block that can take hole: */</i></td></tr>
+<tr><th id="438">438</th><td><em>static</em> u64 mtrr_chunk_size __initdata = (<var>256ULL</var>&lt;&lt;<var>20</var>);</td></tr>
+<tr><th id="439">439</th><td></td></tr>
+<tr><th id="440">440</th><td><em>static</em> <em>int</em> __init parse_mtrr_chunk_size_opt(<em>char</em> *p)</td></tr>
+<tr><th id="441">441</th><td>{</td></tr>
+<tr><th id="442">442</th><td>	<b>if</b> (!p)</td></tr>
+<tr><th id="443">443</th><td>		<b>return</b> -EINVAL;</td></tr>
+<tr><th id="444">444</th><td>	mtrr_chunk_size = memparse(p, &amp;p);</td></tr>
+<tr><th id="445">445</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="446">446</th><td>}</td></tr>
+<tr><th id="447">447</th><td>early_param(<q>"mtrr_chunk_size"</q>, parse_mtrr_chunk_size_opt);</td></tr>
+<tr><th id="448">448</th><td></td></tr>
+<tr><th id="449">449</th><td><i>/* Granularity of mtrr of block: */</i></td></tr>
+<tr><th id="450">450</th><td><em>static</em> u64 mtrr_gran_size __initdata;</td></tr>
+<tr><th id="451">451</th><td></td></tr>
+<tr><th id="452">452</th><td><em>static</em> <em>int</em> __init parse_mtrr_gran_size_opt(<em>char</em> *p)</td></tr>
+<tr><th id="453">453</th><td>{</td></tr>
+<tr><th id="454">454</th><td>	<b>if</b> (!p)</td></tr>
+<tr><th id="455">455</th><td>		<b>return</b> -EINVAL;</td></tr>
+<tr><th id="456">456</th><td>	mtrr_gran_size = memparse(p, &amp;p);</td></tr>
+<tr><th id="457">457</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="458">458</th><td>}</td></tr>
+<tr><th id="459">459</th><td>early_param(<q>"mtrr_gran_size"</q>, parse_mtrr_gran_size_opt);</td></tr>
+<tr><th id="460">460</th><td></td></tr>
+<tr><th id="461">461</th><td><em>static</em> <em>unsigned</em> <em>long</em> nr_mtrr_spare_reg __initdata =</td></tr>
+<tr><th id="462">462</th><td>				 CONFIG_MTRR_SANITIZER_SPARE_REG_NR_DEFAULT;</td></tr>
+<tr><th id="463">463</th><td></td></tr>
+<tr><th id="464">464</th><td><em>static</em> <em>int</em> __init parse_mtrr_spare_reg(<em>char</em> *arg)</td></tr>
+<tr><th id="465">465</th><td>{</td></tr>
+<tr><th id="466">466</th><td>	<b>if</b> (arg)</td></tr>
+<tr><th id="467">467</th><td>		nr_mtrr_spare_reg = simple_strtoul(arg, NULL, <var>0</var>);</td></tr>
+<tr><th id="468">468</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="469">469</th><td>}</td></tr>
+<tr><th id="470">470</th><td>early_param(<q>"mtrr_spare_reg_nr"</q>, parse_mtrr_spare_reg);</td></tr>
+<tr><th id="471">471</th><td></td></tr>
+<tr><th id="472">472</th><td><em>static</em> <em>int</em> __init</td></tr>
+<tr><th id="473">473</th><td>x86_setup_var_mtrrs(<b>struct</b> range *range, <em>int</em> nr_range,</td></tr>
+<tr><th id="474">474</th><td>		    u64 chunk_size, u64 gran_size)</td></tr>
+<tr><th id="475">475</th><td>{</td></tr>
+<tr><th id="476">476</th><td>	<b>struct</b> var_mtrr_state var_state;</td></tr>
+<tr><th id="477">477</th><td>	<em>int</em> num_reg;</td></tr>
+<tr><th id="478">478</th><td>	<em>int</em> i;</td></tr>
+<tr><th id="479">479</th><td></td></tr>
+<tr><th id="480">480</th><td>	var_state.range_startk	= <var>0</var>;</td></tr>
+<tr><th id="481">481</th><td>	var_state.range_sizek	= <var>0</var>;</td></tr>
+<tr><th id="482">482</th><td>	var_state.reg		= <var>0</var>;</td></tr>
+<tr><th id="483">483</th><td>	var_state.chunk_sizek	= chunk_size &gt;&gt; <var>10</var>;</td></tr>
+<tr><th id="484">484</th><td>	var_state.gran_sizek	= gran_size &gt;&gt; <var>10</var>;</td></tr>
+<tr><th id="485">485</th><td></td></tr>
+<tr><th id="486">486</th><td>	memset(range_state, <var>0</var>, <b>sizeof</b>(range_state));</td></tr>
+<tr><th id="487">487</th><td></td></tr>
+<tr><th id="488">488</th><td>	<i>/* Write the range: */</i></td></tr>
+<tr><th id="489">489</th><td>	<b>for</b> (i = <var>0</var>; i &lt; nr_range; i++) {</td></tr>
+<tr><th id="490">490</th><td>		set_var_mtrr_range(&amp;var_state, range[i].start,</td></tr>
+<tr><th id="491">491</th><td>				   range[i].end - range[i].start);</td></tr>
+<tr><th id="492">492</th><td>	}</td></tr>
+<tr><th id="493">493</th><td></td></tr>
+<tr><th id="494">494</th><td>	<i>/* Write the last range: */</i></td></tr>
+<tr><th id="495">495</th><td>	<b>if</b> (var_state.range_sizek != <var>0</var>)</td></tr>
+<tr><th id="496">496</th><td>		range_to_mtrr_with_hole(&amp;var_state, <var>0</var>, <var>0</var>);</td></tr>
+<tr><th id="497">497</th><td></td></tr>
+<tr><th id="498">498</th><td>	num_reg = var_state.reg;</td></tr>
+<tr><th id="499">499</th><td>	<i>/* Clear out the extra MTRR's: */</i></td></tr>
+<tr><th id="500">500</th><td>	<b>while</b> (var_state.reg &lt; num_var_ranges) {</td></tr>
+<tr><th id="501">501</th><td>		save_var_mtrr(var_state.reg, <var>0</var>, <var>0</var>, <var>0</var>);</td></tr>
+<tr><th id="502">502</th><td>		var_state.reg++;</td></tr>
+<tr><th id="503">503</th><td>	}</td></tr>
+<tr><th id="504">504</th><td></td></tr>
+<tr><th id="505">505</th><td>	<b>return</b> num_reg;</td></tr>
+<tr><th id="506">506</th><td>}</td></tr>
+<tr><th id="507">507</th><td></td></tr>
+<tr><th id="508">508</th><td><b>struct</b> mtrr_cleanup_result {</td></tr>
+<tr><th id="509">509</th><td>	<em>unsigned</em> <em>long</em>	gran_sizek;</td></tr>
+<tr><th id="510">510</th><td>	<em>unsigned</em> <em>long</em>	chunk_sizek;</td></tr>
+<tr><th id="511">511</th><td>	<em>unsigned</em> <em>long</em>	lose_cover_sizek;</td></tr>
+<tr><th id="512">512</th><td>	<em>unsigned</em> <em>int</em>	num_reg;</td></tr>
+<tr><th id="513">513</th><td>	<em>int</em>		bad;</td></tr>
+<tr><th id="514">514</th><td>};</td></tr>
+<tr><th id="515">515</th><td></td></tr>
+<tr><th id="516">516</th><td><i>/*</i></td></tr>
+<tr><th id="517">517</th><td><i> * gran_size: 64K, 128K, 256K, 512K, 1M, 2M, ..., 2G</i></td></tr>
+<tr><th id="518">518</th><td><i> * chunk size: gran_size, ..., 2G</i></td></tr>
+<tr><th id="519">519</th><td><i> * so we need (1+16)*8</i></td></tr>
+<tr><th id="520">520</th><td><i> */</i></td></tr>
+<tr><th id="521">521</th><td><u>#define NUM_RESULT	136</u></td></tr>
+<tr><th id="522">522</th><td><u>#define PSHIFT		(PAGE_SHIFT - 10)</u></td></tr>
+<tr><th id="523">523</th><td></td></tr>
+<tr><th id="524">524</th><td><em>static</em> <b>struct</b> mtrr_cleanup_result __initdata result[NUM_RESULT];</td></tr>
+<tr><th id="525">525</th><td><em>static</em> <em>unsigned</em> <em>long</em> __initdata min_loss_pfn[RANGE_NUM];</td></tr>
+<tr><th id="526">526</th><td></td></tr>
+<tr><th id="527">527</th><td><em>static</em> <em>void</em> __init print_out_mtrr_range_state(<em>void</em>)</td></tr>
+<tr><th id="528">528</th><td>{</td></tr>
+<tr><th id="529">529</th><td>	<em>char</em> start_factor = <kbd>'K'</kbd>, size_factor = <kbd>'K'</kbd>;</td></tr>
+<tr><th id="530">530</th><td>	<em>unsigned</em> <em>long</em> start_base, size_base;</td></tr>
+<tr><th id="531">531</th><td>	mtrr_type type;</td></tr>
+<tr><th id="532">532</th><td>	<em>int</em> i;</td></tr>
+<tr><th id="533">533</th><td></td></tr>
+<tr><th id="534">534</th><td>	<b>for</b> (i = <var>0</var>; i &lt; num_var_ranges; i++) {</td></tr>
+<tr><th id="535">535</th><td></td></tr>
+<tr><th id="536">536</th><td>		size_base = range_state[i].size_pfn &lt;&lt; (PAGE_SHIFT - <var>10</var>);</td></tr>
+<tr><th id="537">537</th><td>		<b>if</b> (!size_base)</td></tr>
+<tr><th id="538">538</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="539">539</th><td></td></tr>
+<tr><th id="540">540</th><td>		size_base = to_size_factor(size_base, &amp;size_factor),</td></tr>
+<tr><th id="541">541</th><td>		start_base = range_state[i].base_pfn &lt;&lt; (PAGE_SHIFT - <var>10</var>);</td></tr>
+<tr><th id="542">542</th><td>		start_base = to_size_factor(start_base, &amp;start_factor),</td></tr>
+<tr><th id="543">543</th><td>		type = range_state[i].type;</td></tr>
+<tr><th id="544">544</th><td></td></tr>
+<tr><th id="545">545</th><td>		pr_debug(<q>"reg %d, base: %ld%cB, range: %ld%cB, type %s\n"</q>,</td></tr>
+<tr><th id="546">546</th><td>			i, start_base, start_factor,</td></tr>
+<tr><th id="547">547</th><td>			size_base, size_factor,</td></tr>
+<tr><th id="548">548</th><td>			(type == MTRR_TYPE_UNCACHABLE) ? <q>"UC"</q> :</td></tr>
+<tr><th id="549">549</th><td>			    ((type == MTRR_TYPE_WRPROT) ? <q>"WP"</q> :</td></tr>
+<tr><th id="550">550</th><td>			     ((type == MTRR_TYPE_WRBACK) ? <q>"WB"</q> : <q>"Other"</q>))</td></tr>
+<tr><th id="551">551</th><td>			);</td></tr>
+<tr><th id="552">552</th><td>	}</td></tr>
+<tr><th id="553">553</th><td>}</td></tr>
+<tr><th id="554">554</th><td></td></tr>
+<tr><th id="555">555</th><td><em>static</em> <em>int</em> __init mtrr_need_cleanup(<em>void</em>)</td></tr>
+<tr><th id="556">556</th><td>{</td></tr>
+<tr><th id="557">557</th><td>	<em>int</em> i;</td></tr>
+<tr><th id="558">558</th><td>	mtrr_type type;</td></tr>
+<tr><th id="559">559</th><td>	<em>unsigned</em> <em>long</em> size;</td></tr>
+<tr><th id="560">560</th><td>	<i>/* Extra one for all 0: */</i></td></tr>
+<tr><th id="561">561</th><td>	<em>int</em> num[MTRR_NUM_TYPES + <var>1</var>];</td></tr>
+<tr><th id="562">562</th><td></td></tr>
+<tr><th id="563">563</th><td>	<i>/* Check entries number: */</i></td></tr>
+<tr><th id="564">564</th><td>	memset(num, <var>0</var>, <b>sizeof</b>(num));</td></tr>
+<tr><th id="565">565</th><td>	<b>for</b> (i = <var>0</var>; i &lt; num_var_ranges; i++) {</td></tr>
+<tr><th id="566">566</th><td>		type = range_state[i].type;</td></tr>
+<tr><th id="567">567</th><td>		size = range_state[i].size_pfn;</td></tr>
+<tr><th id="568">568</th><td>		<b>if</b> (type &gt;= MTRR_NUM_TYPES)</td></tr>
+<tr><th id="569">569</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="570">570</th><td>		<b>if</b> (!size)</td></tr>
+<tr><th id="571">571</th><td>			type = MTRR_NUM_TYPES;</td></tr>
+<tr><th id="572">572</th><td>		num[type]++;</td></tr>
+<tr><th id="573">573</th><td>	}</td></tr>
+<tr><th id="574">574</th><td></td></tr>
+<tr><th id="575">575</th><td>	<i>/* Check if we got UC entries: */</i></td></tr>
+<tr><th id="576">576</th><td>	<b>if</b> (!num[MTRR_TYPE_UNCACHABLE])</td></tr>
+<tr><th id="577">577</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="578">578</th><td></td></tr>
+<tr><th id="579">579</th><td>	<i>/* Check if we only had WB and UC */</i></td></tr>
+<tr><th id="580">580</th><td>	<b>if</b> (num[MTRR_TYPE_WRBACK] + num[MTRR_TYPE_UNCACHABLE] !=</td></tr>
+<tr><th id="581">581</th><td>	    num_var_ranges - num[MTRR_NUM_TYPES])</td></tr>
+<tr><th id="582">582</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="583">583</th><td></td></tr>
+<tr><th id="584">584</th><td>	<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="585">585</th><td>}</td></tr>
+<tr><th id="586">586</th><td></td></tr>
+<tr><th id="587">587</th><td><em>static</em> <em>unsigned</em> <em>long</em> __initdata range_sums;</td></tr>
+<tr><th id="588">588</th><td></td></tr>
+<tr><th id="589">589</th><td><em>static</em> <em>void</em> __init</td></tr>
+<tr><th id="590">590</th><td>mtrr_calc_range_state(u64 chunk_size, u64 gran_size,</td></tr>
+<tr><th id="591">591</th><td>		      <em>unsigned</em> <em>long</em> x_remove_base,</td></tr>
+<tr><th id="592">592</th><td>		      <em>unsigned</em> <em>long</em> x_remove_size, <em>int</em> i)</td></tr>
+<tr><th id="593">593</th><td>{</td></tr>
+<tr><th id="594">594</th><td>	<i>/*</i></td></tr>
+<tr><th id="595">595</th><td><i>	 * range_new should really be an automatic variable, but</i></td></tr>
+<tr><th id="596">596</th><td><i>	 * putting 4096 bytes on the stack is frowned upon, to put it</i></td></tr>
+<tr><th id="597">597</th><td><i>	 * mildly. It is safe to make it a static __initdata variable,</i></td></tr>
+<tr><th id="598">598</th><td><i>	 * since mtrr_calc_range_state is only called during init and</i></td></tr>
+<tr><th id="599">599</th><td><i>	 * there's no way it will call itself recursively.</i></td></tr>
+<tr><th id="600">600</th><td><i>	 */</i></td></tr>
+<tr><th id="601">601</th><td>	<em>static</em> <b>struct</b> range range_new[RANGE_NUM] __initdata;</td></tr>
+<tr><th id="602">602</th><td>	<em>unsigned</em> <em>long</em> range_sums_new;</td></tr>
+<tr><th id="603">603</th><td>	<em>int</em> nr_range_new;</td></tr>
+<tr><th id="604">604</th><td>	<em>int</em> num_reg;</td></tr>
+<tr><th id="605">605</th><td></td></tr>
+<tr><th id="606">606</th><td>	<i>/* Convert ranges to var ranges state: */</i></td></tr>
+<tr><th id="607">607</th><td>	num_reg = x86_setup_var_mtrrs(range, nr_range, chunk_size, gran_size);</td></tr>
+<tr><th id="608">608</th><td></td></tr>
+<tr><th id="609">609</th><td>	<i>/* We got new setting in range_state, check it: */</i></td></tr>
+<tr><th id="610">610</th><td>	memset(range_new, <var>0</var>, <b>sizeof</b>(range_new));</td></tr>
+<tr><th id="611">611</th><td>	nr_range_new = x86_get_mtrr_mem_range(range_new, <var>0</var>,</td></tr>
+<tr><th id="612">612</th><td>				x_remove_base, x_remove_size);</td></tr>
+<tr><th id="613">613</th><td>	range_sums_new = sum_ranges(range_new, nr_range_new);</td></tr>
+<tr><th id="614">614</th><td></td></tr>
+<tr><th id="615">615</th><td>	result[i].chunk_sizek = chunk_size &gt;&gt; <var>10</var>;</td></tr>
+<tr><th id="616">616</th><td>	result[i].gran_sizek = gran_size &gt;&gt; <var>10</var>;</td></tr>
+<tr><th id="617">617</th><td>	result[i].num_reg = num_reg;</td></tr>
+<tr><th id="618">618</th><td></td></tr>
+<tr><th id="619">619</th><td>	<b>if</b> (range_sums &lt; range_sums_new) {</td></tr>
+<tr><th id="620">620</th><td>		result[i].lose_cover_sizek = (range_sums_new - range_sums) &lt;&lt; PSHIFT;</td></tr>
+<tr><th id="621">621</th><td>		result[i].bad = <var>1</var>;</td></tr>
+<tr><th id="622">622</th><td>	} <b>else</b> {</td></tr>
+<tr><th id="623">623</th><td>		result[i].lose_cover_sizek = (range_sums - range_sums_new) &lt;&lt; PSHIFT;</td></tr>
+<tr><th id="624">624</th><td>	}</td></tr>
+<tr><th id="625">625</th><td></td></tr>
+<tr><th id="626">626</th><td>	<i>/* Double check it: */</i></td></tr>
+<tr><th id="627">627</th><td>	<b>if</b> (!result[i].bad &amp;&amp; !result[i].lose_cover_sizek) {</td></tr>
+<tr><th id="628">628</th><td>		<b>if</b> (nr_range_new != nr_range || memcmp(range, range_new, <b>sizeof</b>(range)))</td></tr>
+<tr><th id="629">629</th><td>			result[i].bad = <var>1</var>;</td></tr>
+<tr><th id="630">630</th><td>	}</td></tr>
+<tr><th id="631">631</th><td></td></tr>
+<tr><th id="632">632</th><td>	<b>if</b> (!result[i].bad &amp;&amp; (range_sums - range_sums_new &lt; min_loss_pfn[num_reg]))</td></tr>
+<tr><th id="633">633</th><td>		min_loss_pfn[num_reg] = range_sums - range_sums_new;</td></tr>
+<tr><th id="634">634</th><td>}</td></tr>
+<tr><th id="635">635</th><td></td></tr>
+<tr><th id="636">636</th><td><em>static</em> <em>void</em> __init mtrr_print_out_one_result(<em>int</em> i)</td></tr>
+<tr><th id="637">637</th><td>{</td></tr>
+<tr><th id="638">638</th><td>	<em>unsigned</em> <em>long</em> gran_base, chunk_base, lose_base;</td></tr>
+<tr><th id="639">639</th><td>	<em>char</em> gran_factor, chunk_factor, lose_factor;</td></tr>
+<tr><th id="640">640</th><td></td></tr>
+<tr><th id="641">641</th><td>	gran_base = to_size_factor(result[i].gran_sizek, &amp;gran_factor);</td></tr>
+<tr><th id="642">642</th><td>	chunk_base = to_size_factor(result[i].chunk_sizek, &amp;chunk_factor);</td></tr>
+<tr><th id="643">643</th><td>	lose_base = to_size_factor(result[i].lose_cover_sizek, &amp;lose_factor);</td></tr>
+<tr><th id="644">644</th><td></td></tr>
+<tr><th id="645">645</th><td>	pr_info(<q>"%sgran_size: %ld%c \tchunk_size: %ld%c \t"</q>,</td></tr>
+<tr><th id="646">646</th><td>		result[i].bad ? <q>"*BAD*"</q> : <q>" "</q>,</td></tr>
+<tr><th id="647">647</th><td>		gran_base, gran_factor, chunk_base, chunk_factor);</td></tr>
+<tr><th id="648">648</th><td>	pr_cont(<q>"num_reg: %d  \tlose cover RAM: %s%ld%c\n"</q>,</td></tr>
+<tr><th id="649">649</th><td>		result[i].num_reg, result[i].bad ? <q>"-"</q> : <q>""</q>,</td></tr>
+<tr><th id="650">650</th><td>		lose_base, lose_factor);</td></tr>
+<tr><th id="651">651</th><td>}</td></tr>
+<tr><th id="652">652</th><td></td></tr>
+<tr><th id="653">653</th><td><em>static</em> <em>int</em> __init mtrr_search_optimal_index(<em>void</em>)</td></tr>
+<tr><th id="654">654</th><td>{</td></tr>
+<tr><th id="655">655</th><td>	<em>int</em> num_reg_good;</td></tr>
+<tr><th id="656">656</th><td>	<em>int</em> index_good;</td></tr>
+<tr><th id="657">657</th><td>	<em>int</em> i;</td></tr>
+<tr><th id="658">658</th><td></td></tr>
+<tr><th id="659">659</th><td>	<b>if</b> (nr_mtrr_spare_reg &gt;= num_var_ranges)</td></tr>
+<tr><th id="660">660</th><td>		nr_mtrr_spare_reg = num_var_ranges - <var>1</var>;</td></tr>
+<tr><th id="661">661</th><td></td></tr>
+<tr><th id="662">662</th><td>	num_reg_good = -<var>1</var>;</td></tr>
+<tr><th id="663">663</th><td>	<b>for</b> (i = num_var_ranges - nr_mtrr_spare_reg; i &gt; <var>0</var>; i--) {</td></tr>
+<tr><th id="664">664</th><td>		<b>if</b> (!min_loss_pfn[i])</td></tr>
+<tr><th id="665">665</th><td>			num_reg_good = i;</td></tr>
+<tr><th id="666">666</th><td>	}</td></tr>
+<tr><th id="667">667</th><td></td></tr>
+<tr><th id="668">668</th><td>	index_good = -<var>1</var>;</td></tr>
+<tr><th id="669">669</th><td>	<b>if</b> (num_reg_good != -<var>1</var>) {</td></tr>
+<tr><th id="670">670</th><td>		<b>for</b> (i = <var>0</var>; i &lt; NUM_RESULT; i++) {</td></tr>
+<tr><th id="671">671</th><td>			<b>if</b> (!result[i].bad &amp;&amp;</td></tr>
+<tr><th id="672">672</th><td>			    result[i].num_reg == num_reg_good &amp;&amp;</td></tr>
+<tr><th id="673">673</th><td>			    !result[i].lose_cover_sizek) {</td></tr>
+<tr><th id="674">674</th><td>				index_good = i;</td></tr>
+<tr><th id="675">675</th><td>				<b>break</b>;</td></tr>
+<tr><th id="676">676</th><td>			}</td></tr>
+<tr><th id="677">677</th><td>		}</td></tr>
+<tr><th id="678">678</th><td>	}</td></tr>
+<tr><th id="679">679</th><td></td></tr>
+<tr><th id="680">680</th><td>	<b>return</b> index_good;</td></tr>
+<tr><th id="681">681</th><td>}</td></tr>
+<tr><th id="682">682</th><td></td></tr>
+<tr><th id="683">683</th><td><em>int</em> __init mtrr_cleanup(<em>unsigned</em> address_bits)</td></tr>
+<tr><th id="684">684</th><td>{</td></tr>
+<tr><th id="685">685</th><td>	<em>unsigned</em> <em>long</em> x_remove_base, x_remove_size;</td></tr>
+<tr><th id="686">686</th><td>	<em>unsigned</em> <em>long</em> base, size, def, dummy;</td></tr>
+<tr><th id="687">687</th><td>	u64 chunk_size, gran_size;</td></tr>
+<tr><th id="688">688</th><td>	mtrr_type type;</td></tr>
+<tr><th id="689">689</th><td>	<em>int</em> index_good;</td></tr>
+<tr><th id="690">690</th><td>	<em>int</em> i;</td></tr>
+<tr><th id="691">691</th><td></td></tr>
+<tr><th id="692">692</th><td>	<b>if</b> (!is_cpu(INTEL) || enable_mtrr_cleanup &lt; <var>1</var>)</td></tr>
+<tr><th id="693">693</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="694">694</th><td></td></tr>
+<tr><th id="695">695</th><td>	rdmsr(MSR_MTRRdefType, def, dummy);</td></tr>
+<tr><th id="696">696</th><td>	def &amp;= <var>0xff</var>;</td></tr>
+<tr><th id="697">697</th><td>	<b>if</b> (def != MTRR_TYPE_UNCACHABLE)</td></tr>
+<tr><th id="698">698</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="699">699</th><td></td></tr>
+<tr><th id="700">700</th><td>	<i>/* Get it and store it aside: */</i></td></tr>
+<tr><th id="701">701</th><td>	memset(range_state, <var>0</var>, <b>sizeof</b>(range_state));</td></tr>
+<tr><th id="702">702</th><td>	<b>for</b> (i = <var>0</var>; i &lt; num_var_ranges; i++) {</td></tr>
+<tr><th id="703">703</th><td>		mtrr_if-&gt;get(i, &amp;base, &amp;size, &amp;type);</td></tr>
+<tr><th id="704">704</th><td>		range_state[i].base_pfn = base;</td></tr>
+<tr><th id="705">705</th><td>		range_state[i].size_pfn = size;</td></tr>
+<tr><th id="706">706</th><td>		range_state[i].type = type;</td></tr>
+<tr><th id="707">707</th><td>	}</td></tr>
+<tr><th id="708">708</th><td></td></tr>
+<tr><th id="709">709</th><td>	<i>/* Check if we need handle it and can handle it: */</i></td></tr>
+<tr><th id="710">710</th><td>	<b>if</b> (!mtrr_need_cleanup())</td></tr>
+<tr><th id="711">711</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="712">712</th><td></td></tr>
+<tr><th id="713">713</th><td>	<i>/* Print original var MTRRs at first, for debugging: */</i></td></tr>
+<tr><th id="714">714</th><td>	pr_debug(<q>"original variable MTRRs\n"</q>);</td></tr>
+<tr><th id="715">715</th><td>	print_out_mtrr_range_state();</td></tr>
+<tr><th id="716">716</th><td></td></tr>
+<tr><th id="717">717</th><td>	memset(range, <var>0</var>, <b>sizeof</b>(range));</td></tr>
+<tr><th id="718">718</th><td>	x_remove_size = <var>0</var>;</td></tr>
+<tr><th id="719">719</th><td>	x_remove_base = <var>1</var> &lt;&lt; (<var>32</var> - PAGE_SHIFT);</td></tr>
+<tr><th id="720">720</th><td>	<b>if</b> (mtrr_tom2)</td></tr>
+<tr><th id="721">721</th><td>		x_remove_size = (mtrr_tom2 &gt;&gt; PAGE_SHIFT) - x_remove_base;</td></tr>
+<tr><th id="722">722</th><td></td></tr>
+<tr><th id="723">723</th><td>	<i>/*</i></td></tr>
+<tr><th id="724">724</th><td><i>	 * [0, 1M) should always be covered by var mtrr with WB</i></td></tr>
+<tr><th id="725">725</th><td><i>	 * and fixed mtrrs should take effect before var mtrr for it:</i></td></tr>
+<tr><th id="726">726</th><td><i>	 */</i></td></tr>
+<tr><th id="727">727</th><td>	nr_range = add_range_with_merge(range, RANGE_NUM, <var>0</var>, <var>0</var>,</td></tr>
+<tr><th id="728">728</th><td>					<var>1ULL</var>&lt;&lt;(<var>20</var> - PAGE_SHIFT));</td></tr>
+<tr><th id="729">729</th><td>	<i>/* add from var mtrr at last */</i></td></tr>
+<tr><th id="730">730</th><td>	nr_range = x86_get_mtrr_mem_range(range, nr_range,</td></tr>
+<tr><th id="731">731</th><td>					  x_remove_base, x_remove_size);</td></tr>
+<tr><th id="732">732</th><td></td></tr>
+<tr><th id="733">733</th><td>	range_sums = sum_ranges(range, nr_range);</td></tr>
+<tr><th id="734">734</th><td>	pr_info(<q>"total RAM covered: %ldM\n"</q>,</td></tr>
+<tr><th id="735">735</th><td>	       range_sums &gt;&gt; (<var>20</var> - PAGE_SHIFT));</td></tr>
+<tr><th id="736">736</th><td></td></tr>
+<tr><th id="737">737</th><td>	<b>if</b> (mtrr_chunk_size &amp;&amp; mtrr_gran_size) {</td></tr>
+<tr><th id="738">738</th><td>		i = <var>0</var>;</td></tr>
+<tr><th id="739">739</th><td>		mtrr_calc_range_state(mtrr_chunk_size, mtrr_gran_size,</td></tr>
+<tr><th id="740">740</th><td>				      x_remove_base, x_remove_size, i);</td></tr>
+<tr><th id="741">741</th><td></td></tr>
+<tr><th id="742">742</th><td>		mtrr_print_out_one_result(i);</td></tr>
+<tr><th id="743">743</th><td></td></tr>
+<tr><th id="744">744</th><td>		<b>if</b> (!result[i].bad) {</td></tr>
+<tr><th id="745">745</th><td>			set_var_mtrr_all(address_bits);</td></tr>
+<tr><th id="746">746</th><td>			pr_debug(<q>"New variable MTRRs\n"</q>);</td></tr>
+<tr><th id="747">747</th><td>			print_out_mtrr_range_state();</td></tr>
+<tr><th id="748">748</th><td>			<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="749">749</th><td>		}</td></tr>
+<tr><th id="750">750</th><td>		pr_info(<q>"invalid mtrr_gran_size or mtrr_chunk_size, will find optimal one\n"</q>);</td></tr>
+<tr><th id="751">751</th><td>	}</td></tr>
+<tr><th id="752">752</th><td></td></tr>
+<tr><th id="753">753</th><td>	i = <var>0</var>;</td></tr>
+<tr><th id="754">754</th><td>	memset(min_loss_pfn, <var>0xff</var>, <b>sizeof</b>(min_loss_pfn));</td></tr>
+<tr><th id="755">755</th><td>	memset(result, <var>0</var>, <b>sizeof</b>(result));</td></tr>
+<tr><th id="756">756</th><td>	<b>for</b> (gran_size = (<var>1ULL</var>&lt;&lt;<var>16</var>); gran_size &lt; (<var>1ULL</var>&lt;&lt;<var>32</var>); gran_size &lt;&lt;= <var>1</var>) {</td></tr>
+<tr><th id="757">757</th><td></td></tr>
+<tr><th id="758">758</th><td>		<b>for</b> (chunk_size = gran_size; chunk_size &lt; (<var>1ULL</var>&lt;&lt;<var>32</var>);</td></tr>
+<tr><th id="759">759</th><td>		     chunk_size &lt;&lt;= <var>1</var>) {</td></tr>
+<tr><th id="760">760</th><td></td></tr>
+<tr><th id="761">761</th><td>			<b>if</b> (i &gt;= NUM_RESULT)</td></tr>
+<tr><th id="762">762</th><td>				<b>continue</b>;</td></tr>
+<tr><th id="763">763</th><td></td></tr>
+<tr><th id="764">764</th><td>			mtrr_calc_range_state(chunk_size, gran_size,</td></tr>
+<tr><th id="765">765</th><td>				      x_remove_base, x_remove_size, i);</td></tr>
+<tr><th id="766">766</th><td>			<b>if</b> (debug_print) {</td></tr>
+<tr><th id="767">767</th><td>				mtrr_print_out_one_result(i);</td></tr>
+<tr><th id="768">768</th><td>				pr_info(<q>"\n"</q>);</td></tr>
+<tr><th id="769">769</th><td>			}</td></tr>
+<tr><th id="770">770</th><td></td></tr>
+<tr><th id="771">771</th><td>			i++;</td></tr>
+<tr><th id="772">772</th><td>		}</td></tr>
+<tr><th id="773">773</th><td>	}</td></tr>
+<tr><th id="774">774</th><td></td></tr>
+<tr><th id="775">775</th><td>	<i>/* Try to find the optimal index: */</i></td></tr>
+<tr><th id="776">776</th><td>	index_good = mtrr_search_optimal_index();</td></tr>
+<tr><th id="777">777</th><td></td></tr>
+<tr><th id="778">778</th><td>	<b>if</b> (index_good != -<var>1</var>) {</td></tr>
+<tr><th id="779">779</th><td>		pr_info(<q>"Found optimal setting for mtrr clean up\n"</q>);</td></tr>
+<tr><th id="780">780</th><td>		i = index_good;</td></tr>
+<tr><th id="781">781</th><td>		mtrr_print_out_one_result(i);</td></tr>
+<tr><th id="782">782</th><td></td></tr>
+<tr><th id="783">783</th><td>		<i>/* Convert ranges to var ranges state: */</i></td></tr>
+<tr><th id="784">784</th><td>		chunk_size = result[i].chunk_sizek;</td></tr>
+<tr><th id="785">785</th><td>		chunk_size &lt;&lt;= <var>10</var>;</td></tr>
+<tr><th id="786">786</th><td>		gran_size = result[i].gran_sizek;</td></tr>
+<tr><th id="787">787</th><td>		gran_size &lt;&lt;= <var>10</var>;</td></tr>
+<tr><th id="788">788</th><td>		x86_setup_var_mtrrs(range, nr_range, chunk_size, gran_size);</td></tr>
+<tr><th id="789">789</th><td>		set_var_mtrr_all(address_bits);</td></tr>
+<tr><th id="790">790</th><td>		pr_debug(<q>"New variable MTRRs\n"</q>);</td></tr>
+<tr><th id="791">791</th><td>		print_out_mtrr_range_state();</td></tr>
+<tr><th id="792">792</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="793">793</th><td>	} <b>else</b> {</td></tr>
+<tr><th id="794">794</th><td>		<i>/* print out all */</i></td></tr>
+<tr><th id="795">795</th><td>		<b>for</b> (i = <var>0</var>; i &lt; NUM_RESULT; i++)</td></tr>
+<tr><th id="796">796</th><td>			mtrr_print_out_one_result(i);</td></tr>
+<tr><th id="797">797</th><td>	}</td></tr>
+<tr><th id="798">798</th><td></td></tr>
+<tr><th id="799">799</th><td>	pr_info(<q>"mtrr_cleanup: can not find optimal value\n"</q>);</td></tr>
+<tr><th id="800">800</th><td>	pr_info(<q>"please specify mtrr_gran_size/mtrr_chunk_size\n"</q>);</td></tr>
+<tr><th id="801">801</th><td></td></tr>
+<tr><th id="802">802</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="803">803</th><td>}</td></tr>
+<tr><th id="804">804</th><td><u>#<span data-ppcond="137">else</span></u></td></tr>
+<tr><th id="805">805</th><td><em>int</em> <a class="macro" href="../../../../../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="decl def fn" id="mtrr_cleanup" title='mtrr_cleanup' data-ref="mtrr_cleanup" data-ref-filename="mtrr_cleanup">mtrr_cleanup</dfn>(<em>unsigned</em> <dfn class="local col2 decl" id="62address_bits" title='address_bits' data-type='unsigned int' data-ref="62address_bits" data-ref-filename="62address_bits">address_bits</dfn>)</td></tr>
+<tr><th id="806">806</th><td>{</td></tr>
+<tr><th id="807">807</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="808">808</th><td>}</td></tr>
+<tr><th id="809">809</th><td><u>#<span data-ppcond="137">endif</span></u></td></tr>
+<tr><th id="810">810</th><td></td></tr>
+<tr><th id="811">811</th><td><em>static</em> <em>int</em> <dfn class="tu decl def" id="disable_mtrr_trim" title='disable_mtrr_trim' data-type='int' data-ref="disable_mtrr_trim" data-ref-filename="disable_mtrr_trim">disable_mtrr_trim</dfn>;</td></tr>
+<tr><th id="812">812</th><td></td></tr>
+<tr><th id="813">813</th><td><em>static</em> <em>int</em> <a class="macro" href="../../../../../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="tu decl def fn" id="disable_mtrr_trim_setup" title='disable_mtrr_trim_setup' data-type='int disable_mtrr_trim_setup(char * str)' data-ref="disable_mtrr_trim_setup" data-ref-filename="disable_mtrr_trim_setup">disable_mtrr_trim_setup</dfn>(<em>char</em> *<dfn class="local col3 decl" id="63str" title='str' data-type='char *' data-ref="63str" data-ref-filename="63str">str</dfn>)</td></tr>
+<tr><th id="814">814</th><td>{</td></tr>
+<tr><th id="815">815</th><td>	<a class="tu ref" href="#disable_mtrr_trim" title='disable_mtrr_trim' data-use='w' data-ref="disable_mtrr_trim" data-ref-filename="disable_mtrr_trim">disable_mtrr_trim</a> = <var>1</var>;</td></tr>
+<tr><th id="816">816</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="817">817</th><td>}</td></tr>
+<tr><th id="818">818</th><td><a class="macro" href="../../../../../include/linux/init.h.html#268" title="static const char __setup_str_disable_mtrr_trim_setup[] __attribute__((__section__(&quot;.init.rodata&quot;))) __attribute__((__aligned__(1))) = &quot;disable_mtrr_trim&quot;; static struct obs_kernel_param __setup_disable_mtrr_trim_setup __attribute__((__used__)) __attribute__((__section__(&quot;.init.setup&quot;))) __attribute__((aligned((sizeof(long))))) = { __setup_str_disable_mtrr_trim_setup, disable_mtrr_trim_setup, 1 }" data-ref="_M/early_param">early_param</a>(<q>"disable_mtrr_trim"</q>, <a class="tu ref fn" href="#disable_mtrr_trim_setup" title='disable_mtrr_trim_setup' data-ref="disable_mtrr_trim_setup" data-ref-filename="disable_mtrr_trim_setup">disable_mtrr_trim_setup</a>);</td></tr>
+<tr><th id="819">819</th><td></td></tr>
+<tr><th id="820">820</th><td><i>/*</i></td></tr>
+<tr><th id="821">821</th><td><i> * Newer AMD K8s and later CPUs have a special magic MSR way to force WB</i></td></tr>
+<tr><th id="822">822</th><td><i> * for memory &gt;4GB. Check for that here.</i></td></tr>
+<tr><th id="823">823</th><td><i> * Note this won't check if the MTRRs &lt; 4GB where the magic bit doesn't</i></td></tr>
+<tr><th id="824">824</th><td><i> * apply to are wrong, but so far we don't know of any such case in the wild.</i></td></tr>
+<tr><th id="825">825</th><td><i> */</i></td></tr>
+<tr><th id="826">826</th><td><u>#define <dfn class="macro" id="_M/Tom2Enabled" data-ref="_M/Tom2Enabled">Tom2Enabled</dfn>		(1U &lt;&lt; 21)</u></td></tr>
+<tr><th id="827">827</th><td><u>#define <dfn class="macro" id="_M/Tom2ForceMemTypeWB" data-ref="_M/Tom2ForceMemTypeWB">Tom2ForceMemTypeWB</dfn>	(1U &lt;&lt; 22)</u></td></tr>
+<tr><th id="828">828</th><td></td></tr>
+<tr><th id="829">829</th><td><em>int</em> <a class="macro" href="../../../../../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="decl def fn" id="amd_special_default_mtrr" title='amd_special_default_mtrr' data-ref="amd_special_default_mtrr" data-ref-filename="amd_special_default_mtrr">amd_special_default_mtrr</dfn>(<em>void</em>)</td></tr>
+<tr><th id="830">830</th><td>{</td></tr>
+<tr><th id="831">831</th><td>	<a class="typedef" href="../../../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col4 decl" id="64l" title='l' data-type='u32' data-ref="64l" data-ref-filename="64l">l</dfn>, <dfn class="local col5 decl" id="65h" title='h' data-type='u32' data-ref="65h" data-ref-filename="65h">h</dfn>;</td></tr>
+<tr><th id="832">832</th><td></td></tr>
+<tr><th id="833">833</th><td>	<b>if</b> (<a class="ref" href="../../../include/asm/processor.h.html#boot_cpu_data" title='boot_cpu_data' data-ref="boot_cpu_data" data-ref-filename="boot_cpu_data">boot_cpu_data</a>.<a class="ref field" href="../../../include/asm/processor.h.html#cpuinfo_x86::x86_vendor" title='cpuinfo_x86::x86_vendor' data-ref="cpuinfo_x86::x86_vendor" data-ref-filename="cpuinfo_x86..x86_vendor">x86_vendor</a> != <a class="macro" href="../../../include/asm/processor.h.html#143" title="2" data-ref="_M/X86_VENDOR_AMD">X86_VENDOR_AMD</a> &amp;&amp;</td></tr>
+<tr><th id="834">834</th><td>	    <a class="ref" href="../../../include/asm/processor.h.html#boot_cpu_data" title='boot_cpu_data' data-ref="boot_cpu_data" data-ref-filename="boot_cpu_data">boot_cpu_data</a>.<a class="ref field" href="../../../include/asm/processor.h.html#cpuinfo_x86::x86_vendor" title='cpuinfo_x86::x86_vendor' data-ref="cpuinfo_x86::x86_vendor" data-ref-filename="cpuinfo_x86..x86_vendor">x86_vendor</a> != <a class="macro" href="../../../include/asm/processor.h.html#148" title="9" data-ref="_M/X86_VENDOR_HYGON">X86_VENDOR_HYGON</a>)</td></tr>
+<tr><th id="835">835</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="836">836</th><td>	<b>if</b> (<a class="ref" href="../../../include/asm/processor.h.html#boot_cpu_data" title='boot_cpu_data' data-ref="boot_cpu_data" data-ref-filename="boot_cpu_data">boot_cpu_data</a>.<a class="ref field" href="../../../include/asm/processor.h.html#cpuinfo_x86::x86" title='cpuinfo_x86::x86' data-ref="cpuinfo_x86::x86" data-ref-filename="cpuinfo_x86..x86">x86</a> &lt; <var>0xf</var>)</td></tr>
+<tr><th id="837">837</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="838">838</th><td>	<i>/* In case some hypervisor doesn't pass SYSCFG through: */</i></td></tr>
+<tr><th id="839">839</th><td>	<b>if</b> (<a class="macro" href="../../../include/asm/msr.h.html#294" title="({ int __err; u64 __val = native_read_msr_safe((0xc0010010), &amp;__err); (*&amp;l) = (u32)__val; (*&amp;h) = (u32)(__val &gt;&gt; 32); __err; })" data-ref="_M/rdmsr_safe">rdmsr_safe</a>(<a class="macro" href="../../../include/asm/msr-index.h.html#464" title="0xc0010010" data-ref="_M/MSR_K8_SYSCFG">MSR_K8_SYSCFG</a>, &amp;<a class="local col4 ref" href="#64l" title='l' data-ref="64l" data-ref-filename="64l">l</a>, &amp;<a class="local col5 ref" href="#65h" title='h' data-ref="65h" data-ref-filename="65h">h</a>) &lt; <var>0</var>)</td></tr>
+<tr><th id="840">840</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="841">841</th><td>	<i>/*</i></td></tr>
+<tr><th id="842">842</th><td><i>	 * Memory between 4GB and top of mem is forced WB by this magic bit.</i></td></tr>
+<tr><th id="843">843</th><td><i>	 * Reserved before K8RevF, but should be zero there.</i></td></tr>
+<tr><th id="844">844</th><td><i>	 */</i></td></tr>
+<tr><th id="845">845</th><td>	<b>if</b> ((<a class="local col4 ref" href="#64l" title='l' data-ref="64l" data-ref-filename="64l">l</a> &amp; (<a class="macro" href="#826" title="(1U &lt;&lt; 21)" data-ref="_M/Tom2Enabled">Tom2Enabled</a> | <a class="macro" href="#827" title="(1U &lt;&lt; 22)" data-ref="_M/Tom2ForceMemTypeWB">Tom2ForceMemTypeWB</a>)) ==</td></tr>
+<tr><th id="846">846</th><td>		 (<a class="macro" href="#826" title="(1U &lt;&lt; 21)" data-ref="_M/Tom2Enabled">Tom2Enabled</a> | <a class="macro" href="#827" title="(1U &lt;&lt; 22)" data-ref="_M/Tom2ForceMemTypeWB">Tom2ForceMemTypeWB</a>))</td></tr>
+<tr><th id="847">847</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="848">848</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="849">849</th><td>}</td></tr>
+<tr><th id="850">850</th><td></td></tr>
+<tr><th id="851">851</th><td><em>static</em> <a class="typedef" href="../../../../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <a class="macro" href="../../../../../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a></td></tr>
+<tr><th id="852">852</th><td><dfn class="tu decl def fn" id="real_trim_memory" title='real_trim_memory' data-type='u64 real_trim_memory(unsigned long start_pfn, unsigned long limit_pfn)' data-ref="real_trim_memory" data-ref-filename="real_trim_memory">real_trim_memory</dfn>(<em>unsigned</em> <em>long</em> <dfn class="local col6 decl" id="66start_pfn" title='start_pfn' data-type='unsigned long' data-ref="66start_pfn" data-ref-filename="66start_pfn">start_pfn</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col7 decl" id="67limit_pfn" title='limit_pfn' data-type='unsigned long' data-ref="67limit_pfn" data-ref-filename="67limit_pfn">limit_pfn</dfn>)</td></tr>
+<tr><th id="853">853</th><td>{</td></tr>
+<tr><th id="854">854</th><td>	<a class="typedef" href="../../../../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col8 decl" id="68trim_start" title='trim_start' data-type='u64' data-ref="68trim_start" data-ref-filename="68trim_start">trim_start</dfn>, <dfn class="local col9 decl" id="69trim_size" title='trim_size' data-type='u64' data-ref="69trim_size" data-ref-filename="69trim_size">trim_size</dfn>;</td></tr>
+<tr><th id="855">855</th><td></td></tr>
+<tr><th id="856">856</th><td>	<a class="local col8 ref" href="#68trim_start" title='trim_start' data-ref="68trim_start" data-ref-filename="68trim_start">trim_start</a> = <a class="local col6 ref" href="#66start_pfn" title='start_pfn' data-ref="66start_pfn" data-ref-filename="66start_pfn">start_pfn</a>;</td></tr>
+<tr><th id="857">857</th><td>	<a class="local col8 ref" href="#68trim_start" title='trim_start' data-ref="68trim_start" data-ref-filename="68trim_start">trim_start</a> &lt;&lt;= <a class="macro" href="../../../include/asm/page_types.h.html#10" title="12" data-ref="_M/PAGE_SHIFT">PAGE_SHIFT</a>;</td></tr>
+<tr><th id="858">858</th><td></td></tr>
+<tr><th id="859">859</th><td>	<a class="local col9 ref" href="#69trim_size" title='trim_size' data-ref="69trim_size" data-ref-filename="69trim_size">trim_size</a> = <a class="local col7 ref" href="#67limit_pfn" title='limit_pfn' data-ref="67limit_pfn" data-ref-filename="67limit_pfn">limit_pfn</a>;</td></tr>
+<tr><th id="860">860</th><td>	<a class="local col9 ref" href="#69trim_size" title='trim_size' data-ref="69trim_size" data-ref-filename="69trim_size">trim_size</a> &lt;&lt;= <a class="macro" href="../../../include/asm/page_types.h.html#10" title="12" data-ref="_M/PAGE_SHIFT">PAGE_SHIFT</a>;</td></tr>
+<tr><th id="861">861</th><td>	<a class="local col9 ref" href="#69trim_size" title='trim_size' data-ref="69trim_size" data-ref-filename="69trim_size">trim_size</a> -= <a class="local col8 ref" href="#68trim_start" title='trim_start' data-ref="68trim_start" data-ref-filename="68trim_start">trim_start</a>;</td></tr>
+<tr><th id="862">862</th><td></td></tr>
+<tr><th id="863">863</th><td>	<b>return</b> <a class="ref fn" href="../../../include/asm/e820/api.h.html#e820__range_update" title='e820__range_update' data-ref="e820__range_update" data-ref-filename="e820__range_update">e820__range_update</a>(<a class="local col8 ref" href="#68trim_start" title='trim_start' data-ref="68trim_start" data-ref-filename="68trim_start">trim_start</a>, <a class="local col9 ref" href="#69trim_size" title='trim_size' data-ref="69trim_size" data-ref-filename="69trim_size">trim_size</a>, <a class="enum" href="../../../include/asm/e820/types.h.html#E820_TYPE_RAM" title='E820_TYPE_RAM' data-ref="E820_TYPE_RAM" data-ref-filename="E820_TYPE_RAM">E820_TYPE_RAM</a>, <a class="enum" href="../../../include/asm/e820/types.h.html#E820_TYPE_RESERVED" title='E820_TYPE_RESERVED' data-ref="E820_TYPE_RESERVED" data-ref-filename="E820_TYPE_RESERVED">E820_TYPE_RESERVED</a>);</td></tr>
+<tr><th id="864">864</th><td>}</td></tr>
+<tr><th id="865">865</th><td></td></tr>
+<tr><th id="866">866</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="867">867</th><td><i class="doc"> * mtrr_trim_uncached_memory - trim RAM not covered by MTRRs</i></td></tr>
+<tr><th id="868">868</th><td><i class="doc"> *<span class="command"> @end</span>_pfn: ending page frame number</i></td></tr>
+<tr><th id="869">869</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="870">870</th><td><i class="doc"> * Some buggy BIOSes don't setup the MTRRs properly for systems with certain</i></td></tr>
+<tr><th id="871">871</th><td><i class="doc"> * memory configurations.  This routine checks that the highest MTRR matches</i></td></tr>
+<tr><th id="872">872</th><td><i class="doc"> * the end of memory, to make sure the MTRRs having a write back type cover</i></td></tr>
+<tr><th id="873">873</th><td><i class="doc"> * all of the memory the kernel is intending to use.  If not, it'll trim any</i></td></tr>
+<tr><th id="874">874</th><td><i class="doc"> * memory off the end by adjusting end_pfn, removing it from the kernel's</i></td></tr>
+<tr><th id="875">875</th><td><i class="doc"> * allocation pools, warning the user with an obnoxious message.</i></td></tr>
+<tr><th id="876">876</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="877">877</th><td><em>int</em> <a class="macro" href="../../../../../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="decl def fn" id="mtrr_trim_uncached_memory" title='mtrr_trim_uncached_memory' data-ref="mtrr_trim_uncached_memory" data-ref-filename="mtrr_trim_uncached_memory">mtrr_trim_uncached_memory</dfn>(<em>unsigned</em> <em>long</em> <dfn class="local col0 decl" id="70end_pfn" title='end_pfn' data-type='unsigned long' data-ref="70end_pfn" data-ref-filename="70end_pfn">end_pfn</dfn>)</td></tr>
+<tr><th id="878">878</th><td>{</td></tr>
+<tr><th id="879">879</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col1 decl" id="71i" title='i' data-type='unsigned long' data-ref="71i" data-ref-filename="71i">i</dfn>, <dfn class="local col2 decl" id="72base" title='base' data-type='unsigned long' data-ref="72base" data-ref-filename="72base">base</dfn>, <dfn class="local col3 decl" id="73size" title='size' data-type='unsigned long' data-ref="73size" data-ref-filename="73size">size</dfn>, <dfn class="local col4 decl" id="74highest_pfn" title='highest_pfn' data-type='unsigned long' data-ref="74highest_pfn" data-ref-filename="74highest_pfn">highest_pfn</dfn> = <var>0</var>, <dfn class="local col5 decl" id="75def" title='def' data-type='unsigned long' data-ref="75def" data-ref-filename="75def">def</dfn>, <dfn class="local col6 decl" id="76dummy" title='dummy' data-type='unsigned long' data-ref="76dummy" data-ref-filename="76dummy">dummy</dfn>;</td></tr>
+<tr><th id="880">880</th><td>	<a class="typedef" href="../../../include/uapi/asm/mtrr.h.html#mtrr_type" title='mtrr_type' data-type='__u8' data-ref="mtrr_type" data-ref-filename="mtrr_type">mtrr_type</a> <dfn class="local col7 decl" id="77type" title='type' data-type='mtrr_type' data-ref="77type" data-ref-filename="77type">type</dfn>;</td></tr>
+<tr><th id="881">881</th><td>	<a class="typedef" href="../../../../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col8 decl" id="78total_trim_size" title='total_trim_size' data-type='u64' data-ref="78total_trim_size" data-ref-filename="78total_trim_size">total_trim_size</dfn>;</td></tr>
+<tr><th id="882">882</th><td>	<i>/* extra one for all 0 */</i></td></tr>
+<tr><th id="883">883</th><td>	<em>int</em> <dfn class="local col9 decl" id="79num" title='num' data-type='int [8]' data-ref="79num" data-ref-filename="79num">num</dfn>[<a class="macro" href="../../../include/uapi/asm/mtrr.h.html#115" title="7" data-ref="_M/MTRR_NUM_TYPES">MTRR_NUM_TYPES</a> + <var>1</var>];</td></tr>
+<tr><th id="884">884</th><td></td></tr>
+<tr><th id="885">885</th><td>	<i>/*</i></td></tr>
+<tr><th id="886">886</th><td><i>	 * Make sure we only trim uncachable memory on machines that</i></td></tr>
+<tr><th id="887">887</th><td><i>	 * support the Intel MTRR architecture:</i></td></tr>
+<tr><th id="888">888</th><td><i>	 */</i></td></tr>
+<tr><th id="889">889</th><td>	<b>if</b> (!<a class="macro" href="mtrr.h.html#63" title="(mtrr_if &amp;&amp; mtrr_if-&gt;vendor == 0)" data-ref="_M/is_cpu">is_cpu</a>(INTEL) || <a class="tu ref" href="#disable_mtrr_trim" title='disable_mtrr_trim' data-use='r' data-ref="disable_mtrr_trim" data-ref-filename="disable_mtrr_trim">disable_mtrr_trim</a>)</td></tr>
+<tr><th id="890">890</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="891">891</th><td></td></tr>
+<tr><th id="892">892</th><td>	<a class="macro" href="../../../include/asm/msr.h.html#267" title="do { u64 __val = native_read_msr((0x000002ff)); (void)((def) = (u32)__val); (void)((dummy) = (u32)(__val &gt;&gt; 32)); } while (0)" data-ref="_M/rdmsr">rdmsr</a>(<a class="macro" href="../../../include/asm/msr-index.h.html#201" title="0x000002ff" data-ref="_M/MSR_MTRRdefType">MSR_MTRRdefType</a>, <a class="local col5 ref" href="#75def" title='def' data-ref="75def" data-ref-filename="75def">def</a>, <a class="local col6 ref" href="#76dummy" title='dummy' data-ref="76dummy" data-ref-filename="76dummy">dummy</a>);</td></tr>
+<tr><th id="893">893</th><td>	<a class="local col5 ref" href="#75def" title='def' data-ref="75def" data-ref-filename="75def">def</a> &amp;= <var>0xff</var>;</td></tr>
+<tr><th id="894">894</th><td>	<b>if</b> (<a class="local col5 ref" href="#75def" title='def' data-ref="75def" data-ref-filename="75def">def</a> != <a class="macro" href="../../../include/uapi/asm/mtrr.h.html#108" title="0" data-ref="_M/MTRR_TYPE_UNCACHABLE">MTRR_TYPE_UNCACHABLE</a>)</td></tr>
+<tr><th id="895">895</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="896">896</th><td></td></tr>
+<tr><th id="897">897</th><td>	<i>/* Get it and store it aside: */</i></td></tr>
+<tr><th id="898">898</th><td>	<a class="ref fn" href="../../../include/asm/string_64.h.html#memset" title='memset' data-ref="memset" data-ref-filename="memset">memset</a>(<a class="tu ref" href="#range_state" title='range_state' data-use='r' data-ref="range_state" data-ref-filename="range_state">range_state</a>, <var>0</var>, <b>sizeof</b>(<a class="tu ref" href="#range_state" title='range_state' data-use='r' data-ref="range_state" data-ref-filename="range_state">range_state</a>));</td></tr>
+<tr><th id="899">899</th><td>	<b>for</b> (<a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a> = <var>0</var>; <a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a> &lt; <a class="ref" href="mtrr.h.html#num_var_ranges" title='num_var_ranges' data-ref="num_var_ranges" data-ref-filename="num_var_ranges">num_var_ranges</a>; <a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a>++) {</td></tr>
+<tr><th id="900">900</th><td>		<a class="ref" href="mtrr.h.html#mtrr_if" title='mtrr_if' data-ref="mtrr_if" data-ref-filename="mtrr_if">mtrr_if</a>-&gt;<a class="ref field" href="mtrr.h.html#mtrr_ops::get" title='mtrr_ops::get' data-ref="mtrr_ops::get" data-ref-filename="mtrr_ops..get">get</a>(<a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a>, &amp;<a class="local col2 ref" href="#72base" title='base' data-ref="72base" data-ref-filename="72base">base</a>, &amp;<a class="local col3 ref" href="#73size" title='size' data-ref="73size" data-ref-filename="73size">size</a>, &amp;<a class="local col7 ref" href="#77type" title='type' data-ref="77type" data-ref-filename="77type">type</a>);</td></tr>
+<tr><th id="901">901</th><td>		<a class="tu ref" href="#range_state" title='range_state' data-use='m' data-ref="range_state" data-ref-filename="range_state">range_state</a>[<a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a>].<a class="tu ref field" href="#var_mtrr_range_state::base_pfn" title='var_mtrr_range_state::base_pfn' data-use='w' data-ref="var_mtrr_range_state::base_pfn" data-ref-filename="var_mtrr_range_state..base_pfn">base_pfn</a> = <a class="local col2 ref" href="#72base" title='base' data-ref="72base" data-ref-filename="72base">base</a>;</td></tr>
+<tr><th id="902">902</th><td>		<a class="tu ref" href="#range_state" title='range_state' data-use='m' data-ref="range_state" data-ref-filename="range_state">range_state</a>[<a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a>].<a class="tu ref field" href="#var_mtrr_range_state::size_pfn" title='var_mtrr_range_state::size_pfn' data-use='w' data-ref="var_mtrr_range_state::size_pfn" data-ref-filename="var_mtrr_range_state..size_pfn">size_pfn</a> = <a class="local col3 ref" href="#73size" title='size' data-ref="73size" data-ref-filename="73size">size</a>;</td></tr>
+<tr><th id="903">903</th><td>		<a class="tu ref" href="#range_state" title='range_state' data-use='m' data-ref="range_state" data-ref-filename="range_state">range_state</a>[<a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a>].<a class="tu ref field" href="#var_mtrr_range_state::type" title='var_mtrr_range_state::type' data-use='w' data-ref="var_mtrr_range_state::type" data-ref-filename="var_mtrr_range_state..type">type</a> = <a class="local col7 ref" href="#77type" title='type' data-ref="77type" data-ref-filename="77type">type</a>;</td></tr>
+<tr><th id="904">904</th><td>	}</td></tr>
+<tr><th id="905">905</th><td></td></tr>
+<tr><th id="906">906</th><td>	<i>/* Find highest cached pfn: */</i></td></tr>
+<tr><th id="907">907</th><td>	<b>for</b> (<a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a> = <var>0</var>; <a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a> &lt; <a class="ref" href="mtrr.h.html#num_var_ranges" title='num_var_ranges' data-ref="num_var_ranges" data-ref-filename="num_var_ranges">num_var_ranges</a>; <a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a>++) {</td></tr>
+<tr><th id="908">908</th><td>		<a class="local col7 ref" href="#77type" title='type' data-ref="77type" data-ref-filename="77type">type</a> = <a class="tu ref" href="#range_state" title='range_state' data-use='m' data-ref="range_state" data-ref-filename="range_state">range_state</a>[<a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a>].<a class="tu ref field" href="#var_mtrr_range_state::type" title='var_mtrr_range_state::type' data-use='r' data-ref="var_mtrr_range_state::type" data-ref-filename="var_mtrr_range_state..type">type</a>;</td></tr>
+<tr><th id="909">909</th><td>		<b>if</b> (<a class="local col7 ref" href="#77type" title='type' data-ref="77type" data-ref-filename="77type">type</a> != <a class="macro" href="../../../include/uapi/asm/mtrr.h.html#114" title="6" data-ref="_M/MTRR_TYPE_WRBACK">MTRR_TYPE_WRBACK</a>)</td></tr>
+<tr><th id="910">910</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="911">911</th><td>		<a class="local col2 ref" href="#72base" title='base' data-ref="72base" data-ref-filename="72base">base</a> = <a class="tu ref" href="#range_state" title='range_state' data-use='m' data-ref="range_state" data-ref-filename="range_state">range_state</a>[<a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a>].<a class="tu ref field" href="#var_mtrr_range_state::base_pfn" title='var_mtrr_range_state::base_pfn' data-use='r' data-ref="var_mtrr_range_state::base_pfn" data-ref-filename="var_mtrr_range_state..base_pfn">base_pfn</a>;</td></tr>
+<tr><th id="912">912</th><td>		<a class="local col3 ref" href="#73size" title='size' data-ref="73size" data-ref-filename="73size">size</a> = <a class="tu ref" href="#range_state" title='range_state' data-use='m' data-ref="range_state" data-ref-filename="range_state">range_state</a>[<a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a>].<a class="tu ref field" href="#var_mtrr_range_state::size_pfn" title='var_mtrr_range_state::size_pfn' data-use='r' data-ref="var_mtrr_range_state::size_pfn" data-ref-filename="var_mtrr_range_state..size_pfn">size_pfn</a>;</td></tr>
+<tr><th id="913">913</th><td>		<b>if</b> (<a class="local col4 ref" href="#74highest_pfn" title='highest_pfn' data-ref="74highest_pfn" data-ref-filename="74highest_pfn">highest_pfn</a> &lt; <a class="local col2 ref" href="#72base" title='base' data-ref="72base" data-ref-filename="72base">base</a> + <a class="local col3 ref" href="#73size" title='size' data-ref="73size" data-ref-filename="73size">size</a>)</td></tr>
+<tr><th id="914">914</th><td>			<a class="local col4 ref" href="#74highest_pfn" title='highest_pfn' data-ref="74highest_pfn" data-ref-filename="74highest_pfn">highest_pfn</a> = <a class="local col2 ref" href="#72base" title='base' data-ref="72base" data-ref-filename="72base">base</a> + <a class="local col3 ref" href="#73size" title='size' data-ref="73size" data-ref-filename="73size">size</a>;</td></tr>
+<tr><th id="915">915</th><td>	}</td></tr>
+<tr><th id="916">916</th><td></td></tr>
+<tr><th id="917">917</th><td>	<i>/* kvm/qemu doesn't have mtrr set right, don't trim them all: */</i></td></tr>
+<tr><th id="918">918</th><td>	<b>if</b> (!<a class="local col4 ref" href="#74highest_pfn" title='highest_pfn' data-ref="74highest_pfn" data-ref-filename="74highest_pfn">highest_pfn</a>) {</td></tr>
+<tr><th id="919">919</th><td>		<a class="macro" href="../../../../../include/linux/printk.h.html#310" title="printk(&quot;\001&quot; &quot;6&quot; &quot;CPU MTRRs all blank - virtualized system.\n&quot;)" data-ref="_M/pr_info">pr_info</a>(<q>"CPU MTRRs all blank - virtualized system.\n"</q>);</td></tr>
+<tr><th id="920">920</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="921">921</th><td>	}</td></tr>
+<tr><th id="922">922</th><td></td></tr>
+<tr><th id="923">923</th><td>	<i>/* Check entries number: */</i></td></tr>
+<tr><th id="924">924</th><td>	<a class="ref fn" href="../../../include/asm/string_64.h.html#memset" title='memset' data-ref="memset" data-ref-filename="memset">memset</a>(<a class="local col9 ref" href="#79num" title='num' data-ref="79num" data-ref-filename="79num">num</a>, <var>0</var>, <b>sizeof</b>(<a class="local col9 ref" href="#79num" title='num' data-ref="79num" data-ref-filename="79num">num</a>));</td></tr>
+<tr><th id="925">925</th><td>	<b>for</b> (<a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a> = <var>0</var>; <a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a> &lt; <a class="ref" href="mtrr.h.html#num_var_ranges" title='num_var_ranges' data-ref="num_var_ranges" data-ref-filename="num_var_ranges">num_var_ranges</a>; <a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a>++) {</td></tr>
+<tr><th id="926">926</th><td>		<a class="local col7 ref" href="#77type" title='type' data-ref="77type" data-ref-filename="77type">type</a> = <a class="tu ref" href="#range_state" title='range_state' data-use='m' data-ref="range_state" data-ref-filename="range_state">range_state</a>[<a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a>].<a class="tu ref field" href="#var_mtrr_range_state::type" title='var_mtrr_range_state::type' data-use='r' data-ref="var_mtrr_range_state::type" data-ref-filename="var_mtrr_range_state..type">type</a>;</td></tr>
+<tr><th id="927">927</th><td>		<b>if</b> (<a class="local col7 ref" href="#77type" title='type' data-ref="77type" data-ref-filename="77type">type</a> &gt;= <a class="macro" href="../../../include/uapi/asm/mtrr.h.html#115" title="7" data-ref="_M/MTRR_NUM_TYPES">MTRR_NUM_TYPES</a>)</td></tr>
+<tr><th id="928">928</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="929">929</th><td>		<a class="local col3 ref" href="#73size" title='size' data-ref="73size" data-ref-filename="73size">size</a> = <a class="tu ref" href="#range_state" title='range_state' data-use='m' data-ref="range_state" data-ref-filename="range_state">range_state</a>[<a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a>].<a class="tu ref field" href="#var_mtrr_range_state::size_pfn" title='var_mtrr_range_state::size_pfn' data-use='r' data-ref="var_mtrr_range_state::size_pfn" data-ref-filename="var_mtrr_range_state..size_pfn">size_pfn</a>;</td></tr>
+<tr><th id="930">930</th><td>		<b>if</b> (!<a class="local col3 ref" href="#73size" title='size' data-ref="73size" data-ref-filename="73size">size</a>)</td></tr>
+<tr><th id="931">931</th><td>			<a class="local col7 ref" href="#77type" title='type' data-ref="77type" data-ref-filename="77type">type</a> = <a class="macro" href="../../../include/uapi/asm/mtrr.h.html#115" title="7" data-ref="_M/MTRR_NUM_TYPES">MTRR_NUM_TYPES</a>;</td></tr>
+<tr><th id="932">932</th><td>		<a class="local col9 ref" href="#79num" title='num' data-ref="79num" data-ref-filename="79num">num</a>[<a class="local col7 ref" href="#77type" title='type' data-ref="77type" data-ref-filename="77type">type</a>]++;</td></tr>
+<tr><th id="933">933</th><td>	}</td></tr>
+<tr><th id="934">934</th><td></td></tr>
+<tr><th id="935">935</th><td>	<i>/* No entry for WB? */</i></td></tr>
+<tr><th id="936">936</th><td>	<b>if</b> (!<a class="local col9 ref" href="#79num" title='num' data-ref="79num" data-ref-filename="79num">num</a>[<a class="macro" href="../../../include/uapi/asm/mtrr.h.html#114" title="6" data-ref="_M/MTRR_TYPE_WRBACK">MTRR_TYPE_WRBACK</a>])</td></tr>
+<tr><th id="937">937</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="938">938</th><td></td></tr>
+<tr><th id="939">939</th><td>	<i>/* Check if we only had WB and UC: */</i></td></tr>
+<tr><th id="940">940</th><td>	<b>if</b> (<a class="local col9 ref" href="#79num" title='num' data-ref="79num" data-ref-filename="79num">num</a>[<a class="macro" href="../../../include/uapi/asm/mtrr.h.html#114" title="6" data-ref="_M/MTRR_TYPE_WRBACK">MTRR_TYPE_WRBACK</a>] + <a class="local col9 ref" href="#79num" title='num' data-ref="79num" data-ref-filename="79num">num</a>[<a class="macro" href="../../../include/uapi/asm/mtrr.h.html#108" title="0" data-ref="_M/MTRR_TYPE_UNCACHABLE">MTRR_TYPE_UNCACHABLE</a>] !=</td></tr>
+<tr><th id="941">941</th><td>		<a class="ref" href="mtrr.h.html#num_var_ranges" title='num_var_ranges' data-ref="num_var_ranges" data-ref-filename="num_var_ranges">num_var_ranges</a> - <a class="local col9 ref" href="#79num" title='num' data-ref="79num" data-ref-filename="79num">num</a>[<a class="macro" href="../../../include/uapi/asm/mtrr.h.html#115" title="7" data-ref="_M/MTRR_NUM_TYPES">MTRR_NUM_TYPES</a>])</td></tr>
+<tr><th id="942">942</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="943">943</th><td></td></tr>
+<tr><th id="944">944</th><td>	<a class="ref fn" href="../../../include/asm/string_64.h.html#memset" title='memset' data-ref="memset" data-ref-filename="memset">memset</a>(<a class="tu ref" href="#range" title='range' data-use='r' data-ref="range" data-ref-filename="range">range</a>, <var>0</var>, <b>sizeof</b>(<a class="tu ref" href="#range" title='range' data-use='r' data-ref="range" data-ref-filename="range">range</a>));</td></tr>
+<tr><th id="945">945</th><td>	<a class="tu ref" href="#nr_range" title='nr_range' data-use='w' data-ref="nr_range" data-ref-filename="nr_range">nr_range</a> = <var>0</var>;</td></tr>
+<tr><th id="946">946</th><td>	<b>if</b> (<a class="ref" href="mtrr.h.html#mtrr_tom2" title='mtrr_tom2' data-ref="mtrr_tom2" data-ref-filename="mtrr_tom2">mtrr_tom2</a>) {</td></tr>
+<tr><th id="947">947</th><td>		<a class="tu ref" href="#range" title='range' data-use='m' data-ref="range" data-ref-filename="range">range</a>[<a class="tu ref" href="#nr_range" title='nr_range' data-use='r' data-ref="nr_range" data-ref-filename="nr_range">nr_range</a>].<a class="ref field" href="../../../../../include/linux/range.h.html#range::start" title='range::start' data-ref="range::start" data-ref-filename="range..start">start</a> = (<var>1ULL</var>&lt;&lt;(<var>32</var> - <a class="macro" href="../../../include/asm/page_types.h.html#10" title="12" data-ref="_M/PAGE_SHIFT">PAGE_SHIFT</a>));</td></tr>
+<tr><th id="948">948</th><td>		<a class="tu ref" href="#range" title='range' data-use='m' data-ref="range" data-ref-filename="range">range</a>[<a class="tu ref" href="#nr_range" title='nr_range' data-use='r' data-ref="nr_range" data-ref-filename="nr_range">nr_range</a>].<a class="ref field" href="../../../../../include/linux/range.h.html#range::end" title='range::end' data-ref="range::end" data-ref-filename="range..end">end</a> = <a class="ref" href="mtrr.h.html#mtrr_tom2" title='mtrr_tom2' data-ref="mtrr_tom2" data-ref-filename="mtrr_tom2">mtrr_tom2</a> &gt;&gt; <a class="macro" href="../../../include/asm/page_types.h.html#10" title="12" data-ref="_M/PAGE_SHIFT">PAGE_SHIFT</a>;</td></tr>
+<tr><th id="949">949</th><td>		<b>if</b> (<a class="local col4 ref" href="#74highest_pfn" title='highest_pfn' data-ref="74highest_pfn" data-ref-filename="74highest_pfn">highest_pfn</a> &lt; <a class="tu ref" href="#range" title='range' data-use='m' data-ref="range" data-ref-filename="range">range</a>[<a class="tu ref" href="#nr_range" title='nr_range' data-use='r' data-ref="nr_range" data-ref-filename="nr_range">nr_range</a>].<a class="ref field" href="../../../../../include/linux/range.h.html#range::end" title='range::end' data-ref="range::end" data-ref-filename="range..end">end</a>)</td></tr>
+<tr><th id="950">950</th><td>			<a class="local col4 ref" href="#74highest_pfn" title='highest_pfn' data-ref="74highest_pfn" data-ref-filename="74highest_pfn">highest_pfn</a> = <a class="tu ref" href="#range" title='range' data-use='m' data-ref="range" data-ref-filename="range">range</a>[<a class="tu ref" href="#nr_range" title='nr_range' data-use='r' data-ref="nr_range" data-ref-filename="nr_range">nr_range</a>].<a class="ref field" href="../../../../../include/linux/range.h.html#range::end" title='range::end' data-ref="range::end" data-ref-filename="range..end">end</a>;</td></tr>
+<tr><th id="951">951</th><td>		<a class="tu ref" href="#nr_range" title='nr_range' data-use='w' data-ref="nr_range" data-ref-filename="nr_range">nr_range</a>++;</td></tr>
+<tr><th id="952">952</th><td>	}</td></tr>
+<tr><th id="953">953</th><td>	<a class="tu ref" href="#nr_range" title='nr_range' data-use='w' data-ref="nr_range" data-ref-filename="nr_range">nr_range</a> = <a class="tu ref fn" href="#x86_get_mtrr_mem_range" title='x86_get_mtrr_mem_range' data-use='c' data-ref="x86_get_mtrr_mem_range" data-ref-filename="x86_get_mtrr_mem_range">x86_get_mtrr_mem_range</a>(<a class="tu ref" href="#range" title='range' data-use='r' data-ref="range" data-ref-filename="range">range</a>, <a class="tu ref" href="#nr_range" title='nr_range' data-use='r' data-ref="nr_range" data-ref-filename="nr_range">nr_range</a>, <var>0</var>, <var>0</var>);</td></tr>
+<tr><th id="954">954</th><td></td></tr>
+<tr><th id="955">955</th><td>	<i>/* Check the head: */</i></td></tr>
+<tr><th id="956">956</th><td>	<a class="local col8 ref" href="#78total_trim_size" title='total_trim_size' data-ref="78total_trim_size" data-ref-filename="78total_trim_size">total_trim_size</a> = <var>0</var>;</td></tr>
+<tr><th id="957">957</th><td>	<b>if</b> (<a class="tu ref" href="#range" title='range' data-use='m' data-ref="range" data-ref-filename="range">range</a>[<var>0</var>].<a class="ref field" href="../../../../../include/linux/range.h.html#range::start" title='range::start' data-ref="range::start" data-ref-filename="range..start">start</a>)</td></tr>
+<tr><th id="958">958</th><td>		<a class="local col8 ref" href="#78total_trim_size" title='total_trim_size' data-ref="78total_trim_size" data-ref-filename="78total_trim_size">total_trim_size</a> += <a class="tu ref fn" href="#real_trim_memory" title='real_trim_memory' data-use='c' data-ref="real_trim_memory" data-ref-filename="real_trim_memory">real_trim_memory</a>(<var>0</var>, <a class="tu ref" href="#range" title='range' data-use='m' data-ref="range" data-ref-filename="range">range</a>[<var>0</var>].<a class="ref field" href="../../../../../include/linux/range.h.html#range::start" title='range::start' data-ref="range::start" data-ref-filename="range..start">start</a>);</td></tr>
+<tr><th id="959">959</th><td></td></tr>
+<tr><th id="960">960</th><td>	<i>/* Check the holes: */</i></td></tr>
+<tr><th id="961">961</th><td>	<b>for</b> (<a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a> = <var>0</var>; <a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a> &lt; <a class="tu ref" href="#nr_range" title='nr_range' data-use='r' data-ref="nr_range" data-ref-filename="nr_range">nr_range</a> - <var>1</var>; <a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a>++) {</td></tr>
+<tr><th id="962">962</th><td>		<b>if</b> (<a class="tu ref" href="#range" title='range' data-use='m' data-ref="range" data-ref-filename="range">range</a>[<a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a>].<a class="ref field" href="../../../../../include/linux/range.h.html#range::end" title='range::end' data-ref="range::end" data-ref-filename="range..end">end</a> &lt; <a class="tu ref" href="#range" title='range' data-use='m' data-ref="range" data-ref-filename="range">range</a>[<a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a>+<var>1</var>].<a class="ref field" href="../../../../../include/linux/range.h.html#range::start" title='range::start' data-ref="range::start" data-ref-filename="range..start">start</a>)</td></tr>
+<tr><th id="963">963</th><td>			<a class="local col8 ref" href="#78total_trim_size" title='total_trim_size' data-ref="78total_trim_size" data-ref-filename="78total_trim_size">total_trim_size</a> += <a class="tu ref fn" href="#real_trim_memory" title='real_trim_memory' data-use='c' data-ref="real_trim_memory" data-ref-filename="real_trim_memory">real_trim_memory</a>(<a class="tu ref" href="#range" title='range' data-use='m' data-ref="range" data-ref-filename="range">range</a>[<a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a>].<a class="ref field" href="../../../../../include/linux/range.h.html#range::end" title='range::end' data-ref="range::end" data-ref-filename="range..end">end</a>,</td></tr>
+<tr><th id="964">964</th><td>							    <a class="tu ref" href="#range" title='range' data-use='m' data-ref="range" data-ref-filename="range">range</a>[<a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a>+<var>1</var>].<a class="ref field" href="../../../../../include/linux/range.h.html#range::start" title='range::start' data-ref="range::start" data-ref-filename="range..start">start</a>);</td></tr>
+<tr><th id="965">965</th><td>	}</td></tr>
+<tr><th id="966">966</th><td></td></tr>
+<tr><th id="967">967</th><td>	<i>/* Check the top: */</i></td></tr>
+<tr><th id="968">968</th><td>	<a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a> = <a class="tu ref" href="#nr_range" title='nr_range' data-use='r' data-ref="nr_range" data-ref-filename="nr_range">nr_range</a> - <var>1</var>;</td></tr>
+<tr><th id="969">969</th><td>	<b>if</b> (<a class="tu ref" href="#range" title='range' data-use='m' data-ref="range" data-ref-filename="range">range</a>[<a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a>].<a class="ref field" href="../../../../../include/linux/range.h.html#range::end" title='range::end' data-ref="range::end" data-ref-filename="range..end">end</a> &lt; <a class="local col0 ref" href="#70end_pfn" title='end_pfn' data-ref="70end_pfn" data-ref-filename="70end_pfn">end_pfn</a>)</td></tr>
+<tr><th id="970">970</th><td>		<a class="local col8 ref" href="#78total_trim_size" title='total_trim_size' data-ref="78total_trim_size" data-ref-filename="78total_trim_size">total_trim_size</a> += <a class="tu ref fn" href="#real_trim_memory" title='real_trim_memory' data-use='c' data-ref="real_trim_memory" data-ref-filename="real_trim_memory">real_trim_memory</a>(<a class="tu ref" href="#range" title='range' data-use='m' data-ref="range" data-ref-filename="range">range</a>[<a class="local col1 ref" href="#71i" title='i' data-ref="71i" data-ref-filename="71i">i</a>].<a class="ref field" href="../../../../../include/linux/range.h.html#range::end" title='range::end' data-ref="range::end" data-ref-filename="range..end">end</a>,</td></tr>
+<tr><th id="971">971</th><td>							 <a class="local col0 ref" href="#70end_pfn" title='end_pfn' data-ref="70end_pfn" data-ref-filename="70end_pfn">end_pfn</a>);</td></tr>
+<tr><th id="972">972</th><td></td></tr>
+<tr><th id="973">973</th><td>	<b>if</b> (<a class="local col8 ref" href="#78total_trim_size" title='total_trim_size' data-ref="78total_trim_size" data-ref-filename="78total_trim_size">total_trim_size</a>) {</td></tr>
+<tr><th id="974">974</th><td>		<a class="macro" href="../../../../../include/linux/printk.h.html#307" title="pr_warning" data-ref="_M/pr_warn">pr_warn</a>(<q>"WARNING: BIOS bug: CPU MTRRs don't cover all of memory, losing %lluMB of RAM.\n"</q>,</td></tr>
+<tr><th id="975">975</th><td>			<a class="local col8 ref" href="#78total_trim_size" title='total_trim_size' data-ref="78total_trim_size" data-ref-filename="78total_trim_size">total_trim_size</a> &gt;&gt; <var>20</var>);</td></tr>
+<tr><th id="976">976</th><td></td></tr>
+<tr><th id="977">977</th><td>		<b>if</b> (!<a class="ref" href="mtrr.h.html#changed_by_mtrr_cleanup" title='changed_by_mtrr_cleanup' data-ref="changed_by_mtrr_cleanup" data-ref-filename="changed_by_mtrr_cleanup">changed_by_mtrr_cleanup</a>)</td></tr>
+<tr><th id="978">978</th><td>			<a class="macro" href="../../../../../include/asm-generic/bug.h.html#123" title="({ int __ret_warn_on = !!(1); if (__builtin_expect(!!(__ret_warn_on), 0)) do { printk(&quot;\001&quot; &quot;4&quot; &quot;------------[ cut here ]------------\n&quot;); do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/arch/x86/kernel/cpu/mtrr/cleanup.c&quot;), &quot;i&quot; (978), &quot;i&quot; ((1 &lt;&lt; 0)|(((9) &lt;&lt; 8))), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.reachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (55)); }); } while (0); } while (0); __builtin_expect(!!(__ret_warn_on), 0); })" data-ref="_M/WARN_ON">WARN_ON</a>(<var>1</var>);</td></tr>
+<tr><th id="979">979</th><td></td></tr>
+<tr><th id="980">980</th><td>		<a class="macro" href="../../../../../include/linux/printk.h.html#310" title="printk(&quot;\001&quot; &quot;6&quot; &quot;update e820 for mtrr\n&quot;)" data-ref="_M/pr_info">pr_info</a>(<q>"update e820 for mtrr\n"</q>);</td></tr>
+<tr><th id="981">981</th><td>		<a class="ref fn" href="../../../include/asm/e820/api.h.html#e820__update_table_print" title='e820__update_table_print' data-ref="e820__update_table_print" data-ref-filename="e820__update_table_print">e820__update_table_print</a>();</td></tr>
+<tr><th id="982">982</th><td></td></tr>
+<tr><th id="983">983</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="984">984</th><td>	}</td></tr>
+<tr><th id="985">985</th><td></td></tr>
+<tr><th id="986">986</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="987">987</th><td>}</td></tr>
+<tr><th id="988">988</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

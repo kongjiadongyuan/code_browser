@@ -1,0 +1,38 @@
+<dec f='linux-5.3.1/include/linux/jbd2.h' l='1324' type='int jbd2_journal_write_metadata_buffer(transaction_t * transaction, struct journal_head * jh_in, struct buffer_head ** bh_out, sector_t blocknr)'/>
+<doc f='linux-5.3.1/include/linux/jbd2.h' l='1323'>/* Buffer IO */</doc>
+<use f='linux-5.3.1/fs/jbd2/commit.c' l='661' u='c' c='jbd2_journal_commit_transaction'/>
+<def f='linux-5.3.1/fs/jbd2/journal.c' l='337' ll='472' type='int jbd2_journal_write_metadata_buffer(transaction_t * transaction, struct journal_head * jh_in, struct buffer_head ** bh_out, sector_t blocknr)'/>
+<doc f='linux-5.3.1/fs/jbd2/journal.c' l='302'>/*
+ * jbd2_journal_write_metadata_buffer: write a metadata buffer to the journal.
+ *
+ * Writes a metadata buffer to a given disk block.  The actual IO is not
+ * performed but a new buffer_head is constructed which labels the data
+ * to be written with the correct destination disk block.
+ *
+ * Any magic-number escaping which needs to be done will cause a
+ * copy-out here.  If the buffer happens to start with the
+ * JBD2_MAGIC_NUMBER, then we can&apos;t write it to the log directly: the
+ * magic number is only written to the log for descripter blocks.  In
+ * this case, we copy the data and replace the first word with 0, and we
+ * return a result code which indicates that this buffer needs to be
+ * marked as an escaped buffer in the corresponding log descriptor
+ * block.  The missing word can then be restored when the block is read
+ * during recovery.
+ *
+ * If the source buffer has already been modified by a new transaction
+ * since we took the last commit snapshot, we use the frozen copy of
+ * that data for IO. If we end up using the existing buffer_head&apos;s data
+ * for the write, then we have to make sure nobody modifies it while the
+ * IO is in progress. do_get_write_access() handles this.
+ *
+ * The function returns a pointer to the buffer_head to be used for IO.
+ *
+ *
+ * Return value:
+ *  &lt;0: Error
+ * &gt;=0: Finished OK
+ *
+ * On success:
+ * Bit 0 set == escape performed on the data
+ * Bit 1 set == buffer copy-out performed (kfree the data after IO)
+ */</doc>

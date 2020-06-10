@@ -1,0 +1,34 @@
+<dec f='linux-5.3.1/include/linux/nfs_xdr.h' l='1532' type='struct nfs_pgio_res'/>
+<offset>5568</offset>
+<doc f='linux-5.3.1/include/linux/nfs_xdr.h' l='1532'>/* result struct */</doc>
+<use f='linux-5.3.1/fs/nfs/nfs3proc.c' l='798' u='m' c='nfs3_read_done'/>
+<use f='linux-5.3.1/fs/nfs/nfs4proc.c' l='5117' u='m' c='nfs4_read_done'/>
+<use f='linux-5.3.1/fs/nfs/nfs4proc.c' l='5134' u='m' c='nfs4_proc_read_setup'/>
+<use f='linux-5.3.1/fs/nfs/nfs4proc.c' l='5142' u='m' c='nfs4_proc_pgio_rpc_prepare'/>
+<use f='linux-5.3.1/fs/nfs/nfs4proc.c' l='5197' u='m' c='nfs4_write_done'/>
+<use f='linux-5.3.1/fs/nfs/nfs4proc.c' l='5225' u='m' c='nfs4_proc_write_setup'/>
+<use f='linux-5.3.1/fs/nfs/nfs4proc.c' l='5231' u='m' c='nfs4_proc_write_setup'/>
+<use f='linux-5.3.1/fs/nfs/nfs4proc.c' l='5235' u='m' c='nfs4_proc_write_setup'/>
+<use f='linux-5.3.1/fs/nfs/pagelist.c' l='592' u='m' c='nfs_pgio_rpcsetup'/>
+<use f='linux-5.3.1/fs/nfs/pagelist.c' l='593' u='m' c='nfs_pgio_rpcsetup'/>
+<use f='linux-5.3.1/fs/nfs/pagelist.c' l='594' u='m' c='nfs_pgio_rpcsetup'/>
+<use f='linux-5.3.1/fs/nfs/pagelist.c' l='595' u='m' c='nfs_pgio_rpcsetup'/>
+<use f='linux-5.3.1/fs/nfs/pagelist.c' l='620' u='a' c='nfs_initiate_pgio'/>
+<use f='linux-5.3.1/fs/nfs/pagelist.c' l='620' u='a' c='nfs_initiate_pgio'/>
+<use f='linux-5.3.1/fs/nfs/proc.c' l='593' u='m' c='nfs_read_done'/>
+<use f='linux-5.3.1/fs/nfs/proc.c' l='597' u='m' c='nfs_read_done'/>
+<use f='linux-5.3.1/fs/nfs/proc.c' l='598' u='m' c='nfs_read_done'/>
+<use f='linux-5.3.1/fs/nfs/proc.c' l='598' u='m' c='nfs_read_done'/>
+<use f='linux-5.3.1/fs/nfs/proc.c' l='599' u='m' c='nfs_read_done'/>
+<use f='linux-5.3.1/fs/nfs/proc.c' l='620' u='m' c='nfs_write_done'/>
+<use f='linux-5.3.1/fs/nfs/read.c' l='249' u='m' c='nfs_readpage_done'/>
+<use f='linux-5.3.1/fs/nfs/read.c' l='251' u='m' c='nfs_readpage_done'/>
+<use f='linux-5.3.1/fs/nfs/read.c' l='264' u='a' c='nfs_readpage_retry'/>
+<use f='linux-5.3.1/fs/nfs/read.c' l='291' u='m' c='nfs_readpage_result'/>
+<use f='linux-5.3.1/fs/nfs/read.c' l='292' u='m' c='nfs_readpage_result'/>
+<use f='linux-5.3.1/fs/nfs/read.c' l='300' u='m' c='nfs_readpage_result'/>
+<use f='linux-5.3.1/fs/nfs/write.c' l='1520' u='a' c='nfs_writeback_check_extend'/>
+<use f='linux-5.3.1/fs/nfs/write.c' l='1569' u='m' c='nfs_writeback_done'/>
+<use f='linux-5.3.1/fs/nfs/write.c' l='1571' u='m' c='nfs_writeback_done'/>
+<use f='linux-5.3.1/fs/nfs/write.c' l='1573' u='m' c='nfs_writeback_done'/>
+<use f='linux-5.3.1/fs/nfs/write.c' l='1611' u='a' c='nfs_writeback_result'/>

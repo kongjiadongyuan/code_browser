@@ -1,0 +1,267 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>drm_scdc_helper.c source code [linux-5.3.1/drivers/gpu/drm/drm_scdc_helper.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/drivers/gpu/drm/drm_scdc_helper.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>linux-5.3.1</a>/<a href='../..'>drivers</a>/<a href='..'>gpu</a>/<a href='./'>drm</a>/<a href='drm_scdc_helper.c.html'>drm_scdc_helper.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*</i></td></tr>
+<tr><th id="2">2</th><td><i> * Copyright (c) 2015 NVIDIA Corporation. All rights reserved.</i></td></tr>
+<tr><th id="3">3</th><td><i> *</i></td></tr>
+<tr><th id="4">4</th><td><i> * Permission is hereby granted, free of charge, to any person obtaining a</i></td></tr>
+<tr><th id="5">5</th><td><i> * copy of this software and associated documentation files (the "Software"),</i></td></tr>
+<tr><th id="6">6</th><td><i> * to deal in the Software without restriction, including without limitation</i></td></tr>
+<tr><th id="7">7</th><td><i> * the rights to use, copy, modify, merge, publish, distribute, sub license,</i></td></tr>
+<tr><th id="8">8</th><td><i> * and/or sell copies of the Software, and to permit persons to whom the</i></td></tr>
+<tr><th id="9">9</th><td><i> * Software is furnished to do so, subject to the following conditions:</i></td></tr>
+<tr><th id="10">10</th><td><i> *</i></td></tr>
+<tr><th id="11">11</th><td><i> * The above copyright notice and this permission notice (including the</i></td></tr>
+<tr><th id="12">12</th><td><i> * next paragraph) shall be included in all copies or substantial portions</i></td></tr>
+<tr><th id="13">13</th><td><i> * of the Software.</i></td></tr>
+<tr><th id="14">14</th><td><i> *</i></td></tr>
+<tr><th id="15">15</th><td><i> * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR</i></td></tr>
+<tr><th id="16">16</th><td><i> * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,</i></td></tr>
+<tr><th id="17">17</th><td><i> * FITNESS FOR A PARTICULAR PURPOSE AND NON-INFRINGEMENT. IN NO EVENT SHALL</i></td></tr>
+<tr><th id="18">18</th><td><i> * THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER</i></td></tr>
+<tr><th id="19">19</th><td><i> * LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING</i></td></tr>
+<tr><th id="20">20</th><td><i> * FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER</i></td></tr>
+<tr><th id="21">21</th><td><i> * DEALINGS IN THE SOFTWARE.</i></td></tr>
+<tr><th id="22">22</th><td><i> */</i></td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../../../include/linux/slab.h.html">&lt;linux/slab.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../../../include/linux/delay.h.html">&lt;linux/delay.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../../../include/drm/drm_print.h.html">&lt;drm/drm_print.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../../../include/drm/drm_scdc_helper.h.html">&lt;drm/drm_scdc_helper.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td></td></tr>
+<tr><th id="30">30</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="31">31</th><td><i class="doc"> * DOC: scdc helpers</i></td></tr>
+<tr><th id="32">32</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="33">33</th><td><i class="doc"> * Status and Control Data Channel (SCDC) is a mechanism introduced by the</i></td></tr>
+<tr><th id="34">34</th><td><i class="doc"> * HDMI 2.0 specification. It is a point-to-point protocol that allows the</i></td></tr>
+<tr><th id="35">35</th><td><i class="doc"> * HDMI source and HDMI sink to exchange data. The same I2C interface that</i></td></tr>
+<tr><th id="36">36</th><td><i class="doc"> * is used to access EDID serves as the transport mechanism for SCDC.</i></td></tr>
+<tr><th id="37">37</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="38">38</th><td></td></tr>
+<tr><th id="39">39</th><td><u>#define <dfn class="macro" id="_M/SCDC_I2C_SLAVE_ADDRESS" data-ref="_M/SCDC_I2C_SLAVE_ADDRESS">SCDC_I2C_SLAVE_ADDRESS</dfn> 0x54</u></td></tr>
+<tr><th id="40">40</th><td></td></tr>
+<tr><th id="41">41</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="42">42</th><td><i class="doc"> * drm_scdc_read - read a block of data from SCDC</i></td></tr>
+<tr><th id="43">43</th><td><i class="doc"> *<span class="command"> @adapter</span>: I2C controller</i></td></tr>
+<tr><th id="44">44</th><td><i class="doc"> *<span class="command"> @offset</span>: start offset of block to read</i></td></tr>
+<tr><th id="45">45</th><td><i class="doc"> *<span class="command"> @buffer</span>: return location for the block to read</i></td></tr>
+<tr><th id="46">46</th><td><i class="doc"> *<span class="command"> @size</span>: size of the block to read</i></td></tr>
+<tr><th id="47">47</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="48">48</th><td><i class="doc"> * Reads a block of data from SCDC, starting at a given offset.</i></td></tr>
+<tr><th id="49">49</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="50">50</th><td><i class="doc"> * Returns:</i></td></tr>
+<tr><th id="51">51</th><td><i class="doc"> * 0 on success, negative error code on failure.</i></td></tr>
+<tr><th id="52">52</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="53">53</th><td><a class="typedef" href="../../../include/linux/types.h.html#ssize_t" title='ssize_t' data-type='__kernel_ssize_t' data-ref="ssize_t" data-ref-filename="ssize_t">ssize_t</a> <dfn class="decl def fn" id="drm_scdc_read" title='drm_scdc_read' data-ref="drm_scdc_read" data-ref-filename="drm_scdc_read">drm_scdc_read</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/i2c.h.html#i2c_adapter" title='i2c_adapter' data-ref="i2c_adapter" data-ref-filename="i2c_adapter">i2c_adapter</a> *<dfn class="local col1 decl" id="1adapter" title='adapter' data-type='struct i2c_adapter *' data-ref="1adapter" data-ref-filename="1adapter">adapter</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="local col2 decl" id="2offset" title='offset' data-type='u8' data-ref="2offset" data-ref-filename="2offset">offset</dfn>, <em>void</em> *<dfn class="local col3 decl" id="3buffer" title='buffer' data-type='void *' data-ref="3buffer" data-ref-filename="3buffer">buffer</dfn>,</td></tr>
+<tr><th id="54">54</th><td>		      <a class="typedef" href="../../../include/linux/types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col4 decl" id="4size" title='size' data-type='size_t' data-ref="4size" data-ref-filename="4size">size</dfn>)</td></tr>
+<tr><th id="55">55</th><td>{</td></tr>
+<tr><th id="56">56</th><td>	<em>int</em> <dfn class="local col5 decl" id="5ret" title='ret' data-type='int' data-ref="5ret" data-ref-filename="5ret">ret</dfn>;</td></tr>
+<tr><th id="57">57</th><td>	<b>struct</b> <a class="type" href="../../../include/uapi/linux/i2c.h.html#i2c_msg" title='i2c_msg' data-ref="i2c_msg" data-ref-filename="i2c_msg">i2c_msg</a> <dfn class="local col6 decl" id="6msgs" title='msgs' data-type='struct i2c_msg [2]' data-ref="6msgs" data-ref-filename="6msgs">msgs</dfn>[<var>2</var>] = {</td></tr>
+<tr><th id="58">58</th><td>		{</td></tr>
+<tr><th id="59">59</th><td>			.<a class="ref field" href="../../../include/uapi/linux/i2c.h.html#i2c_msg::addr" title='i2c_msg::addr' data-ref="i2c_msg::addr" data-ref-filename="i2c_msg..addr">addr</a> = <a class="macro" href="#39" title="0x54" data-ref="_M/SCDC_I2C_SLAVE_ADDRESS">SCDC_I2C_SLAVE_ADDRESS</a>,</td></tr>
+<tr><th id="60">60</th><td>			.<a class="ref field" href="../../../include/uapi/linux/i2c.h.html#i2c_msg::flags" title='i2c_msg::flags' data-ref="i2c_msg::flags" data-ref-filename="i2c_msg..flags">flags</a> = <var>0</var>,</td></tr>
+<tr><th id="61">61</th><td>			.<a class="ref field" href="../../../include/uapi/linux/i2c.h.html#i2c_msg::len" title='i2c_msg::len' data-ref="i2c_msg::len" data-ref-filename="i2c_msg..len">len</a> = <var>1</var>,</td></tr>
+<tr><th id="62">62</th><td>			.<a class="ref field" href="../../../include/uapi/linux/i2c.h.html#i2c_msg::buf" title='i2c_msg::buf' data-ref="i2c_msg::buf" data-ref-filename="i2c_msg..buf">buf</a> = &amp;<a class="local col2 ref" href="#2offset" title='offset' data-ref="2offset" data-ref-filename="2offset">offset</a>,</td></tr>
+<tr><th id="63">63</th><td>		}, {</td></tr>
+<tr><th id="64">64</th><td>			.<a class="ref field" href="../../../include/uapi/linux/i2c.h.html#i2c_msg::addr" title='i2c_msg::addr' data-ref="i2c_msg::addr" data-ref-filename="i2c_msg..addr">addr</a> = <a class="macro" href="#39" title="0x54" data-ref="_M/SCDC_I2C_SLAVE_ADDRESS">SCDC_I2C_SLAVE_ADDRESS</a>,</td></tr>
+<tr><th id="65">65</th><td>			.<a class="ref field" href="../../../include/uapi/linux/i2c.h.html#i2c_msg::flags" title='i2c_msg::flags' data-ref="i2c_msg::flags" data-ref-filename="i2c_msg..flags">flags</a> = <a class="macro" href="../../../include/uapi/linux/i2c.h.html#72" title="0x0001" data-ref="_M/I2C_M_RD">I2C_M_RD</a>,</td></tr>
+<tr><th id="66">66</th><td>			.<a class="ref field" href="../../../include/uapi/linux/i2c.h.html#i2c_msg::len" title='i2c_msg::len' data-ref="i2c_msg::len" data-ref-filename="i2c_msg..len">len</a> = <a class="local col4 ref" href="#4size" title='size' data-ref="4size" data-ref-filename="4size">size</a>,</td></tr>
+<tr><th id="67">67</th><td>			.<a class="ref field" href="../../../include/uapi/linux/i2c.h.html#i2c_msg::buf" title='i2c_msg::buf' data-ref="i2c_msg::buf" data-ref-filename="i2c_msg..buf">buf</a> = <a class="local col3 ref" href="#3buffer" title='buffer' data-ref="3buffer" data-ref-filename="3buffer">buffer</a>,</td></tr>
+<tr><th id="68">68</th><td>		}</td></tr>
+<tr><th id="69">69</th><td>	};</td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td>	<a class="local col5 ref" href="#5ret" title='ret' data-ref="5ret" data-ref-filename="5ret">ret</a> = <a class="ref fn" href="../../../include/linux/i2c.h.html#i2c_transfer" title='i2c_transfer' data-ref="i2c_transfer" data-ref-filename="i2c_transfer">i2c_transfer</a>(<a class="local col1 ref" href="#1adapter" title='adapter' data-ref="1adapter" data-ref-filename="1adapter">adapter</a>, <a class="local col6 ref" href="#6msgs" title='msgs' data-ref="6msgs" data-ref-filename="6msgs">msgs</a>, <a class="macro" href="../../../include/linux/kernel.h.html#47" title="(sizeof(msgs) / sizeof((msgs)[0]) + (sizeof(struct { int:(-!!(__builtin_types_compatible_p(typeof((msgs)), typeof(&amp;(msgs)[0])))); })))" data-ref="_M/ARRAY_SIZE">ARRAY_SIZE</a>(<a class="local col6 ref" href="#6msgs" title='msgs' data-ref="6msgs" data-ref-filename="6msgs">msgs</a>));</td></tr>
+<tr><th id="72">72</th><td>	<b>if</b> (<a class="local col5 ref" href="#5ret" title='ret' data-ref="5ret" data-ref-filename="5ret">ret</a> &lt; <var>0</var>)</td></tr>
+<tr><th id="73">73</th><td>		<b>return</b> <a class="local col5 ref" href="#5ret" title='ret' data-ref="5ret" data-ref-filename="5ret">ret</a>;</td></tr>
+<tr><th id="74">74</th><td>	<b>if</b> (<a class="local col5 ref" href="#5ret" title='ret' data-ref="5ret" data-ref-filename="5ret">ret</a> != <a class="macro" href="../../../include/linux/kernel.h.html#47" title="(sizeof(msgs) / sizeof((msgs)[0]) + (sizeof(struct { int:(-!!(__builtin_types_compatible_p(typeof((msgs)), typeof(&amp;(msgs)[0])))); })))" data-ref="_M/ARRAY_SIZE">ARRAY_SIZE</a>(<a class="local col6 ref" href="#6msgs" title='msgs' data-ref="6msgs" data-ref-filename="6msgs">msgs</a>))</td></tr>
+<tr><th id="75">75</th><td>		<b>return</b> -<a class="macro" href="../../../include/uapi/asm-generic/errno.h.html#54" title="71" data-ref="_M/EPROTO">EPROTO</a>;</td></tr>
+<tr><th id="76">76</th><td></td></tr>
+<tr><th id="77">77</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="78">78</th><td>}</td></tr>
+<tr><th id="79">79</th><td><a class="macro" href="../../../include/linux/export.h.html#123" title="extern typeof(drm_scdc_read) drm_scdc_read; static const char __kstrtab_drm_scdc_read[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;drm_scdc_read&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_drm_scdc_read79 = (void *)&amp;drm_scdc_read; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;&quot; &quot;+&quot; &quot;drm_scdc_read&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;drm_scdc_read&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;drm_scdc_read&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;drm_scdc_read&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL">EXPORT_SYMBOL</a>(<a class="decl fn" href="#drm_scdc_read" title='drm_scdc_read' data-ref="drm_scdc_read" data-ref-filename="drm_scdc_read"><a class="ref fn" href="#drm_scdc_read" title='drm_scdc_read' data-ref="drm_scdc_read" data-ref-filename="drm_scdc_read"><a class="ref fn" href="#drm_scdc_read" title='drm_scdc_read' data-ref="drm_scdc_read" data-ref-filename="drm_scdc_read">drm_scdc_read</a></a></a>);</td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="82">82</th><td><i class="doc"> * drm_scdc_write - write a block of data to SCDC</i></td></tr>
+<tr><th id="83">83</th><td><i class="doc"> *<span class="command"> @adapter</span>: I2C controller</i></td></tr>
+<tr><th id="84">84</th><td><i class="doc"> *<span class="command"> @offset</span>: start offset of block to write</i></td></tr>
+<tr><th id="85">85</th><td><i class="doc"> *<span class="command"> @buffer</span>: block of data to write</i></td></tr>
+<tr><th id="86">86</th><td><i class="doc"> *<span class="command"> @size</span>: size of the block to write</i></td></tr>
+<tr><th id="87">87</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="88">88</th><td><i class="doc"> * Writes a block of data to SCDC, starting at a given offset.</i></td></tr>
+<tr><th id="89">89</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="90">90</th><td><i class="doc"> * Returns:</i></td></tr>
+<tr><th id="91">91</th><td><i class="doc"> * 0 on success, negative error code on failure.</i></td></tr>
+<tr><th id="92">92</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="93">93</th><td><a class="typedef" href="../../../include/linux/types.h.html#ssize_t" title='ssize_t' data-type='__kernel_ssize_t' data-ref="ssize_t" data-ref-filename="ssize_t">ssize_t</a> <dfn class="decl def fn" id="drm_scdc_write" title='drm_scdc_write' data-ref="drm_scdc_write" data-ref-filename="drm_scdc_write">drm_scdc_write</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/i2c.h.html#i2c_adapter" title='i2c_adapter' data-ref="i2c_adapter" data-ref-filename="i2c_adapter">i2c_adapter</a> *<dfn class="local col7 decl" id="7adapter" title='adapter' data-type='struct i2c_adapter *' data-ref="7adapter" data-ref-filename="7adapter">adapter</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="local col8 decl" id="8offset" title='offset' data-type='u8' data-ref="8offset" data-ref-filename="8offset">offset</dfn>,</td></tr>
+<tr><th id="94">94</th><td>		       <em>const</em> <em>void</em> *<dfn class="local col9 decl" id="9buffer" title='buffer' data-type='const void *' data-ref="9buffer" data-ref-filename="9buffer">buffer</dfn>, <a class="typedef" href="../../../include/linux/types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col0 decl" id="10size" title='size' data-type='size_t' data-ref="10size" data-ref-filename="10size">size</dfn>)</td></tr>
+<tr><th id="95">95</th><td>{</td></tr>
+<tr><th id="96">96</th><td>	<b>struct</b> <a class="type" href="../../../include/uapi/linux/i2c.h.html#i2c_msg" title='i2c_msg' data-ref="i2c_msg" data-ref-filename="i2c_msg">i2c_msg</a> <dfn class="local col1 decl" id="11msg" title='msg' data-type='struct i2c_msg' data-ref="11msg" data-ref-filename="11msg">msg</dfn> = {</td></tr>
+<tr><th id="97">97</th><td>		.<a class="ref field" href="../../../include/uapi/linux/i2c.h.html#i2c_msg::addr" title='i2c_msg::addr' data-ref="i2c_msg::addr" data-ref-filename="i2c_msg..addr">addr</a> = <a class="macro" href="#39" title="0x54" data-ref="_M/SCDC_I2C_SLAVE_ADDRESS">SCDC_I2C_SLAVE_ADDRESS</a>,</td></tr>
+<tr><th id="98">98</th><td>		.<a class="ref field" href="../../../include/uapi/linux/i2c.h.html#i2c_msg::flags" title='i2c_msg::flags' data-ref="i2c_msg::flags" data-ref-filename="i2c_msg..flags">flags</a> = <var>0</var>,</td></tr>
+<tr><th id="99">99</th><td>		.<a class="ref field" href="../../../include/uapi/linux/i2c.h.html#i2c_msg::len" title='i2c_msg::len' data-ref="i2c_msg::len" data-ref-filename="i2c_msg..len">len</a> = <var>1</var> + <a class="local col0 ref" href="#10size" title='size' data-ref="10size" data-ref-filename="10size">size</a>,</td></tr>
+<tr><th id="100">100</th><td>		.<a class="ref field" href="../../../include/uapi/linux/i2c.h.html#i2c_msg::buf" title='i2c_msg::buf' data-ref="i2c_msg::buf" data-ref-filename="i2c_msg..buf">buf</a> = <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>,</td></tr>
+<tr><th id="101">101</th><td>	};</td></tr>
+<tr><th id="102">102</th><td>	<em>void</em> *<dfn class="local col2 decl" id="12data" title='data' data-type='void *' data-ref="12data" data-ref-filename="12data">data</dfn>;</td></tr>
+<tr><th id="103">103</th><td>	<em>int</em> <dfn class="local col3 decl" id="13err" title='err' data-type='int' data-ref="13err" data-ref-filename="13err">err</dfn>;</td></tr>
+<tr><th id="104">104</th><td></td></tr>
+<tr><th id="105">105</th><td>	<a class="local col2 ref" href="#12data" title='data' data-ref="12data" data-ref-filename="12data">data</a> = <a class="ref fn" href="../../../include/linux/slab.h.html#kmalloc" title='kmalloc' data-ref="kmalloc" data-ref-filename="kmalloc">kmalloc</a>(<var>1</var> + <a class="local col0 ref" href="#10size" title='size' data-ref="10size" data-ref-filename="10size">size</a>, <a class="macro" href="../../../include/linux/gfp.h.html#290" title="((( gfp_t)(0x400u|0x800u)) | (( gfp_t)0x40u) | (( gfp_t)0x80u))" data-ref="_M/GFP_KERNEL">GFP_KERNEL</a>);</td></tr>
+<tr><th id="106">106</th><td>	<b>if</b> (!<a class="local col2 ref" href="#12data" title='data' data-ref="12data" data-ref-filename="12data">data</a>)</td></tr>
+<tr><th id="107">107</th><td>		<b>return</b> -<a class="macro" href="../../../include/uapi/asm-generic/errno-base.h.html#16" title="12" data-ref="_M/ENOMEM">ENOMEM</a>;</td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td>	<a class="local col1 ref" href="#11msg" title='msg' data-ref="11msg" data-ref-filename="11msg">msg</a>.<a class="ref field" href="../../../include/uapi/linux/i2c.h.html#i2c_msg::buf" title='i2c_msg::buf' data-ref="i2c_msg::buf" data-ref-filename="i2c_msg..buf">buf</a> = <a class="local col2 ref" href="#12data" title='data' data-ref="12data" data-ref-filename="12data">data</a>;</td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td>	<a class="ref fn" href="../../../arch/x86/include/asm/string_64.h.html#memcpy" title='memcpy' data-ref="memcpy" data-ref-filename="memcpy">memcpy</a>(<a class="local col2 ref" href="#12data" title='data' data-ref="12data" data-ref-filename="12data">data</a>, &amp;<a class="local col8 ref" href="#8offset" title='offset' data-ref="8offset" data-ref-filename="8offset">offset</a>, <b>sizeof</b>(<a class="local col8 ref" href="#8offset" title='offset' data-ref="8offset" data-ref-filename="8offset">offset</a>));</td></tr>
+<tr><th id="112">112</th><td>	<a class="ref fn" href="../../../arch/x86/include/asm/string_64.h.html#memcpy" title='memcpy' data-ref="memcpy" data-ref-filename="memcpy">memcpy</a>(<a class="local col2 ref" href="#12data" title='data' data-ref="12data" data-ref-filename="12data">data</a> + <var>1</var>, <a class="local col9 ref" href="#9buffer" title='buffer' data-ref="9buffer" data-ref-filename="9buffer">buffer</a>, <a class="local col0 ref" href="#10size" title='size' data-ref="10size" data-ref-filename="10size">size</a>);</td></tr>
+<tr><th id="113">113</th><td></td></tr>
+<tr><th id="114">114</th><td>	<a class="local col3 ref" href="#13err" title='err' data-ref="13err" data-ref-filename="13err">err</a> = <a class="ref fn" href="../../../include/linux/i2c.h.html#i2c_transfer" title='i2c_transfer' data-ref="i2c_transfer" data-ref-filename="i2c_transfer">i2c_transfer</a>(<a class="local col7 ref" href="#7adapter" title='adapter' data-ref="7adapter" data-ref-filename="7adapter">adapter</a>, &amp;<a class="local col1 ref" href="#11msg" title='msg' data-ref="11msg" data-ref-filename="11msg">msg</a>, <var>1</var>);</td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td>	<a class="ref fn" href="../../../include/linux/slab.h.html#kfree" title='kfree' data-ref="kfree" data-ref-filename="kfree">kfree</a>(<a class="local col2 ref" href="#12data" title='data' data-ref="12data" data-ref-filename="12data">data</a>);</td></tr>
+<tr><th id="117">117</th><td></td></tr>
+<tr><th id="118">118</th><td>	<b>if</b> (<a class="local col3 ref" href="#13err" title='err' data-ref="13err" data-ref-filename="13err">err</a> &lt; <var>0</var>)</td></tr>
+<tr><th id="119">119</th><td>		<b>return</b> <a class="local col3 ref" href="#13err" title='err' data-ref="13err" data-ref-filename="13err">err</a>;</td></tr>
+<tr><th id="120">120</th><td>	<b>if</b> (<a class="local col3 ref" href="#13err" title='err' data-ref="13err" data-ref-filename="13err">err</a> != <var>1</var>)</td></tr>
+<tr><th id="121">121</th><td>		<b>return</b> -<a class="macro" href="../../../include/uapi/asm-generic/errno.h.html#54" title="71" data-ref="_M/EPROTO">EPROTO</a>;</td></tr>
+<tr><th id="122">122</th><td></td></tr>
+<tr><th id="123">123</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="124">124</th><td>}</td></tr>
+<tr><th id="125">125</th><td><a class="macro" href="../../../include/linux/export.h.html#123" title="extern typeof(drm_scdc_write) drm_scdc_write; static const char __kstrtab_drm_scdc_write[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;drm_scdc_write&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_drm_scdc_write125 = (void *)&amp;drm_scdc_write; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;&quot; &quot;+&quot; &quot;drm_scdc_write&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;drm_scdc_write&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;drm_scdc_write&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;drm_scdc_write&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL">EXPORT_SYMBOL</a>(<a class="decl fn" href="#drm_scdc_write" title='drm_scdc_write' data-ref="drm_scdc_write" data-ref-filename="drm_scdc_write"><a class="ref fn" href="#drm_scdc_write" title='drm_scdc_write' data-ref="drm_scdc_write" data-ref-filename="drm_scdc_write"><a class="ref fn" href="#drm_scdc_write" title='drm_scdc_write' data-ref="drm_scdc_write" data-ref-filename="drm_scdc_write">drm_scdc_write</a></a></a>);</td></tr>
+<tr><th id="126">126</th><td></td></tr>
+<tr><th id="127">127</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="128">128</th><td><i class="doc"> * drm_scdc_check_scrambling_status - what is status of scrambling?</i></td></tr>
+<tr><th id="129">129</th><td><i class="doc"> *<span class="command"> @adapter</span>: I2C adapter for DDC channel</i></td></tr>
+<tr><th id="130">130</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="131">131</th><td><i class="doc"> * Reads the scrambler status over SCDC, and checks the</i></td></tr>
+<tr><th id="132">132</th><td><i class="doc"> * scrambling status.</i></td></tr>
+<tr><th id="133">133</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="134">134</th><td><i class="doc"> * Returns:</i></td></tr>
+<tr><th id="135">135</th><td><i class="doc"> * True if the scrambling is enabled, false otherwise.</i></td></tr>
+<tr><th id="136">136</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="137">137</th><td><a class="typedef" href="../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="drm_scdc_get_scrambling_status" title='drm_scdc_get_scrambling_status' data-ref="drm_scdc_get_scrambling_status" data-ref-filename="drm_scdc_get_scrambling_status">drm_scdc_get_scrambling_status</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/i2c.h.html#i2c_adapter" title='i2c_adapter' data-ref="i2c_adapter" data-ref-filename="i2c_adapter">i2c_adapter</a> *<dfn class="local col4 decl" id="14adapter" title='adapter' data-type='struct i2c_adapter *' data-ref="14adapter" data-ref-filename="14adapter">adapter</dfn>)</td></tr>
+<tr><th id="138">138</th><td>{</td></tr>
+<tr><th id="139">139</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="local col5 decl" id="15status" title='status' data-type='u8' data-ref="15status" data-ref-filename="15status">status</dfn>;</td></tr>
+<tr><th id="140">140</th><td>	<em>int</em> <dfn class="local col6 decl" id="16ret" title='ret' data-type='int' data-ref="16ret" data-ref-filename="16ret">ret</dfn>;</td></tr>
+<tr><th id="141">141</th><td></td></tr>
+<tr><th id="142">142</th><td>	<a class="local col6 ref" href="#16ret" title='ret' data-ref="16ret" data-ref-filename="16ret">ret</a> = <a class="ref fn" href="../../../include/drm/drm_scdc_helper.h.html#drm_scdc_readb" title='drm_scdc_readb' data-ref="drm_scdc_readb" data-ref-filename="drm_scdc_readb">drm_scdc_readb</a>(<a class="local col4 ref" href="#14adapter" title='adapter' data-ref="14adapter" data-ref-filename="14adapter">adapter</a>, <a class="macro" href="../../../include/drm/drm_scdc_helper.h.html#46" title="0x21" data-ref="_M/SCDC_SCRAMBLER_STATUS">SCDC_SCRAMBLER_STATUS</a>, &amp;<a class="local col5 ref" href="#15status" title='status' data-ref="15status" data-ref-filename="15status">status</a>);</td></tr>
+<tr><th id="143">143</th><td>	<b>if</b> (<a class="local col6 ref" href="#16ret" title='ret' data-ref="16ret" data-ref-filename="16ret">ret</a> &lt; <var>0</var>) {</td></tr>
+<tr><th id="144">144</th><td>		<a class="macro" href="../../../include/drm/drm_print.h.html#365" title="drm_dbg(0x04, &quot;Failed to read scrambling status: %d\n&quot;, ret)" data-ref="_M/DRM_DEBUG_KMS">DRM_DEBUG_KMS</a>(<q>"Failed to read scrambling status: %d\n"</q>, <a class="local col6 ref" href="#16ret" title='ret' data-ref="16ret" data-ref-filename="16ret">ret</a>);</td></tr>
+<tr><th id="145">145</th><td>		<b>return</b> <a class="enum" href="../../../include/linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="146">146</th><td>	}</td></tr>
+<tr><th id="147">147</th><td></td></tr>
+<tr><th id="148">148</th><td>	<b>return</b> <a class="local col5 ref" href="#15status" title='status' data-ref="15status" data-ref-filename="15status">status</a> &amp; <a class="macro" href="../../../include/drm/drm_scdc_helper.h.html#47" title="(1 &lt;&lt; 0)" data-ref="_M/SCDC_SCRAMBLING_STATUS">SCDC_SCRAMBLING_STATUS</a>;</td></tr>
+<tr><th id="149">149</th><td>}</td></tr>
+<tr><th id="150">150</th><td><a class="macro" href="../../../include/linux/export.h.html#123" title="extern typeof(drm_scdc_get_scrambling_status) drm_scdc_get_scrambling_status; static const char __kstrtab_drm_scdc_get_scrambling_status[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;drm_scdc_get_scrambling_status&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_drm_scdc_get_scrambling_status150 = (void *)&amp;drm_scdc_get_scrambling_status; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;&quot; &quot;+&quot; &quot;drm_scdc_get_scrambling_status&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;drm_scdc_get_scrambling_status&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;drm_scdc_get_scrambling_status&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;drm_scdc_get_scrambling_status&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL">EXPORT_SYMBOL</a>(<a class="decl fn" href="#drm_scdc_get_scrambling_status" title='drm_scdc_get_scrambling_status' data-ref="drm_scdc_get_scrambling_status" data-ref-filename="drm_scdc_get_scrambling_status"><a class="ref fn" href="#drm_scdc_get_scrambling_status" title='drm_scdc_get_scrambling_status' data-ref="drm_scdc_get_scrambling_status" data-ref-filename="drm_scdc_get_scrambling_status"><a class="ref fn" href="#drm_scdc_get_scrambling_status" title='drm_scdc_get_scrambling_status' data-ref="drm_scdc_get_scrambling_status" data-ref-filename="drm_scdc_get_scrambling_status">drm_scdc_get_scrambling_status</a></a></a>);</td></tr>
+<tr><th id="151">151</th><td></td></tr>
+<tr><th id="152">152</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="153">153</th><td><i class="doc"> * drm_scdc_set_scrambling - enable scrambling</i></td></tr>
+<tr><th id="154">154</th><td><i class="doc"> *<span class="command"> @adapter</span>: I2C adapter for DDC channel</i></td></tr>
+<tr><th id="155">155</th><td><i class="doc"> *<span class="command"> @enable</span>: bool to indicate if scrambling is to be enabled/disabled</i></td></tr>
+<tr><th id="156">156</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="157">157</th><td><i class="doc"> * Writes the TMDS config register over SCDC channel, and:</i></td></tr>
+<tr><th id="158">158</th><td><i class="doc"> * enables scrambling when enable = 1</i></td></tr>
+<tr><th id="159">159</th><td><i class="doc"> * disables scrambling when enable = 0</i></td></tr>
+<tr><th id="160">160</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="161">161</th><td><i class="doc"> * Returns:</i></td></tr>
+<tr><th id="162">162</th><td><i class="doc"> * True if scrambling is set/reset successfully, false otherwise.</i></td></tr>
+<tr><th id="163">163</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="164">164</th><td><a class="typedef" href="../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="drm_scdc_set_scrambling" title='drm_scdc_set_scrambling' data-ref="drm_scdc_set_scrambling" data-ref-filename="drm_scdc_set_scrambling">drm_scdc_set_scrambling</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/i2c.h.html#i2c_adapter" title='i2c_adapter' data-ref="i2c_adapter" data-ref-filename="i2c_adapter">i2c_adapter</a> *<dfn class="local col7 decl" id="17adapter" title='adapter' data-type='struct i2c_adapter *' data-ref="17adapter" data-ref-filename="17adapter">adapter</dfn>, <a class="typedef" href="../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col8 decl" id="18enable" title='enable' data-type='bool' data-ref="18enable" data-ref-filename="18enable">enable</dfn>)</td></tr>
+<tr><th id="165">165</th><td>{</td></tr>
+<tr><th id="166">166</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="local col9 decl" id="19config" title='config' data-type='u8' data-ref="19config" data-ref-filename="19config">config</dfn>;</td></tr>
+<tr><th id="167">167</th><td>	<em>int</em> <dfn class="local col0 decl" id="20ret" title='ret' data-type='int' data-ref="20ret" data-ref-filename="20ret">ret</dfn>;</td></tr>
+<tr><th id="168">168</th><td></td></tr>
+<tr><th id="169">169</th><td>	<a class="local col0 ref" href="#20ret" title='ret' data-ref="20ret" data-ref-filename="20ret">ret</a> = <a class="ref fn" href="../../../include/drm/drm_scdc_helper.h.html#drm_scdc_readb" title='drm_scdc_readb' data-ref="drm_scdc_readb" data-ref-filename="drm_scdc_readb">drm_scdc_readb</a>(<a class="local col7 ref" href="#17adapter" title='adapter' data-ref="17adapter" data-ref-filename="17adapter">adapter</a>, <a class="macro" href="../../../include/drm/drm_scdc_helper.h.html#41" title="0x20" data-ref="_M/SCDC_TMDS_CONFIG">SCDC_TMDS_CONFIG</a>, &amp;<a class="local col9 ref" href="#19config" title='config' data-ref="19config" data-ref-filename="19config">config</a>);</td></tr>
+<tr><th id="170">170</th><td>	<b>if</b> (<a class="local col0 ref" href="#20ret" title='ret' data-ref="20ret" data-ref-filename="20ret">ret</a> &lt; <var>0</var>) {</td></tr>
+<tr><th id="171">171</th><td>		<a class="macro" href="../../../include/drm/drm_print.h.html#365" title="drm_dbg(0x04, &quot;Failed to read TMDS config: %d\n&quot;, ret)" data-ref="_M/DRM_DEBUG_KMS">DRM_DEBUG_KMS</a>(<q>"Failed to read TMDS config: %d\n"</q>, <a class="local col0 ref" href="#20ret" title='ret' data-ref="20ret" data-ref-filename="20ret">ret</a>);</td></tr>
+<tr><th id="172">172</th><td>		<b>return</b> <a class="enum" href="../../../include/linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="173">173</th><td>	}</td></tr>
+<tr><th id="174">174</th><td></td></tr>
+<tr><th id="175">175</th><td>	<b>if</b> (<a class="local col8 ref" href="#18enable" title='enable' data-ref="18enable" data-ref-filename="18enable">enable</a>)</td></tr>
+<tr><th id="176">176</th><td>		<a class="local col9 ref" href="#19config" title='config' data-ref="19config" data-ref-filename="19config">config</a> |= <a class="macro" href="../../../include/drm/drm_scdc_helper.h.html#44" title="(1 &lt;&lt; 0)" data-ref="_M/SCDC_SCRAMBLING_ENABLE">SCDC_SCRAMBLING_ENABLE</a>;</td></tr>
+<tr><th id="177">177</th><td>	<b>else</b></td></tr>
+<tr><th id="178">178</th><td>		<a class="local col9 ref" href="#19config" title='config' data-ref="19config" data-ref-filename="19config">config</a> &amp;= ~<a class="macro" href="../../../include/drm/drm_scdc_helper.h.html#44" title="(1 &lt;&lt; 0)" data-ref="_M/SCDC_SCRAMBLING_ENABLE">SCDC_SCRAMBLING_ENABLE</a>;</td></tr>
+<tr><th id="179">179</th><td></td></tr>
+<tr><th id="180">180</th><td>	<a class="local col0 ref" href="#20ret" title='ret' data-ref="20ret" data-ref-filename="20ret">ret</a> = <a class="ref fn" href="../../../include/drm/drm_scdc_helper.h.html#drm_scdc_writeb" title='drm_scdc_writeb' data-ref="drm_scdc_writeb" data-ref-filename="drm_scdc_writeb">drm_scdc_writeb</a>(<a class="local col7 ref" href="#17adapter" title='adapter' data-ref="17adapter" data-ref-filename="17adapter">adapter</a>, <a class="macro" href="../../../include/drm/drm_scdc_helper.h.html#41" title="0x20" data-ref="_M/SCDC_TMDS_CONFIG">SCDC_TMDS_CONFIG</a>, <a class="local col9 ref" href="#19config" title='config' data-ref="19config" data-ref-filename="19config">config</a>);</td></tr>
+<tr><th id="181">181</th><td>	<b>if</b> (<a class="local col0 ref" href="#20ret" title='ret' data-ref="20ret" data-ref-filename="20ret">ret</a> &lt; <var>0</var>) {</td></tr>
+<tr><th id="182">182</th><td>		<a class="macro" href="../../../include/drm/drm_print.h.html#365" title="drm_dbg(0x04, &quot;Failed to enable scrambling: %d\n&quot;, ret)" data-ref="_M/DRM_DEBUG_KMS">DRM_DEBUG_KMS</a>(<q>"Failed to enable scrambling: %d\n"</q>, <a class="local col0 ref" href="#20ret" title='ret' data-ref="20ret" data-ref-filename="20ret">ret</a>);</td></tr>
+<tr><th id="183">183</th><td>		<b>return</b> <a class="enum" href="../../../include/linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="184">184</th><td>	}</td></tr>
+<tr><th id="185">185</th><td></td></tr>
+<tr><th id="186">186</th><td>	<b>return</b> <a class="enum" href="../../../include/linux/stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>;</td></tr>
+<tr><th id="187">187</th><td>}</td></tr>
+<tr><th id="188">188</th><td><a class="macro" href="../../../include/linux/export.h.html#123" title="extern typeof(drm_scdc_set_scrambling) drm_scdc_set_scrambling; static const char __kstrtab_drm_scdc_set_scrambling[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;drm_scdc_set_scrambling&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_drm_scdc_set_scrambling188 = (void *)&amp;drm_scdc_set_scrambling; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;&quot; &quot;+&quot; &quot;drm_scdc_set_scrambling&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;drm_scdc_set_scrambling&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;drm_scdc_set_scrambling&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;drm_scdc_set_scrambling&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL">EXPORT_SYMBOL</a>(<a class="decl fn" href="#drm_scdc_set_scrambling" title='drm_scdc_set_scrambling' data-ref="drm_scdc_set_scrambling" data-ref-filename="drm_scdc_set_scrambling"><a class="ref fn" href="#drm_scdc_set_scrambling" title='drm_scdc_set_scrambling' data-ref="drm_scdc_set_scrambling" data-ref-filename="drm_scdc_set_scrambling"><a class="ref fn" href="#drm_scdc_set_scrambling" title='drm_scdc_set_scrambling' data-ref="drm_scdc_set_scrambling" data-ref-filename="drm_scdc_set_scrambling">drm_scdc_set_scrambling</a></a></a>);</td></tr>
+<tr><th id="189">189</th><td></td></tr>
+<tr><th id="190">190</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="191">191</th><td><i class="doc"> * drm_scdc_set_high_tmds_clock_ratio - set TMDS clock ratio</i></td></tr>
+<tr><th id="192">192</th><td><i class="doc"> *<span class="command"> @adapter</span>: I2C adapter for DDC channel</i></td></tr>
+<tr><th id="193">193</th><td><i class="doc"> * <span class="command">@set</span>: ret or reset the high clock ratio</i></td></tr>
+<tr><th id="194">194</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="195">195</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="196">196</th><td><i class="doc"> *	TMDS clock ratio calculations go like this:</i></td></tr>
+<tr><th id="197">197</th><td><i class="doc"> *		TMDS character = 10 bit TMDS encoded value</i></td></tr>
+<tr><th id="198">198</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="199">199</th><td><i class="doc"> *		TMDS character rate = The rate at which TMDS characters are</i></td></tr>
+<tr><th id="200">200</th><td><i class="doc"> *		transmitted (Mcsc)</i></td></tr>
+<tr><th id="201">201</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="202">202</th><td><i class="doc"> *		TMDS bit rate = 10x TMDS character rate</i></td></tr>
+<tr><th id="203">203</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="204">204</th><td><i class="doc"> *	As per the spec:</i></td></tr>
+<tr><th id="205">205</th><td><i class="doc"> *		TMDS clock rate for pixel clock &lt; 340 MHz = 1x the character</i></td></tr>
+<tr><th id="206">206</th><td><i class="doc"> *		rate = 1/10 pixel clock rate</i></td></tr>
+<tr><th id="207">207</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="208">208</th><td><i class="doc"> *		TMDS clock rate for pixel clock &gt; 340 MHz = 0.25x the character</i></td></tr>
+<tr><th id="209">209</th><td><i class="doc"> *		rate = 1/40 pixel clock rate</i></td></tr>
+<tr><th id="210">210</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="211">211</th><td><i class="doc"> *	Writes to the TMDS config register over SCDC channel, and:</i></td></tr>
+<tr><th id="212">212</th><td><i class="doc"> *		sets TMDS clock ratio to 1/40 when set = 1</i></td></tr>
+<tr><th id="213">213</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="214">214</th><td><i class="doc"> *		sets TMDS clock ratio to 1/10 when set = 0</i></td></tr>
+<tr><th id="215">215</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="216">216</th><td><i class="doc"> * Returns:</i></td></tr>
+<tr><th id="217">217</th><td><i class="doc"> * True if write is successful, false otherwise.</i></td></tr>
+<tr><th id="218">218</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="219">219</th><td><a class="typedef" href="../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="drm_scdc_set_high_tmds_clock_ratio" title='drm_scdc_set_high_tmds_clock_ratio' data-ref="drm_scdc_set_high_tmds_clock_ratio" data-ref-filename="drm_scdc_set_high_tmds_clock_ratio">drm_scdc_set_high_tmds_clock_ratio</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/i2c.h.html#i2c_adapter" title='i2c_adapter' data-ref="i2c_adapter" data-ref-filename="i2c_adapter">i2c_adapter</a> *<dfn class="local col1 decl" id="21adapter" title='adapter' data-type='struct i2c_adapter *' data-ref="21adapter" data-ref-filename="21adapter">adapter</dfn>, <a class="typedef" href="../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col2 decl" id="22set" title='set' data-type='bool' data-ref="22set" data-ref-filename="22set">set</dfn>)</td></tr>
+<tr><th id="220">220</th><td>{</td></tr>
+<tr><th id="221">221</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="local col3 decl" id="23config" title='config' data-type='u8' data-ref="23config" data-ref-filename="23config">config</dfn>;</td></tr>
+<tr><th id="222">222</th><td>	<em>int</em> <dfn class="local col4 decl" id="24ret" title='ret' data-type='int' data-ref="24ret" data-ref-filename="24ret">ret</dfn>;</td></tr>
+<tr><th id="223">223</th><td></td></tr>
+<tr><th id="224">224</th><td>	<a class="local col4 ref" href="#24ret" title='ret' data-ref="24ret" data-ref-filename="24ret">ret</a> = <a class="ref fn" href="../../../include/drm/drm_scdc_helper.h.html#drm_scdc_readb" title='drm_scdc_readb' data-ref="drm_scdc_readb" data-ref-filename="drm_scdc_readb">drm_scdc_readb</a>(<a class="local col1 ref" href="#21adapter" title='adapter' data-ref="21adapter" data-ref-filename="21adapter">adapter</a>, <a class="macro" href="../../../include/drm/drm_scdc_helper.h.html#41" title="0x20" data-ref="_M/SCDC_TMDS_CONFIG">SCDC_TMDS_CONFIG</a>, &amp;<a class="local col3 ref" href="#23config" title='config' data-ref="23config" data-ref-filename="23config">config</a>);</td></tr>
+<tr><th id="225">225</th><td>	<b>if</b> (<a class="local col4 ref" href="#24ret" title='ret' data-ref="24ret" data-ref-filename="24ret">ret</a> &lt; <var>0</var>) {</td></tr>
+<tr><th id="226">226</th><td>		<a class="macro" href="../../../include/drm/drm_print.h.html#365" title="drm_dbg(0x04, &quot;Failed to read TMDS config: %d\n&quot;, ret)" data-ref="_M/DRM_DEBUG_KMS">DRM_DEBUG_KMS</a>(<q>"Failed to read TMDS config: %d\n"</q>, <a class="local col4 ref" href="#24ret" title='ret' data-ref="24ret" data-ref-filename="24ret">ret</a>);</td></tr>
+<tr><th id="227">227</th><td>		<b>return</b> <a class="enum" href="../../../include/linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="228">228</th><td>	}</td></tr>
+<tr><th id="229">229</th><td></td></tr>
+<tr><th id="230">230</th><td>	<b>if</b> (<a class="local col2 ref" href="#22set" title='set' data-ref="22set" data-ref-filename="22set">set</a>)</td></tr>
+<tr><th id="231">231</th><td>		<a class="local col3 ref" href="#23config" title='config' data-ref="23config" data-ref-filename="23config">config</a> |= <a class="macro" href="../../../include/drm/drm_scdc_helper.h.html#42" title="(1 &lt;&lt; 1)" data-ref="_M/SCDC_TMDS_BIT_CLOCK_RATIO_BY_40">SCDC_TMDS_BIT_CLOCK_RATIO_BY_40</a>;</td></tr>
+<tr><th id="232">232</th><td>	<b>else</b></td></tr>
+<tr><th id="233">233</th><td>		<a class="local col3 ref" href="#23config" title='config' data-ref="23config" data-ref-filename="23config">config</a> &amp;= ~<a class="macro" href="../../../include/drm/drm_scdc_helper.h.html#42" title="(1 &lt;&lt; 1)" data-ref="_M/SCDC_TMDS_BIT_CLOCK_RATIO_BY_40">SCDC_TMDS_BIT_CLOCK_RATIO_BY_40</a>;</td></tr>
+<tr><th id="234">234</th><td></td></tr>
+<tr><th id="235">235</th><td>	<a class="local col4 ref" href="#24ret" title='ret' data-ref="24ret" data-ref-filename="24ret">ret</a> = <a class="ref fn" href="../../../include/drm/drm_scdc_helper.h.html#drm_scdc_writeb" title='drm_scdc_writeb' data-ref="drm_scdc_writeb" data-ref-filename="drm_scdc_writeb">drm_scdc_writeb</a>(<a class="local col1 ref" href="#21adapter" title='adapter' data-ref="21adapter" data-ref-filename="21adapter">adapter</a>, <a class="macro" href="../../../include/drm/drm_scdc_helper.h.html#41" title="0x20" data-ref="_M/SCDC_TMDS_CONFIG">SCDC_TMDS_CONFIG</a>, <a class="local col3 ref" href="#23config" title='config' data-ref="23config" data-ref-filename="23config">config</a>);</td></tr>
+<tr><th id="236">236</th><td>	<b>if</b> (<a class="local col4 ref" href="#24ret" title='ret' data-ref="24ret" data-ref-filename="24ret">ret</a> &lt; <var>0</var>) {</td></tr>
+<tr><th id="237">237</th><td>		<a class="macro" href="../../../include/drm/drm_print.h.html#365" title="drm_dbg(0x04, &quot;Failed to set TMDS clock ratio: %d\n&quot;, ret)" data-ref="_M/DRM_DEBUG_KMS">DRM_DEBUG_KMS</a>(<q>"Failed to set TMDS clock ratio: %d\n"</q>, <a class="local col4 ref" href="#24ret" title='ret' data-ref="24ret" data-ref-filename="24ret">ret</a>);</td></tr>
+<tr><th id="238">238</th><td>		<b>return</b> <a class="enum" href="../../../include/linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="239">239</th><td>	}</td></tr>
+<tr><th id="240">240</th><td></td></tr>
+<tr><th id="241">241</th><td>	<i>/*</i></td></tr>
+<tr><th id="242">242</th><td><i>	 * The spec says that a source should wait minimum 1ms and maximum</i></td></tr>
+<tr><th id="243">243</th><td><i>	 * 100ms after writing the TMDS config for clock ratio. Lets allow a</i></td></tr>
+<tr><th id="244">244</th><td><i>	 * wait of upto 2ms here.</i></td></tr>
+<tr><th id="245">245</th><td><i>	 */</i></td></tr>
+<tr><th id="246">246</th><td>	<a class="ref fn" href="../../../include/linux/delay.h.html#usleep_range" title='usleep_range' data-ref="usleep_range" data-ref-filename="usleep_range">usleep_range</a>(<var>1000</var>, <var>2000</var>);</td></tr>
+<tr><th id="247">247</th><td>	<b>return</b> <a class="enum" href="../../../include/linux/stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>;</td></tr>
+<tr><th id="248">248</th><td>}</td></tr>
+<tr><th id="249">249</th><td><a class="macro" href="../../../include/linux/export.h.html#123" title="extern typeof(drm_scdc_set_high_tmds_clock_ratio) drm_scdc_set_high_tmds_clock_ratio; static const char __kstrtab_drm_scdc_set_high_tmds_clock_ratio[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;drm_scdc_set_high_tmds_clock_ratio&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_drm_scdc_set_high_tmds_clock_ratio249 = (void *)&amp;drm_scdc_set_high_tmds_clock_ratio; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;&quot; &quot;+&quot; &quot;drm_scdc_set_high_tmds_clock_ratio&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;drm_scdc_set_high_tmds_clock_ratio&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;drm_scdc_set_high_tmds_clock_ratio&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;drm_scdc_set_high_tmds_clock_ratio&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL">EXPORT_SYMBOL</a>(<a class="decl fn" href="#drm_scdc_set_high_tmds_clock_ratio" title='drm_scdc_set_high_tmds_clock_ratio' data-ref="drm_scdc_set_high_tmds_clock_ratio" data-ref-filename="drm_scdc_set_high_tmds_clock_ratio"><a class="ref fn" href="#drm_scdc_set_high_tmds_clock_ratio" title='drm_scdc_set_high_tmds_clock_ratio' data-ref="drm_scdc_set_high_tmds_clock_ratio" data-ref-filename="drm_scdc_set_high_tmds_clock_ratio"><a class="ref fn" href="#drm_scdc_set_high_tmds_clock_ratio" title='drm_scdc_set_high_tmds_clock_ratio' data-ref="drm_scdc_set_high_tmds_clock_ratio" data-ref-filename="drm_scdc_set_high_tmds_clock_ratio">drm_scdc_set_high_tmds_clock_ratio</a></a></a>);</td></tr>
+<tr><th id="250">250</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

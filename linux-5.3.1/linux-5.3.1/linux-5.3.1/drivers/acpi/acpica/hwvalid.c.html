@@ -1,0 +1,312 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>hwvalid.c source code [linux-5.3.1/drivers/acpi/acpica/hwvalid.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/drivers/acpi/acpica/hwvalid.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>linux-5.3.1</a>/<a href='../..'>drivers</a>/<a href='..'>acpi</a>/<a href='./'>acpica</a>/<a href='hwvalid.c.html'>hwvalid.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><i>/******************************************************************************</i></td></tr>
+<tr><th id="3">3</th><td><i> *</i></td></tr>
+<tr><th id="4">4</th><td><i> * Module Name: hwvalid - I/O request validation</i></td></tr>
+<tr><th id="5">5</th><td><i> *</i></td></tr>
+<tr><th id="6">6</th><td><i> * Copyright (C) 2000 - 2019, Intel Corp.</i></td></tr>
+<tr><th id="7">7</th><td><i> *</i></td></tr>
+<tr><th id="8">8</th><td><i> *****************************************************************************/</i></td></tr>
+<tr><th id="9">9</th><td></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="../../../include/acpi/acpi.h.html">&lt;acpi/acpi.h&gt;</a></u></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="accommon.h.html">"accommon.h"</a></u></td></tr>
+<tr><th id="12">12</th><td></td></tr>
+<tr><th id="13">13</th><td><u>#define <dfn class="macro" id="_M/_COMPONENT" data-ref="_M/_COMPONENT">_COMPONENT</dfn>          ACPI_HARDWARE</u></td></tr>
+<tr><th id="14">14</th><td><a class="macro" href="../../../include/acpi/acoutput.h.html#181" title="static const char __attribute__ ((unused)) _acpi_module_name[] = &quot;hwvalid&quot;;" data-ref="_M/ACPI_MODULE_NAME">ACPI_MODULE_NAME</a>(<q>"hwvalid"</q>)</td></tr>
+<tr><th id="15">15</th><td></td></tr>
+<tr><th id="16">16</th><td><i  data-doc="acpi_hw_validate_io_request">/* Local prototypes */</i></td></tr>
+<tr><th id="17">17</th><td><em>static</em> <a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_status" title='acpi_status' data-type='u32' data-ref="acpi_status" data-ref-filename="acpi_status">acpi_status</a></td></tr>
+<tr><th id="18">18</th><td><a class="tu decl fn" href="#acpi_hw_validate_io_request" title='acpi_hw_validate_io_request' data-type='acpi_status acpi_hw_validate_io_request(acpi_io_address address, u32 bit_width)' data-ref="acpi_hw_validate_io_request" data-ref-filename="acpi_hw_validate_io_request">acpi_hw_validate_io_request</a>(<a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_io_address" title='acpi_io_address' data-type='u64' data-ref="acpi_io_address" data-ref-filename="acpi_io_address">acpi_io_address</a> <dfn class="local col1 decl" id="1address" title='address' data-type='acpi_io_address' data-ref="1address" data-ref-filename="1address">address</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col2 decl" id="2bit_width" title='bit_width' data-type='u32' data-ref="2bit_width" data-ref-filename="2bit_width">bit_width</dfn>);</td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><i  data-doc="acpi_protected_ports">/*</i></td></tr>
+<tr><th id="21">21</th><td><i  data-doc="acpi_protected_ports"> * Protected I/O ports. Some ports are always illegal, and some are</i></td></tr>
+<tr><th id="22">22</th><td><i  data-doc="acpi_protected_ports"> * conditionally illegal. This table must remain ordered by port address.</i></td></tr>
+<tr><th id="23">23</th><td><i  data-doc="acpi_protected_ports"> *</i></td></tr>
+<tr><th id="24">24</th><td><i  data-doc="acpi_protected_ports"> * The table is used to implement the Microsoft port access rules that</i></td></tr>
+<tr><th id="25">25</th><td><i  data-doc="acpi_protected_ports"> * first appeared in Windows XP. Some ports are always illegal, and some</i></td></tr>
+<tr><th id="26">26</th><td><i  data-doc="acpi_protected_ports"> * ports are only illegal if the BIOS calls _OSI with a win_XP string or</i></td></tr>
+<tr><th id="27">27</th><td><i  data-doc="acpi_protected_ports"> * later (meaning that the BIOS itelf is post-XP.)</i></td></tr>
+<tr><th id="28">28</th><td><i  data-doc="acpi_protected_ports"> *</i></td></tr>
+<tr><th id="29">29</th><td><i  data-doc="acpi_protected_ports"> * This provides ACPICA with the desired port protections and</i></td></tr>
+<tr><th id="30">30</th><td><i  data-doc="acpi_protected_ports"> * Microsoft compatibility.</i></td></tr>
+<tr><th id="31">31</th><td><i  data-doc="acpi_protected_ports"> *</i></td></tr>
+<tr><th id="32">32</th><td><i  data-doc="acpi_protected_ports"> * Description of port entries:</i></td></tr>
+<tr><th id="33">33</th><td><i  data-doc="acpi_protected_ports"> *  DMA:   DMA controller</i></td></tr>
+<tr><th id="34">34</th><td><i  data-doc="acpi_protected_ports"> *  PIC0:  Programmable Interrupt Controller (8259A)</i></td></tr>
+<tr><th id="35">35</th><td><i  data-doc="acpi_protected_ports"> *  PIT1:  System Timer 1</i></td></tr>
+<tr><th id="36">36</th><td><i  data-doc="acpi_protected_ports"> *  PIT2:  System Timer 2 failsafe</i></td></tr>
+<tr><th id="37">37</th><td><i  data-doc="acpi_protected_ports"> *  RTC:   Real-time clock</i></td></tr>
+<tr><th id="38">38</th><td><i  data-doc="acpi_protected_ports"> *  CMOS:  Extended CMOS</i></td></tr>
+<tr><th id="39">39</th><td><i  data-doc="acpi_protected_ports"> *  DMA1:  DMA 1 page registers</i></td></tr>
+<tr><th id="40">40</th><td><i  data-doc="acpi_protected_ports"> *  DMA1L: DMA 1 Ch 0 low page</i></td></tr>
+<tr><th id="41">41</th><td><i  data-doc="acpi_protected_ports"> *  DMA2:  DMA 2 page registers</i></td></tr>
+<tr><th id="42">42</th><td><i  data-doc="acpi_protected_ports"> *  DMA2L: DMA 2 low page refresh</i></td></tr>
+<tr><th id="43">43</th><td><i  data-doc="acpi_protected_ports"> *  ARBC:  Arbitration control</i></td></tr>
+<tr><th id="44">44</th><td><i  data-doc="acpi_protected_ports"> *  SETUP: Reserved system board setup</i></td></tr>
+<tr><th id="45">45</th><td><i  data-doc="acpi_protected_ports"> *  POS:   POS channel select</i></td></tr>
+<tr><th id="46">46</th><td><i  data-doc="acpi_protected_ports"> *  PIC1:  Cascaded PIC</i></td></tr>
+<tr><th id="47">47</th><td><i  data-doc="acpi_protected_ports"> *  IDMA:  ISA DMA</i></td></tr>
+<tr><th id="48">48</th><td><i  data-doc="acpi_protected_ports"> *  ELCR:  PIC edge/level registers</i></td></tr>
+<tr><th id="49">49</th><td><i  data-doc="acpi_protected_ports"> *  PCI:   PCI configuration space</i></td></tr>
+<tr><th id="50">50</th><td><i  data-doc="acpi_protected_ports"> */</i></td></tr>
+<tr><th id="51">51</th><td><em>static</em> <em>const</em> <b>struct</b> <a class="type" href="aclocal.h.html#acpi_port_info" title='acpi_port_info' data-ref="acpi_port_info" data-ref-filename="acpi_port_info">acpi_port_info</a> <dfn class="tu decl def" id="acpi_protected_ports" title='acpi_protected_ports' data-type='const struct acpi_port_info [17]' data-ref="acpi_protected_ports" data-ref-filename="acpi_protected_ports">acpi_protected_ports</dfn>[] = {</td></tr>
+<tr><th id="52">52</th><td>	{<q>"DMA"</q>, <var>0x0000</var>, <var>0x000F</var>, <a class="macro" href="../../../include/acpi/actypes.h.html#1257" title="0x02" data-ref="_M/ACPI_OSI_WIN_XP">ACPI_OSI_WIN_XP</a>},</td></tr>
+<tr><th id="53">53</th><td>	{<q>"PIC0"</q>, <var>0x0020</var>, <var>0x0021</var>, <a class="macro" href="aclocal.h.html#1036" title="0x00" data-ref="_M/ACPI_ALWAYS_ILLEGAL">ACPI_ALWAYS_ILLEGAL</a>},</td></tr>
+<tr><th id="54">54</th><td>	{<q>"PIT1"</q>, <var>0x0040</var>, <var>0x0043</var>, <a class="macro" href="../../../include/acpi/actypes.h.html#1257" title="0x02" data-ref="_M/ACPI_OSI_WIN_XP">ACPI_OSI_WIN_XP</a>},</td></tr>
+<tr><th id="55">55</th><td>	{<q>"PIT2"</q>, <var>0x0048</var>, <var>0x004B</var>, <a class="macro" href="../../../include/acpi/actypes.h.html#1257" title="0x02" data-ref="_M/ACPI_OSI_WIN_XP">ACPI_OSI_WIN_XP</a>},</td></tr>
+<tr><th id="56">56</th><td>	{<q>"RTC"</q>, <var>0x0070</var>, <var>0x0071</var>, <a class="macro" href="../../../include/acpi/actypes.h.html#1257" title="0x02" data-ref="_M/ACPI_OSI_WIN_XP">ACPI_OSI_WIN_XP</a>},</td></tr>
+<tr><th id="57">57</th><td>	{<q>"CMOS"</q>, <var>0x0074</var>, <var>0x0076</var>, <a class="macro" href="../../../include/acpi/actypes.h.html#1257" title="0x02" data-ref="_M/ACPI_OSI_WIN_XP">ACPI_OSI_WIN_XP</a>},</td></tr>
+<tr><th id="58">58</th><td>	{<q>"DMA1"</q>, <var>0x0081</var>, <var>0x0083</var>, <a class="macro" href="../../../include/acpi/actypes.h.html#1257" title="0x02" data-ref="_M/ACPI_OSI_WIN_XP">ACPI_OSI_WIN_XP</a>},</td></tr>
+<tr><th id="59">59</th><td>	{<q>"DMA1L"</q>, <var>0x0087</var>, <var>0x0087</var>, <a class="macro" href="../../../include/acpi/actypes.h.html#1257" title="0x02" data-ref="_M/ACPI_OSI_WIN_XP">ACPI_OSI_WIN_XP</a>},</td></tr>
+<tr><th id="60">60</th><td>	{<q>"DMA2"</q>, <var>0x0089</var>, <var>0x008B</var>, <a class="macro" href="../../../include/acpi/actypes.h.html#1257" title="0x02" data-ref="_M/ACPI_OSI_WIN_XP">ACPI_OSI_WIN_XP</a>},</td></tr>
+<tr><th id="61">61</th><td>	{<q>"DMA2L"</q>, <var>0x008F</var>, <var>0x008F</var>, <a class="macro" href="../../../include/acpi/actypes.h.html#1257" title="0x02" data-ref="_M/ACPI_OSI_WIN_XP">ACPI_OSI_WIN_XP</a>},</td></tr>
+<tr><th id="62">62</th><td>	{<q>"ARBC"</q>, <var>0x0090</var>, <var>0x0091</var>, <a class="macro" href="../../../include/acpi/actypes.h.html#1257" title="0x02" data-ref="_M/ACPI_OSI_WIN_XP">ACPI_OSI_WIN_XP</a>},</td></tr>
+<tr><th id="63">63</th><td>	{<q>"SETUP"</q>, <var>0x0093</var>, <var>0x0094</var>, <a class="macro" href="../../../include/acpi/actypes.h.html#1257" title="0x02" data-ref="_M/ACPI_OSI_WIN_XP">ACPI_OSI_WIN_XP</a>},</td></tr>
+<tr><th id="64">64</th><td>	{<q>"POS"</q>, <var>0x0096</var>, <var>0x0097</var>, <a class="macro" href="../../../include/acpi/actypes.h.html#1257" title="0x02" data-ref="_M/ACPI_OSI_WIN_XP">ACPI_OSI_WIN_XP</a>},</td></tr>
+<tr><th id="65">65</th><td>	{<q>"PIC1"</q>, <var>0x00A0</var>, <var>0x00A1</var>, <a class="macro" href="aclocal.h.html#1036" title="0x00" data-ref="_M/ACPI_ALWAYS_ILLEGAL">ACPI_ALWAYS_ILLEGAL</a>},</td></tr>
+<tr><th id="66">66</th><td>	{<q>"IDMA"</q>, <var>0x00C0</var>, <var>0x00DF</var>, <a class="macro" href="../../../include/acpi/actypes.h.html#1257" title="0x02" data-ref="_M/ACPI_OSI_WIN_XP">ACPI_OSI_WIN_XP</a>},</td></tr>
+<tr><th id="67">67</th><td>	{<q>"ELCR"</q>, <var>0x04D0</var>, <var>0x04D1</var>, <a class="macro" href="aclocal.h.html#1036" title="0x00" data-ref="_M/ACPI_ALWAYS_ILLEGAL">ACPI_ALWAYS_ILLEGAL</a>},</td></tr>
+<tr><th id="68">68</th><td>	{<q>"PCI"</q>, <var>0x0CF8</var>, <var>0x0CFF</var>, <a class="macro" href="../../../include/acpi/actypes.h.html#1257" title="0x02" data-ref="_M/ACPI_OSI_WIN_XP">ACPI_OSI_WIN_XP</a>}</td></tr>
+<tr><th id="69">69</th><td>};</td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td><u>#define <dfn class="macro" id="_M/ACPI_PORT_INFO_ENTRIES" data-ref="_M/ACPI_PORT_INFO_ENTRIES">ACPI_PORT_INFO_ENTRIES</dfn>      ACPI_ARRAY_LENGTH (<a class="tu ref" href="#acpi_protected_ports" title='acpi_protected_ports' data-use='r' data-ref="acpi_protected_ports" data-ref-filename="acpi_protected_ports">acpi_protected_ports</a>)</u></td></tr>
+<tr><th id="72">72</th><td></td></tr>
+<tr><th id="73">73</th><td><i  data-doc="acpi_hw_validate_io_request">/******************************************************************************</i></td></tr>
+<tr><th id="74">74</th><td><i  data-doc="acpi_hw_validate_io_request"> *</i></td></tr>
+<tr><th id="75">75</th><td><i  data-doc="acpi_hw_validate_io_request"> * FUNCTION:    acpi_hw_validate_io_request</i></td></tr>
+<tr><th id="76">76</th><td><i  data-doc="acpi_hw_validate_io_request"> *</i></td></tr>
+<tr><th id="77">77</th><td><i  data-doc="acpi_hw_validate_io_request"> * PARAMETERS:  Address             Address of I/O port/register</i></td></tr>
+<tr><th id="78">78</th><td><i  data-doc="acpi_hw_validate_io_request"> *              bit_width           Number of bits (8,16,32)</i></td></tr>
+<tr><th id="79">79</th><td><i  data-doc="acpi_hw_validate_io_request"> *</i></td></tr>
+<tr><th id="80">80</th><td><i  data-doc="acpi_hw_validate_io_request"> * RETURN:      Status</i></td></tr>
+<tr><th id="81">81</th><td><i  data-doc="acpi_hw_validate_io_request"> *</i></td></tr>
+<tr><th id="82">82</th><td><i  data-doc="acpi_hw_validate_io_request"> * DESCRIPTION: Validates an I/O request (address/length). Certain ports are</i></td></tr>
+<tr><th id="83">83</th><td><i  data-doc="acpi_hw_validate_io_request"> *              always illegal and some ports are only illegal depending on</i></td></tr>
+<tr><th id="84">84</th><td><i  data-doc="acpi_hw_validate_io_request"> *              the requests the BIOS AML code makes to the predefined</i></td></tr>
+<tr><th id="85">85</th><td><i  data-doc="acpi_hw_validate_io_request"> *              _OSI method.</i></td></tr>
+<tr><th id="86">86</th><td><i  data-doc="acpi_hw_validate_io_request"> *</i></td></tr>
+<tr><th id="87">87</th><td><i  data-doc="acpi_hw_validate_io_request"> ******************************************************************************/</i></td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td><em>static</em> <a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_status" title='acpi_status' data-type='u32' data-ref="acpi_status" data-ref-filename="acpi_status">acpi_status</a></td></tr>
+<tr><th id="90">90</th><td><dfn class="tu decl def fn" id="acpi_hw_validate_io_request" title='acpi_hw_validate_io_request' data-type='acpi_status acpi_hw_validate_io_request(acpi_io_address address, u32 bit_width)' data-ref="acpi_hw_validate_io_request" data-ref-filename="acpi_hw_validate_io_request">acpi_hw_validate_io_request</dfn>(<a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_io_address" title='acpi_io_address' data-type='u64' data-ref="acpi_io_address" data-ref-filename="acpi_io_address">acpi_io_address</a> <dfn class="local col3 decl" id="3address" title='address' data-type='acpi_io_address' data-ref="3address" data-ref-filename="3address">address</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col4 decl" id="4bit_width" title='bit_width' data-type='u32' data-ref="4bit_width" data-ref-filename="4bit_width">bit_width</dfn>)</td></tr>
+<tr><th id="91">91</th><td>{</td></tr>
+<tr><th id="92">92</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col5 decl" id="5i" title='i' data-type='u32' data-ref="5i" data-ref-filename="5i">i</dfn>;</td></tr>
+<tr><th id="93">93</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col6 decl" id="6byte_width" title='byte_width' data-type='u32' data-ref="6byte_width" data-ref-filename="6byte_width">byte_width</dfn>;</td></tr>
+<tr><th id="94">94</th><td>	<a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_io_address" title='acpi_io_address' data-type='u64' data-ref="acpi_io_address" data-ref-filename="acpi_io_address">acpi_io_address</a> <dfn class="local col7 decl" id="7last_address" title='last_address' data-type='acpi_io_address' data-ref="7last_address" data-ref-filename="7last_address">last_address</dfn>;</td></tr>
+<tr><th id="95">95</th><td>	<em>const</em> <b>struct</b> <a class="type" href="aclocal.h.html#acpi_port_info" title='acpi_port_info' data-ref="acpi_port_info" data-ref-filename="acpi_port_info">acpi_port_info</a> *<dfn class="local col8 decl" id="8port_info" title='port_info' data-type='const struct acpi_port_info *' data-ref="8port_info" data-ref-filename="8port_info">port_info</dfn>;</td></tr>
+<tr><th id="96">96</th><td></td></tr>
+<tr><th id="97">97</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#441" title="" data-ref="_M/ACPI_FUNCTION_TRACE">ACPI_FUNCTION_TRACE</a>(hw_validate_io_request);</td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td>	<i>/* Supported widths are 8/16/32 */</i></td></tr>
+<tr><th id="100">100</th><td></td></tr>
+<tr><th id="101">101</th><td>	<b>if</b> ((<a class="local col4 ref" href="#4bit_width" title='bit_width' data-ref="4bit_width" data-ref-filename="4bit_width">bit_width</a> != <var>8</var>) &amp;&amp; (<a class="local col4 ref" href="#4bit_width" title='bit_width' data-ref="4bit_width" data-ref-filename="4bit_width">bit_width</a> != <var>16</var>) &amp;&amp; (<a class="local col4 ref" href="#4bit_width" title='bit_width' data-ref="4bit_width" data-ref-filename="4bit_width">bit_width</a> != <var>32</var>)) {</td></tr>
+<tr><th id="102">102</th><td>		<a class="macro" href="../../../include/acpi/acoutput.h.html#205" title="acpi_error (_acpi_module_name, 102, &quot;Bad BitWidth parameter: %8.8X&quot;, bit_width)" data-ref="_M/ACPI_ERROR">ACPI_ERROR</a>((<a class="macro" href="../../../include/acpi/acoutput.h.html#195" title="_acpi_module_name, 102" data-ref="_M/AE_INFO">AE_INFO</a>,</td></tr>
+<tr><th id="103">103</th><td>			    <q>"Bad BitWidth parameter: %8.8X"</q>, <a class="local col4 ref" href="#4bit_width" title='bit_width' data-ref="4bit_width" data-ref-filename="4bit_width">bit_width</a>));</td></tr>
+<tr><th id="104">104</th><td>		<a class="macro" href="../../../include/acpi/acoutput.h.html#457" title="return(((acpi_status) (0x0001 | 0x1000)))" data-ref="_M/return_ACPI_STATUS">return_ACPI_STATUS</a>(<a class="macro" href="../../../include/acpi/acexcep.h.html#112" title="((acpi_status) (0x0001 | 0x1000))" data-ref="_M/AE_BAD_PARAMETER">AE_BAD_PARAMETER</a>);</td></tr>
+<tr><th id="105">105</th><td>	}</td></tr>
+<tr><th id="106">106</th><td></td></tr>
+<tr><th id="107">107</th><td>	<a class="local col8 ref" href="#8port_info" title='port_info' data-ref="8port_info" data-ref-filename="8port_info">port_info</a> = <a class="tu ref" href="#acpi_protected_ports" title='acpi_protected_ports' data-use='r' data-ref="acpi_protected_ports" data-ref-filename="acpi_protected_ports">acpi_protected_ports</a>;</td></tr>
+<tr><th id="108">108</th><td>	<a class="local col6 ref" href="#6byte_width" title='byte_width' data-ref="6byte_width" data-ref-filename="6byte_width">byte_width</a> = <a class="macro" href="acmacros.h.html#177" title="((u32) ((bit_width) &gt;&gt; (3)))" data-ref="_M/ACPI_DIV_8">ACPI_DIV_8</a>(<a class="local col4 ref" href="#4bit_width" title='bit_width' data-ref="4bit_width" data-ref-filename="4bit_width">bit_width</a>);</td></tr>
+<tr><th id="109">109</th><td>	<a class="local col7 ref" href="#7last_address" title='last_address' data-ref="7last_address" data-ref-filename="7last_address">last_address</a> = <a class="local col3 ref" href="#3address" title='address' data-ref="3address" data-ref-filename="3address">address</a> + <a class="local col6 ref" href="#6byte_width" title='byte_width' data-ref="6byte_width" data-ref-filename="6byte_width">byte_width</a> - <var>1</var>;</td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#436" title="" data-ref="_M/ACPI_DEBUG_PRINT">ACPI_DEBUG_PRINT</a>((ACPI_DB_IO,</td></tr>
+<tr><th id="112">112</th><td>			  <q>"Address %8.8X%8.8X LastAddress %8.8X%8.8X Length %X"</q>,</td></tr>
+<tr><th id="113">113</th><td>			  ACPI_FORMAT_UINT64(address),</td></tr>
+<tr><th id="114">114</th><td>			  ACPI_FORMAT_UINT64(last_address), byte_width));</td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td>	<i>/* Maximum 16-bit address in I/O space */</i></td></tr>
+<tr><th id="117">117</th><td></td></tr>
+<tr><th id="118">118</th><td>	<b>if</b> (<a class="local col7 ref" href="#7last_address" title='last_address' data-ref="7last_address" data-ref-filename="7last_address">last_address</a> &gt; <a class="macro" href="../../../include/acpi/actypes.h.html#31" title="(u16)(~((u16) 0))" data-ref="_M/ACPI_UINT16_MAX">ACPI_UINT16_MAX</a>) {</td></tr>
+<tr><th id="119">119</th><td>		<a class="macro" href="../../../include/acpi/acoutput.h.html#205" title="acpi_error (_acpi_module_name, 119, &quot;Illegal I/O port address/length above 64K: %8.8X%8.8X/0x%X&quot;, ((u32)(((u64)(address)) &gt;&gt; 32)), ((u32) (u64)(address)), byte_width)" data-ref="_M/ACPI_ERROR">ACPI_ERROR</a>((<a class="macro" href="../../../include/acpi/acoutput.h.html#195" title="_acpi_module_name, 119" data-ref="_M/AE_INFO">AE_INFO</a>,</td></tr>
+<tr><th id="120">120</th><td>			    <q>"Illegal I/O port address/length above 64K: %8.8X%8.8X/0x%X"</q>,</td></tr>
+<tr><th id="121">121</th><td>			    <a class="macro" href="acmacros.h.html#36" title="((u32)(((u64)(address)) &gt;&gt; 32)), ((u32) (u64)(address))" data-ref="_M/ACPI_FORMAT_UINT64">ACPI_FORMAT_UINT64</a>(<a class="local col3 ref" href="#3address" title='address' data-ref="3address" data-ref-filename="3address">address</a>), <a class="local col6 ref" href="#6byte_width" title='byte_width' data-ref="6byte_width" data-ref-filename="6byte_width">byte_width</a>));</td></tr>
+<tr><th id="122">122</th><td>		<a class="macro" href="../../../include/acpi/acoutput.h.html#457" title="return(((acpi_status) (0x0010 | 0x0000)))" data-ref="_M/return_ACPI_STATUS">return_ACPI_STATUS</a>(<a class="macro" href="../../../include/acpi/acexcep.h.html#86" title="((acpi_status) (0x0010 | 0x0000))" data-ref="_M/AE_LIMIT">AE_LIMIT</a>);</td></tr>
+<tr><th id="123">123</th><td>	}</td></tr>
+<tr><th id="124">124</th><td></td></tr>
+<tr><th id="125">125</th><td>	<i>/* Exit if requested address is not within the protected port table */</i></td></tr>
+<tr><th id="126">126</th><td></td></tr>
+<tr><th id="127">127</th><td>	<b>if</b> (<a class="local col3 ref" href="#3address" title='address' data-ref="3address" data-ref-filename="3address">address</a> &gt; <a class="tu ref" href="#acpi_protected_ports" title='acpi_protected_ports' data-use='m' data-ref="acpi_protected_ports" data-ref-filename="acpi_protected_ports">acpi_protected_ports</a>[<a class="macro" href="#71" title="(sizeof(acpi_protected_ports) / sizeof((acpi_protected_ports)[0]))" data-ref="_M/ACPI_PORT_INFO_ENTRIES">ACPI_PORT_INFO_ENTRIES</a> - <var>1</var>].<a class="ref field" href="aclocal.h.html#acpi_port_info::end" title='acpi_port_info::end' data-ref="acpi_port_info::end" data-ref-filename="acpi_port_info..end">end</a>) {</td></tr>
+<tr><th id="128">128</th><td>		<a class="macro" href="../../../include/acpi/acoutput.h.html#457" title="return((acpi_status) 0x0000)" data-ref="_M/return_ACPI_STATUS">return_ACPI_STATUS</a>(<a class="macro" href="../../../include/acpi/acexcep.h.html#60" title="(acpi_status) 0x0000" data-ref="_M/AE_OK">AE_OK</a>);</td></tr>
+<tr><th id="129">129</th><td>	}</td></tr>
+<tr><th id="130">130</th><td></td></tr>
+<tr><th id="131">131</th><td>	<i>/* Check request against the list of protected I/O ports */</i></td></tr>
+<tr><th id="132">132</th><td></td></tr>
+<tr><th id="133">133</th><td>	<b>for</b> (<a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a> = <var>0</var>; <a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a> &lt; <a class="macro" href="#71" title="(sizeof(acpi_protected_ports) / sizeof((acpi_protected_ports)[0]))" data-ref="_M/ACPI_PORT_INFO_ENTRIES">ACPI_PORT_INFO_ENTRIES</a>; <a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a>++, <a class="local col8 ref" href="#8port_info" title='port_info' data-ref="8port_info" data-ref-filename="8port_info">port_info</a>++) {</td></tr>
+<tr><th id="134">134</th><td>		<i>/*</i></td></tr>
+<tr><th id="135">135</th><td><i>		 * Check if the requested address range will write to a reserved</i></td></tr>
+<tr><th id="136">136</th><td><i>		 * port. There are four cases to consider:</i></td></tr>
+<tr><th id="137">137</th><td><i>		 *</i></td></tr>
+<tr><th id="138">138</th><td><i>		 * 1) Address range is contained completely in the port address range</i></td></tr>
+<tr><th id="139">139</th><td><i>		 * 2) Address range overlaps port range at the port range start</i></td></tr>
+<tr><th id="140">140</th><td><i>		 * 3) Address range overlaps port range at the port range end</i></td></tr>
+<tr><th id="141">141</th><td><i>		 * 4) Address range completely encompasses the port range</i></td></tr>
+<tr><th id="142">142</th><td><i>		 */</i></td></tr>
+<tr><th id="143">143</th><td>		<b>if</b> ((<a class="local col3 ref" href="#3address" title='address' data-ref="3address" data-ref-filename="3address">address</a> &lt;= <a class="local col8 ref" href="#8port_info" title='port_info' data-ref="8port_info" data-ref-filename="8port_info">port_info</a>-&gt;<a class="ref field" href="aclocal.h.html#acpi_port_info::end" title='acpi_port_info::end' data-ref="acpi_port_info::end" data-ref-filename="acpi_port_info..end">end</a>)</td></tr>
+<tr><th id="144">144</th><td>		    &amp;&amp; (<a class="local col7 ref" href="#7last_address" title='last_address' data-ref="7last_address" data-ref-filename="7last_address">last_address</a> &gt;= <a class="local col8 ref" href="#8port_info" title='port_info' data-ref="8port_info" data-ref-filename="8port_info">port_info</a>-&gt;<a class="ref field" href="aclocal.h.html#acpi_port_info::start" title='acpi_port_info::start' data-ref="acpi_port_info::start" data-ref-filename="acpi_port_info..start">start</a>)) {</td></tr>
+<tr><th id="145">145</th><td></td></tr>
+<tr><th id="146">146</th><td>			<i>/* Port illegality may depend on the _OSI calls made by the BIOS */</i></td></tr>
+<tr><th id="147">147</th><td></td></tr>
+<tr><th id="148">148</th><td>			<b>if</b> (<a class="ref" href="../../../include/acpi/acpixf.h.html#207" title='acpi_gbl_osi_data' data-ref="acpi_gbl_osi_data" data-ref-filename="acpi_gbl_osi_data">acpi_gbl_osi_data</a> &gt;= <a class="local col8 ref" href="#8port_info" title='port_info' data-ref="8port_info" data-ref-filename="8port_info">port_info</a>-&gt;<a class="ref field" href="aclocal.h.html#acpi_port_info::osi_dependency" title='acpi_port_info::osi_dependency' data-ref="acpi_port_info::osi_dependency" data-ref-filename="acpi_port_info..osi_dependency">osi_dependency</a>) {</td></tr>
+<tr><th id="149">149</th><td>				<a class="macro" href="../../../include/acpi/acoutput.h.html#436" title="" data-ref="_M/ACPI_DEBUG_PRINT">ACPI_DEBUG_PRINT</a>((ACPI_DB_VALUES,</td></tr>
+<tr><th id="150">150</th><td>						  <q>"Denied AML access to port 0x%8.8X%8.8X/%X (%s 0x%.4X-0x%.4X)\n"</q>,</td></tr>
+<tr><th id="151">151</th><td>						  ACPI_FORMAT_UINT64(address),</td></tr>
+<tr><th id="152">152</th><td>						  byte_width, port_info-&gt;name,</td></tr>
+<tr><th id="153">153</th><td>						  port_info-&gt;start,</td></tr>
+<tr><th id="154">154</th><td>						  port_info-&gt;end));</td></tr>
+<tr><th id="155">155</th><td></td></tr>
+<tr><th id="156">156</th><td>				<a class="macro" href="../../../include/acpi/acoutput.h.html#457" title="return(((acpi_status) (0x0020 | 0x3000)))" data-ref="_M/return_ACPI_STATUS">return_ACPI_STATUS</a>(<a class="macro" href="../../../include/acpi/acexcep.h.html#170" title="((acpi_status) (0x0020 | 0x3000))" data-ref="_M/AE_AML_ILLEGAL_ADDRESS">AE_AML_ILLEGAL_ADDRESS</a>);</td></tr>
+<tr><th id="157">157</th><td>			}</td></tr>
+<tr><th id="158">158</th><td>		}</td></tr>
+<tr><th id="159">159</th><td></td></tr>
+<tr><th id="160">160</th><td>		<i>/* Finished if address range ends before the end of this port */</i></td></tr>
+<tr><th id="161">161</th><td></td></tr>
+<tr><th id="162">162</th><td>		<b>if</b> (<a class="local col7 ref" href="#7last_address" title='last_address' data-ref="7last_address" data-ref-filename="7last_address">last_address</a> &lt;= <a class="local col8 ref" href="#8port_info" title='port_info' data-ref="8port_info" data-ref-filename="8port_info">port_info</a>-&gt;<a class="ref field" href="aclocal.h.html#acpi_port_info::end" title='acpi_port_info::end' data-ref="acpi_port_info::end" data-ref-filename="acpi_port_info..end">end</a>) {</td></tr>
+<tr><th id="163">163</th><td>			<b>break</b>;</td></tr>
+<tr><th id="164">164</th><td>		}</td></tr>
+<tr><th id="165">165</th><td>	}</td></tr>
+<tr><th id="166">166</th><td></td></tr>
+<tr><th id="167">167</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#457" title="return((acpi_status) 0x0000)" data-ref="_M/return_ACPI_STATUS">return_ACPI_STATUS</a>(<a class="macro" href="../../../include/acpi/acexcep.h.html#60" title="(acpi_status) 0x0000" data-ref="_M/AE_OK">AE_OK</a>);</td></tr>
+<tr><th id="168">168</th><td>}</td></tr>
+<tr><th id="169">169</th><td></td></tr>
+<tr><th id="170">170</th><td><i>/******************************************************************************</i></td></tr>
+<tr><th id="171">171</th><td><i> *</i></td></tr>
+<tr><th id="172">172</th><td><i> * FUNCTION:    acpi_hw_read_port</i></td></tr>
+<tr><th id="173">173</th><td><i> *</i></td></tr>
+<tr><th id="174">174</th><td><i> * PARAMETERS:  Address             Address of I/O port/register to read</i></td></tr>
+<tr><th id="175">175</th><td><i> *              Value               Where value (data) is returned</i></td></tr>
+<tr><th id="176">176</th><td><i> *              Width               Number of bits</i></td></tr>
+<tr><th id="177">177</th><td><i> *</i></td></tr>
+<tr><th id="178">178</th><td><i> * RETURN:      Status and value read from port</i></td></tr>
+<tr><th id="179">179</th><td><i> *</i></td></tr>
+<tr><th id="180">180</th><td><i> * DESCRIPTION: Read data from an I/O port or register. This is a front-end</i></td></tr>
+<tr><th id="181">181</th><td><i> *              to acpi_os_read_port that performs validation on both the port</i></td></tr>
+<tr><th id="182">182</th><td><i> *              address and the length.</i></td></tr>
+<tr><th id="183">183</th><td><i> *</i></td></tr>
+<tr><th id="184">184</th><td><i> *****************************************************************************/</i></td></tr>
+<tr><th id="185">185</th><td></td></tr>
+<tr><th id="186">186</th><td><a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_status" title='acpi_status' data-type='u32' data-ref="acpi_status" data-ref-filename="acpi_status">acpi_status</a> <dfn class="decl def fn" id="acpi_hw_read_port" title='acpi_hw_read_port' data-ref="acpi_hw_read_port" data-ref-filename="acpi_hw_read_port">acpi_hw_read_port</dfn>(<a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_io_address" title='acpi_io_address' data-type='u64' data-ref="acpi_io_address" data-ref-filename="acpi_io_address">acpi_io_address</a> <dfn class="local col9 decl" id="9address" title='address' data-type='acpi_io_address' data-ref="9address" data-ref-filename="9address">address</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> *<dfn class="local col0 decl" id="10value" title='value' data-type='u32 *' data-ref="10value" data-ref-filename="10value">value</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col1 decl" id="11width" title='width' data-type='u32' data-ref="11width" data-ref-filename="11width">width</dfn>)</td></tr>
+<tr><th id="187">187</th><td>{</td></tr>
+<tr><th id="188">188</th><td>	<a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_status" title='acpi_status' data-type='u32' data-ref="acpi_status" data-ref-filename="acpi_status">acpi_status</a> <dfn class="local col2 decl" id="12status" title='status' data-type='acpi_status' data-ref="12status" data-ref-filename="12status">status</dfn>;</td></tr>
+<tr><th id="189">189</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col3 decl" id="13one_byte" title='one_byte' data-type='u32' data-ref="13one_byte" data-ref-filename="13one_byte">one_byte</dfn>;</td></tr>
+<tr><th id="190">190</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col4 decl" id="14i" title='i' data-type='u32' data-ref="14i" data-ref-filename="14i">i</dfn>;</td></tr>
+<tr><th id="191">191</th><td></td></tr>
+<tr><th id="192">192</th><td>	<i>/* Truncate address to 16 bits if requested */</i></td></tr>
+<tr><th id="193">193</th><td></td></tr>
+<tr><th id="194">194</th><td>	<b>if</b> (<a class="ref" href="../../../include/acpi/acpixf.h.html#184" title='acpi_gbl_truncate_io_addresses' data-ref="acpi_gbl_truncate_io_addresses" data-ref-filename="acpi_gbl_truncate_io_addresses">acpi_gbl_truncate_io_addresses</a>) {</td></tr>
+<tr><th id="195">195</th><td>		<a class="local col9 ref" href="#9address" title='address' data-ref="9address" data-ref-filename="9address">address</a> &amp;= <a class="macro" href="../../../include/acpi/actypes.h.html#31" title="(u16)(~((u16) 0))" data-ref="_M/ACPI_UINT16_MAX">ACPI_UINT16_MAX</a>;</td></tr>
+<tr><th id="196">196</th><td>	}</td></tr>
+<tr><th id="197">197</th><td></td></tr>
+<tr><th id="198">198</th><td>	<i>/* Validate the entire request and perform the I/O */</i></td></tr>
+<tr><th id="199">199</th><td></td></tr>
+<tr><th id="200">200</th><td>	<a class="local col2 ref" href="#12status" title='status' data-ref="12status" data-ref-filename="12status">status</a> = <a class="tu ref fn" href="#acpi_hw_validate_io_request" title='acpi_hw_validate_io_request' data-use='c' data-ref="acpi_hw_validate_io_request" data-ref-filename="acpi_hw_validate_io_request">acpi_hw_validate_io_request</a>(<a class="local col9 ref" href="#9address" title='address' data-ref="9address" data-ref-filename="9address">address</a>, <a class="local col1 ref" href="#11width" title='width' data-ref="11width" data-ref-filename="11width">width</a>);</td></tr>
+<tr><th id="201">201</th><td>	<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#57" title="(!(status))" data-ref="_M/ACPI_SUCCESS">ACPI_SUCCESS</a>(<a class="local col2 ref" href="#12status" title='status' data-ref="12status" data-ref-filename="12status">status</a>)) {</td></tr>
+<tr><th id="202">202</th><td>		<a class="local col2 ref" href="#12status" title='status' data-ref="12status" data-ref-filename="12status">status</a> = <a class="ref fn" href="../../../include/acpi/acpiosxf.h.html#acpi_os_read_port" title='acpi_os_read_port' data-ref="acpi_os_read_port" data-ref-filename="acpi_os_read_port">acpi_os_read_port</a>(<a class="local col9 ref" href="#9address" title='address' data-ref="9address" data-ref-filename="9address">address</a>, <a class="local col0 ref" href="#10value" title='value' data-ref="10value" data-ref-filename="10value">value</a>, <a class="local col1 ref" href="#11width" title='width' data-ref="11width" data-ref-filename="11width">width</a>);</td></tr>
+<tr><th id="203">203</th><td>		<b>return</b> (<a class="local col2 ref" href="#12status" title='status' data-ref="12status" data-ref-filename="12status">status</a>);</td></tr>
+<tr><th id="204">204</th><td>	}</td></tr>
+<tr><th id="205">205</th><td></td></tr>
+<tr><th id="206">206</th><td>	<b>if</b> (<a class="local col2 ref" href="#12status" title='status' data-ref="12status" data-ref-filename="12status">status</a> != <a class="macro" href="../../../include/acpi/acexcep.h.html#170" title="((acpi_status) (0x0020 | 0x3000))" data-ref="_M/AE_AML_ILLEGAL_ADDRESS">AE_AML_ILLEGAL_ADDRESS</a>) {</td></tr>
+<tr><th id="207">207</th><td>		<b>return</b> (<a class="local col2 ref" href="#12status" title='status' data-ref="12status" data-ref-filename="12status">status</a>);</td></tr>
+<tr><th id="208">208</th><td>	}</td></tr>
+<tr><th id="209">209</th><td></td></tr>
+<tr><th id="210">210</th><td>	<i>/*</i></td></tr>
+<tr><th id="211">211</th><td><i>	 * There has been a protection violation within the request. Fall</i></td></tr>
+<tr><th id="212">212</th><td><i>	 * back to byte granularity port I/O and ignore the failing bytes.</i></td></tr>
+<tr><th id="213">213</th><td><i>	 * This provides compatibility with other ACPI implementations.</i></td></tr>
+<tr><th id="214">214</th><td><i>	 */</i></td></tr>
+<tr><th id="215">215</th><td>	<b>for</b> (<a class="local col4 ref" href="#14i" title='i' data-ref="14i" data-ref-filename="14i">i</a> = <var>0</var>, *<a class="local col0 ref" href="#10value" title='value' data-ref="10value" data-ref-filename="10value">value</a> = <var>0</var>; <a class="local col4 ref" href="#14i" title='i' data-ref="14i" data-ref-filename="14i">i</a> &lt; <a class="local col1 ref" href="#11width" title='width' data-ref="11width" data-ref-filename="11width">width</a>; <a class="local col4 ref" href="#14i" title='i' data-ref="14i" data-ref-filename="14i">i</a> += <var>8</var>) {</td></tr>
+<tr><th id="216">216</th><td></td></tr>
+<tr><th id="217">217</th><td>		<i>/* Validate and read one byte */</i></td></tr>
+<tr><th id="218">218</th><td></td></tr>
+<tr><th id="219">219</th><td>		<b>if</b> (<a class="tu ref fn" href="#acpi_hw_validate_io_request" title='acpi_hw_validate_io_request' data-use='c' data-ref="acpi_hw_validate_io_request" data-ref-filename="acpi_hw_validate_io_request">acpi_hw_validate_io_request</a>(<a class="local col9 ref" href="#9address" title='address' data-ref="9address" data-ref-filename="9address">address</a>, <var>8</var>) == <a class="macro" href="../../../include/acpi/acexcep.h.html#60" title="(acpi_status) 0x0000" data-ref="_M/AE_OK">AE_OK</a>) {</td></tr>
+<tr><th id="220">220</th><td>			<a class="local col2 ref" href="#12status" title='status' data-ref="12status" data-ref-filename="12status">status</a> = <a class="ref fn" href="../../../include/acpi/acpiosxf.h.html#acpi_os_read_port" title='acpi_os_read_port' data-ref="acpi_os_read_port" data-ref-filename="acpi_os_read_port">acpi_os_read_port</a>(<a class="local col9 ref" href="#9address" title='address' data-ref="9address" data-ref-filename="9address">address</a>, &amp;<a class="local col3 ref" href="#13one_byte" title='one_byte' data-ref="13one_byte" data-ref-filename="13one_byte">one_byte</a>, <var>8</var>);</td></tr>
+<tr><th id="221">221</th><td>			<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#58" title="(status)" data-ref="_M/ACPI_FAILURE">ACPI_FAILURE</a>(<a class="local col2 ref" href="#12status" title='status' data-ref="12status" data-ref-filename="12status">status</a>)) {</td></tr>
+<tr><th id="222">222</th><td>				<b>return</b> (<a class="local col2 ref" href="#12status" title='status' data-ref="12status" data-ref-filename="12status">status</a>);</td></tr>
+<tr><th id="223">223</th><td>			}</td></tr>
+<tr><th id="224">224</th><td></td></tr>
+<tr><th id="225">225</th><td>			*<a class="local col0 ref" href="#10value" title='value' data-ref="10value" data-ref-filename="10value">value</a> |= (<a class="local col3 ref" href="#13one_byte" title='one_byte' data-ref="13one_byte" data-ref-filename="13one_byte">one_byte</a> &lt;&lt; <a class="local col4 ref" href="#14i" title='i' data-ref="14i" data-ref-filename="14i">i</a>);</td></tr>
+<tr><th id="226">226</th><td>		}</td></tr>
+<tr><th id="227">227</th><td></td></tr>
+<tr><th id="228">228</th><td>		<a class="local col9 ref" href="#9address" title='address' data-ref="9address" data-ref-filename="9address">address</a>++;</td></tr>
+<tr><th id="229">229</th><td>	}</td></tr>
+<tr><th id="230">230</th><td></td></tr>
+<tr><th id="231">231</th><td>	<b>return</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#60" title="(acpi_status) 0x0000" data-ref="_M/AE_OK">AE_OK</a>);</td></tr>
+<tr><th id="232">232</th><td>}</td></tr>
+<tr><th id="233">233</th><td></td></tr>
+<tr><th id="234">234</th><td><i>/******************************************************************************</i></td></tr>
+<tr><th id="235">235</th><td><i> *</i></td></tr>
+<tr><th id="236">236</th><td><i> * FUNCTION:    acpi_hw_write_port</i></td></tr>
+<tr><th id="237">237</th><td><i> *</i></td></tr>
+<tr><th id="238">238</th><td><i> * PARAMETERS:  Address             Address of I/O port/register to write</i></td></tr>
+<tr><th id="239">239</th><td><i> *              Value               Value to write</i></td></tr>
+<tr><th id="240">240</th><td><i> *              Width               Number of bits</i></td></tr>
+<tr><th id="241">241</th><td><i> *</i></td></tr>
+<tr><th id="242">242</th><td><i> * RETURN:      Status</i></td></tr>
+<tr><th id="243">243</th><td><i> *</i></td></tr>
+<tr><th id="244">244</th><td><i> * DESCRIPTION: Write data to an I/O port or register. This is a front-end</i></td></tr>
+<tr><th id="245">245</th><td><i> *              to acpi_os_write_port that performs validation on both the port</i></td></tr>
+<tr><th id="246">246</th><td><i> *              address and the length.</i></td></tr>
+<tr><th id="247">247</th><td><i> *</i></td></tr>
+<tr><th id="248">248</th><td><i> *****************************************************************************/</i></td></tr>
+<tr><th id="249">249</th><td></td></tr>
+<tr><th id="250">250</th><td><a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_status" title='acpi_status' data-type='u32' data-ref="acpi_status" data-ref-filename="acpi_status">acpi_status</a> <dfn class="decl def fn" id="acpi_hw_write_port" title='acpi_hw_write_port' data-ref="acpi_hw_write_port" data-ref-filename="acpi_hw_write_port">acpi_hw_write_port</dfn>(<a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_io_address" title='acpi_io_address' data-type='u64' data-ref="acpi_io_address" data-ref-filename="acpi_io_address">acpi_io_address</a> <dfn class="local col5 decl" id="15address" title='address' data-type='acpi_io_address' data-ref="15address" data-ref-filename="15address">address</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col6 decl" id="16value" title='value' data-type='u32' data-ref="16value" data-ref-filename="16value">value</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col7 decl" id="17width" title='width' data-type='u32' data-ref="17width" data-ref-filename="17width">width</dfn>)</td></tr>
+<tr><th id="251">251</th><td>{</td></tr>
+<tr><th id="252">252</th><td>	<a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_status" title='acpi_status' data-type='u32' data-ref="acpi_status" data-ref-filename="acpi_status">acpi_status</a> <dfn class="local col8 decl" id="18status" title='status' data-type='acpi_status' data-ref="18status" data-ref-filename="18status">status</dfn>;</td></tr>
+<tr><th id="253">253</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col9 decl" id="19i" title='i' data-type='u32' data-ref="19i" data-ref-filename="19i">i</dfn>;</td></tr>
+<tr><th id="254">254</th><td></td></tr>
+<tr><th id="255">255</th><td>	<i>/* Truncate address to 16 bits if requested */</i></td></tr>
+<tr><th id="256">256</th><td></td></tr>
+<tr><th id="257">257</th><td>	<b>if</b> (<a class="ref" href="../../../include/acpi/acpixf.h.html#184" title='acpi_gbl_truncate_io_addresses' data-ref="acpi_gbl_truncate_io_addresses" data-ref-filename="acpi_gbl_truncate_io_addresses">acpi_gbl_truncate_io_addresses</a>) {</td></tr>
+<tr><th id="258">258</th><td>		<a class="local col5 ref" href="#15address" title='address' data-ref="15address" data-ref-filename="15address">address</a> &amp;= <a class="macro" href="../../../include/acpi/actypes.h.html#31" title="(u16)(~((u16) 0))" data-ref="_M/ACPI_UINT16_MAX">ACPI_UINT16_MAX</a>;</td></tr>
+<tr><th id="259">259</th><td>	}</td></tr>
+<tr><th id="260">260</th><td></td></tr>
+<tr><th id="261">261</th><td>	<i>/* Validate the entire request and perform the I/O */</i></td></tr>
+<tr><th id="262">262</th><td></td></tr>
+<tr><th id="263">263</th><td>	<a class="local col8 ref" href="#18status" title='status' data-ref="18status" data-ref-filename="18status">status</a> = <a class="tu ref fn" href="#acpi_hw_validate_io_request" title='acpi_hw_validate_io_request' data-use='c' data-ref="acpi_hw_validate_io_request" data-ref-filename="acpi_hw_validate_io_request">acpi_hw_validate_io_request</a>(<a class="local col5 ref" href="#15address" title='address' data-ref="15address" data-ref-filename="15address">address</a>, <a class="local col7 ref" href="#17width" title='width' data-ref="17width" data-ref-filename="17width">width</a>);</td></tr>
+<tr><th id="264">264</th><td>	<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#57" title="(!(status))" data-ref="_M/ACPI_SUCCESS">ACPI_SUCCESS</a>(<a class="local col8 ref" href="#18status" title='status' data-ref="18status" data-ref-filename="18status">status</a>)) {</td></tr>
+<tr><th id="265">265</th><td>		<a class="local col8 ref" href="#18status" title='status' data-ref="18status" data-ref-filename="18status">status</a> = <a class="ref fn" href="../../../include/acpi/acpiosxf.h.html#acpi_os_write_port" title='acpi_os_write_port' data-ref="acpi_os_write_port" data-ref-filename="acpi_os_write_port">acpi_os_write_port</a>(<a class="local col5 ref" href="#15address" title='address' data-ref="15address" data-ref-filename="15address">address</a>, <a class="local col6 ref" href="#16value" title='value' data-ref="16value" data-ref-filename="16value">value</a>, <a class="local col7 ref" href="#17width" title='width' data-ref="17width" data-ref-filename="17width">width</a>);</td></tr>
+<tr><th id="266">266</th><td>		<b>return</b> (<a class="local col8 ref" href="#18status" title='status' data-ref="18status" data-ref-filename="18status">status</a>);</td></tr>
+<tr><th id="267">267</th><td>	}</td></tr>
+<tr><th id="268">268</th><td></td></tr>
+<tr><th id="269">269</th><td>	<b>if</b> (<a class="local col8 ref" href="#18status" title='status' data-ref="18status" data-ref-filename="18status">status</a> != <a class="macro" href="../../../include/acpi/acexcep.h.html#170" title="((acpi_status) (0x0020 | 0x3000))" data-ref="_M/AE_AML_ILLEGAL_ADDRESS">AE_AML_ILLEGAL_ADDRESS</a>) {</td></tr>
+<tr><th id="270">270</th><td>		<b>return</b> (<a class="local col8 ref" href="#18status" title='status' data-ref="18status" data-ref-filename="18status">status</a>);</td></tr>
+<tr><th id="271">271</th><td>	}</td></tr>
+<tr><th id="272">272</th><td></td></tr>
+<tr><th id="273">273</th><td>	<i>/*</i></td></tr>
+<tr><th id="274">274</th><td><i>	 * There has been a protection violation within the request. Fall</i></td></tr>
+<tr><th id="275">275</th><td><i>	 * back to byte granularity port I/O and ignore the failing bytes.</i></td></tr>
+<tr><th id="276">276</th><td><i>	 * This provides compatibility with other ACPI implementations.</i></td></tr>
+<tr><th id="277">277</th><td><i>	 */</i></td></tr>
+<tr><th id="278">278</th><td>	<b>for</b> (<a class="local col9 ref" href="#19i" title='i' data-ref="19i" data-ref-filename="19i">i</a> = <var>0</var>; <a class="local col9 ref" href="#19i" title='i' data-ref="19i" data-ref-filename="19i">i</a> &lt; <a class="local col7 ref" href="#17width" title='width' data-ref="17width" data-ref-filename="17width">width</a>; <a class="local col9 ref" href="#19i" title='i' data-ref="19i" data-ref-filename="19i">i</a> += <var>8</var>) {</td></tr>
+<tr><th id="279">279</th><td></td></tr>
+<tr><th id="280">280</th><td>		<i>/* Validate and write one byte */</i></td></tr>
+<tr><th id="281">281</th><td></td></tr>
+<tr><th id="282">282</th><td>		<b>if</b> (<a class="tu ref fn" href="#acpi_hw_validate_io_request" title='acpi_hw_validate_io_request' data-use='c' data-ref="acpi_hw_validate_io_request" data-ref-filename="acpi_hw_validate_io_request">acpi_hw_validate_io_request</a>(<a class="local col5 ref" href="#15address" title='address' data-ref="15address" data-ref-filename="15address">address</a>, <var>8</var>) == <a class="macro" href="../../../include/acpi/acexcep.h.html#60" title="(acpi_status) 0x0000" data-ref="_M/AE_OK">AE_OK</a>) {</td></tr>
+<tr><th id="283">283</th><td>			<a class="local col8 ref" href="#18status" title='status' data-ref="18status" data-ref-filename="18status">status</a> =</td></tr>
+<tr><th id="284">284</th><td>			    <a class="ref fn" href="../../../include/acpi/acpiosxf.h.html#acpi_os_write_port" title='acpi_os_write_port' data-ref="acpi_os_write_port" data-ref-filename="acpi_os_write_port">acpi_os_write_port</a>(<a class="local col5 ref" href="#15address" title='address' data-ref="15address" data-ref-filename="15address">address</a>, (<a class="local col6 ref" href="#16value" title='value' data-ref="16value" data-ref-filename="16value">value</a> &gt;&gt; <a class="local col9 ref" href="#19i" title='i' data-ref="19i" data-ref-filename="19i">i</a>) &amp; <var>0xFF</var>, <var>8</var>);</td></tr>
+<tr><th id="285">285</th><td>			<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#58" title="(status)" data-ref="_M/ACPI_FAILURE">ACPI_FAILURE</a>(<a class="local col8 ref" href="#18status" title='status' data-ref="18status" data-ref-filename="18status">status</a>)) {</td></tr>
+<tr><th id="286">286</th><td>				<b>return</b> (<a class="local col8 ref" href="#18status" title='status' data-ref="18status" data-ref-filename="18status">status</a>);</td></tr>
+<tr><th id="287">287</th><td>			}</td></tr>
+<tr><th id="288">288</th><td>		}</td></tr>
+<tr><th id="289">289</th><td></td></tr>
+<tr><th id="290">290</th><td>		<a class="local col5 ref" href="#15address" title='address' data-ref="15address" data-ref-filename="15address">address</a>++;</td></tr>
+<tr><th id="291">291</th><td>	}</td></tr>
+<tr><th id="292">292</th><td></td></tr>
+<tr><th id="293">293</th><td>	<b>return</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#60" title="(acpi_status) 0x0000" data-ref="_M/AE_OK">AE_OK</a>);</td></tr>
+<tr><th id="294">294</th><td>}</td></tr>
+<tr><th id="295">295</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

@@ -1,0 +1,38 @@
+<def f='linux-5.3.1/include/net/sock.h' l='2086' ll='2089' type='bool skwq_has_sleeper(struct socket_wq * wq)'/>
+<doc f='linux-5.3.1/include/net/sock.h' l='2055'>/**
+ * skwq_has_sleeper - check if there are any waiting processes
+ * @wq: struct socket_wq
+ *
+ * Returns true if socket_wq has waiting processes
+ *
+ * The purpose of the skwq_has_sleeper and sock_poll_wait is to wrap the memory
+ * barrier call. They were added due to the race found within the tcp code.
+ *
+ * Consider following tcp code paths::
+ *
+ *   CPU1                CPU2
+ *   sys_select          receive packet
+ *   ...                 ...
+ *   __add_wait_queue    update tp-&gt;rcv_nxt
+ *   ...                 ...
+ *   tp-&gt;rcv_nxt check   sock_def_readable
+ *   ...                 {
+ *   schedule               rcu_read_lock();
+ *                          wq = rcu_dereference(sk-&gt;sk_wq);
+ *                          if (wq &amp;&amp; waitqueue_active(&amp;wq-&gt;wait))
+ *                              wake_up_interruptible(&amp;wq-&gt;wait)
+ *                          ...
+ *                       }
+ *
+ * The race for tcp fires when the __add_wait_queue changes done by CPU1 stay
+ * in its cache, and so does the tp-&gt;rcv_nxt update on CPU2 side.  The CPU1
+ * could then endup calling schedule and sleep forever if there are no more
+ * data on the socket.
+ *
+ */</doc>
+<use f='linux-5.3.1/net/core/sock.c' l='2762' u='c' c='sock_def_wakeup'/>
+<use f='linux-5.3.1/net/core/sock.c' l='2773' u='c' c='sock_def_error_report'/>
+<use f='linux-5.3.1/net/core/sock.c' l='2785' u='c' c='sock_def_readable'/>
+<use f='linux-5.3.1/net/core/sock.c' l='2803' u='c' c='sock_def_write_space'/>
+<use f='linux-5.3.1/net/core/stream.c' l='40' u='c' c='sk_stream_write_space'/>
+<use f='linux-5.3.1/net/unix/af_unix.c' l='459' u='c' c='unix_write_space'/>

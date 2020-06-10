@@ -1,0 +1,67 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>dm-builtin.c source code [linux-5.3.1/drivers/md/dm-builtin.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/drivers/md/dm-builtin.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>drivers</a>/<a href='./'>md</a>/<a href='dm-builtin.c.html'>dm-builtin.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><u>#include <a href="dm-core.h.html">"dm-core.h"</a></u></td></tr>
+<tr><th id="3">3</th><td></td></tr>
+<tr><th id="4">4</th><td><i>/*</i></td></tr>
+<tr><th id="5">5</th><td><i> * The kobject release method must not be placed in the module itself,</i></td></tr>
+<tr><th id="6">6</th><td><i> * otherwise we are subject to module unload races.</i></td></tr>
+<tr><th id="7">7</th><td><i> *</i></td></tr>
+<tr><th id="8">8</th><td><i> * The release method is called when the last reference to the kobject is</i></td></tr>
+<tr><th id="9">9</th><td><i> * dropped. It may be called by any other kernel code that drops the last</i></td></tr>
+<tr><th id="10">10</th><td><i> * reference.</i></td></tr>
+<tr><th id="11">11</th><td><i> *</i></td></tr>
+<tr><th id="12">12</th><td><i> * The release method suffers from module unload race. We may prevent the</i></td></tr>
+<tr><th id="13">13</th><td><i> * module from being unloaded at the start of the release method (using</i></td></tr>
+<tr><th id="14">14</th><td><i> * increased module reference count or synchronizing against the release</i></td></tr>
+<tr><th id="15">15</th><td><i> * method), however there is no way to prevent the module from being</i></td></tr>
+<tr><th id="16">16</th><td><i> * unloaded at the end of the release method.</i></td></tr>
+<tr><th id="17">17</th><td><i> *</i></td></tr>
+<tr><th id="18">18</th><td><i> * If this code were placed in the dm module, the following race may</i></td></tr>
+<tr><th id="19">19</th><td><i> * happen:</i></td></tr>
+<tr><th id="20">20</th><td><i> *  1. Some other process takes a reference to dm kobject</i></td></tr>
+<tr><th id="21">21</th><td><i> *  2. The user issues ioctl function to unload the dm device</i></td></tr>
+<tr><th id="22">22</th><td><i> *  3. dm_sysfs_exit calls kobject_put, however the object is not released</i></td></tr>
+<tr><th id="23">23</th><td><i> *     because of the other reference taken at step 1</i></td></tr>
+<tr><th id="24">24</th><td><i> *  4. dm_sysfs_exit waits on the completion</i></td></tr>
+<tr><th id="25">25</th><td><i> *  5. The other process that took the reference in step 1 drops it,</i></td></tr>
+<tr><th id="26">26</th><td><i> *     dm_kobject_release is called from this process</i></td></tr>
+<tr><th id="27">27</th><td><i> *  6. dm_kobject_release calls complete()</i></td></tr>
+<tr><th id="28">28</th><td><i> *  7. a reschedule happens before dm_kobject_release returns</i></td></tr>
+<tr><th id="29">29</th><td><i> *  8. dm_sysfs_exit continues, the dm device is unloaded, module reference</i></td></tr>
+<tr><th id="30">30</th><td><i> *     count is decremented</i></td></tr>
+<tr><th id="31">31</th><td><i> *  9. The user unloads the dm module</i></td></tr>
+<tr><th id="32">32</th><td><i> * 10. The other process that was rescheduled in step 7 continues to run,</i></td></tr>
+<tr><th id="33">33</th><td><i> *     it is now executing code in unloaded module, so it crashes</i></td></tr>
+<tr><th id="34">34</th><td><i> *</i></td></tr>
+<tr><th id="35">35</th><td><i> * Note that if the process that takes the foreign reference to dm kobject</i></td></tr>
+<tr><th id="36">36</th><td><i> * has a low priority and the system is sufficiently loaded with</i></td></tr>
+<tr><th id="37">37</th><td><i> * higher-priority processes that prevent the low-priority process from</i></td></tr>
+<tr><th id="38">38</th><td><i> * being scheduled long enough, this bug may really happen.</i></td></tr>
+<tr><th id="39">39</th><td><i> *</i></td></tr>
+<tr><th id="40">40</th><td><i> * In order to fix this module unload race, we place the release method</i></td></tr>
+<tr><th id="41">41</th><td><i> * into a helper code that is compiled directly into the kernel.</i></td></tr>
+<tr><th id="42">42</th><td><i> */</i></td></tr>
+<tr><th id="43">43</th><td></td></tr>
+<tr><th id="44">44</th><td><em>void</em> <dfn class="decl def fn" id="dm_kobject_release" title='dm_kobject_release' data-ref="dm_kobject_release" data-ref-filename="dm_kobject_release">dm_kobject_release</dfn>(<b>struct</b> <a class="type" href="../../include/linux/kobject.h.html#kobject" title='kobject' data-ref="kobject" data-ref-filename="kobject">kobject</a> *<dfn class="local col1 decl" id="281kobj" title='kobj' data-type='struct kobject *' data-ref="281kobj" data-ref-filename="281kobj">kobj</dfn>)</td></tr>
+<tr><th id="45">45</th><td>{</td></tr>
+<tr><th id="46">46</th><td>	<a class="ref fn" href="../../include/linux/completion.h.html#complete" title='complete' data-ref="complete" data-ref-filename="complete">complete</a>(<a class="ref fn" href="dm-core.h.html#dm_get_completion_from_kobject" title='dm_get_completion_from_kobject' data-ref="dm_get_completion_from_kobject" data-ref-filename="dm_get_completion_from_kobject">dm_get_completion_from_kobject</a>(<a class="local col1 ref" href="#281kobj" title='kobj' data-ref="281kobj" data-ref-filename="281kobj">kobj</a>));</td></tr>
+<tr><th id="47">47</th><td>}</td></tr>
+<tr><th id="48">48</th><td></td></tr>
+<tr><th id="49">49</th><td><a class="macro" href="../../include/linux/export.h.html#123" title="extern typeof(dm_kobject_release) dm_kobject_release; static const char __kstrtab_dm_kobject_release[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;dm_kobject_release&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_dm_kobject_release49 = (void *)&amp;dm_kobject_release; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;&quot; &quot;+&quot; &quot;dm_kobject_release&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;dm_kobject_release&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;dm_kobject_release&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;dm_kobject_release&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL">EXPORT_SYMBOL</a>(<a class="decl fn" href="#dm_kobject_release" title='dm_kobject_release' data-ref="dm_kobject_release" data-ref-filename="dm_kobject_release"><a class="ref fn" href="#dm_kobject_release" title='dm_kobject_release' data-ref="dm_kobject_release" data-ref-filename="dm_kobject_release"><a class="ref fn" href="#dm_kobject_release" title='dm_kobject_release' data-ref="dm_kobject_release" data-ref-filename="dm_kobject_release">dm_kobject_release</a></a></a>);</td></tr>
+<tr><th id="50">50</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

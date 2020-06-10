@@ -1,0 +1,35 @@
+<dec f='linux-5.3.1/include/linux/blkdev.h' l='140' type='int'/>
+<offset>256</offset>
+<use f='linux-5.3.1/include/linux/blk-mq.h' l='362' u='r' c='request_to_qc_t'/>
+<use f='linux-5.3.1/include/linux/blk-mq.h' l='363' u='r' c='request_to_qc_t'/>
+<use f='linux-5.3.1/block/blk-mq.h' l='211' u='r' c='__blk_mq_put_driver_tag'/>
+<use f='linux-5.3.1/block/blk-mq.h' l='212' u='w' c='__blk_mq_put_driver_tag'/>
+<use f='linux-5.3.1/block/blk-mq.h' l='222' u='r' c='blk_mq_put_driver_tag'/>
+<use f='linux-5.3.1/block/blk-core.c' l='116' u='w' c='blk_rq_init'/>
+<use f='linux-5.3.1/block/blk-flush.c' l='219' u='r' c='flush_end_io'/>
+<use f='linux-5.3.1/block/blk-flush.c' l='220' u='w' c='flush_end_io'/>
+<use f='linux-5.3.1/block/blk-flush.c' l='301' u='w' c='blk_kick_flush'/>
+<use f='linux-5.3.1/block/blk-flush.c' l='301' u='r' c='blk_kick_flush'/>
+<use f='linux-5.3.1/block/blk-flush.c' l='302' u='r' c='blk_kick_flush'/>
+<use f='linux-5.3.1/block/blk-flush.c' l='325' u='r' c='mq_flush_data_end_io'/>
+<use f='linux-5.3.1/block/blk-mq-debugfs.c' l='342' u='r' c='__blk_mq_debugfs_rq_show'/>
+<use f='linux-5.3.1/block/blk-mq-sched.c' l='392' u='r' c='blk_mq_sched_insert_request'/>
+<use f='linux-5.3.1/block/blk-mq-tag.c' l='527' u='r' c='blk_mq_unique_tag'/>
+<use f='linux-5.3.1/block/blk-mq.c' l='301' u='w' c='blk_mq_rq_ctx_init'/>
+<use f='linux-5.3.1/block/blk-mq.c' l='308' u='w' c='blk_mq_rq_ctx_init'/>
+<use f='linux-5.3.1/block/blk-mq.c' l='310' u='r' c='blk_mq_rq_ctx_init'/>
+<use f='linux-5.3.1/block/blk-mq.c' l='490' u='r' c='__blk_mq_free_request'/>
+<use f='linux-5.3.1/block/blk-mq.c' l='491' u='r' c='__blk_mq_free_request'/>
+<use f='linux-5.3.1/block/blk-mq.c' l='1050' u='r' c='blk_mq_get_driver_tag'/>
+<use f='linux-5.3.1/block/blk-mq.c' l='1057' u='w' c='blk_mq_get_driver_tag'/>
+<use f='linux-5.3.1/block/blk-mq.c' l='1058' u='r' c='blk_mq_get_driver_tag'/>
+<use f='linux-5.3.1/block/blk-mq.c' l='1063' u='r' c='blk_mq_get_driver_tag'/>
+<use f='linux-5.3.1/block/blk-mq.c' l='1067' u='r' c='blk_mq_get_driver_tag'/>
+<use f='linux-5.3.1/drivers/ata/libata-scsi.c' l='848' u='r' c='ata_scsi_qc_new'/>
+<use f='linux-5.3.1/drivers/scsi/scsi_lib.c' l='1577' u='r' c='scsi_mq_prep_fn'/>
+<use f='linux-5.3.1/drivers/scsi/scsi_logging.c' l='136' u='r' c='scmd_printk'/>
+<use f='linux-5.3.1/drivers/scsi/scsi_logging.c' l='233' u='r' c='scsi_print_command'/>
+<use f='linux-5.3.1/drivers/scsi/scsi_logging.c' l='259' u='r' c='scsi_print_command'/>
+<use f='linux-5.3.1/drivers/scsi/scsi_logging.c' l='422' u='r' c='scsi_print_sense'/>
+<use f='linux-5.3.1/drivers/scsi/scsi_logging.c' l='441' u='r' c='scsi_print_result'/>
+<use f='linux-5.3.1/drivers/scsi/scsi_transport_spi.c' l='1222' u='r' c='spi_populate_tag_msg'/>

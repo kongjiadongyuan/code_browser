@@ -1,0 +1,183 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>codel.h source code [linux-5.3.1/include/net/codel.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="codel_params,codel_stats,codel_vars "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/include/net/codel.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>include</a>/<a href='./'>net</a>/<a href='codel.h.html'>codel.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><u>#<span data-ppcond="1">ifndef</span> <span class="macro" data-ref="_M/__NET_SCHED_CODEL_H">__NET_SCHED_CODEL_H</span></u></td></tr>
+<tr><th id="2">2</th><td><u>#define <dfn class="macro" id="_M/__NET_SCHED_CODEL_H" data-ref="_M/__NET_SCHED_CODEL_H">__NET_SCHED_CODEL_H</dfn></u></td></tr>
+<tr><th id="3">3</th><td></td></tr>
+<tr><th id="4">4</th><td><i>/*</i></td></tr>
+<tr><th id="5">5</th><td><i> * Codel - The Controlled-Delay Active Queue Management algorithm</i></td></tr>
+<tr><th id="6">6</th><td><i> *</i></td></tr>
+<tr><th id="7">7</th><td><i> *  Copyright (C) 2011-2012 Kathleen Nichols &lt;nichols@pollere.com&gt;</i></td></tr>
+<tr><th id="8">8</th><td><i> *  Copyright (C) 2011-2012 Van Jacobson &lt;van@pollere.net&gt;</i></td></tr>
+<tr><th id="9">9</th><td><i> *  Copyright (C) 2012 Michael D. Taht &lt;dave.taht@bufferbloat.net&gt;</i></td></tr>
+<tr><th id="10">10</th><td><i> *  Copyright (C) 2012,2015 Eric Dumazet &lt;edumazet@google.com&gt;</i></td></tr>
+<tr><th id="11">11</th><td><i> *</i></td></tr>
+<tr><th id="12">12</th><td><i> * Redistribution and use in source and binary forms, with or without</i></td></tr>
+<tr><th id="13">13</th><td><i> * modification, are permitted provided that the following conditions</i></td></tr>
+<tr><th id="14">14</th><td><i> * are met:</i></td></tr>
+<tr><th id="15">15</th><td><i> * 1. Redistributions of source code must retain the above copyright</i></td></tr>
+<tr><th id="16">16</th><td><i> *    notice, this list of conditions, and the following disclaimer,</i></td></tr>
+<tr><th id="17">17</th><td><i> *    without modification.</i></td></tr>
+<tr><th id="18">18</th><td><i> * 2. Redistributions in binary form must reproduce the above copyright</i></td></tr>
+<tr><th id="19">19</th><td><i> *    notice, this list of conditions and the following disclaimer in the</i></td></tr>
+<tr><th id="20">20</th><td><i> *    documentation and/or other materials provided with the distribution.</i></td></tr>
+<tr><th id="21">21</th><td><i> * 3. The names of the authors may not be used to endorse or promote products</i></td></tr>
+<tr><th id="22">22</th><td><i> *    derived from this software without specific prior written permission.</i></td></tr>
+<tr><th id="23">23</th><td><i> *</i></td></tr>
+<tr><th id="24">24</th><td><i> * Alternatively, provided that this notice is retained in full, this</i></td></tr>
+<tr><th id="25">25</th><td><i> * software may be distributed under the terms of the GNU General</i></td></tr>
+<tr><th id="26">26</th><td><i> * Public License ("GPL") version 2, in which case the provisions of the</i></td></tr>
+<tr><th id="27">27</th><td><i> * GPL apply INSTEAD OF those given above.</i></td></tr>
+<tr><th id="28">28</th><td><i> *</i></td></tr>
+<tr><th id="29">29</th><td><i> * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS</i></td></tr>
+<tr><th id="30">30</th><td><i> * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT</i></td></tr>
+<tr><th id="31">31</th><td><i> * LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR</i></td></tr>
+<tr><th id="32">32</th><td><i> * A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT</i></td></tr>
+<tr><th id="33">33</th><td><i> * OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,</i></td></tr>
+<tr><th id="34">34</th><td><i> * SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT</i></td></tr>
+<tr><th id="35">35</th><td><i> * LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,</i></td></tr>
+<tr><th id="36">36</th><td><i> * DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY</i></td></tr>
+<tr><th id="37">37</th><td><i> * THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT</i></td></tr>
+<tr><th id="38">38</th><td><i> * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE</i></td></tr>
+<tr><th id="39">39</th><td><i> * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH</i></td></tr>
+<tr><th id="40">40</th><td><i> * DAMAGE.</i></td></tr>
+<tr><th id="41">41</th><td><i> *</i></td></tr>
+<tr><th id="42">42</th><td><i> */</i></td></tr>
+<tr><th id="43">43</th><td></td></tr>
+<tr><th id="44">44</th><td><u>#include <a href="../linux/types.h.html">&lt;linux/types.h&gt;</a></u></td></tr>
+<tr><th id="45">45</th><td><u>#include <a href="../linux/ktime.h.html">&lt;linux/ktime.h&gt;</a></u></td></tr>
+<tr><th id="46">46</th><td><u>#include <a href="../linux/skbuff.h.html">&lt;linux/skbuff.h&gt;</a></u></td></tr>
+<tr><th id="47">47</th><td><u>#include <a href="pkt_sched.h.html">&lt;net/pkt_sched.h&gt;</a></u></td></tr>
+<tr><th id="48">48</th><td><u>#include <a href="inet_ecn.h.html">&lt;net/inet_ecn.h&gt;</a></u></td></tr>
+<tr><th id="49">49</th><td></td></tr>
+<tr><th id="50">50</th><td><i>/* Controlling Queue Delay (CoDel) algorithm</i></td></tr>
+<tr><th id="51">51</th><td><i> * =========================================</i></td></tr>
+<tr><th id="52">52</th><td><i> * Source : Kathleen Nichols and Van Jacobson</i></td></tr>
+<tr><th id="53">53</th><td><i> * <a href="http://queue.acm.org/detail.cfm?id=2209336">http://queue.acm.org/detail.cfm?id=2209336</a></i></td></tr>
+<tr><th id="54">54</th><td><i> *</i></td></tr>
+<tr><th id="55">55</th><td><i> * Implemented on linux by Dave Taht and Eric Dumazet</i></td></tr>
+<tr><th id="56">56</th><td><i> */</i></td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td></td></tr>
+<tr><th id="59">59</th><td><i>/* CoDel uses a 1024 nsec clock, encoded in u32</i></td></tr>
+<tr><th id="60">60</th><td><i> * This gives a range of 2199 seconds, because of signed compares</i></td></tr>
+<tr><th id="61">61</th><td><i> */</i></td></tr>
+<tr><th id="62">62</th><td><b>typedef</b> <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="typedef" id="codel_time_t" title='codel_time_t' data-type='u32' data-ref="codel_time_t" data-ref-filename="codel_time_t">codel_time_t</dfn>;</td></tr>
+<tr><th id="63">63</th><td><b>typedef</b> <a class="typedef" href="../asm-generic/int-ll64.h.html#s32" title='s32' data-type='__s32' data-ref="s32" data-ref-filename="s32">s32</a> <dfn class="typedef" id="codel_tdiff_t" title='codel_tdiff_t' data-type='s32' data-ref="codel_tdiff_t" data-ref-filename="codel_tdiff_t">codel_tdiff_t</dfn>;</td></tr>
+<tr><th id="64">64</th><td><u>#define <dfn class="macro" id="_M/CODEL_SHIFT" data-ref="_M/CODEL_SHIFT">CODEL_SHIFT</dfn> 10</u></td></tr>
+<tr><th id="65">65</th><td><u>#define <dfn class="macro" id="_M/MS2TIME" data-ref="_M/MS2TIME">MS2TIME</dfn>(a) ((a * NSEC_PER_MSEC) &gt;&gt; CODEL_SHIFT)</u></td></tr>
+<tr><th id="66">66</th><td></td></tr>
+<tr><th id="67">67</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="#codel_time_t" title='codel_time_t' data-type='u32' data-ref="codel_time_t" data-ref-filename="codel_time_t">codel_time_t</a> <dfn class="decl def fn" id="codel_get_time" title='codel_get_time' data-ref="codel_get_time" data-ref-filename="codel_get_time">codel_get_time</dfn>(<em>void</em>)</td></tr>
+<tr><th id="68">68</th><td>{</td></tr>
+<tr><th id="69">69</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col8 decl" id="1028ns" title='ns' data-type='u64' data-ref="1028ns" data-ref-filename="1028ns">ns</dfn> = <a class="ref fn" href="../linux/timekeeping.h.html#ktime_get_ns" title='ktime_get_ns' data-ref="ktime_get_ns" data-ref-filename="ktime_get_ns">ktime_get_ns</a>();</td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td>	<b>return</b> <a class="local col8 ref" href="#1028ns" title='ns' data-ref="1028ns" data-ref-filename="1028ns">ns</a> &gt;&gt; <a class="macro" href="#64" title="10" data-ref="_M/CODEL_SHIFT">CODEL_SHIFT</a>;</td></tr>
+<tr><th id="72">72</th><td>}</td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td><i>/* Dealing with timer wrapping, according to RFC 1982, as desc in wikipedia:</i></td></tr>
+<tr><th id="75">75</th><td><i> *  <a href="https://en.wikipedia.org/wiki/Serial_number_arithmetic#General_Solution">https://en.wikipedia.org/wiki/Serial_number_arithmetic#General_Solution</a></i></td></tr>
+<tr><th id="76">76</th><td><i> * codel_time_after(a,b) returns true if the time a is after time b.</i></td></tr>
+<tr><th id="77">77</th><td><i> */</i></td></tr>
+<tr><th id="78">78</th><td><u>#define <dfn class="macro" id="_M/codel_time_after" data-ref="_M/codel_time_after">codel_time_after</dfn>(a, b)						\</u></td></tr>
+<tr><th id="79">79</th><td><u>	(typecheck(codel_time_t, a) &amp;&amp;					\</u></td></tr>
+<tr><th id="80">80</th><td><u>	 typecheck(codel_time_t, b) &amp;&amp;					\</u></td></tr>
+<tr><th id="81">81</th><td><u>	 ((s32)((a) - (b)) &gt; 0))</u></td></tr>
+<tr><th id="82">82</th><td><u>#define <dfn class="macro" id="_M/codel_time_before" data-ref="_M/codel_time_before">codel_time_before</dfn>(a, b) 	codel_time_after(b, a)</u></td></tr>
+<tr><th id="83">83</th><td></td></tr>
+<tr><th id="84">84</th><td><u>#define <dfn class="macro" id="_M/codel_time_after_eq" data-ref="_M/codel_time_after_eq">codel_time_after_eq</dfn>(a, b)					\</u></td></tr>
+<tr><th id="85">85</th><td><u>	(typecheck(codel_time_t, a) &amp;&amp;					\</u></td></tr>
+<tr><th id="86">86</th><td><u>	 typecheck(codel_time_t, b) &amp;&amp;					\</u></td></tr>
+<tr><th id="87">87</th><td><u>	 ((s32)((a) - (b)) &gt;= 0))</u></td></tr>
+<tr><th id="88">88</th><td><u>#define <dfn class="macro" id="_M/codel_time_before_eq" data-ref="_M/codel_time_before_eq">codel_time_before_eq</dfn>(a, b)	codel_time_after_eq(b, a)</u></td></tr>
+<tr><th id="89">89</th><td></td></tr>
+<tr><th id="90">90</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl def fn" id="codel_time_to_us" title='codel_time_to_us' data-ref="codel_time_to_us" data-ref-filename="codel_time_to_us">codel_time_to_us</dfn>(<a class="typedef" href="#codel_time_t" title='codel_time_t' data-type='u32' data-ref="codel_time_t" data-ref-filename="codel_time_t">codel_time_t</a> <dfn class="local col9 decl" id="1029val" title='val' data-type='codel_time_t' data-ref="1029val" data-ref-filename="1029val">val</dfn>)</td></tr>
+<tr><th id="91">91</th><td>{</td></tr>
+<tr><th id="92">92</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col0 decl" id="1030valns" title='valns' data-type='u64' data-ref="1030valns" data-ref-filename="1030valns">valns</dfn> = ((<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a>)<a class="local col9 ref" href="#1029val" title='val' data-ref="1029val" data-ref-filename="1029val">val</a> &lt;&lt; <a class="macro" href="#64" title="10" data-ref="_M/CODEL_SHIFT">CODEL_SHIFT</a>);</td></tr>
+<tr><th id="93">93</th><td></td></tr>
+<tr><th id="94">94</th><td>	<a class="macro" href="../asm-generic/div64.h.html#43" title="({ uint32_t __base = (1000L); uint32_t __rem; __rem = ((uint64_t)(valns)) % __base; (valns) = ((uint64_t)(valns)) / __base; __rem; })" data-ref="_M/do_div">do_div</a>(<a class="local col0 ref" href="#1030valns" title='valns' data-ref="1030valns" data-ref-filename="1030valns">valns</a>, <a class="macro" href="../linux/time64.h.html#25" title="1000L" data-ref="_M/NSEC_PER_USEC">NSEC_PER_USEC</a>);</td></tr>
+<tr><th id="95">95</th><td>	<b>return</b> (<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>)<a class="local col0 ref" href="#1030valns" title='valns' data-ref="1030valns" data-ref-filename="1030valns">valns</a>;</td></tr>
+<tr><th id="96">96</th><td>}</td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="99">99</th><td><i class="doc"> * struct codel_params - contains codel parameters</i></td></tr>
+<tr><th id="100">100</th><td><i class="doc"> *<span class="command"> @target</span>:	target queue size (in time units)</i></td></tr>
+<tr><th id="101">101</th><td><i class="doc"> *<span class="command"> @ce</span>_threshold:  threshold for marking packets with ECN CE</i></td></tr>
+<tr><th id="102">102</th><td><i class="doc"> *<span class="command"> @interval</span>:	width of moving time window</i></td></tr>
+<tr><th id="103">103</th><td><i class="doc"> *<span class="command"> @mtu</span>:	device mtu, or minimal queue backlog in bytes.</i></td></tr>
+<tr><th id="104">104</th><td><i class="doc"> *<span class="command"> @ecn</span>:	is Explicit Congestion Notification enabled</i></td></tr>
+<tr><th id="105">105</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="106">106</th><td><b>struct</b> <dfn class="type def" id="codel_params" title='codel_params' data-ref="codel_params" data-ref-filename="codel_params">codel_params</dfn> {</td></tr>
+<tr><th id="107">107</th><td>	<a class="typedef" href="#codel_time_t" title='codel_time_t' data-type='u32' data-ref="codel_time_t" data-ref-filename="codel_time_t">codel_time_t</a>	<dfn class="decl field" id="codel_params::target" title='codel_params::target' data-ref="codel_params::target" data-ref-filename="codel_params..target">target</dfn>;</td></tr>
+<tr><th id="108">108</th><td>	<a class="typedef" href="#codel_time_t" title='codel_time_t' data-type='u32' data-ref="codel_time_t" data-ref-filename="codel_time_t">codel_time_t</a>	<dfn class="decl field" id="codel_params::ce_threshold" title='codel_params::ce_threshold' data-ref="codel_params::ce_threshold" data-ref-filename="codel_params..ce_threshold">ce_threshold</dfn>;</td></tr>
+<tr><th id="109">109</th><td>	<a class="typedef" href="#codel_time_t" title='codel_time_t' data-type='u32' data-ref="codel_time_t" data-ref-filename="codel_time_t">codel_time_t</a>	<dfn class="decl field" id="codel_params::interval" title='codel_params::interval' data-ref="codel_params::interval" data-ref-filename="codel_params..interval">interval</dfn>;</td></tr>
+<tr><th id="110">110</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>		<dfn class="decl field" id="codel_params::mtu" title='codel_params::mtu' data-ref="codel_params::mtu" data-ref-filename="codel_params..mtu">mtu</dfn>;</td></tr>
+<tr><th id="111">111</th><td>	<a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a>		<dfn class="decl field" id="codel_params::ecn" title='codel_params::ecn' data-ref="codel_params::ecn" data-ref-filename="codel_params..ecn">ecn</dfn>;</td></tr>
+<tr><th id="112">112</th><td>};</td></tr>
+<tr><th id="113">113</th><td></td></tr>
+<tr><th id="114">114</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="115">115</th><td><i class="doc"> * struct codel_vars - contains codel variables</i></td></tr>
+<tr><th id="116">116</th><td><i class="doc"> *<span class="command"> @count</span>:		how many drops we've done since the last time we</i></td></tr>
+<tr><th id="117">117</th><td><i class="doc"> *			entered dropping state</i></td></tr>
+<tr><th id="118">118</th><td><i class="doc"> *<span class="command"> @lastcount</span>:		count at entry to dropping state</i></td></tr>
+<tr><th id="119">119</th><td><i class="doc"> *<span class="command"> @dropping</span>:		set to true if in dropping state</i></td></tr>
+<tr><th id="120">120</th><td><i class="doc"> * <span class="command">@rec</span>_<span class="verb">inv_sqrt:	reciprocal value of sqrt(count) &gt;&gt; 1</span></i></td></tr>
+<tr><th id="121">121</th><td><i class="doc"> *<span class="command"> @first</span>_above_time:	when we went (or will go) continuously above target</i></td></tr>
+<tr><th id="122">122</th><td><i class="doc"> *			for interval</i></td></tr>
+<tr><th id="123">123</th><td><i class="doc"> *<span class="command"> @drop</span>_next:		time to drop next packet, or when we dropped last</i></td></tr>
+<tr><th id="124">124</th><td><i class="doc"> *<span class="command"> @ldelay</span>:		sojourn time of last dequeued packet</i></td></tr>
+<tr><th id="125">125</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="126">126</th><td><b>struct</b> <dfn class="type def" id="codel_vars" title='codel_vars' data-ref="codel_vars" data-ref-filename="codel_vars">codel_vars</dfn> {</td></tr>
+<tr><th id="127">127</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>		<dfn class="decl field" id="codel_vars::count" title='codel_vars::count' data-ref="codel_vars::count" data-ref-filename="codel_vars..count">count</dfn>;</td></tr>
+<tr><th id="128">128</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>		<dfn class="decl field" id="codel_vars::lastcount" title='codel_vars::lastcount' data-ref="codel_vars::lastcount" data-ref-filename="codel_vars..lastcount">lastcount</dfn>;</td></tr>
+<tr><th id="129">129</th><td>	<a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a>		<dfn class="decl field" id="codel_vars::dropping" title='codel_vars::dropping' data-ref="codel_vars::dropping" data-ref-filename="codel_vars..dropping">dropping</dfn>;</td></tr>
+<tr><th id="130">130</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a>		<dfn class="decl field" id="codel_vars::rec_inv_sqrt" title='codel_vars::rec_inv_sqrt' data-ref="codel_vars::rec_inv_sqrt" data-ref-filename="codel_vars..rec_inv_sqrt">rec_inv_sqrt</dfn>;</td></tr>
+<tr><th id="131">131</th><td>	<a class="typedef" href="#codel_time_t" title='codel_time_t' data-type='u32' data-ref="codel_time_t" data-ref-filename="codel_time_t">codel_time_t</a>	<dfn class="decl field" id="codel_vars::first_above_time" title='codel_vars::first_above_time' data-ref="codel_vars::first_above_time" data-ref-filename="codel_vars..first_above_time">first_above_time</dfn>;</td></tr>
+<tr><th id="132">132</th><td>	<a class="typedef" href="#codel_time_t" title='codel_time_t' data-type='u32' data-ref="codel_time_t" data-ref-filename="codel_time_t">codel_time_t</a>	<dfn class="decl field" id="codel_vars::drop_next" title='codel_vars::drop_next' data-ref="codel_vars::drop_next" data-ref-filename="codel_vars..drop_next">drop_next</dfn>;</td></tr>
+<tr><th id="133">133</th><td>	<a class="typedef" href="#codel_time_t" title='codel_time_t' data-type='u32' data-ref="codel_time_t" data-ref-filename="codel_time_t">codel_time_t</a>	<dfn class="decl field" id="codel_vars::ldelay" title='codel_vars::ldelay' data-ref="codel_vars::ldelay" data-ref-filename="codel_vars..ldelay">ldelay</dfn>;</td></tr>
+<tr><th id="134">134</th><td>};</td></tr>
+<tr><th id="135">135</th><td></td></tr>
+<tr><th id="136">136</th><td><u>#define <dfn class="macro" id="_M/REC_INV_SQRT_BITS" data-ref="_M/REC_INV_SQRT_BITS">REC_INV_SQRT_BITS</dfn> (8 * sizeof(u16)) /* or sizeof_in_bits(rec_inv_sqrt) */</u></td></tr>
+<tr><th id="137">137</th><td><i>/* needed shift to get a Q0.32 number from rec_inv_sqrt */</i></td></tr>
+<tr><th id="138">138</th><td><u>#define <dfn class="macro" id="_M/REC_INV_SQRT_SHIFT" data-ref="_M/REC_INV_SQRT_SHIFT">REC_INV_SQRT_SHIFT</dfn> (32 - REC_INV_SQRT_BITS)</u></td></tr>
+<tr><th id="139">139</th><td></td></tr>
+<tr><th id="140">140</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="141">141</th><td><i class="doc"> * struct codel_stats - contains codel shared variables and stats</i></td></tr>
+<tr><th id="142">142</th><td><i class="doc"> *<span class="command"> @maxpacket</span>:	largest packet we've seen so far</i></td></tr>
+<tr><th id="143">143</th><td><i class="doc"> *<span class="command"> @drop</span>_count:	temp count of dropped packets in dequeue()</i></td></tr>
+<tr><th id="144">144</th><td><i class="doc"> *<span class="command"> @drop</span>_len:	bytes of dropped packets in dequeue()</i></td></tr>
+<tr><th id="145">145</th><td><i class="doc"> * ecn_mark:	number of packets we ECN marked instead of dropping</i></td></tr>
+<tr><th id="146">146</th><td><i class="doc"> * ce_mark:	number of packets CE marked because sojourn time was above ce_threshold</i></td></tr>
+<tr><th id="147">147</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="148">148</th><td><b>struct</b> <dfn class="type def" id="codel_stats" title='codel_stats' data-ref="codel_stats" data-ref-filename="codel_stats">codel_stats</dfn> {</td></tr>
+<tr><th id="149">149</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>		<dfn class="decl field" id="codel_stats::maxpacket" title='codel_stats::maxpacket' data-ref="codel_stats::maxpacket" data-ref-filename="codel_stats..maxpacket">maxpacket</dfn>;</td></tr>
+<tr><th id="150">150</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>		<dfn class="decl field" id="codel_stats::drop_count" title='codel_stats::drop_count' data-ref="codel_stats::drop_count" data-ref-filename="codel_stats..drop_count">drop_count</dfn>;</td></tr>
+<tr><th id="151">151</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>		<dfn class="decl field" id="codel_stats::drop_len" title='codel_stats::drop_len' data-ref="codel_stats::drop_len" data-ref-filename="codel_stats..drop_len">drop_len</dfn>;</td></tr>
+<tr><th id="152">152</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>		<dfn class="decl field" id="codel_stats::ecn_mark" title='codel_stats::ecn_mark' data-ref="codel_stats::ecn_mark" data-ref-filename="codel_stats..ecn_mark">ecn_mark</dfn>;</td></tr>
+<tr><th id="153">153</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>		<dfn class="decl field" id="codel_stats::ce_mark" title='codel_stats::ce_mark' data-ref="codel_stats::ce_mark" data-ref-filename="codel_stats..ce_mark">ce_mark</dfn>;</td></tr>
+<tr><th id="154">154</th><td>};</td></tr>
+<tr><th id="155">155</th><td></td></tr>
+<tr><th id="156">156</th><td><u>#define <dfn class="macro" id="_M/CODEL_DISABLED_THRESHOLD" data-ref="_M/CODEL_DISABLED_THRESHOLD">CODEL_DISABLED_THRESHOLD</dfn> INT_MAX</u></td></tr>
+<tr><th id="157">157</th><td></td></tr>
+<tr><th id="158">158</th><td><b>typedef</b> <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> (*<dfn class="typedef" id="codel_skb_len_t" title='codel_skb_len_t' data-type='u32 (*)(const struct sk_buff *)' data-ref="codel_skb_len_t" data-ref-filename="codel_skb_len_t">codel_skb_len_t</dfn>)(<em>const</em> <b>struct</b> <a class="type" href="../linux/skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col1 decl" id="1031skb" title='skb' data-type='const struct sk_buff *' data-ref="1031skb" data-ref-filename="1031skb">skb</dfn>);</td></tr>
+<tr><th id="159">159</th><td><b>typedef</b> <a class="typedef" href="#codel_time_t" title='codel_time_t' data-type='u32' data-ref="codel_time_t" data-ref-filename="codel_time_t">codel_time_t</a> (*<dfn class="typedef" id="codel_skb_time_t" title='codel_skb_time_t' data-type='codel_time_t (*)(const struct sk_buff *)' data-ref="codel_skb_time_t" data-ref-filename="codel_skb_time_t">codel_skb_time_t</dfn>)(<em>const</em> <b>struct</b> <a class="type" href="../linux/skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col2 decl" id="1032skb" title='skb' data-type='const struct sk_buff *' data-ref="1032skb" data-ref-filename="1032skb">skb</dfn>);</td></tr>
+<tr><th id="160">160</th><td><b>typedef</b> <em>void</em> (*<dfn class="typedef" id="codel_skb_drop_t" title='codel_skb_drop_t' data-type='void (*)(struct sk_buff *, void *)' data-ref="codel_skb_drop_t" data-ref-filename="codel_skb_drop_t">codel_skb_drop_t</dfn>)(<b>struct</b> <a class="type" href="../linux/skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col3 decl" id="1033skb" title='skb' data-type='struct sk_buff *' data-ref="1033skb" data-ref-filename="1033skb">skb</dfn>, <em>void</em> *<dfn class="local col4 decl" id="1034ctx" title='ctx' data-type='void *' data-ref="1034ctx" data-ref-filename="1034ctx">ctx</dfn>);</td></tr>
+<tr><th id="161">161</th><td><b>typedef</b> <b>struct</b> <a class="type" href="../linux/skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> * (*<dfn class="typedef" id="codel_skb_dequeue_t" title='codel_skb_dequeue_t' data-type='struct sk_buff *(*)(struct codel_vars *, void *)' data-ref="codel_skb_dequeue_t" data-ref-filename="codel_skb_dequeue_t">codel_skb_dequeue_t</dfn>)(<b>struct</b> <a class="type" href="#codel_vars" title='codel_vars' data-ref="codel_vars" data-ref-filename="codel_vars">codel_vars</a> *<dfn class="local col5 decl" id="1035vars" title='vars' data-type='struct codel_vars *' data-ref="1035vars" data-ref-filename="1035vars">vars</dfn>,</td></tr>
+<tr><th id="162">162</th><td>						<em>void</em> *<dfn class="local col6 decl" id="1036ctx" title='ctx' data-type='void *' data-ref="1036ctx" data-ref-filename="1036ctx">ctx</dfn>);</td></tr>
+<tr><th id="163">163</th><td></td></tr>
+<tr><th id="164">164</th><td><u>#<span data-ppcond="1">endif</span></u></td></tr>
+<tr><th id="165">165</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../net/mac80211/aes_cmac.c.html'>linux-5.3.1/net/mac80211/aes_cmac.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

@@ -1,0 +1,913 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>ehci.h source code [linux-5.3.1/drivers/usb/host/ehci.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="ehci_driver_overrides,ehci_fstn,ehci_hcd,ehci_hrtimer_event,ehci_iso_packet,ehci_iso_sched,ehci_iso_stream,ehci_itd,ehci_per_sched,ehci_qh,ehci_qh_hw,ehci_qtd,ehci_rh_state,ehci_shadow,ehci_sitd,ehci_stats,ehci_tt "/>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/drivers/usb/host/ehci.h'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>linux-5.3.1</a>/<a href='../..'>drivers</a>/<a href='..'>usb</a>/<a href='./'>host</a>/<a href='ehci.h.html'>ehci.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0+</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * Copyright (c) 2001-2002 by David Brownell</i></td></tr>
+<tr><th id="4">4</th><td><i> */</i></td></tr>
+<tr><th id="5">5</th><td></td></tr>
+<tr><th id="6">6</th><td><u>#<span data-ppcond="6">ifndef</span> <span class="macro" data-ref="_M/__LINUX_EHCI_HCD_H">__LINUX_EHCI_HCD_H</span></u></td></tr>
+<tr><th id="7">7</th><td><u>#define <dfn class="macro" id="_M/__LINUX_EHCI_HCD_H" data-ref="_M/__LINUX_EHCI_HCD_H">__LINUX_EHCI_HCD_H</dfn></u></td></tr>
+<tr><th id="8">8</th><td></td></tr>
+<tr><th id="9">9</th><td><i>/* definitions used for the EHCI driver */</i></td></tr>
+<tr><th id="10">10</th><td></td></tr>
+<tr><th id="11">11</th><td><i>/*</i></td></tr>
+<tr><th id="12">12</th><td><i> * __hc32 and __hc16 are "Host Controller" types, they may be equivalent to</i></td></tr>
+<tr><th id="13">13</th><td><i> * __leXX (normally) or __beXX (given EHCI_BIG_ENDIAN_DESC), depending on</i></td></tr>
+<tr><th id="14">14</th><td><i> * the host controller implementation.</i></td></tr>
+<tr><th id="15">15</th><td><i> *</i></td></tr>
+<tr><th id="16">16</th><td><i> * To facilitate the strongest possible byte-order checking from "sparse"</i></td></tr>
+<tr><th id="17">17</th><td><i> * and so on, we use __leXX unless that's not practical.</i></td></tr>
+<tr><th id="18">18</th><td><i> */</i></td></tr>
+<tr><th id="19">19</th><td><u>#<span data-ppcond="19">ifdef</span> <span class="macro" data-ref="_M/CONFIG_USB_EHCI_BIG_ENDIAN_DESC">CONFIG_USB_EHCI_BIG_ENDIAN_DESC</span></u></td></tr>
+<tr><th id="20">20</th><td><b>typedef</b> __u32 __bitwise __hc32;</td></tr>
+<tr><th id="21">21</th><td><b>typedef</b> __u16 __bitwise __hc16;</td></tr>
+<tr><th id="22">22</th><td><u>#<span data-ppcond="19">else</span></u></td></tr>
+<tr><th id="23">23</th><td><u>#define <dfn class="macro" id="_M/__hc32" data-ref="_M/__hc32">__hc32</dfn>	<a class="typedef" href="../../../include/uapi/linux/types.h.html#__le32" title='__le32' data-type='__u32' data-ref="__le32" data-ref-filename="__le32">__le32</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#define <dfn class="macro" id="_M/__hc16" data-ref="_M/__hc16">__hc16</dfn>	__le16</u></td></tr>
+<tr><th id="25">25</th><td><u>#<span data-ppcond="19">endif</span></u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><i>/* statistics can be kept for tuning/monitoring */</i></td></tr>
+<tr><th id="28">28</th><td><u>#<span data-ppcond="28">ifdef</span> <span class="macro" data-ref="_M/CONFIG_DYNAMIC_DEBUG">CONFIG_DYNAMIC_DEBUG</span></u></td></tr>
+<tr><th id="29">29</th><td><u>#define EHCI_STATS</u></td></tr>
+<tr><th id="30">30</th><td><u>#<span data-ppcond="28">endif</span></u></td></tr>
+<tr><th id="31">31</th><td></td></tr>
+<tr><th id="32">32</th><td><b>struct</b> <dfn class="type def" id="ehci_stats" title='ehci_stats' data-ref="ehci_stats" data-ref-filename="ehci_stats">ehci_stats</dfn> {</td></tr>
+<tr><th id="33">33</th><td>	<i>/* irq usage */</i></td></tr>
+<tr><th id="34">34</th><td>	<em>unsigned</em> <em>long</em>		<dfn class="decl field" id="ehci_stats::normal" title='ehci_stats::normal' data-ref="ehci_stats::normal" data-ref-filename="ehci_stats..normal">normal</dfn>;</td></tr>
+<tr><th id="35">35</th><td>	<em>unsigned</em> <em>long</em>		<dfn class="decl field" id="ehci_stats::error" title='ehci_stats::error' data-ref="ehci_stats::error" data-ref-filename="ehci_stats..error">error</dfn>;</td></tr>
+<tr><th id="36">36</th><td>	<em>unsigned</em> <em>long</em>		<dfn class="decl field" id="ehci_stats::iaa" title='ehci_stats::iaa' data-ref="ehci_stats::iaa" data-ref-filename="ehci_stats..iaa">iaa</dfn>;</td></tr>
+<tr><th id="37">37</th><td>	<em>unsigned</em> <em>long</em>		<dfn class="decl field" id="ehci_stats::lost_iaa" title='ehci_stats::lost_iaa' data-ref="ehci_stats::lost_iaa" data-ref-filename="ehci_stats..lost_iaa">lost_iaa</dfn>;</td></tr>
+<tr><th id="38">38</th><td></td></tr>
+<tr><th id="39">39</th><td>	<i>/* termination of urbs from core */</i></td></tr>
+<tr><th id="40">40</th><td>	<em>unsigned</em> <em>long</em>		<dfn class="decl field" id="ehci_stats::complete" title='ehci_stats::complete' data-ref="ehci_stats::complete" data-ref-filename="ehci_stats..complete">complete</dfn>;</td></tr>
+<tr><th id="41">41</th><td>	<em>unsigned</em> <em>long</em>		<dfn class="decl field" id="ehci_stats::unlink" title='ehci_stats::unlink' data-ref="ehci_stats::unlink" data-ref-filename="ehci_stats..unlink">unlink</dfn>;</td></tr>
+<tr><th id="42">42</th><td>};</td></tr>
+<tr><th id="43">43</th><td></td></tr>
+<tr><th id="44">44</th><td><i>/*</i></td></tr>
+<tr><th id="45">45</th><td><i> * Scheduling and budgeting information for periodic transfers, for both</i></td></tr>
+<tr><th id="46">46</th><td><i> * high-speed devices and full/low-speed devices lying behind a TT.</i></td></tr>
+<tr><th id="47">47</th><td><i> */</i></td></tr>
+<tr><th id="48">48</th><td><b>struct</b> <dfn class="type def" id="ehci_per_sched" title='ehci_per_sched' data-ref="ehci_per_sched" data-ref-filename="ehci_per_sched">ehci_per_sched</dfn> {</td></tr>
+<tr><th id="49">49</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/usb.h.html#usb_device" title='usb_device' data-ref="usb_device" data-ref-filename="usb_device">usb_device</a>	*<dfn class="decl field" id="ehci_per_sched::udev" title='ehci_per_sched::udev' data-ref="ehci_per_sched::udev" data-ref-filename="ehci_per_sched..udev">udev</dfn>;		<i>/* access to the TT */</i></td></tr>
+<tr><th id="50">50</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/usb.h.html#usb_host_endpoint" title='usb_host_endpoint' data-ref="usb_host_endpoint" data-ref-filename="usb_host_endpoint">usb_host_endpoint</a> *<dfn class="decl field" id="ehci_per_sched::ep" title='ehci_per_sched::ep' data-ref="ehci_per_sched::ep" data-ref-filename="ehci_per_sched..ep">ep</dfn>;</td></tr>
+<tr><th id="51">51</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="ehci_per_sched::ps_list" title='ehci_per_sched::ps_list' data-ref="ehci_per_sched::ps_list" data-ref-filename="ehci_per_sched..ps_list">ps_list</dfn>;	<i>/* node on ehci_tt's ps_list */</i></td></tr>
+<tr><th id="52">52</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a>			<dfn class="decl field" id="ehci_per_sched::tt_usecs" title='ehci_per_sched::tt_usecs' data-ref="ehci_per_sched::tt_usecs" data-ref-filename="ehci_per_sched..tt_usecs">tt_usecs</dfn>;	<i>/* time on the FS/LS bus */</i></td></tr>
+<tr><th id="53">53</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a>			<dfn class="decl field" id="ehci_per_sched::cs_mask" title='ehci_per_sched::cs_mask' data-ref="ehci_per_sched::cs_mask" data-ref-filename="ehci_per_sched..cs_mask">cs_mask</dfn>;	<i>/* C-mask and S-mask bytes */</i></td></tr>
+<tr><th id="54">54</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a>			<dfn class="decl field" id="ehci_per_sched::period" title='ehci_per_sched::period' data-ref="ehci_per_sched::period" data-ref-filename="ehci_per_sched..period">period</dfn>;		<i>/* actual period in frames */</i></td></tr>
+<tr><th id="55">55</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a>			<dfn class="decl field" id="ehci_per_sched::phase" title='ehci_per_sched::phase' data-ref="ehci_per_sched::phase" data-ref-filename="ehci_per_sched..phase">phase</dfn>;		<i>/* actual phase, frame part */</i></td></tr>
+<tr><th id="56">56</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a>			<dfn class="decl field" id="ehci_per_sched::bw_phase" title='ehci_per_sched::bw_phase' data-ref="ehci_per_sched::bw_phase" data-ref-filename="ehci_per_sched..bw_phase">bw_phase</dfn>;	<i>/* same, for bandwidth</i></td></tr>
+<tr><th id="57">57</th><td><i>						   reservation */</i></td></tr>
+<tr><th id="58">58</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a>			<dfn class="decl field" id="ehci_per_sched::phase_uf" title='ehci_per_sched::phase_uf' data-ref="ehci_per_sched::phase_uf" data-ref-filename="ehci_per_sched..phase_uf">phase_uf</dfn>;	<i>/* uframe part of the phase */</i></td></tr>
+<tr><th id="59">59</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a>			<dfn class="decl field" id="ehci_per_sched::usecs" title='ehci_per_sched::usecs' data-ref="ehci_per_sched::usecs" data-ref-filename="ehci_per_sched..usecs">usecs</dfn>, <dfn class="decl field" id="ehci_per_sched::c_usecs" title='ehci_per_sched::c_usecs' data-ref="ehci_per_sched::c_usecs" data-ref-filename="ehci_per_sched..c_usecs">c_usecs</dfn>;	<i>/* times on the HS bus */</i></td></tr>
+<tr><th id="60">60</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a>			<dfn class="decl field" id="ehci_per_sched::bw_uperiod" title='ehci_per_sched::bw_uperiod' data-ref="ehci_per_sched::bw_uperiod" data-ref-filename="ehci_per_sched..bw_uperiod">bw_uperiod</dfn>;	<i>/* period in microframes, for</i></td></tr>
+<tr><th id="61">61</th><td><i>						   bandwidth reservation */</i></td></tr>
+<tr><th id="62">62</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a>			<dfn class="decl field" id="ehci_per_sched::bw_period" title='ehci_per_sched::bw_period' data-ref="ehci_per_sched::bw_period" data-ref-filename="ehci_per_sched..bw_period">bw_period</dfn>;	<i>/* same, in frames */</i></td></tr>
+<tr><th id="63">63</th><td>};</td></tr>
+<tr><th id="64">64</th><td><u>#define <dfn class="macro" id="_M/NO_FRAME" data-ref="_M/NO_FRAME">NO_FRAME</dfn>	29999			/* frame not assigned yet */</u></td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td><i>/* ehci_hcd-&gt;lock guards shared data against other CPUs:</i></td></tr>
+<tr><th id="67">67</th><td><i> *   ehci_hcd:	async, unlink, periodic (and shadow), ...</i></td></tr>
+<tr><th id="68">68</th><td><i> *   usb_host_endpoint: hcpriv</i></td></tr>
+<tr><th id="69">69</th><td><i> *   ehci_qh:	qh_next, qtd_list</i></td></tr>
+<tr><th id="70">70</th><td><i> *   ehci_qtd:	qtd_list</i></td></tr>
+<tr><th id="71">71</th><td><i> *</i></td></tr>
+<tr><th id="72">72</th><td><i> * Also, hold this lock when talking to HC registers or</i></td></tr>
+<tr><th id="73">73</th><td><i> * when updating hw_* fields in shared qh/qtd/... structures.</i></td></tr>
+<tr><th id="74">74</th><td><i> */</i></td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td><u>#define	<dfn class="macro" id="_M/EHCI_MAX_ROOT_PORTS" data-ref="_M/EHCI_MAX_ROOT_PORTS">EHCI_MAX_ROOT_PORTS</dfn>	15		/* see HCS_N_PORTS */</u></td></tr>
+<tr><th id="77">77</th><td></td></tr>
+<tr><th id="78">78</th><td><i>/*</i></td></tr>
+<tr><th id="79">79</th><td><i> * ehci_rh_state values of EHCI_RH_RUNNING or above mean that the</i></td></tr>
+<tr><th id="80">80</th><td><i> * controller may be doing DMA.  Lower values mean there's no DMA.</i></td></tr>
+<tr><th id="81">81</th><td><i> */</i></td></tr>
+<tr><th id="82">82</th><td><b>enum</b> <dfn class="type def" id="ehci_rh_state" title='ehci_rh_state' data-ref="ehci_rh_state" data-ref-filename="ehci_rh_state">ehci_rh_state</dfn> {</td></tr>
+<tr><th id="83">83</th><td>	<dfn class="enum" id="EHCI_RH_HALTED" title='EHCI_RH_HALTED' data-ref="EHCI_RH_HALTED" data-ref-filename="EHCI_RH_HALTED">EHCI_RH_HALTED</dfn>,</td></tr>
+<tr><th id="84">84</th><td>	<dfn class="enum" id="EHCI_RH_SUSPENDED" title='EHCI_RH_SUSPENDED' data-ref="EHCI_RH_SUSPENDED" data-ref-filename="EHCI_RH_SUSPENDED">EHCI_RH_SUSPENDED</dfn>,</td></tr>
+<tr><th id="85">85</th><td>	<dfn class="enum" id="EHCI_RH_RUNNING" title='EHCI_RH_RUNNING' data-ref="EHCI_RH_RUNNING" data-ref-filename="EHCI_RH_RUNNING">EHCI_RH_RUNNING</dfn>,</td></tr>
+<tr><th id="86">86</th><td>	<dfn class="enum" id="EHCI_RH_STOPPING" title='EHCI_RH_STOPPING' data-ref="EHCI_RH_STOPPING" data-ref-filename="EHCI_RH_STOPPING">EHCI_RH_STOPPING</dfn></td></tr>
+<tr><th id="87">87</th><td>};</td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td><i>/*</i></td></tr>
+<tr><th id="90">90</th><td><i> * Timer events, ordered by increasing delay length.</i></td></tr>
+<tr><th id="91">91</th><td><i> * Always update event_delays_ns[] and event_handlers[] (defined in</i></td></tr>
+<tr><th id="92">92</th><td><i> * ehci-timer.c) in parallel with this list.</i></td></tr>
+<tr><th id="93">93</th><td><i> */</i></td></tr>
+<tr><th id="94">94</th><td><b>enum</b> <dfn class="type def" id="ehci_hrtimer_event" title='ehci_hrtimer_event' data-ref="ehci_hrtimer_event" data-ref-filename="ehci_hrtimer_event">ehci_hrtimer_event</dfn> {</td></tr>
+<tr><th id="95">95</th><td>	<dfn class="enum" id="EHCI_HRTIMER_POLL_ASS" title='EHCI_HRTIMER_POLL_ASS' data-ref="EHCI_HRTIMER_POLL_ASS" data-ref-filename="EHCI_HRTIMER_POLL_ASS">EHCI_HRTIMER_POLL_ASS</dfn>,		<i>/* Poll for async schedule off */</i></td></tr>
+<tr><th id="96">96</th><td>	<dfn class="enum" id="EHCI_HRTIMER_POLL_PSS" title='EHCI_HRTIMER_POLL_PSS' data-ref="EHCI_HRTIMER_POLL_PSS" data-ref-filename="EHCI_HRTIMER_POLL_PSS">EHCI_HRTIMER_POLL_PSS</dfn>,		<i>/* Poll for periodic schedule off */</i></td></tr>
+<tr><th id="97">97</th><td>	<dfn class="enum" id="EHCI_HRTIMER_POLL_DEAD" title='EHCI_HRTIMER_POLL_DEAD' data-ref="EHCI_HRTIMER_POLL_DEAD" data-ref-filename="EHCI_HRTIMER_POLL_DEAD">EHCI_HRTIMER_POLL_DEAD</dfn>,		<i>/* Wait for dead controller to stop */</i></td></tr>
+<tr><th id="98">98</th><td>	<dfn class="enum" id="EHCI_HRTIMER_UNLINK_INTR" title='EHCI_HRTIMER_UNLINK_INTR' data-ref="EHCI_HRTIMER_UNLINK_INTR" data-ref-filename="EHCI_HRTIMER_UNLINK_INTR">EHCI_HRTIMER_UNLINK_INTR</dfn>,	<i>/* Wait for interrupt QH unlink */</i></td></tr>
+<tr><th id="99">99</th><td>	<dfn class="enum" id="EHCI_HRTIMER_FREE_ITDS" title='EHCI_HRTIMER_FREE_ITDS' data-ref="EHCI_HRTIMER_FREE_ITDS" data-ref-filename="EHCI_HRTIMER_FREE_ITDS">EHCI_HRTIMER_FREE_ITDS</dfn>,		<i>/* Wait for unused iTDs and siTDs */</i></td></tr>
+<tr><th id="100">100</th><td>	<dfn class="enum" id="EHCI_HRTIMER_ACTIVE_UNLINK" title='EHCI_HRTIMER_ACTIVE_UNLINK' data-ref="EHCI_HRTIMER_ACTIVE_UNLINK" data-ref-filename="EHCI_HRTIMER_ACTIVE_UNLINK">EHCI_HRTIMER_ACTIVE_UNLINK</dfn>,	<i>/* Wait while unlinking an active QH */</i></td></tr>
+<tr><th id="101">101</th><td>	<dfn class="enum" id="EHCI_HRTIMER_START_UNLINK_INTR" title='EHCI_HRTIMER_START_UNLINK_INTR' data-ref="EHCI_HRTIMER_START_UNLINK_INTR" data-ref-filename="EHCI_HRTIMER_START_UNLINK_INTR">EHCI_HRTIMER_START_UNLINK_INTR</dfn>, <i>/* Unlink empty interrupt QHs */</i></td></tr>
+<tr><th id="102">102</th><td>	<dfn class="enum" id="EHCI_HRTIMER_ASYNC_UNLINKS" title='EHCI_HRTIMER_ASYNC_UNLINKS' data-ref="EHCI_HRTIMER_ASYNC_UNLINKS" data-ref-filename="EHCI_HRTIMER_ASYNC_UNLINKS">EHCI_HRTIMER_ASYNC_UNLINKS</dfn>,	<i>/* Unlink empty async QHs */</i></td></tr>
+<tr><th id="103">103</th><td>	<dfn class="enum" id="EHCI_HRTIMER_IAA_WATCHDOG" title='EHCI_HRTIMER_IAA_WATCHDOG' data-ref="EHCI_HRTIMER_IAA_WATCHDOG" data-ref-filename="EHCI_HRTIMER_IAA_WATCHDOG">EHCI_HRTIMER_IAA_WATCHDOG</dfn>,	<i>/* Handle lost IAA interrupts */</i></td></tr>
+<tr><th id="104">104</th><td>	<dfn class="enum" id="EHCI_HRTIMER_DISABLE_PERIODIC" title='EHCI_HRTIMER_DISABLE_PERIODIC' data-ref="EHCI_HRTIMER_DISABLE_PERIODIC" data-ref-filename="EHCI_HRTIMER_DISABLE_PERIODIC">EHCI_HRTIMER_DISABLE_PERIODIC</dfn>,	<i>/* Wait to disable periodic sched */</i></td></tr>
+<tr><th id="105">105</th><td>	<dfn class="enum" id="EHCI_HRTIMER_DISABLE_ASYNC" title='EHCI_HRTIMER_DISABLE_ASYNC' data-ref="EHCI_HRTIMER_DISABLE_ASYNC" data-ref-filename="EHCI_HRTIMER_DISABLE_ASYNC">EHCI_HRTIMER_DISABLE_ASYNC</dfn>,	<i>/* Wait to disable async sched */</i></td></tr>
+<tr><th id="106">106</th><td>	<dfn class="enum" id="EHCI_HRTIMER_IO_WATCHDOG" title='EHCI_HRTIMER_IO_WATCHDOG' data-ref="EHCI_HRTIMER_IO_WATCHDOG" data-ref-filename="EHCI_HRTIMER_IO_WATCHDOG">EHCI_HRTIMER_IO_WATCHDOG</dfn>,	<i>/* Check for missing IRQs */</i></td></tr>
+<tr><th id="107">107</th><td>	<dfn class="enum" id="EHCI_HRTIMER_NUM_EVENTS" title='EHCI_HRTIMER_NUM_EVENTS' data-ref="EHCI_HRTIMER_NUM_EVENTS" data-ref-filename="EHCI_HRTIMER_NUM_EVENTS">EHCI_HRTIMER_NUM_EVENTS</dfn>		<i>/* Must come last */</i></td></tr>
+<tr><th id="108">108</th><td>};</td></tr>
+<tr><th id="109">109</th><td><u>#define <dfn class="macro" id="_M/EHCI_HRTIMER_NO_EVENT" data-ref="_M/EHCI_HRTIMER_NO_EVENT">EHCI_HRTIMER_NO_EVENT</dfn>	99</u></td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td><b>struct</b> <dfn class="type def" id="ehci_hcd" title='ehci_hcd' data-ref="ehci_hcd" data-ref-filename="ehci_hcd">ehci_hcd</dfn> {			<i>/* one per controller */</i></td></tr>
+<tr><th id="112">112</th><td>	<i>/* timing support */</i></td></tr>
+<tr><th id="113">113</th><td>	<b>enum</b> <a class="type" href="#ehci_hrtimer_event" title='ehci_hrtimer_event' data-ref="ehci_hrtimer_event" data-ref-filename="ehci_hrtimer_event">ehci_hrtimer_event</a>	<dfn class="decl field" id="ehci_hcd::next_hrtimer_event" title='ehci_hcd::next_hrtimer_event' data-ref="ehci_hcd::next_hrtimer_event" data-ref-filename="ehci_hcd..next_hrtimer_event">next_hrtimer_event</dfn>;</td></tr>
+<tr><th id="114">114</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::enabled_hrtimer_events" title='ehci_hcd::enabled_hrtimer_events' data-ref="ehci_hcd::enabled_hrtimer_events" data-ref-filename="ehci_hcd..enabled_hrtimer_events">enabled_hrtimer_events</dfn>;</td></tr>
+<tr><th id="115">115</th><td>	<a class="typedef" href="../../../include/linux/ktime.h.html#ktime_t" title='ktime_t' data-type='s64' data-ref="ktime_t" data-ref-filename="ktime_t">ktime_t</a>			<dfn class="decl field" id="ehci_hcd::hr_timeouts" title='ehci_hcd::hr_timeouts' data-ref="ehci_hcd::hr_timeouts" data-ref-filename="ehci_hcd..hr_timeouts">hr_timeouts</dfn>[<a class="enum" href="#EHCI_HRTIMER_NUM_EVENTS" title='EHCI_HRTIMER_NUM_EVENTS' data-ref="EHCI_HRTIMER_NUM_EVENTS" data-ref-filename="EHCI_HRTIMER_NUM_EVENTS">EHCI_HRTIMER_NUM_EVENTS</a>];</td></tr>
+<tr><th id="116">116</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/hrtimer.h.html#hrtimer" title='hrtimer' data-ref="hrtimer" data-ref-filename="hrtimer">hrtimer</a>		<dfn class="decl field" id="ehci_hcd::hrtimer" title='ehci_hcd::hrtimer' data-ref="ehci_hcd::hrtimer" data-ref-filename="ehci_hcd..hrtimer">hrtimer</dfn>;</td></tr>
+<tr><th id="117">117</th><td></td></tr>
+<tr><th id="118">118</th><td>	<em>int</em>			<dfn class="decl field" id="ehci_hcd::PSS_poll_count" title='ehci_hcd::PSS_poll_count' data-ref="ehci_hcd::PSS_poll_count" data-ref-filename="ehci_hcd..PSS_poll_count">PSS_poll_count</dfn>;</td></tr>
+<tr><th id="119">119</th><td>	<em>int</em>			<dfn class="decl field" id="ehci_hcd::ASS_poll_count" title='ehci_hcd::ASS_poll_count' data-ref="ehci_hcd::ASS_poll_count" data-ref-filename="ehci_hcd..ASS_poll_count">ASS_poll_count</dfn>;</td></tr>
+<tr><th id="120">120</th><td>	<em>int</em>			<dfn class="decl field" id="ehci_hcd::died_poll_count" title='ehci_hcd::died_poll_count' data-ref="ehci_hcd::died_poll_count" data-ref-filename="ehci_hcd..died_poll_count">died_poll_count</dfn>;</td></tr>
+<tr><th id="121">121</th><td></td></tr>
+<tr><th id="122">122</th><td>	<i>/* glue to PCI and HCD framework */</i></td></tr>
+<tr><th id="123">123</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/usb/ehci_def.h.html#ehci_caps" title='ehci_caps' data-ref="ehci_caps" data-ref-filename="ehci_caps" id="ehci_caps"><a class="type" href="../../../include/linux/usb/ehci_def.h.html#ehci_caps" title='ehci_caps' data-ref="ehci_caps" data-ref-filename="ehci_caps">ehci_caps</a></a> <a class="macro" href="../../../include/linux/compiler_types.h.html#36" title="" data-ref="_M/__iomem">__iomem</a> *<dfn class="decl field" id="ehci_hcd::caps" title='ehci_hcd::caps' data-ref="ehci_hcd::caps" data-ref-filename="ehci_hcd..caps">caps</dfn>;</td></tr>
+<tr><th id="124">124</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/usb/ehci_def.h.html#ehci_regs" title='ehci_regs' data-ref="ehci_regs" data-ref-filename="ehci_regs" id="ehci_regs"><a class="type" href="../../../include/linux/usb/ehci_def.h.html#ehci_regs" title='ehci_regs' data-ref="ehci_regs" data-ref-filename="ehci_regs">ehci_regs</a></a> <a class="macro" href="../../../include/linux/compiler_types.h.html#36" title="" data-ref="_M/__iomem">__iomem</a> *<dfn class="decl field" id="ehci_hcd::regs" title='ehci_hcd::regs' data-ref="ehci_hcd::regs" data-ref-filename="ehci_hcd..regs">regs</dfn>;</td></tr>
+<tr><th id="125">125</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/usb/ehci-dbgp.h.html#ehci_dbg_port" title='ehci_dbg_port' data-ref="ehci_dbg_port" data-ref-filename="ehci_dbg_port" id="ehci_dbg_port"><a class="type" href="../../../include/linux/usb/ehci-dbgp.h.html#ehci_dbg_port" title='ehci_dbg_port' data-ref="ehci_dbg_port" data-ref-filename="ehci_dbg_port">ehci_dbg_port</a></a> <a class="macro" href="../../../include/linux/compiler_types.h.html#36" title="" data-ref="_M/__iomem">__iomem</a> *<dfn class="decl field" id="ehci_hcd::debug" title='ehci_hcd::debug' data-ref="ehci_hcd::debug" data-ref-filename="ehci_hcd..debug">debug</dfn>;</td></tr>
+<tr><th id="126">126</th><td></td></tr>
+<tr><th id="127">127</th><td>	<a class="typedef" href="../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>			<dfn class="decl field" id="ehci_hcd::hcs_params" title='ehci_hcd::hcs_params' data-ref="ehci_hcd::hcs_params" data-ref-filename="ehci_hcd..hcs_params">hcs_params</dfn>;	<i>/* cached register copy */</i></td></tr>
+<tr><th id="128">128</th><td>	<a class="typedef" href="../../../include/linux/spinlock_types.h.html#spinlock_t" title='spinlock_t' data-type='struct spinlock' data-ref="spinlock_t" data-ref-filename="spinlock_t">spinlock_t</a>		<dfn class="decl field" id="ehci_hcd::lock" title='ehci_hcd::lock' data-ref="ehci_hcd::lock" data-ref-filename="ehci_hcd..lock">lock</dfn>;</td></tr>
+<tr><th id="129">129</th><td>	<b>enum</b> <a class="type" href="#ehci_rh_state" title='ehci_rh_state' data-ref="ehci_rh_state" data-ref-filename="ehci_rh_state">ehci_rh_state</a>	<dfn class="decl field" id="ehci_hcd::rh_state" title='ehci_hcd::rh_state' data-ref="ehci_hcd::rh_state" data-ref-filename="ehci_hcd..rh_state">rh_state</dfn>;</td></tr>
+<tr><th id="130">130</th><td></td></tr>
+<tr><th id="131">131</th><td>	<i>/* general schedule support */</i></td></tr>
+<tr><th id="132">132</th><td>	<a class="typedef" href="../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a>			<dfn class="decl field" id="ehci_hcd::scanning" title='ehci_hcd::scanning' data-ref="ehci_hcd::scanning" data-ref-filename="ehci_hcd..scanning">scanning</dfn>:<var>1</var>;</td></tr>
+<tr><th id="133">133</th><td>	<a class="typedef" href="../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a>			<dfn class="decl field" id="ehci_hcd::need_rescan" title='ehci_hcd::need_rescan' data-ref="ehci_hcd::need_rescan" data-ref-filename="ehci_hcd..need_rescan">need_rescan</dfn>:<var>1</var>;</td></tr>
+<tr><th id="134">134</th><td>	<a class="typedef" href="../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a>			<dfn class="decl field" id="ehci_hcd::intr_unlinking" title='ehci_hcd::intr_unlinking' data-ref="ehci_hcd::intr_unlinking" data-ref-filename="ehci_hcd..intr_unlinking">intr_unlinking</dfn>:<var>1</var>;</td></tr>
+<tr><th id="135">135</th><td>	<a class="typedef" href="../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a>			<dfn class="decl field" id="ehci_hcd::iaa_in_progress" title='ehci_hcd::iaa_in_progress' data-ref="ehci_hcd::iaa_in_progress" data-ref-filename="ehci_hcd..iaa_in_progress">iaa_in_progress</dfn>:<var>1</var>;</td></tr>
+<tr><th id="136">136</th><td>	<a class="typedef" href="../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a>			<dfn class="decl field" id="ehci_hcd::async_unlinking" title='ehci_hcd::async_unlinking' data-ref="ehci_hcd::async_unlinking" data-ref-filename="ehci_hcd..async_unlinking">async_unlinking</dfn>:<var>1</var>;</td></tr>
+<tr><th id="137">137</th><td>	<a class="typedef" href="../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a>			<dfn class="decl field" id="ehci_hcd::shutdown" title='ehci_hcd::shutdown' data-ref="ehci_hcd::shutdown" data-ref-filename="ehci_hcd..shutdown">shutdown</dfn>:<var>1</var>;</td></tr>
+<tr><th id="138">138</th><td>	<b>struct</b> <a class="type" href="#ehci_qh" title='ehci_qh' data-ref="ehci_qh" data-ref-filename="ehci_qh">ehci_qh</a>		*<dfn class="decl field" id="ehci_hcd::qh_scan_next" title='ehci_hcd::qh_scan_next' data-ref="ehci_hcd::qh_scan_next" data-ref-filename="ehci_hcd..qh_scan_next">qh_scan_next</dfn>;</td></tr>
+<tr><th id="139">139</th><td></td></tr>
+<tr><th id="140">140</th><td>	<i>/* async schedule support */</i></td></tr>
+<tr><th id="141">141</th><td>	<b>struct</b> <a class="type" href="#ehci_qh" title='ehci_qh' data-ref="ehci_qh" data-ref-filename="ehci_qh">ehci_qh</a>		*<dfn class="decl field" id="ehci_hcd::async" title='ehci_hcd::async' data-ref="ehci_hcd::async" data-ref-filename="ehci_hcd..async">async</dfn>;</td></tr>
+<tr><th id="142">142</th><td>	<b>struct</b> <a class="type" href="#ehci_qh" title='ehci_qh' data-ref="ehci_qh" data-ref-filename="ehci_qh">ehci_qh</a>		*<dfn class="decl field" id="ehci_hcd::dummy" title='ehci_hcd::dummy' data-ref="ehci_hcd::dummy" data-ref-filename="ehci_hcd..dummy">dummy</dfn>;		<i>/* For AMD quirk use */</i></td></tr>
+<tr><th id="143">143</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="ehci_hcd::async_unlink" title='ehci_hcd::async_unlink' data-ref="ehci_hcd::async_unlink" data-ref-filename="ehci_hcd..async_unlink">async_unlink</dfn>;</td></tr>
+<tr><th id="144">144</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="ehci_hcd::async_idle" title='ehci_hcd::async_idle' data-ref="ehci_hcd::async_idle" data-ref-filename="ehci_hcd..async_idle">async_idle</dfn>;</td></tr>
+<tr><th id="145">145</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::async_unlink_cycle" title='ehci_hcd::async_unlink_cycle' data-ref="ehci_hcd::async_unlink_cycle" data-ref-filename="ehci_hcd..async_unlink_cycle">async_unlink_cycle</dfn>;</td></tr>
+<tr><th id="146">146</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::async_count" title='ehci_hcd::async_count' data-ref="ehci_hcd::async_count" data-ref-filename="ehci_hcd..async_count">async_count</dfn>;	<i>/* async activity count */</i></td></tr>
+<tr><th id="147">147</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_hcd::old_current" title='ehci_hcd::old_current' data-ref="ehci_hcd::old_current" data-ref-filename="ehci_hcd..old_current">old_current</dfn>;	<i>/* Test for QH becoming */</i></td></tr>
+<tr><th id="148">148</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_hcd::old_token" title='ehci_hcd::old_token' data-ref="ehci_hcd::old_token" data-ref-filename="ehci_hcd..old_token">old_token</dfn>;	<i>/*  inactive during unlink */</i></td></tr>
+<tr><th id="149">149</th><td></td></tr>
+<tr><th id="150">150</th><td>	<i>/* periodic schedule support */</i></td></tr>
+<tr><th id="151">151</th><td><u>#define	<dfn class="macro" id="_M/DEFAULT_I_TDPS" data-ref="_M/DEFAULT_I_TDPS">DEFAULT_I_TDPS</dfn>		1024		/* some HCs can do less */</u></td></tr>
+<tr><th id="152">152</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::periodic_size" title='ehci_hcd::periodic_size' data-ref="ehci_hcd::periodic_size" data-ref-filename="ehci_hcd..periodic_size">periodic_size</dfn>;</td></tr>
+<tr><th id="153">153</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			*<dfn class="decl field" id="ehci_hcd::periodic" title='ehci_hcd::periodic' data-ref="ehci_hcd::periodic" data-ref-filename="ehci_hcd..periodic">periodic</dfn>;	<i>/* hw periodic table */</i></td></tr>
+<tr><th id="154">154</th><td>	<a class="typedef" href="../../../include/linux/types.h.html#dma_addr_t" title='dma_addr_t' data-type='u64' data-ref="dma_addr_t" data-ref-filename="dma_addr_t">dma_addr_t</a>		<dfn class="decl field" id="ehci_hcd::periodic_dma" title='ehci_hcd::periodic_dma' data-ref="ehci_hcd::periodic_dma" data-ref-filename="ehci_hcd..periodic_dma">periodic_dma</dfn>;</td></tr>
+<tr><th id="155">155</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="ehci_hcd::intr_qh_list" title='ehci_hcd::intr_qh_list' data-ref="ehci_hcd::intr_qh_list" data-ref-filename="ehci_hcd..intr_qh_list">intr_qh_list</dfn>;</td></tr>
+<tr><th id="156">156</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::i_thresh" title='ehci_hcd::i_thresh' data-ref="ehci_hcd::i_thresh" data-ref-filename="ehci_hcd..i_thresh">i_thresh</dfn>;	<i>/* uframes HC might cache */</i></td></tr>
+<tr><th id="157">157</th><td></td></tr>
+<tr><th id="158">158</th><td>	<b>union</b> <a class="type" href="#ehci_shadow" title='ehci_shadow' data-ref="ehci_shadow" data-ref-filename="ehci_shadow">ehci_shadow</a>	*<dfn class="decl field" id="ehci_hcd::pshadow" title='ehci_hcd::pshadow' data-ref="ehci_hcd::pshadow" data-ref-filename="ehci_hcd..pshadow">pshadow</dfn>;	<i>/* mirror hw periodic table */</i></td></tr>
+<tr><th id="159">159</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="ehci_hcd::intr_unlink_wait" title='ehci_hcd::intr_unlink_wait' data-ref="ehci_hcd::intr_unlink_wait" data-ref-filename="ehci_hcd..intr_unlink_wait">intr_unlink_wait</dfn>;</td></tr>
+<tr><th id="160">160</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="ehci_hcd::intr_unlink" title='ehci_hcd::intr_unlink' data-ref="ehci_hcd::intr_unlink" data-ref-filename="ehci_hcd..intr_unlink">intr_unlink</dfn>;</td></tr>
+<tr><th id="161">161</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::intr_unlink_wait_cycle" title='ehci_hcd::intr_unlink_wait_cycle' data-ref="ehci_hcd::intr_unlink_wait_cycle" data-ref-filename="ehci_hcd..intr_unlink_wait_cycle">intr_unlink_wait_cycle</dfn>;</td></tr>
+<tr><th id="162">162</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::intr_unlink_cycle" title='ehci_hcd::intr_unlink_cycle' data-ref="ehci_hcd::intr_unlink_cycle" data-ref-filename="ehci_hcd..intr_unlink_cycle">intr_unlink_cycle</dfn>;</td></tr>
+<tr><th id="163">163</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::now_frame" title='ehci_hcd::now_frame' data-ref="ehci_hcd::now_frame" data-ref-filename="ehci_hcd..now_frame">now_frame</dfn>;	<i>/* frame from HC hardware */</i></td></tr>
+<tr><th id="164">164</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::last_iso_frame" title='ehci_hcd::last_iso_frame' data-ref="ehci_hcd::last_iso_frame" data-ref-filename="ehci_hcd..last_iso_frame">last_iso_frame</dfn>;	<i>/* last frame scanned for iso */</i></td></tr>
+<tr><th id="165">165</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::intr_count" title='ehci_hcd::intr_count' data-ref="ehci_hcd::intr_count" data-ref-filename="ehci_hcd..intr_count">intr_count</dfn>;	<i>/* intr activity count */</i></td></tr>
+<tr><th id="166">166</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::isoc_count" title='ehci_hcd::isoc_count' data-ref="ehci_hcd::isoc_count" data-ref-filename="ehci_hcd..isoc_count">isoc_count</dfn>;	<i>/* isoc activity count */</i></td></tr>
+<tr><th id="167">167</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::periodic_count" title='ehci_hcd::periodic_count' data-ref="ehci_hcd::periodic_count" data-ref-filename="ehci_hcd..periodic_count">periodic_count</dfn>;	<i>/* periodic activity count */</i></td></tr>
+<tr><th id="168">168</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::uframe_periodic_max" title='ehci_hcd::uframe_periodic_max' data-ref="ehci_hcd::uframe_periodic_max" data-ref-filename="ehci_hcd..uframe_periodic_max">uframe_periodic_max</dfn>; <i>/* max periodic time per uframe */</i></td></tr>
+<tr><th id="169">169</th><td></td></tr>
+<tr><th id="170">170</th><td></td></tr>
+<tr><th id="171">171</th><td>	<i>/* list of itds &amp; sitds completed while now_frame was still active */</i></td></tr>
+<tr><th id="172">172</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="ehci_hcd::cached_itd_list" title='ehci_hcd::cached_itd_list' data-ref="ehci_hcd::cached_itd_list" data-ref-filename="ehci_hcd..cached_itd_list">cached_itd_list</dfn>;</td></tr>
+<tr><th id="173">173</th><td>	<b>struct</b> <a class="type" href="#ehci_itd" title='ehci_itd' data-ref="ehci_itd" data-ref-filename="ehci_itd">ehci_itd</a>		*<dfn class="decl field" id="ehci_hcd::last_itd_to_free" title='ehci_hcd::last_itd_to_free' data-ref="ehci_hcd::last_itd_to_free" data-ref-filename="ehci_hcd..last_itd_to_free">last_itd_to_free</dfn>;</td></tr>
+<tr><th id="174">174</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="ehci_hcd::cached_sitd_list" title='ehci_hcd::cached_sitd_list' data-ref="ehci_hcd::cached_sitd_list" data-ref-filename="ehci_hcd..cached_sitd_list">cached_sitd_list</dfn>;</td></tr>
+<tr><th id="175">175</th><td>	<b>struct</b> <a class="type" href="#ehci_sitd" title='ehci_sitd' data-ref="ehci_sitd" data-ref-filename="ehci_sitd">ehci_sitd</a>	*<dfn class="decl field" id="ehci_hcd::last_sitd_to_free" title='ehci_hcd::last_sitd_to_free' data-ref="ehci_hcd::last_sitd_to_free" data-ref-filename="ehci_hcd..last_sitd_to_free">last_sitd_to_free</dfn>;</td></tr>
+<tr><th id="176">176</th><td></td></tr>
+<tr><th id="177">177</th><td>	<i>/* per root hub port */</i></td></tr>
+<tr><th id="178">178</th><td>	<em>unsigned</em> <em>long</em>		<dfn class="decl field" id="ehci_hcd::reset_done" title='ehci_hcd::reset_done' data-ref="ehci_hcd::reset_done" data-ref-filename="ehci_hcd..reset_done">reset_done</dfn>[<a class="macro" href="#76" title="15" data-ref="_M/EHCI_MAX_ROOT_PORTS">EHCI_MAX_ROOT_PORTS</a>];</td></tr>
+<tr><th id="179">179</th><td></td></tr>
+<tr><th id="180">180</th><td>	<i>/* bit vectors (one bit per port) */</i></td></tr>
+<tr><th id="181">181</th><td>	<em>unsigned</em> <em>long</em>		<dfn class="decl field" id="ehci_hcd::bus_suspended" title='ehci_hcd::bus_suspended' data-ref="ehci_hcd::bus_suspended" data-ref-filename="ehci_hcd..bus_suspended">bus_suspended</dfn>;		<i>/* which ports were</i></td></tr>
+<tr><th id="182">182</th><td><i>			already suspended at the start of a bus suspend */</i></td></tr>
+<tr><th id="183">183</th><td>	<em>unsigned</em> <em>long</em>		<dfn class="decl field" id="ehci_hcd::companion_ports" title='ehci_hcd::companion_ports' data-ref="ehci_hcd::companion_ports" data-ref-filename="ehci_hcd..companion_ports">companion_ports</dfn>;	<i>/* which ports are</i></td></tr>
+<tr><th id="184">184</th><td><i>			dedicated to the companion controller */</i></td></tr>
+<tr><th id="185">185</th><td>	<em>unsigned</em> <em>long</em>		<dfn class="decl field" id="ehci_hcd::owned_ports" title='ehci_hcd::owned_ports' data-ref="ehci_hcd::owned_ports" data-ref-filename="ehci_hcd..owned_ports">owned_ports</dfn>;		<i>/* which ports are</i></td></tr>
+<tr><th id="186">186</th><td><i>			owned by the companion during a bus suspend */</i></td></tr>
+<tr><th id="187">187</th><td>	<em>unsigned</em> <em>long</em>		<dfn class="decl field" id="ehci_hcd::port_c_suspend" title='ehci_hcd::port_c_suspend' data-ref="ehci_hcd::port_c_suspend" data-ref-filename="ehci_hcd..port_c_suspend">port_c_suspend</dfn>;		<i>/* which ports have</i></td></tr>
+<tr><th id="188">188</th><td><i>			the change-suspend feature turned on */</i></td></tr>
+<tr><th id="189">189</th><td>	<em>unsigned</em> <em>long</em>		<dfn class="decl field" id="ehci_hcd::suspended_ports" title='ehci_hcd::suspended_ports' data-ref="ehci_hcd::suspended_ports" data-ref-filename="ehci_hcd..suspended_ports">suspended_ports</dfn>;	<i>/* which ports are</i></td></tr>
+<tr><th id="190">190</th><td><i>			suspended */</i></td></tr>
+<tr><th id="191">191</th><td>	<em>unsigned</em> <em>long</em>		<dfn class="decl field" id="ehci_hcd::resuming_ports" title='ehci_hcd::resuming_ports' data-ref="ehci_hcd::resuming_ports" data-ref-filename="ehci_hcd..resuming_ports">resuming_ports</dfn>;		<i>/* which ports have</i></td></tr>
+<tr><th id="192">192</th><td><i>			started to resume */</i></td></tr>
+<tr><th id="193">193</th><td></td></tr>
+<tr><th id="194">194</th><td>	<i>/* per-HC memory pools (could be per-bus, but ...) */</i></td></tr>
+<tr><th id="195">195</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/dmapool.h.html#dma_pool" title='dma_pool' data-ref="dma_pool" data-ref-filename="dma_pool">dma_pool</a>		*<dfn class="decl field" id="ehci_hcd::qh_pool" title='ehci_hcd::qh_pool' data-ref="ehci_hcd::qh_pool" data-ref-filename="ehci_hcd..qh_pool">qh_pool</dfn>;	<i>/* qh per active urb */</i></td></tr>
+<tr><th id="196">196</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/dmapool.h.html#dma_pool" title='dma_pool' data-ref="dma_pool" data-ref-filename="dma_pool">dma_pool</a>		*<dfn class="decl field" id="ehci_hcd::qtd_pool" title='ehci_hcd::qtd_pool' data-ref="ehci_hcd::qtd_pool" data-ref-filename="ehci_hcd..qtd_pool">qtd_pool</dfn>;	<i>/* one or more per qh */</i></td></tr>
+<tr><th id="197">197</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/dmapool.h.html#dma_pool" title='dma_pool' data-ref="dma_pool" data-ref-filename="dma_pool">dma_pool</a>		*<dfn class="decl field" id="ehci_hcd::itd_pool" title='ehci_hcd::itd_pool' data-ref="ehci_hcd::itd_pool" data-ref-filename="ehci_hcd..itd_pool">itd_pool</dfn>;	<i>/* itd per iso urb */</i></td></tr>
+<tr><th id="198">198</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/dmapool.h.html#dma_pool" title='dma_pool' data-ref="dma_pool" data-ref-filename="dma_pool">dma_pool</a>		*<dfn class="decl field" id="ehci_hcd::sitd_pool" title='ehci_hcd::sitd_pool' data-ref="ehci_hcd::sitd_pool" data-ref-filename="ehci_hcd..sitd_pool">sitd_pool</dfn>;	<i>/* sitd per split iso urb */</i></td></tr>
+<tr><th id="199">199</th><td></td></tr>
+<tr><th id="200">200</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::random_frame" title='ehci_hcd::random_frame' data-ref="ehci_hcd::random_frame" data-ref-filename="ehci_hcd..random_frame">random_frame</dfn>;</td></tr>
+<tr><th id="201">201</th><td>	<em>unsigned</em> <em>long</em>		<dfn class="decl field" id="ehci_hcd::next_statechange" title='ehci_hcd::next_statechange' data-ref="ehci_hcd::next_statechange" data-ref-filename="ehci_hcd..next_statechange">next_statechange</dfn>;</td></tr>
+<tr><th id="202">202</th><td>	<a class="typedef" href="../../../include/linux/ktime.h.html#ktime_t" title='ktime_t' data-type='s64' data-ref="ktime_t" data-ref-filename="ktime_t">ktime_t</a>			<dfn class="decl field" id="ehci_hcd::last_periodic_enable" title='ehci_hcd::last_periodic_enable' data-ref="ehci_hcd::last_periodic_enable" data-ref-filename="ehci_hcd..last_periodic_enable">last_periodic_enable</dfn>;</td></tr>
+<tr><th id="203">203</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>			<dfn class="decl field" id="ehci_hcd::command" title='ehci_hcd::command' data-ref="ehci_hcd::command" data-ref-filename="ehci_hcd..command">command</dfn>;</td></tr>
+<tr><th id="204">204</th><td></td></tr>
+<tr><th id="205">205</th><td>	<i>/* SILICON QUIRKS */</i></td></tr>
+<tr><th id="206">206</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::no_selective_suspend" title='ehci_hcd::no_selective_suspend' data-ref="ehci_hcd::no_selective_suspend" data-ref-filename="ehci_hcd..no_selective_suspend">no_selective_suspend</dfn>:<var>1</var>;</td></tr>
+<tr><th id="207">207</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::has_fsl_port_bug" title='ehci_hcd::has_fsl_port_bug' data-ref="ehci_hcd::has_fsl_port_bug" data-ref-filename="ehci_hcd..has_fsl_port_bug">has_fsl_port_bug</dfn>:<var>1</var>; <i>/* FreeScale */</i></td></tr>
+<tr><th id="208">208</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::has_fsl_hs_errata" title='ehci_hcd::has_fsl_hs_errata' data-ref="ehci_hcd::has_fsl_hs_errata" data-ref-filename="ehci_hcd..has_fsl_hs_errata">has_fsl_hs_errata</dfn>:<var>1</var>;	<i>/* Freescale HS quirk */</i></td></tr>
+<tr><th id="209">209</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::has_fsl_susp_errata" title='ehci_hcd::has_fsl_susp_errata' data-ref="ehci_hcd::has_fsl_susp_errata" data-ref-filename="ehci_hcd..has_fsl_susp_errata">has_fsl_susp_errata</dfn>:<var>1</var>;	<i>/* NXP SUSP quirk */</i></td></tr>
+<tr><th id="210">210</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::big_endian_mmio" title='ehci_hcd::big_endian_mmio' data-ref="ehci_hcd::big_endian_mmio" data-ref-filename="ehci_hcd..big_endian_mmio">big_endian_mmio</dfn>:<var>1</var>;</td></tr>
+<tr><th id="211">211</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::big_endian_desc" title='ehci_hcd::big_endian_desc' data-ref="ehci_hcd::big_endian_desc" data-ref-filename="ehci_hcd..big_endian_desc">big_endian_desc</dfn>:<var>1</var>;</td></tr>
+<tr><th id="212">212</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::big_endian_capbase" title='ehci_hcd::big_endian_capbase' data-ref="ehci_hcd::big_endian_capbase" data-ref-filename="ehci_hcd..big_endian_capbase">big_endian_capbase</dfn>:<var>1</var>;</td></tr>
+<tr><th id="213">213</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::has_amcc_usb23" title='ehci_hcd::has_amcc_usb23' data-ref="ehci_hcd::has_amcc_usb23" data-ref-filename="ehci_hcd..has_amcc_usb23">has_amcc_usb23</dfn>:<var>1</var>;</td></tr>
+<tr><th id="214">214</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::need_io_watchdog" title='ehci_hcd::need_io_watchdog' data-ref="ehci_hcd::need_io_watchdog" data-ref-filename="ehci_hcd..need_io_watchdog">need_io_watchdog</dfn>:<var>1</var>;</td></tr>
+<tr><th id="215">215</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::amd_pll_fix" title='ehci_hcd::amd_pll_fix' data-ref="ehci_hcd::amd_pll_fix" data-ref-filename="ehci_hcd..amd_pll_fix">amd_pll_fix</dfn>:<var>1</var>;</td></tr>
+<tr><th id="216">216</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::use_dummy_qh" title='ehci_hcd::use_dummy_qh' data-ref="ehci_hcd::use_dummy_qh" data-ref-filename="ehci_hcd..use_dummy_qh">use_dummy_qh</dfn>:<var>1</var>;	<i>/* AMD Frame List table quirk*/</i></td></tr>
+<tr><th id="217">217</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::has_synopsys_hc_bug" title='ehci_hcd::has_synopsys_hc_bug' data-ref="ehci_hcd::has_synopsys_hc_bug" data-ref-filename="ehci_hcd..has_synopsys_hc_bug">has_synopsys_hc_bug</dfn>:<var>1</var>; <i>/* Synopsys HC */</i></td></tr>
+<tr><th id="218">218</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::frame_index_bug" title='ehci_hcd::frame_index_bug' data-ref="ehci_hcd::frame_index_bug" data-ref-filename="ehci_hcd..frame_index_bug">frame_index_bug</dfn>:<var>1</var>; <i>/* MosChip (AKA NetMos) */</i></td></tr>
+<tr><th id="219">219</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::need_oc_pp_cycle" title='ehci_hcd::need_oc_pp_cycle' data-ref="ehci_hcd::need_oc_pp_cycle" data-ref-filename="ehci_hcd..need_oc_pp_cycle">need_oc_pp_cycle</dfn>:<var>1</var>; <i>/* MPC834X port power */</i></td></tr>
+<tr><th id="220">220</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::imx28_write_fix" title='ehci_hcd::imx28_write_fix' data-ref="ehci_hcd::imx28_write_fix" data-ref-filename="ehci_hcd..imx28_write_fix">imx28_write_fix</dfn>:<var>1</var>; <i>/* For Freescale i.MX28 */</i></td></tr>
+<tr><th id="221">221</th><td></td></tr>
+<tr><th id="222">222</th><td>	<i>/* required for usb32 quirk */</i></td></tr>
+<tr><th id="223">223</th><td>	<u>#define <dfn class="macro" id="_M/OHCI_CTRL_HCFS" data-ref="_M/OHCI_CTRL_HCFS">OHCI_CTRL_HCFS</dfn>          (3 &lt;&lt; 6)</u></td></tr>
+<tr><th id="224">224</th><td>	<u>#define <dfn class="macro" id="_M/OHCI_USB_OPER" data-ref="_M/OHCI_USB_OPER">OHCI_USB_OPER</dfn>           (2 &lt;&lt; 6)</u></td></tr>
+<tr><th id="225">225</th><td>	<u>#define <dfn class="macro" id="_M/OHCI_USB_SUSPEND" data-ref="_M/OHCI_USB_SUSPEND">OHCI_USB_SUSPEND</dfn>        (3 &lt;&lt; 6)</u></td></tr>
+<tr><th id="226">226</th><td></td></tr>
+<tr><th id="227">227</th><td>	<u>#define <dfn class="macro" id="_M/OHCI_HCCTRL_OFFSET" data-ref="_M/OHCI_HCCTRL_OFFSET">OHCI_HCCTRL_OFFSET</dfn>      0x4</u></td></tr>
+<tr><th id="228">228</th><td>	<u>#define <dfn class="macro" id="_M/OHCI_HCCTRL_LEN" data-ref="_M/OHCI_HCCTRL_LEN">OHCI_HCCTRL_LEN</dfn>         0x4</u></td></tr>
+<tr><th id="229">229</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			*<dfn class="decl field" id="ehci_hcd::ohci_hcctrl_reg" title='ehci_hcd::ohci_hcctrl_reg' data-ref="ehci_hcd::ohci_hcctrl_reg" data-ref-filename="ehci_hcd..ohci_hcctrl_reg">ohci_hcctrl_reg</dfn>;</td></tr>
+<tr><th id="230">230</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::has_hostpc" title='ehci_hcd::has_hostpc' data-ref="ehci_hcd::has_hostpc" data-ref-filename="ehci_hcd..has_hostpc">has_hostpc</dfn>:<var>1</var>;</td></tr>
+<tr><th id="231">231</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::has_tdi_phy_lpm" title='ehci_hcd::has_tdi_phy_lpm' data-ref="ehci_hcd::has_tdi_phy_lpm" data-ref-filename="ehci_hcd..has_tdi_phy_lpm">has_tdi_phy_lpm</dfn>:<var>1</var>;</td></tr>
+<tr><th id="232">232</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_hcd::has_ppcd" title='ehci_hcd::has_ppcd' data-ref="ehci_hcd::has_ppcd" data-ref-filename="ehci_hcd..has_ppcd">has_ppcd</dfn>:<var>1</var>; <i>/* support per-port change bits */</i></td></tr>
+<tr><th id="233">233</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a>			<dfn class="decl field" id="ehci_hcd::sbrn" title='ehci_hcd::sbrn' data-ref="ehci_hcd::sbrn" data-ref-filename="ehci_hcd..sbrn">sbrn</dfn>;		<i>/* packed release number */</i></td></tr>
+<tr><th id="234">234</th><td></td></tr>
+<tr><th id="235">235</th><td>	<i>/* irq statistics */</i></td></tr>
+<tr><th id="236">236</th><td><u>#<span data-ppcond="236">ifdef</span> <span class="macro" data-ref="_M/EHCI_STATS">EHCI_STATS</span></u></td></tr>
+<tr><th id="237">237</th><td>	<b>struct</b> ehci_stats	stats;</td></tr>
+<tr><th id="238">238</th><td><u>#	define INCR(x) ((x)++)</u></td></tr>
+<tr><th id="239">239</th><td><u>#<span data-ppcond="236">else</span></u></td></tr>
+<tr><th id="240">240</th><td><u>#	define <dfn class="macro" id="_M/INCR" data-ref="_M/INCR">INCR</dfn>(x) do {} while (0)</u></td></tr>
+<tr><th id="241">241</th><td><u>#<span data-ppcond="236">endif</span></u></td></tr>
+<tr><th id="242">242</th><td></td></tr>
+<tr><th id="243">243</th><td>	<i>/* debug files */</i></td></tr>
+<tr><th id="244">244</th><td><u>#<span data-ppcond="244">ifdef</span> <span class="macro" data-ref="_M/CONFIG_DYNAMIC_DEBUG">CONFIG_DYNAMIC_DEBUG</span></u></td></tr>
+<tr><th id="245">245</th><td>	<b>struct</b> dentry		*debug_dir;</td></tr>
+<tr><th id="246">246</th><td><u>#<span data-ppcond="244">endif</span></u></td></tr>
+<tr><th id="247">247</th><td></td></tr>
+<tr><th id="248">248</th><td>	<i>/* bandwidth usage */</i></td></tr>
+<tr><th id="249">249</th><td><u>#define <dfn class="macro" id="_M/EHCI_BANDWIDTH_SIZE" data-ref="_M/EHCI_BANDWIDTH_SIZE">EHCI_BANDWIDTH_SIZE</dfn>	64</u></td></tr>
+<tr><th id="250">250</th><td><u>#define <dfn class="macro" id="_M/EHCI_BANDWIDTH_FRAMES" data-ref="_M/EHCI_BANDWIDTH_FRAMES">EHCI_BANDWIDTH_FRAMES</dfn>	(EHCI_BANDWIDTH_SIZE &gt;&gt; 3)</u></td></tr>
+<tr><th id="251">251</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a>			<dfn class="decl field" id="ehci_hcd::bandwidth" title='ehci_hcd::bandwidth' data-ref="ehci_hcd::bandwidth" data-ref-filename="ehci_hcd..bandwidth">bandwidth</dfn>[<a class="macro" href="#249" title="64" data-ref="_M/EHCI_BANDWIDTH_SIZE">EHCI_BANDWIDTH_SIZE</a>];</td></tr>
+<tr><th id="252">252</th><td>						<i>/* us allocated per uframe */</i></td></tr>
+<tr><th id="253">253</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a>			<dfn class="decl field" id="ehci_hcd::tt_budget" title='ehci_hcd::tt_budget' data-ref="ehci_hcd::tt_budget" data-ref-filename="ehci_hcd..tt_budget">tt_budget</dfn>[<a class="macro" href="#249" title="64" data-ref="_M/EHCI_BANDWIDTH_SIZE">EHCI_BANDWIDTH_SIZE</a>];</td></tr>
+<tr><th id="254">254</th><td>						<i>/* us budgeted per uframe */</i></td></tr>
+<tr><th id="255">255</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="ehci_hcd::tt_list" title='ehci_hcd::tt_list' data-ref="ehci_hcd::tt_list" data-ref-filename="ehci_hcd..tt_list">tt_list</dfn>;</td></tr>
+<tr><th id="256">256</th><td></td></tr>
+<tr><th id="257">257</th><td>	<i>/* platform-specific data -- must come last */</i></td></tr>
+<tr><th id="258">258</th><td>	<em>unsigned</em> <em>long</em>		<dfn class="decl field" id="ehci_hcd::priv" title='ehci_hcd::priv' data-ref="ehci_hcd::priv" data-ref-filename="ehci_hcd..priv">priv</dfn>[<var>0</var>] <a class="macro" href="../../../include/linux/compiler_attributes.h.html#55" title="__attribute__((__aligned__(sizeof(s64))))" data-ref="_M/__aligned">__aligned</a>(<b>sizeof</b>(<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#s64" title='s64' data-type='__s64' data-ref="s64" data-ref-filename="s64">s64</a>));</td></tr>
+<tr><th id="259">259</th><td>};</td></tr>
+<tr><th id="260">260</th><td></td></tr>
+<tr><th id="261">261</th><td><i>/* convert between an HCD pointer and the corresponding EHCI_HCD */</i></td></tr>
+<tr><th id="262">262</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="#ehci_hcd" title='ehci_hcd' data-ref="ehci_hcd" data-ref-filename="ehci_hcd">ehci_hcd</a> *<dfn class="decl def fn" id="hcd_to_ehci" title='hcd_to_ehci' data-ref="hcd_to_ehci" data-ref-filename="hcd_to_ehci">hcd_to_ehci</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/usb/hcd.h.html#usb_hcd" title='usb_hcd' data-ref="usb_hcd" data-ref-filename="usb_hcd">usb_hcd</a> *<dfn class="local col1 decl" id="1hcd" title='hcd' data-type='struct usb_hcd *' data-ref="1hcd" data-ref-filename="1hcd">hcd</dfn>)</td></tr>
+<tr><th id="263">263</th><td>{</td></tr>
+<tr><th id="264">264</th><td>	<b>return</b> (<b>struct</b> <a class="type" href="#ehci_hcd" title='ehci_hcd' data-ref="ehci_hcd" data-ref-filename="ehci_hcd">ehci_hcd</a> *) (<a class="local col1 ref" href="#1hcd" title='hcd' data-ref="1hcd" data-ref-filename="1hcd">hcd</a>-&gt;<a class="ref field" href="../../../include/linux/usb/hcd.h.html#usb_hcd::hcd_priv" title='usb_hcd::hcd_priv' data-ref="usb_hcd::hcd_priv" data-ref-filename="usb_hcd..hcd_priv">hcd_priv</a>);</td></tr>
+<tr><th id="265">265</th><td>}</td></tr>
+<tr><th id="266">266</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="../../../include/linux/usb/hcd.h.html#usb_hcd" title='usb_hcd' data-ref="usb_hcd" data-ref-filename="usb_hcd">usb_hcd</a> *<dfn class="decl def fn" id="ehci_to_hcd" title='ehci_to_hcd' data-ref="ehci_to_hcd" data-ref-filename="ehci_to_hcd">ehci_to_hcd</dfn>(<b>struct</b> <a class="type" href="#ehci_hcd" title='ehci_hcd' data-ref="ehci_hcd" data-ref-filename="ehci_hcd">ehci_hcd</a> *<dfn class="local col2 decl" id="2ehci" title='ehci' data-type='struct ehci_hcd *' data-ref="2ehci" data-ref-filename="2ehci">ehci</dfn>)</td></tr>
+<tr><th id="267">267</th><td>{</td></tr>
+<tr><th id="268">268</th><td>	<b>return</b> <a class="macro" href="../../../include/linux/kernel.h.html#971" title="({ void *__mptr = (void *)((void *) ehci); do { extern void __compiletime_assert_268(void) ; if (!(!(!__builtin_types_compatible_p(typeof(*((void *) ehci)), typeof(((struct usb_hcd *)0)-&gt;hcd_priv)) &amp;&amp; !__builtin_types_compatible_p(typeof(*((void *) ehci)), typeof(void))))) __compiletime_assert_268(); } while (0); ((struct usb_hcd *)(__mptr - __builtin_offsetof(struct usb_hcd, hcd_priv))); })" data-ref="_M/container_of">container_of</a>((<em>void</em> *) <a class="local col2 ref" href="#2ehci" title='ehci' data-ref="2ehci" data-ref-filename="2ehci">ehci</a>, <b>struct</b> <a class="type" href="../../../include/linux/usb/hcd.h.html#usb_hcd" title='usb_hcd' data-ref="usb_hcd" data-ref-filename="usb_hcd">usb_hcd</a>, <a class="ref field" href="../../../include/linux/usb/hcd.h.html#usb_hcd::hcd_priv" title='usb_hcd::hcd_priv' data-ref="usb_hcd::hcd_priv" data-ref-filename="usb_hcd..hcd_priv">hcd_priv</a>);</td></tr>
+<tr><th id="269">269</th><td>}</td></tr>
+<tr><th id="270">270</th><td></td></tr>
+<tr><th id="271">271</th><td><i>/*-------------------------------------------------------------------------*/</i></td></tr>
+<tr><th id="272">272</th><td></td></tr>
+<tr><th id="273">273</th><td><u>#include <a href="../../../include/linux/usb/ehci_def.h.html">&lt;linux/usb/ehci_def.h&gt;</a></u></td></tr>
+<tr><th id="274">274</th><td></td></tr>
+<tr><th id="275">275</th><td><i>/*-------------------------------------------------------------------------*/</i></td></tr>
+<tr><th id="276">276</th><td></td></tr>
+<tr><th id="277">277</th><td><u>#define	<dfn class="macro" id="_M/QTD_NEXT" data-ref="_M/QTD_NEXT">QTD_NEXT</dfn>(ehci, dma)	cpu_to_hc32(ehci, (u32)dma)</u></td></tr>
+<tr><th id="278">278</th><td></td></tr>
+<tr><th id="279">279</th><td><i>/*</i></td></tr>
+<tr><th id="280">280</th><td><i> * EHCI Specification 0.95 Section 3.5</i></td></tr>
+<tr><th id="281">281</th><td><i> * QTD: describe data transfer components (buffer, direction, ...)</i></td></tr>
+<tr><th id="282">282</th><td><i> * See Fig 3-6 "Queue Element Transfer Descriptor Block Diagram".</i></td></tr>
+<tr><th id="283">283</th><td><i> *</i></td></tr>
+<tr><th id="284">284</th><td><i> * These are associated only with "QH" (Queue Head) structures,</i></td></tr>
+<tr><th id="285">285</th><td><i> * used with control, bulk, and interrupt transfers.</i></td></tr>
+<tr><th id="286">286</th><td><i> */</i></td></tr>
+<tr><th id="287">287</th><td><b>struct</b> <dfn class="type def" id="ehci_qtd" title='ehci_qtd' data-ref="ehci_qtd" data-ref-filename="ehci_qtd">ehci_qtd</dfn> {</td></tr>
+<tr><th id="288">288</th><td>	<i>/* first part defined by EHCI spec */</i></td></tr>
+<tr><th id="289">289</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_qtd::hw_next" title='ehci_qtd::hw_next' data-ref="ehci_qtd::hw_next" data-ref-filename="ehci_qtd..hw_next">hw_next</dfn>;	<i>/* see EHCI 3.5.1 */</i></td></tr>
+<tr><th id="290">290</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_qtd::hw_alt_next" title='ehci_qtd::hw_alt_next' data-ref="ehci_qtd::hw_alt_next" data-ref-filename="ehci_qtd..hw_alt_next">hw_alt_next</dfn>;    <i>/* see EHCI 3.5.2 */</i></td></tr>
+<tr><th id="291">291</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_qtd::hw_token" title='ehci_qtd::hw_token' data-ref="ehci_qtd::hw_token" data-ref-filename="ehci_qtd..hw_token">hw_token</dfn>;       <i>/* see EHCI 3.5.3 */</i></td></tr>
+<tr><th id="292">292</th><td><u>#define	<dfn class="macro" id="_M/QTD_TOGGLE" data-ref="_M/QTD_TOGGLE">QTD_TOGGLE</dfn>	(1 &lt;&lt; 31)	/* data toggle */</u></td></tr>
+<tr><th id="293">293</th><td><u>#define	<dfn class="macro" id="_M/QTD_LENGTH" data-ref="_M/QTD_LENGTH">QTD_LENGTH</dfn>(tok)	(((tok)&gt;&gt;16) &amp; 0x7fff)</u></td></tr>
+<tr><th id="294">294</th><td><u>#define	<dfn class="macro" id="_M/QTD_IOC" data-ref="_M/QTD_IOC">QTD_IOC</dfn>		(1 &lt;&lt; 15)	/* interrupt on complete */</u></td></tr>
+<tr><th id="295">295</th><td><u>#define	<dfn class="macro" id="_M/QTD_CERR" data-ref="_M/QTD_CERR">QTD_CERR</dfn>(tok)	(((tok)&gt;&gt;10) &amp; 0x3)</u></td></tr>
+<tr><th id="296">296</th><td><u>#define	<dfn class="macro" id="_M/QTD_PID" data-ref="_M/QTD_PID">QTD_PID</dfn>(tok)	(((tok)&gt;&gt;8) &amp; 0x3)</u></td></tr>
+<tr><th id="297">297</th><td><u>#define	<dfn class="macro" id="_M/QTD_STS_ACTIVE" data-ref="_M/QTD_STS_ACTIVE">QTD_STS_ACTIVE</dfn>	(1 &lt;&lt; 7)	/* HC may execute this */</u></td></tr>
+<tr><th id="298">298</th><td><u>#define	<dfn class="macro" id="_M/QTD_STS_HALT" data-ref="_M/QTD_STS_HALT">QTD_STS_HALT</dfn>	(1 &lt;&lt; 6)	/* halted on error */</u></td></tr>
+<tr><th id="299">299</th><td><u>#define	<dfn class="macro" id="_M/QTD_STS_DBE" data-ref="_M/QTD_STS_DBE">QTD_STS_DBE</dfn>	(1 &lt;&lt; 5)	/* data buffer error (in HC) */</u></td></tr>
+<tr><th id="300">300</th><td><u>#define	<dfn class="macro" id="_M/QTD_STS_BABBLE" data-ref="_M/QTD_STS_BABBLE">QTD_STS_BABBLE</dfn>	(1 &lt;&lt; 4)	/* device was babbling (qtd halted) */</u></td></tr>
+<tr><th id="301">301</th><td><u>#define	<dfn class="macro" id="_M/QTD_STS_XACT" data-ref="_M/QTD_STS_XACT">QTD_STS_XACT</dfn>	(1 &lt;&lt; 3)	/* device gave illegal response */</u></td></tr>
+<tr><th id="302">302</th><td><u>#define	<dfn class="macro" id="_M/QTD_STS_MMF" data-ref="_M/QTD_STS_MMF">QTD_STS_MMF</dfn>	(1 &lt;&lt; 2)	/* incomplete split transaction */</u></td></tr>
+<tr><th id="303">303</th><td><u>#define	<dfn class="macro" id="_M/QTD_STS_STS" data-ref="_M/QTD_STS_STS">QTD_STS_STS</dfn>	(1 &lt;&lt; 1)	/* split transaction state */</u></td></tr>
+<tr><th id="304">304</th><td><u>#define	<dfn class="macro" id="_M/QTD_STS_PING" data-ref="_M/QTD_STS_PING">QTD_STS_PING</dfn>	(1 &lt;&lt; 0)	/* issue PING? */</u></td></tr>
+<tr><th id="305">305</th><td></td></tr>
+<tr><th id="306">306</th><td><u>#define <dfn class="macro" id="_M/ACTIVE_BIT" data-ref="_M/ACTIVE_BIT">ACTIVE_BIT</dfn>(ehci)	cpu_to_hc32(ehci, QTD_STS_ACTIVE)</u></td></tr>
+<tr><th id="307">307</th><td><u>#define <dfn class="macro" id="_M/HALT_BIT" data-ref="_M/HALT_BIT">HALT_BIT</dfn>(ehci)		cpu_to_hc32(ehci, QTD_STS_HALT)</u></td></tr>
+<tr><th id="308">308</th><td><u>#define <dfn class="macro" id="_M/STATUS_BIT" data-ref="_M/STATUS_BIT">STATUS_BIT</dfn>(ehci)	cpu_to_hc32(ehci, QTD_STS_STS)</u></td></tr>
+<tr><th id="309">309</th><td></td></tr>
+<tr><th id="310">310</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_qtd::hw_buf" title='ehci_qtd::hw_buf' data-ref="ehci_qtd::hw_buf" data-ref-filename="ehci_qtd..hw_buf">hw_buf</dfn>[<var>5</var>];        <i>/* see EHCI 3.5.4 */</i></td></tr>
+<tr><th id="311">311</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_qtd::hw_buf_hi" title='ehci_qtd::hw_buf_hi' data-ref="ehci_qtd::hw_buf_hi" data-ref-filename="ehci_qtd..hw_buf_hi">hw_buf_hi</dfn>[<var>5</var>];        <i>/* Appendix B */</i></td></tr>
+<tr><th id="312">312</th><td></td></tr>
+<tr><th id="313">313</th><td>	<i>/* the rest is HCD-private */</i></td></tr>
+<tr><th id="314">314</th><td>	<a class="typedef" href="../../../include/linux/types.h.html#dma_addr_t" title='dma_addr_t' data-type='u64' data-ref="dma_addr_t" data-ref-filename="dma_addr_t">dma_addr_t</a>		<dfn class="decl field" id="ehci_qtd::qtd_dma" title='ehci_qtd::qtd_dma' data-ref="ehci_qtd::qtd_dma" data-ref-filename="ehci_qtd..qtd_dma">qtd_dma</dfn>;		<i>/* qtd address */</i></td></tr>
+<tr><th id="315">315</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="ehci_qtd::qtd_list" title='ehci_qtd::qtd_list' data-ref="ehci_qtd::qtd_list" data-ref-filename="ehci_qtd..qtd_list">qtd_list</dfn>;		<i>/* sw qtd list */</i></td></tr>
+<tr><th id="316">316</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/usb.h.html#urb" title='urb' data-ref="urb" data-ref-filename="urb">urb</a>		*<dfn class="decl field" id="ehci_qtd::urb" title='ehci_qtd::urb' data-ref="ehci_qtd::urb" data-ref-filename="ehci_qtd..urb">urb</dfn>;			<i>/* qtd's urb */</i></td></tr>
+<tr><th id="317">317</th><td>	<a class="typedef" href="../../../include/linux/types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a>			<dfn class="decl field" id="ehci_qtd::length" title='ehci_qtd::length' data-ref="ehci_qtd::length" data-ref-filename="ehci_qtd..length">length</dfn>;			<i>/* length of buffer */</i></td></tr>
+<tr><th id="318">318</th><td>} <a class="macro" href="../../../include/linux/compiler_attributes.h.html#55" title="__attribute__((__aligned__(32)))" data-ref="_M/__aligned">__aligned</a>(<var>32</var>);</td></tr>
+<tr><th id="319">319</th><td></td></tr>
+<tr><th id="320">320</th><td><i>/* mask NakCnt+T in qh-&gt;hw_alt_next */</i></td></tr>
+<tr><th id="321">321</th><td><u>#define <dfn class="macro" id="_M/QTD_MASK" data-ref="_M/QTD_MASK">QTD_MASK</dfn>(ehci)	cpu_to_hc32(ehci, ~0x1f)</u></td></tr>
+<tr><th id="322">322</th><td></td></tr>
+<tr><th id="323">323</th><td><u>#define <dfn class="macro" id="_M/IS_SHORT_READ" data-ref="_M/IS_SHORT_READ">IS_SHORT_READ</dfn>(token) (QTD_LENGTH(token) != 0 &amp;&amp; QTD_PID(token) == 1)</u></td></tr>
+<tr><th id="324">324</th><td></td></tr>
+<tr><th id="325">325</th><td><i>/*-------------------------------------------------------------------------*/</i></td></tr>
+<tr><th id="326">326</th><td></td></tr>
+<tr><th id="327">327</th><td><i>/* type tag from {qh,itd,sitd,fstn}-&gt;hw_next */</i></td></tr>
+<tr><th id="328">328</th><td><u>#define <dfn class="macro" id="_M/Q_NEXT_TYPE" data-ref="_M/Q_NEXT_TYPE">Q_NEXT_TYPE</dfn>(ehci, dma)	((dma) &amp; cpu_to_hc32(ehci, 3 &lt;&lt; 1))</u></td></tr>
+<tr><th id="329">329</th><td></td></tr>
+<tr><th id="330">330</th><td><i>/*</i></td></tr>
+<tr><th id="331">331</th><td><i> * Now the following defines are not converted using the</i></td></tr>
+<tr><th id="332">332</th><td><i> * cpu_to_le32() macro anymore, since we have to support</i></td></tr>
+<tr><th id="333">333</th><td><i> * "dynamic" switching between be and le support, so that the driver</i></td></tr>
+<tr><th id="334">334</th><td><i> * can be used on one system with SoC EHCI controller using big-endian</i></td></tr>
+<tr><th id="335">335</th><td><i> * descriptors as well as a normal little-endian PCI EHCI controller.</i></td></tr>
+<tr><th id="336">336</th><td><i> */</i></td></tr>
+<tr><th id="337">337</th><td><i>/* values for that type tag */</i></td></tr>
+<tr><th id="338">338</th><td><u>#define <dfn class="macro" id="_M/Q_TYPE_ITD" data-ref="_M/Q_TYPE_ITD">Q_TYPE_ITD</dfn>	(0 &lt;&lt; 1)</u></td></tr>
+<tr><th id="339">339</th><td><u>#define <dfn class="macro" id="_M/Q_TYPE_QH" data-ref="_M/Q_TYPE_QH">Q_TYPE_QH</dfn>	(1 &lt;&lt; 1)</u></td></tr>
+<tr><th id="340">340</th><td><u>#define <dfn class="macro" id="_M/Q_TYPE_SITD" data-ref="_M/Q_TYPE_SITD">Q_TYPE_SITD</dfn>	(2 &lt;&lt; 1)</u></td></tr>
+<tr><th id="341">341</th><td><u>#define <dfn class="macro" id="_M/Q_TYPE_FSTN" data-ref="_M/Q_TYPE_FSTN">Q_TYPE_FSTN</dfn>	(3 &lt;&lt; 1)</u></td></tr>
+<tr><th id="342">342</th><td></td></tr>
+<tr><th id="343">343</th><td><i>/* next async queue entry, or pointer to interrupt/periodic QH */</i></td></tr>
+<tr><th id="344">344</th><td><u>#define <dfn class="macro" id="_M/QH_NEXT" data-ref="_M/QH_NEXT">QH_NEXT</dfn>(ehci, dma) \</u></td></tr>
+<tr><th id="345">345</th><td><u>		(cpu_to_hc32(ehci, (((u32) dma) &amp; ~0x01f) | Q_TYPE_QH))</u></td></tr>
+<tr><th id="346">346</th><td></td></tr>
+<tr><th id="347">347</th><td><i>/* for periodic/async schedules and qtd lists, mark end of list */</i></td></tr>
+<tr><th id="348">348</th><td><u>#define <dfn class="macro" id="_M/EHCI_LIST_END" data-ref="_M/EHCI_LIST_END">EHCI_LIST_END</dfn>(ehci)	cpu_to_hc32(ehci, 1) /* "null pointer" to hw */</u></td></tr>
+<tr><th id="349">349</th><td></td></tr>
+<tr><th id="350">350</th><td><i>/*</i></td></tr>
+<tr><th id="351">351</th><td><i> * Entries in periodic shadow table are pointers to one of four kinds</i></td></tr>
+<tr><th id="352">352</th><td><i> * of data structure.  That's dictated by the hardware; a type tag is</i></td></tr>
+<tr><th id="353">353</th><td><i> * encoded in the low bits of the hardware's periodic schedule.  Use</i></td></tr>
+<tr><th id="354">354</th><td><i> * Q_NEXT_TYPE to get the tag.</i></td></tr>
+<tr><th id="355">355</th><td><i> *</i></td></tr>
+<tr><th id="356">356</th><td><i> * For entries in the async schedule, the type tag always says "qh".</i></td></tr>
+<tr><th id="357">357</th><td><i> */</i></td></tr>
+<tr><th id="358">358</th><td><b>union</b> <dfn class="type def" id="ehci_shadow" title='ehci_shadow' data-ref="ehci_shadow" data-ref-filename="ehci_shadow">ehci_shadow</dfn> {</td></tr>
+<tr><th id="359">359</th><td>	<b>struct</b> <a class="type" href="#ehci_qh" title='ehci_qh' data-ref="ehci_qh" data-ref-filename="ehci_qh">ehci_qh</a>		*<dfn class="decl field" id="ehci_shadow::qh" title='ehci_shadow::qh' data-ref="ehci_shadow::qh" data-ref-filename="ehci_shadow..qh">qh</dfn>;		<i>/* Q_TYPE_QH */</i></td></tr>
+<tr><th id="360">360</th><td>	<b>struct</b> <a class="type" href="#ehci_itd" title='ehci_itd' data-ref="ehci_itd" data-ref-filename="ehci_itd">ehci_itd</a>		*<dfn class="decl field" id="ehci_shadow::itd" title='ehci_shadow::itd' data-ref="ehci_shadow::itd" data-ref-filename="ehci_shadow..itd">itd</dfn>;		<i>/* Q_TYPE_ITD */</i></td></tr>
+<tr><th id="361">361</th><td>	<b>struct</b> <a class="type" href="#ehci_sitd" title='ehci_sitd' data-ref="ehci_sitd" data-ref-filename="ehci_sitd">ehci_sitd</a>	*<dfn class="decl field" id="ehci_shadow::sitd" title='ehci_shadow::sitd' data-ref="ehci_shadow::sitd" data-ref-filename="ehci_shadow..sitd">sitd</dfn>;		<i>/* Q_TYPE_SITD */</i></td></tr>
+<tr><th id="362">362</th><td>	<b>struct</b> <a class="type" href="#ehci_fstn" title='ehci_fstn' data-ref="ehci_fstn" data-ref-filename="ehci_fstn">ehci_fstn</a>	*<dfn class="decl field" id="ehci_shadow::fstn" title='ehci_shadow::fstn' data-ref="ehci_shadow::fstn" data-ref-filename="ehci_shadow..fstn">fstn</dfn>;		<i>/* Q_TYPE_FSTN */</i></td></tr>
+<tr><th id="363">363</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			*<dfn class="decl field" id="ehci_shadow::hw_next" title='ehci_shadow::hw_next' data-ref="ehci_shadow::hw_next" data-ref-filename="ehci_shadow..hw_next">hw_next</dfn>;	<i>/* (all types) */</i></td></tr>
+<tr><th id="364">364</th><td>	<em>void</em>			*<dfn class="decl field" id="ehci_shadow::ptr" title='ehci_shadow::ptr' data-ref="ehci_shadow::ptr" data-ref-filename="ehci_shadow..ptr">ptr</dfn>;</td></tr>
+<tr><th id="365">365</th><td>};</td></tr>
+<tr><th id="366">366</th><td></td></tr>
+<tr><th id="367">367</th><td><i>/*-------------------------------------------------------------------------*/</i></td></tr>
+<tr><th id="368">368</th><td></td></tr>
+<tr><th id="369">369</th><td><i>/*</i></td></tr>
+<tr><th id="370">370</th><td><i> * EHCI Specification 0.95 Section 3.6</i></td></tr>
+<tr><th id="371">371</th><td><i> * QH: describes control/bulk/interrupt endpoints</i></td></tr>
+<tr><th id="372">372</th><td><i> * See Fig 3-7 "Queue Head Structure Layout".</i></td></tr>
+<tr><th id="373">373</th><td><i> *</i></td></tr>
+<tr><th id="374">374</th><td><i> * These appear in both the async and (for interrupt) periodic schedules.</i></td></tr>
+<tr><th id="375">375</th><td><i> */</i></td></tr>
+<tr><th id="376">376</th><td></td></tr>
+<tr><th id="377">377</th><td><i>/* first part defined by EHCI spec */</i></td></tr>
+<tr><th id="378">378</th><td><b>struct</b> <dfn class="type def" id="ehci_qh_hw" title='ehci_qh_hw' data-ref="ehci_qh_hw" data-ref-filename="ehci_qh_hw">ehci_qh_hw</dfn> {</td></tr>
+<tr><th id="379">379</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_qh_hw::hw_next" title='ehci_qh_hw::hw_next' data-ref="ehci_qh_hw::hw_next" data-ref-filename="ehci_qh_hw..hw_next">hw_next</dfn>;	<i>/* see EHCI 3.6.1 */</i></td></tr>
+<tr><th id="380">380</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_qh_hw::hw_info1" title='ehci_qh_hw::hw_info1' data-ref="ehci_qh_hw::hw_info1" data-ref-filename="ehci_qh_hw..hw_info1">hw_info1</dfn>;       <i>/* see EHCI 3.6.2 */</i></td></tr>
+<tr><th id="381">381</th><td><u>#define	<dfn class="macro" id="_M/QH_CONTROL_EP" data-ref="_M/QH_CONTROL_EP">QH_CONTROL_EP</dfn>	(1 &lt;&lt; 27)	/* FS/LS control endpoint */</u></td></tr>
+<tr><th id="382">382</th><td><u>#define	<dfn class="macro" id="_M/QH_HEAD" data-ref="_M/QH_HEAD">QH_HEAD</dfn>		(1 &lt;&lt; 15)	/* Head of async reclamation list */</u></td></tr>
+<tr><th id="383">383</th><td><u>#define	<dfn class="macro" id="_M/QH_TOGGLE_CTL" data-ref="_M/QH_TOGGLE_CTL">QH_TOGGLE_CTL</dfn>	(1 &lt;&lt; 14)	/* Data toggle control */</u></td></tr>
+<tr><th id="384">384</th><td><u>#define	<dfn class="macro" id="_M/QH_HIGH_SPEED" data-ref="_M/QH_HIGH_SPEED">QH_HIGH_SPEED</dfn>	(2 &lt;&lt; 12)	/* Endpoint speed */</u></td></tr>
+<tr><th id="385">385</th><td><u>#define	<dfn class="macro" id="_M/QH_LOW_SPEED" data-ref="_M/QH_LOW_SPEED">QH_LOW_SPEED</dfn>	(1 &lt;&lt; 12)</u></td></tr>
+<tr><th id="386">386</th><td><u>#define	<dfn class="macro" id="_M/QH_FULL_SPEED" data-ref="_M/QH_FULL_SPEED">QH_FULL_SPEED</dfn>	(0 &lt;&lt; 12)</u></td></tr>
+<tr><th id="387">387</th><td><u>#define	<dfn class="macro" id="_M/QH_INACTIVATE" data-ref="_M/QH_INACTIVATE">QH_INACTIVATE</dfn>	(1 &lt;&lt; 7)	/* Inactivate on next transaction */</u></td></tr>
+<tr><th id="388">388</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_qh_hw::hw_info2" title='ehci_qh_hw::hw_info2' data-ref="ehci_qh_hw::hw_info2" data-ref-filename="ehci_qh_hw..hw_info2">hw_info2</dfn>;        <i>/* see EHCI 3.6.2 */</i></td></tr>
+<tr><th id="389">389</th><td><u>#define	<dfn class="macro" id="_M/QH_SMASK" data-ref="_M/QH_SMASK">QH_SMASK</dfn>	0x000000ff</u></td></tr>
+<tr><th id="390">390</th><td><u>#define	<dfn class="macro" id="_M/QH_CMASK" data-ref="_M/QH_CMASK">QH_CMASK</dfn>	0x0000ff00</u></td></tr>
+<tr><th id="391">391</th><td><u>#define	<dfn class="macro" id="_M/QH_HUBADDR" data-ref="_M/QH_HUBADDR">QH_HUBADDR</dfn>	0x007f0000</u></td></tr>
+<tr><th id="392">392</th><td><u>#define	<dfn class="macro" id="_M/QH_HUBPORT" data-ref="_M/QH_HUBPORT">QH_HUBPORT</dfn>	0x3f800000</u></td></tr>
+<tr><th id="393">393</th><td><u>#define	<dfn class="macro" id="_M/QH_MULT" data-ref="_M/QH_MULT">QH_MULT</dfn>		0xc0000000</u></td></tr>
+<tr><th id="394">394</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_qh_hw::hw_current" title='ehci_qh_hw::hw_current' data-ref="ehci_qh_hw::hw_current" data-ref-filename="ehci_qh_hw..hw_current">hw_current</dfn>;	<i>/* qtd list - see EHCI 3.6.4 */</i></td></tr>
+<tr><th id="395">395</th><td></td></tr>
+<tr><th id="396">396</th><td>	<i>/* qtd overlay (hardware parts of a struct ehci_qtd) */</i></td></tr>
+<tr><th id="397">397</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_qh_hw::hw_qtd_next" title='ehci_qh_hw::hw_qtd_next' data-ref="ehci_qh_hw::hw_qtd_next" data-ref-filename="ehci_qh_hw..hw_qtd_next">hw_qtd_next</dfn>;</td></tr>
+<tr><th id="398">398</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_qh_hw::hw_alt_next" title='ehci_qh_hw::hw_alt_next' data-ref="ehci_qh_hw::hw_alt_next" data-ref-filename="ehci_qh_hw..hw_alt_next">hw_alt_next</dfn>;</td></tr>
+<tr><th id="399">399</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_qh_hw::hw_token" title='ehci_qh_hw::hw_token' data-ref="ehci_qh_hw::hw_token" data-ref-filename="ehci_qh_hw..hw_token">hw_token</dfn>;</td></tr>
+<tr><th id="400">400</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_qh_hw::hw_buf" title='ehci_qh_hw::hw_buf' data-ref="ehci_qh_hw::hw_buf" data-ref-filename="ehci_qh_hw..hw_buf">hw_buf</dfn>[<var>5</var>];</td></tr>
+<tr><th id="401">401</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_qh_hw::hw_buf_hi" title='ehci_qh_hw::hw_buf_hi' data-ref="ehci_qh_hw::hw_buf_hi" data-ref-filename="ehci_qh_hw..hw_buf_hi">hw_buf_hi</dfn>[<var>5</var>];</td></tr>
+<tr><th id="402">402</th><td>} <a class="macro" href="../../../include/linux/compiler_attributes.h.html#55" title="__attribute__((__aligned__(32)))" data-ref="_M/__aligned">__aligned</a>(<var>32</var>);</td></tr>
+<tr><th id="403">403</th><td></td></tr>
+<tr><th id="404">404</th><td><b>struct</b> <dfn class="type def" id="ehci_qh" title='ehci_qh' data-ref="ehci_qh" data-ref-filename="ehci_qh">ehci_qh</dfn> {</td></tr>
+<tr><th id="405">405</th><td>	<b>struct</b> <a class="type" href="#ehci_qh_hw" title='ehci_qh_hw' data-ref="ehci_qh_hw" data-ref-filename="ehci_qh_hw">ehci_qh_hw</a>	*<dfn class="decl field" id="ehci_qh::hw" title='ehci_qh::hw' data-ref="ehci_qh::hw" data-ref-filename="ehci_qh..hw">hw</dfn>;		<i>/* Must come first */</i></td></tr>
+<tr><th id="406">406</th><td>	<i>/* the rest is HCD-private */</i></td></tr>
+<tr><th id="407">407</th><td>	<a class="typedef" href="../../../include/linux/types.h.html#dma_addr_t" title='dma_addr_t' data-type='u64' data-ref="dma_addr_t" data-ref-filename="dma_addr_t">dma_addr_t</a>		<dfn class="decl field" id="ehci_qh::qh_dma" title='ehci_qh::qh_dma' data-ref="ehci_qh::qh_dma" data-ref-filename="ehci_qh..qh_dma">qh_dma</dfn>;		<i>/* address of qh */</i></td></tr>
+<tr><th id="408">408</th><td>	<b>union</b> <a class="type" href="#ehci_shadow" title='ehci_shadow' data-ref="ehci_shadow" data-ref-filename="ehci_shadow">ehci_shadow</a>	<dfn class="decl field" id="ehci_qh::qh_next" title='ehci_qh::qh_next' data-ref="ehci_qh::qh_next" data-ref-filename="ehci_qh..qh_next">qh_next</dfn>;	<i>/* ptr to qh; or periodic */</i></td></tr>
+<tr><th id="409">409</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="ehci_qh::qtd_list" title='ehci_qh::qtd_list' data-ref="ehci_qh::qtd_list" data-ref-filename="ehci_qh..qtd_list">qtd_list</dfn>;	<i>/* sw qtd list */</i></td></tr>
+<tr><th id="410">410</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="ehci_qh::intr_node" title='ehci_qh::intr_node' data-ref="ehci_qh::intr_node" data-ref-filename="ehci_qh..intr_node">intr_node</dfn>;	<i>/* list of intr QHs */</i></td></tr>
+<tr><th id="411">411</th><td>	<b>struct</b> <a class="type" href="#ehci_qtd" title='ehci_qtd' data-ref="ehci_qtd" data-ref-filename="ehci_qtd">ehci_qtd</a>		*<dfn class="decl field" id="ehci_qh::dummy" title='ehci_qh::dummy' data-ref="ehci_qh::dummy" data-ref-filename="ehci_qh..dummy">dummy</dfn>;</td></tr>
+<tr><th id="412">412</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="ehci_qh::unlink_node" title='ehci_qh::unlink_node' data-ref="ehci_qh::unlink_node" data-ref-filename="ehci_qh..unlink_node">unlink_node</dfn>;</td></tr>
+<tr><th id="413">413</th><td>	<b>struct</b> <a class="type" href="#ehci_per_sched" title='ehci_per_sched' data-ref="ehci_per_sched" data-ref-filename="ehci_per_sched">ehci_per_sched</a>	<dfn class="decl field" id="ehci_qh::ps" title='ehci_qh::ps' data-ref="ehci_qh::ps" data-ref-filename="ehci_qh..ps">ps</dfn>;		<i>/* scheduling info */</i></td></tr>
+<tr><th id="414">414</th><td></td></tr>
+<tr><th id="415">415</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_qh::unlink_cycle" title='ehci_qh::unlink_cycle' data-ref="ehci_qh::unlink_cycle" data-ref-filename="ehci_qh..unlink_cycle">unlink_cycle</dfn>;</td></tr>
+<tr><th id="416">416</th><td></td></tr>
+<tr><th id="417">417</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a>			<dfn class="decl field" id="ehci_qh::qh_state" title='ehci_qh::qh_state' data-ref="ehci_qh::qh_state" data-ref-filename="ehci_qh..qh_state">qh_state</dfn>;</td></tr>
+<tr><th id="418">418</th><td><u>#define	<dfn class="macro" id="_M/QH_STATE_LINKED" data-ref="_M/QH_STATE_LINKED">QH_STATE_LINKED</dfn>		1		/* HC sees this */</u></td></tr>
+<tr><th id="419">419</th><td><u>#define	<dfn class="macro" id="_M/QH_STATE_UNLINK" data-ref="_M/QH_STATE_UNLINK">QH_STATE_UNLINK</dfn>		2		/* HC may still see this */</u></td></tr>
+<tr><th id="420">420</th><td><u>#define	<dfn class="macro" id="_M/QH_STATE_IDLE" data-ref="_M/QH_STATE_IDLE">QH_STATE_IDLE</dfn>		3		/* HC doesn't see this */</u></td></tr>
+<tr><th id="421">421</th><td><u>#define	<dfn class="macro" id="_M/QH_STATE_UNLINK_WAIT" data-ref="_M/QH_STATE_UNLINK_WAIT">QH_STATE_UNLINK_WAIT</dfn>	4		/* LINKED and on unlink q */</u></td></tr>
+<tr><th id="422">422</th><td><u>#define	<dfn class="macro" id="_M/QH_STATE_COMPLETING" data-ref="_M/QH_STATE_COMPLETING">QH_STATE_COMPLETING</dfn>	5		/* don't touch token.HALT */</u></td></tr>
+<tr><th id="423">423</th><td></td></tr>
+<tr><th id="424">424</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a>			<dfn class="decl field" id="ehci_qh::xacterrs" title='ehci_qh::xacterrs' data-ref="ehci_qh::xacterrs" data-ref-filename="ehci_qh..xacterrs">xacterrs</dfn>;	<i>/* XactErr retry counter */</i></td></tr>
+<tr><th id="425">425</th><td><u>#define	<dfn class="macro" id="_M/QH_XACTERR_MAX" data-ref="_M/QH_XACTERR_MAX">QH_XACTERR_MAX</dfn>		32		/* XactErr retry limit */</u></td></tr>
+<tr><th id="426">426</th><td></td></tr>
+<tr><th id="427">427</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a>			<dfn class="decl field" id="ehci_qh::unlink_reason" title='ehci_qh::unlink_reason' data-ref="ehci_qh::unlink_reason" data-ref-filename="ehci_qh..unlink_reason">unlink_reason</dfn>;</td></tr>
+<tr><th id="428">428</th><td><u>#define <dfn class="macro" id="_M/QH_UNLINK_HALTED" data-ref="_M/QH_UNLINK_HALTED">QH_UNLINK_HALTED</dfn>	0x01		/* Halt flag is set */</u></td></tr>
+<tr><th id="429">429</th><td><u>#define <dfn class="macro" id="_M/QH_UNLINK_SHORT_READ" data-ref="_M/QH_UNLINK_SHORT_READ">QH_UNLINK_SHORT_READ</dfn>	0x02		/* Recover from a short read */</u></td></tr>
+<tr><th id="430">430</th><td><u>#define <dfn class="macro" id="_M/QH_UNLINK_DUMMY_OVERLAY" data-ref="_M/QH_UNLINK_DUMMY_OVERLAY">QH_UNLINK_DUMMY_OVERLAY</dfn>	0x04		/* QH overlayed the dummy TD */</u></td></tr>
+<tr><th id="431">431</th><td><u>#define <dfn class="macro" id="_M/QH_UNLINK_SHUTDOWN" data-ref="_M/QH_UNLINK_SHUTDOWN">QH_UNLINK_SHUTDOWN</dfn>	0x08		/* The HC isn't running */</u></td></tr>
+<tr><th id="432">432</th><td><u>#define <dfn class="macro" id="_M/QH_UNLINK_QUEUE_EMPTY" data-ref="_M/QH_UNLINK_QUEUE_EMPTY">QH_UNLINK_QUEUE_EMPTY</dfn>	0x10		/* Reached end of the queue */</u></td></tr>
+<tr><th id="433">433</th><td><u>#define <dfn class="macro" id="_M/QH_UNLINK_REQUESTED" data-ref="_M/QH_UNLINK_REQUESTED">QH_UNLINK_REQUESTED</dfn>	0x20		/* Disable, reset, or dequeue */</u></td></tr>
+<tr><th id="434">434</th><td></td></tr>
+<tr><th id="435">435</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a>			<dfn class="decl field" id="ehci_qh::gap_uf" title='ehci_qh::gap_uf' data-ref="ehci_qh::gap_uf" data-ref-filename="ehci_qh..gap_uf">gap_uf</dfn>;		<i>/* uframes split/csplit gap */</i></td></tr>
+<tr><th id="436">436</th><td></td></tr>
+<tr><th id="437">437</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_qh::is_out" title='ehci_qh::is_out' data-ref="ehci_qh::is_out" data-ref-filename="ehci_qh..is_out">is_out</dfn>:<var>1</var>;	<i>/* bulk or intr OUT */</i></td></tr>
+<tr><th id="438">438</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_qh::clearing_tt" title='ehci_qh::clearing_tt' data-ref="ehci_qh::clearing_tt" data-ref-filename="ehci_qh..clearing_tt">clearing_tt</dfn>:<var>1</var>;	<i>/* Clear-TT-Buf in progress */</i></td></tr>
+<tr><th id="439">439</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_qh::dequeue_during_giveback" title='ehci_qh::dequeue_during_giveback' data-ref="ehci_qh::dequeue_during_giveback" data-ref-filename="ehci_qh..dequeue_during_giveback">dequeue_during_giveback</dfn>:<var>1</var>;</td></tr>
+<tr><th id="440">440</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_qh::should_be_inactive" title='ehci_qh::should_be_inactive' data-ref="ehci_qh::should_be_inactive" data-ref-filename="ehci_qh..should_be_inactive">should_be_inactive</dfn>:<var>1</var>;</td></tr>
+<tr><th id="441">441</th><td>};</td></tr>
+<tr><th id="442">442</th><td></td></tr>
+<tr><th id="443">443</th><td><i>/*-------------------------------------------------------------------------*/</i></td></tr>
+<tr><th id="444">444</th><td></td></tr>
+<tr><th id="445">445</th><td><i>/* description of one iso transaction (up to 3 KB data if highspeed) */</i></td></tr>
+<tr><th id="446">446</th><td><b>struct</b> <dfn class="type def" id="ehci_iso_packet" title='ehci_iso_packet' data-ref="ehci_iso_packet" data-ref-filename="ehci_iso_packet">ehci_iso_packet</dfn> {</td></tr>
+<tr><th id="447">447</th><td>	<i>/* These will be copied to iTD when scheduling */</i></td></tr>
+<tr><th id="448">448</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a>			<dfn class="decl field" id="ehci_iso_packet::bufp" title='ehci_iso_packet::bufp' data-ref="ehci_iso_packet::bufp" data-ref-filename="ehci_iso_packet..bufp">bufp</dfn>;		<i>/* itd-&gt;hw_bufp{,_hi}[pg] |= */</i></td></tr>
+<tr><th id="449">449</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_iso_packet::transaction" title='ehci_iso_packet::transaction' data-ref="ehci_iso_packet::transaction" data-ref-filename="ehci_iso_packet..transaction">transaction</dfn>;	<i>/* itd-&gt;hw_transaction[i] |= */</i></td></tr>
+<tr><th id="450">450</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a>			<dfn class="decl field" id="ehci_iso_packet::cross" title='ehci_iso_packet::cross' data-ref="ehci_iso_packet::cross" data-ref-filename="ehci_iso_packet..cross">cross</dfn>;		<i>/* buf crosses pages */</i></td></tr>
+<tr><th id="451">451</th><td>	<i>/* for full speed OUT splits */</i></td></tr>
+<tr><th id="452">452</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>			<dfn class="decl field" id="ehci_iso_packet::buf1" title='ehci_iso_packet::buf1' data-ref="ehci_iso_packet::buf1" data-ref-filename="ehci_iso_packet..buf1">buf1</dfn>;</td></tr>
+<tr><th id="453">453</th><td>};</td></tr>
+<tr><th id="454">454</th><td></td></tr>
+<tr><th id="455">455</th><td><i>/* temporary schedule data for packets from iso urbs (both speeds)</i></td></tr>
+<tr><th id="456">456</th><td><i> * each packet is one logical usb transaction to the device (not TT),</i></td></tr>
+<tr><th id="457">457</th><td><i> * beginning at stream-&gt;next_uframe</i></td></tr>
+<tr><th id="458">458</th><td><i> */</i></td></tr>
+<tr><th id="459">459</th><td><b>struct</b> <dfn class="type def" id="ehci_iso_sched" title='ehci_iso_sched' data-ref="ehci_iso_sched" data-ref-filename="ehci_iso_sched">ehci_iso_sched</dfn> {</td></tr>
+<tr><th id="460">460</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="ehci_iso_sched::td_list" title='ehci_iso_sched::td_list' data-ref="ehci_iso_sched::td_list" data-ref-filename="ehci_iso_sched..td_list">td_list</dfn>;</td></tr>
+<tr><th id="461">461</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_iso_sched::span" title='ehci_iso_sched::span' data-ref="ehci_iso_sched::span" data-ref-filename="ehci_iso_sched..span">span</dfn>;</td></tr>
+<tr><th id="462">462</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_iso_sched::first_packet" title='ehci_iso_sched::first_packet' data-ref="ehci_iso_sched::first_packet" data-ref-filename="ehci_iso_sched..first_packet">first_packet</dfn>;</td></tr>
+<tr><th id="463">463</th><td>	<b>struct</b> <a class="type" href="#ehci_iso_packet" title='ehci_iso_packet' data-ref="ehci_iso_packet" data-ref-filename="ehci_iso_packet">ehci_iso_packet</a>	<dfn class="decl field" id="ehci_iso_sched::packet" title='ehci_iso_sched::packet' data-ref="ehci_iso_sched::packet" data-ref-filename="ehci_iso_sched..packet">packet</dfn>[<var>0</var>];</td></tr>
+<tr><th id="464">464</th><td>};</td></tr>
+<tr><th id="465">465</th><td></td></tr>
+<tr><th id="466">466</th><td><i>/*</i></td></tr>
+<tr><th id="467">467</th><td><i> * ehci_iso_stream - groups all (s)itds for this endpoint.</i></td></tr>
+<tr><th id="468">468</th><td><i> * acts like a qh would, if EHCI had them for ISO.</i></td></tr>
+<tr><th id="469">469</th><td><i> */</i></td></tr>
+<tr><th id="470">470</th><td><b>struct</b> <dfn class="type def" id="ehci_iso_stream" title='ehci_iso_stream' data-ref="ehci_iso_stream" data-ref-filename="ehci_iso_stream">ehci_iso_stream</dfn> {</td></tr>
+<tr><th id="471">471</th><td>	<i>/* first field matches ehci_hq, but is NULL */</i></td></tr>
+<tr><th id="472">472</th><td>	<b>struct</b> <a class="type" href="#ehci_qh_hw" title='ehci_qh_hw' data-ref="ehci_qh_hw" data-ref-filename="ehci_qh_hw">ehci_qh_hw</a>	*<dfn class="decl field" id="ehci_iso_stream::hw" title='ehci_iso_stream::hw' data-ref="ehci_iso_stream::hw" data-ref-filename="ehci_iso_stream..hw">hw</dfn>;</td></tr>
+<tr><th id="473">473</th><td></td></tr>
+<tr><th id="474">474</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a>			<dfn class="decl field" id="ehci_iso_stream::bEndpointAddress" title='ehci_iso_stream::bEndpointAddress' data-ref="ehci_iso_stream::bEndpointAddress" data-ref-filename="ehci_iso_stream..bEndpointAddress">bEndpointAddress</dfn>;</td></tr>
+<tr><th id="475">475</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a>			<dfn class="decl field" id="ehci_iso_stream::highspeed" title='ehci_iso_stream::highspeed' data-ref="ehci_iso_stream::highspeed" data-ref-filename="ehci_iso_stream..highspeed">highspeed</dfn>;</td></tr>
+<tr><th id="476">476</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="ehci_iso_stream::td_list" title='ehci_iso_stream::td_list' data-ref="ehci_iso_stream::td_list" data-ref-filename="ehci_iso_stream..td_list">td_list</dfn>;	<i>/* queued itds/sitds */</i></td></tr>
+<tr><th id="477">477</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="ehci_iso_stream::free_list" title='ehci_iso_stream::free_list' data-ref="ehci_iso_stream::free_list" data-ref-filename="ehci_iso_stream..free_list">free_list</dfn>;	<i>/* list of unused itds/sitds */</i></td></tr>
+<tr><th id="478">478</th><td></td></tr>
+<tr><th id="479">479</th><td>	<i>/* output of (re)scheduling */</i></td></tr>
+<tr><th id="480">480</th><td>	<b>struct</b> <a class="type" href="#ehci_per_sched" title='ehci_per_sched' data-ref="ehci_per_sched" data-ref-filename="ehci_per_sched">ehci_per_sched</a>	<dfn class="decl field" id="ehci_iso_stream::ps" title='ehci_iso_stream::ps' data-ref="ehci_iso_stream::ps" data-ref-filename="ehci_iso_stream..ps">ps</dfn>;		<i>/* scheduling info */</i></td></tr>
+<tr><th id="481">481</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_iso_stream::next_uframe" title='ehci_iso_stream::next_uframe' data-ref="ehci_iso_stream::next_uframe" data-ref-filename="ehci_iso_stream..next_uframe">next_uframe</dfn>;</td></tr>
+<tr><th id="482">482</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_iso_stream::splits" title='ehci_iso_stream::splits' data-ref="ehci_iso_stream::splits" data-ref-filename="ehci_iso_stream..splits">splits</dfn>;</td></tr>
+<tr><th id="483">483</th><td></td></tr>
+<tr><th id="484">484</th><td>	<i>/* the rest is derived from the endpoint descriptor,</i></td></tr>
+<tr><th id="485">485</th><td><i>	 * including the extra info for hw_bufp[0..2]</i></td></tr>
+<tr><th id="486">486</th><td><i>	 */</i></td></tr>
+<tr><th id="487">487</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a>			<dfn class="decl field" id="ehci_iso_stream::uperiod" title='ehci_iso_stream::uperiod' data-ref="ehci_iso_stream::uperiod" data-ref-filename="ehci_iso_stream..uperiod">uperiod</dfn>;	<i>/* period in uframes */</i></td></tr>
+<tr><th id="488">488</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a>			<dfn class="decl field" id="ehci_iso_stream::maxp" title='ehci_iso_stream::maxp' data-ref="ehci_iso_stream::maxp" data-ref-filename="ehci_iso_stream..maxp">maxp</dfn>;</td></tr>
+<tr><th id="489">489</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_iso_stream::bandwidth" title='ehci_iso_stream::bandwidth' data-ref="ehci_iso_stream::bandwidth" data-ref-filename="ehci_iso_stream..bandwidth">bandwidth</dfn>;</td></tr>
+<tr><th id="490">490</th><td></td></tr>
+<tr><th id="491">491</th><td>	<i>/* This is used to initialize iTD's hw_bufp fields */</i></td></tr>
+<tr><th id="492">492</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_iso_stream::buf0" title='ehci_iso_stream::buf0' data-ref="ehci_iso_stream::buf0" data-ref-filename="ehci_iso_stream..buf0">buf0</dfn>;</td></tr>
+<tr><th id="493">493</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_iso_stream::buf1" title='ehci_iso_stream::buf1' data-ref="ehci_iso_stream::buf1" data-ref-filename="ehci_iso_stream..buf1">buf1</dfn>;</td></tr>
+<tr><th id="494">494</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_iso_stream::buf2" title='ehci_iso_stream::buf2' data-ref="ehci_iso_stream::buf2" data-ref-filename="ehci_iso_stream..buf2">buf2</dfn>;</td></tr>
+<tr><th id="495">495</th><td></td></tr>
+<tr><th id="496">496</th><td>	<i>/* this is used to initialize sITD's tt info */</i></td></tr>
+<tr><th id="497">497</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_iso_stream::address" title='ehci_iso_stream::address' data-ref="ehci_iso_stream::address" data-ref-filename="ehci_iso_stream..address">address</dfn>;</td></tr>
+<tr><th id="498">498</th><td>};</td></tr>
+<tr><th id="499">499</th><td></td></tr>
+<tr><th id="500">500</th><td><i>/*-------------------------------------------------------------------------*/</i></td></tr>
+<tr><th id="501">501</th><td></td></tr>
+<tr><th id="502">502</th><td><i>/*</i></td></tr>
+<tr><th id="503">503</th><td><i> * EHCI Specification 0.95 Section 3.3</i></td></tr>
+<tr><th id="504">504</th><td><i> * Fig 3-4 "Isochronous Transaction Descriptor (iTD)"</i></td></tr>
+<tr><th id="505">505</th><td><i> *</i></td></tr>
+<tr><th id="506">506</th><td><i> * Schedule records for high speed iso xfers</i></td></tr>
+<tr><th id="507">507</th><td><i> */</i></td></tr>
+<tr><th id="508">508</th><td><b>struct</b> <dfn class="type def" id="ehci_itd" title='ehci_itd' data-ref="ehci_itd" data-ref-filename="ehci_itd">ehci_itd</dfn> {</td></tr>
+<tr><th id="509">509</th><td>	<i>/* first part defined by EHCI spec */</i></td></tr>
+<tr><th id="510">510</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_itd::hw_next" title='ehci_itd::hw_next' data-ref="ehci_itd::hw_next" data-ref-filename="ehci_itd..hw_next">hw_next</dfn>;           <i>/* see EHCI 3.3.1 */</i></td></tr>
+<tr><th id="511">511</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_itd::hw_transaction" title='ehci_itd::hw_transaction' data-ref="ehci_itd::hw_transaction" data-ref-filename="ehci_itd..hw_transaction">hw_transaction</dfn>[<var>8</var>]; <i>/* see EHCI 3.3.2 */</i></td></tr>
+<tr><th id="512">512</th><td><u>#define <dfn class="macro" id="_M/EHCI_ISOC_ACTIVE" data-ref="_M/EHCI_ISOC_ACTIVE">EHCI_ISOC_ACTIVE</dfn>        (1&lt;&lt;31)        /* activate transfer this slot */</u></td></tr>
+<tr><th id="513">513</th><td><u>#define <dfn class="macro" id="_M/EHCI_ISOC_BUF_ERR" data-ref="_M/EHCI_ISOC_BUF_ERR">EHCI_ISOC_BUF_ERR</dfn>       (1&lt;&lt;30)        /* Data buffer error */</u></td></tr>
+<tr><th id="514">514</th><td><u>#define <dfn class="macro" id="_M/EHCI_ISOC_BABBLE" data-ref="_M/EHCI_ISOC_BABBLE">EHCI_ISOC_BABBLE</dfn>        (1&lt;&lt;29)        /* babble detected */</u></td></tr>
+<tr><th id="515">515</th><td><u>#define <dfn class="macro" id="_M/EHCI_ISOC_XACTERR" data-ref="_M/EHCI_ISOC_XACTERR">EHCI_ISOC_XACTERR</dfn>       (1&lt;&lt;28)        /* XactErr - transaction error */</u></td></tr>
+<tr><th id="516">516</th><td><u>#define	<dfn class="macro" id="_M/EHCI_ITD_LENGTH" data-ref="_M/EHCI_ITD_LENGTH">EHCI_ITD_LENGTH</dfn>(tok)	(((tok)&gt;&gt;16) &amp; 0x0fff)</u></td></tr>
+<tr><th id="517">517</th><td><u>#define	<dfn class="macro" id="_M/EHCI_ITD_IOC" data-ref="_M/EHCI_ITD_IOC">EHCI_ITD_IOC</dfn>		(1 &lt;&lt; 15)	/* interrupt on complete */</u></td></tr>
+<tr><th id="518">518</th><td></td></tr>
+<tr><th id="519">519</th><td><u>#define <dfn class="macro" id="_M/ITD_ACTIVE" data-ref="_M/ITD_ACTIVE">ITD_ACTIVE</dfn>(ehci)	cpu_to_hc32(ehci, EHCI_ISOC_ACTIVE)</u></td></tr>
+<tr><th id="520">520</th><td></td></tr>
+<tr><th id="521">521</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_itd::hw_bufp" title='ehci_itd::hw_bufp' data-ref="ehci_itd::hw_bufp" data-ref-filename="ehci_itd..hw_bufp">hw_bufp</dfn>[<var>7</var>];	<i>/* see EHCI 3.3.3 */</i></td></tr>
+<tr><th id="522">522</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_itd::hw_bufp_hi" title='ehci_itd::hw_bufp_hi' data-ref="ehci_itd::hw_bufp_hi" data-ref-filename="ehci_itd..hw_bufp_hi">hw_bufp_hi</dfn>[<var>7</var>];	<i>/* Appendix B */</i></td></tr>
+<tr><th id="523">523</th><td></td></tr>
+<tr><th id="524">524</th><td>	<i>/* the rest is HCD-private */</i></td></tr>
+<tr><th id="525">525</th><td>	<a class="typedef" href="../../../include/linux/types.h.html#dma_addr_t" title='dma_addr_t' data-type='u64' data-ref="dma_addr_t" data-ref-filename="dma_addr_t">dma_addr_t</a>		<dfn class="decl field" id="ehci_itd::itd_dma" title='ehci_itd::itd_dma' data-ref="ehci_itd::itd_dma" data-ref-filename="ehci_itd..itd_dma">itd_dma</dfn>;	<i>/* for this itd */</i></td></tr>
+<tr><th id="526">526</th><td>	<b>union</b> <a class="type" href="#ehci_shadow" title='ehci_shadow' data-ref="ehci_shadow" data-ref-filename="ehci_shadow">ehci_shadow</a>	<dfn class="decl field" id="ehci_itd::itd_next" title='ehci_itd::itd_next' data-ref="ehci_itd::itd_next" data-ref-filename="ehci_itd..itd_next">itd_next</dfn>;	<i>/* ptr to periodic q entry */</i></td></tr>
+<tr><th id="527">527</th><td></td></tr>
+<tr><th id="528">528</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/usb.h.html#urb" title='urb' data-ref="urb" data-ref-filename="urb">urb</a>		*<dfn class="decl field" id="ehci_itd::urb" title='ehci_itd::urb' data-ref="ehci_itd::urb" data-ref-filename="ehci_itd..urb">urb</dfn>;</td></tr>
+<tr><th id="529">529</th><td>	<b>struct</b> <a class="type" href="#ehci_iso_stream" title='ehci_iso_stream' data-ref="ehci_iso_stream" data-ref-filename="ehci_iso_stream">ehci_iso_stream</a>	*<dfn class="decl field" id="ehci_itd::stream" title='ehci_itd::stream' data-ref="ehci_itd::stream" data-ref-filename="ehci_itd..stream">stream</dfn>;	<i>/* endpoint's queue */</i></td></tr>
+<tr><th id="530">530</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="ehci_itd::itd_list" title='ehci_itd::itd_list' data-ref="ehci_itd::itd_list" data-ref-filename="ehci_itd..itd_list">itd_list</dfn>;	<i>/* list of stream's itds */</i></td></tr>
+<tr><th id="531">531</th><td></td></tr>
+<tr><th id="532">532</th><td>	<i>/* any/all hw_transactions here may be used by that urb */</i></td></tr>
+<tr><th id="533">533</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_itd::frame" title='ehci_itd::frame' data-ref="ehci_itd::frame" data-ref-filename="ehci_itd..frame">frame</dfn>;		<i>/* where scheduled */</i></td></tr>
+<tr><th id="534">534</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_itd::pg" title='ehci_itd::pg' data-ref="ehci_itd::pg" data-ref-filename="ehci_itd..pg">pg</dfn>;</td></tr>
+<tr><th id="535">535</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_itd::index" title='ehci_itd::index' data-ref="ehci_itd::index" data-ref-filename="ehci_itd..index">index</dfn>[<var>8</var>];	<i>/* in urb-&gt;iso_frame_desc */</i></td></tr>
+<tr><th id="536">536</th><td>} <a class="macro" href="../../../include/linux/compiler_attributes.h.html#55" title="__attribute__((__aligned__(32)))" data-ref="_M/__aligned">__aligned</a>(<var>32</var>);</td></tr>
+<tr><th id="537">537</th><td></td></tr>
+<tr><th id="538">538</th><td><i>/*-------------------------------------------------------------------------*/</i></td></tr>
+<tr><th id="539">539</th><td></td></tr>
+<tr><th id="540">540</th><td><i>/*</i></td></tr>
+<tr><th id="541">541</th><td><i> * EHCI Specification 0.95 Section 3.4</i></td></tr>
+<tr><th id="542">542</th><td><i> * siTD, aka split-transaction isochronous Transfer Descriptor</i></td></tr>
+<tr><th id="543">543</th><td><i> *       ... describe full speed iso xfers through TT in hubs</i></td></tr>
+<tr><th id="544">544</th><td><i> * see Figure 3-5 "Split-transaction Isochronous Transaction Descriptor (siTD)</i></td></tr>
+<tr><th id="545">545</th><td><i> */</i></td></tr>
+<tr><th id="546">546</th><td><b>struct</b> <dfn class="type def" id="ehci_sitd" title='ehci_sitd' data-ref="ehci_sitd" data-ref-filename="ehci_sitd">ehci_sitd</dfn> {</td></tr>
+<tr><th id="547">547</th><td>	<i>/* first part defined by EHCI spec */</i></td></tr>
+<tr><th id="548">548</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_sitd::hw_next" title='ehci_sitd::hw_next' data-ref="ehci_sitd::hw_next" data-ref-filename="ehci_sitd..hw_next">hw_next</dfn>;</td></tr>
+<tr><th id="549">549</th><td><i>/* uses bit field macros above - see EHCI 0.95 Table 3-8 */</i></td></tr>
+<tr><th id="550">550</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_sitd::hw_fullspeed_ep" title='ehci_sitd::hw_fullspeed_ep' data-ref="ehci_sitd::hw_fullspeed_ep" data-ref-filename="ehci_sitd..hw_fullspeed_ep">hw_fullspeed_ep</dfn>;	<i>/* EHCI table 3-9 */</i></td></tr>
+<tr><th id="551">551</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_sitd::hw_uframe" title='ehci_sitd::hw_uframe' data-ref="ehci_sitd::hw_uframe" data-ref-filename="ehci_sitd..hw_uframe">hw_uframe</dfn>;		<i>/* EHCI table 3-10 */</i></td></tr>
+<tr><th id="552">552</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_sitd::hw_results" title='ehci_sitd::hw_results' data-ref="ehci_sitd::hw_results" data-ref-filename="ehci_sitd..hw_results">hw_results</dfn>;		<i>/* EHCI table 3-11 */</i></td></tr>
+<tr><th id="553">553</th><td><u>#define	<dfn class="macro" id="_M/SITD_IOC" data-ref="_M/SITD_IOC">SITD_IOC</dfn>	(1 &lt;&lt; 31)	/* interrupt on completion */</u></td></tr>
+<tr><th id="554">554</th><td><u>#define	<dfn class="macro" id="_M/SITD_PAGE" data-ref="_M/SITD_PAGE">SITD_PAGE</dfn>	(1 &lt;&lt; 30)	/* buffer 0/1 */</u></td></tr>
+<tr><th id="555">555</th><td><u>#define	<dfn class="macro" id="_M/SITD_LENGTH" data-ref="_M/SITD_LENGTH">SITD_LENGTH</dfn>(x)	(((x) &gt;&gt; 16) &amp; 0x3ff)</u></td></tr>
+<tr><th id="556">556</th><td><u>#define	<dfn class="macro" id="_M/SITD_STS_ACTIVE" data-ref="_M/SITD_STS_ACTIVE">SITD_STS_ACTIVE</dfn>	(1 &lt;&lt; 7)	/* HC may execute this */</u></td></tr>
+<tr><th id="557">557</th><td><u>#define	<dfn class="macro" id="_M/SITD_STS_ERR" data-ref="_M/SITD_STS_ERR">SITD_STS_ERR</dfn>	(1 &lt;&lt; 6)	/* error from TT */</u></td></tr>
+<tr><th id="558">558</th><td><u>#define	<dfn class="macro" id="_M/SITD_STS_DBE" data-ref="_M/SITD_STS_DBE">SITD_STS_DBE</dfn>	(1 &lt;&lt; 5)	/* data buffer error (in HC) */</u></td></tr>
+<tr><th id="559">559</th><td><u>#define	<dfn class="macro" id="_M/SITD_STS_BABBLE" data-ref="_M/SITD_STS_BABBLE">SITD_STS_BABBLE</dfn>	(1 &lt;&lt; 4)	/* device was babbling */</u></td></tr>
+<tr><th id="560">560</th><td><u>#define	<dfn class="macro" id="_M/SITD_STS_XACT" data-ref="_M/SITD_STS_XACT">SITD_STS_XACT</dfn>	(1 &lt;&lt; 3)	/* illegal IN response */</u></td></tr>
+<tr><th id="561">561</th><td><u>#define	<dfn class="macro" id="_M/SITD_STS_MMF" data-ref="_M/SITD_STS_MMF">SITD_STS_MMF</dfn>	(1 &lt;&lt; 2)	/* incomplete split transaction */</u></td></tr>
+<tr><th id="562">562</th><td><u>#define	<dfn class="macro" id="_M/SITD_STS_STS" data-ref="_M/SITD_STS_STS">SITD_STS_STS</dfn>	(1 &lt;&lt; 1)	/* split transaction state */</u></td></tr>
+<tr><th id="563">563</th><td></td></tr>
+<tr><th id="564">564</th><td><u>#define <dfn class="macro" id="_M/SITD_ACTIVE" data-ref="_M/SITD_ACTIVE">SITD_ACTIVE</dfn>(ehci)	cpu_to_hc32(ehci, SITD_STS_ACTIVE)</u></td></tr>
+<tr><th id="565">565</th><td></td></tr>
+<tr><th id="566">566</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_sitd::hw_buf" title='ehci_sitd::hw_buf' data-ref="ehci_sitd::hw_buf" data-ref-filename="ehci_sitd..hw_buf">hw_buf</dfn>[<var>2</var>];		<i>/* EHCI table 3-12 */</i></td></tr>
+<tr><th id="567">567</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_sitd::hw_backpointer" title='ehci_sitd::hw_backpointer' data-ref="ehci_sitd::hw_backpointer" data-ref-filename="ehci_sitd..hw_backpointer">hw_backpointer</dfn>;		<i>/* EHCI table 3-13 */</i></td></tr>
+<tr><th id="568">568</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_sitd::hw_buf_hi" title='ehci_sitd::hw_buf_hi' data-ref="ehci_sitd::hw_buf_hi" data-ref-filename="ehci_sitd..hw_buf_hi">hw_buf_hi</dfn>[<var>2</var>];		<i>/* Appendix B */</i></td></tr>
+<tr><th id="569">569</th><td></td></tr>
+<tr><th id="570">570</th><td>	<i>/* the rest is HCD-private */</i></td></tr>
+<tr><th id="571">571</th><td>	<a class="typedef" href="../../../include/linux/types.h.html#dma_addr_t" title='dma_addr_t' data-type='u64' data-ref="dma_addr_t" data-ref-filename="dma_addr_t">dma_addr_t</a>		<dfn class="decl field" id="ehci_sitd::sitd_dma" title='ehci_sitd::sitd_dma' data-ref="ehci_sitd::sitd_dma" data-ref-filename="ehci_sitd..sitd_dma">sitd_dma</dfn>;</td></tr>
+<tr><th id="572">572</th><td>	<b>union</b> <a class="type" href="#ehci_shadow" title='ehci_shadow' data-ref="ehci_shadow" data-ref-filename="ehci_shadow">ehci_shadow</a>	<dfn class="decl field" id="ehci_sitd::sitd_next" title='ehci_sitd::sitd_next' data-ref="ehci_sitd::sitd_next" data-ref-filename="ehci_sitd..sitd_next">sitd_next</dfn>;	<i>/* ptr to periodic q entry */</i></td></tr>
+<tr><th id="573">573</th><td></td></tr>
+<tr><th id="574">574</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/usb.h.html#urb" title='urb' data-ref="urb" data-ref-filename="urb">urb</a>		*<dfn class="decl field" id="ehci_sitd::urb" title='ehci_sitd::urb' data-ref="ehci_sitd::urb" data-ref-filename="ehci_sitd..urb">urb</dfn>;</td></tr>
+<tr><th id="575">575</th><td>	<b>struct</b> <a class="type" href="#ehci_iso_stream" title='ehci_iso_stream' data-ref="ehci_iso_stream" data-ref-filename="ehci_iso_stream">ehci_iso_stream</a>	*<dfn class="decl field" id="ehci_sitd::stream" title='ehci_sitd::stream' data-ref="ehci_sitd::stream" data-ref-filename="ehci_sitd..stream">stream</dfn>;	<i>/* endpoint's queue */</i></td></tr>
+<tr><th id="576">576</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="ehci_sitd::sitd_list" title='ehci_sitd::sitd_list' data-ref="ehci_sitd::sitd_list" data-ref-filename="ehci_sitd..sitd_list">sitd_list</dfn>;	<i>/* list of stream's sitds */</i></td></tr>
+<tr><th id="577">577</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_sitd::frame" title='ehci_sitd::frame' data-ref="ehci_sitd::frame" data-ref-filename="ehci_sitd..frame">frame</dfn>;</td></tr>
+<tr><th id="578">578</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ehci_sitd::index" title='ehci_sitd::index' data-ref="ehci_sitd::index" data-ref-filename="ehci_sitd..index">index</dfn>;</td></tr>
+<tr><th id="579">579</th><td>} <a class="macro" href="../../../include/linux/compiler_attributes.h.html#55" title="__attribute__((__aligned__(32)))" data-ref="_M/__aligned">__aligned</a>(<var>32</var>);</td></tr>
+<tr><th id="580">580</th><td></td></tr>
+<tr><th id="581">581</th><td><i>/*-------------------------------------------------------------------------*/</i></td></tr>
+<tr><th id="582">582</th><td></td></tr>
+<tr><th id="583">583</th><td><i>/*</i></td></tr>
+<tr><th id="584">584</th><td><i> * EHCI Specification 0.96 Section 3.7</i></td></tr>
+<tr><th id="585">585</th><td><i> * Periodic Frame Span Traversal Node (FSTN)</i></td></tr>
+<tr><th id="586">586</th><td><i> *</i></td></tr>
+<tr><th id="587">587</th><td><i> * Manages split interrupt transactions (using TT) that span frame boundaries</i></td></tr>
+<tr><th id="588">588</th><td><i> * into uframes 0/1; see 4.12.2.2.  In those uframes, a "save place" FSTN</i></td></tr>
+<tr><th id="589">589</th><td><i> * makes the HC jump (back) to a QH to scan for fs/ls QH completions until</i></td></tr>
+<tr><th id="590">590</th><td><i> * it hits a "restore" FSTN; then it returns to finish other uframe 0/1 work.</i></td></tr>
+<tr><th id="591">591</th><td><i> */</i></td></tr>
+<tr><th id="592">592</th><td><b>struct</b> <dfn class="type def" id="ehci_fstn" title='ehci_fstn' data-ref="ehci_fstn" data-ref-filename="ehci_fstn">ehci_fstn</dfn> {</td></tr>
+<tr><th id="593">593</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_fstn::hw_next" title='ehci_fstn::hw_next' data-ref="ehci_fstn::hw_next" data-ref-filename="ehci_fstn..hw_next">hw_next</dfn>;	<i>/* any periodic q entry */</i></td></tr>
+<tr><th id="594">594</th><td>	<a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a>			<dfn class="decl field" id="ehci_fstn::hw_prev" title='ehci_fstn::hw_prev' data-ref="ehci_fstn::hw_prev" data-ref-filename="ehci_fstn..hw_prev">hw_prev</dfn>;	<i>/* qh or EHCI_LIST_END */</i></td></tr>
+<tr><th id="595">595</th><td></td></tr>
+<tr><th id="596">596</th><td>	<i>/* the rest is HCD-private */</i></td></tr>
+<tr><th id="597">597</th><td>	<a class="typedef" href="../../../include/linux/types.h.html#dma_addr_t" title='dma_addr_t' data-type='u64' data-ref="dma_addr_t" data-ref-filename="dma_addr_t">dma_addr_t</a>		<dfn class="decl field" id="ehci_fstn::fstn_dma" title='ehci_fstn::fstn_dma' data-ref="ehci_fstn::fstn_dma" data-ref-filename="ehci_fstn..fstn_dma">fstn_dma</dfn>;</td></tr>
+<tr><th id="598">598</th><td>	<b>union</b> <a class="type" href="#ehci_shadow" title='ehci_shadow' data-ref="ehci_shadow" data-ref-filename="ehci_shadow">ehci_shadow</a>	<dfn class="decl field" id="ehci_fstn::fstn_next" title='ehci_fstn::fstn_next' data-ref="ehci_fstn::fstn_next" data-ref-filename="ehci_fstn..fstn_next">fstn_next</dfn>;	<i>/* ptr to periodic q entry */</i></td></tr>
+<tr><th id="599">599</th><td>} <a class="macro" href="../../../include/linux/compiler_attributes.h.html#55" title="__attribute__((__aligned__(32)))" data-ref="_M/__aligned">__aligned</a>(<var>32</var>);</td></tr>
+<tr><th id="600">600</th><td></td></tr>
+<tr><th id="601">601</th><td><i>/*-------------------------------------------------------------------------*/</i></td></tr>
+<tr><th id="602">602</th><td></td></tr>
+<tr><th id="603">603</th><td><i>/*</i></td></tr>
+<tr><th id="604">604</th><td><i> * USB-2.0 Specification Sections 11.14 and 11.18</i></td></tr>
+<tr><th id="605">605</th><td><i> * Scheduling and budgeting split transactions using TTs</i></td></tr>
+<tr><th id="606">606</th><td><i> *</i></td></tr>
+<tr><th id="607">607</th><td><i> * A hub can have a single TT for all its ports, or multiple TTs (one for each</i></td></tr>
+<tr><th id="608">608</th><td><i> * port).  The bandwidth and budgeting information for the full/low-speed bus</i></td></tr>
+<tr><th id="609">609</th><td><i> * below each TT is self-contained and independent of the other TTs or the</i></td></tr>
+<tr><th id="610">610</th><td><i> * high-speed bus.</i></td></tr>
+<tr><th id="611">611</th><td><i> *</i></td></tr>
+<tr><th id="612">612</th><td><i> * "Bandwidth" refers to the number of microseconds on the FS/LS bus allocated</i></td></tr>
+<tr><th id="613">613</th><td><i> * to an interrupt or isochronous endpoint for each frame.  "Budget" refers to</i></td></tr>
+<tr><th id="614">614</th><td><i> * the best-case estimate of the number of full-speed bytes allocated to an</i></td></tr>
+<tr><th id="615">615</th><td><i> * endpoint for each microframe within an allocated frame.</i></td></tr>
+<tr><th id="616">616</th><td><i> *</i></td></tr>
+<tr><th id="617">617</th><td><i> * Removal of an endpoint invalidates a TT's budget.  Instead of trying to</i></td></tr>
+<tr><th id="618">618</th><td><i> * keep an up-to-date record, we recompute the budget when it is needed.</i></td></tr>
+<tr><th id="619">619</th><td><i> */</i></td></tr>
+<tr><th id="620">620</th><td></td></tr>
+<tr><th id="621">621</th><td><b>struct</b> <dfn class="type def" id="ehci_tt" title='ehci_tt' data-ref="ehci_tt" data-ref-filename="ehci_tt">ehci_tt</dfn> {</td></tr>
+<tr><th id="622">622</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a>			<dfn class="decl field" id="ehci_tt::bandwidth" title='ehci_tt::bandwidth' data-ref="ehci_tt::bandwidth" data-ref-filename="ehci_tt..bandwidth">bandwidth</dfn>[<a class="macro" href="#250" title="(64 &gt;&gt; 3)" data-ref="_M/EHCI_BANDWIDTH_FRAMES">EHCI_BANDWIDTH_FRAMES</a>];</td></tr>
+<tr><th id="623">623</th><td></td></tr>
+<tr><th id="624">624</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="ehci_tt::tt_list" title='ehci_tt::tt_list' data-ref="ehci_tt::tt_list" data-ref-filename="ehci_tt..tt_list">tt_list</dfn>;	<i>/* List of all ehci_tt's */</i></td></tr>
+<tr><th id="625">625</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="ehci_tt::ps_list" title='ehci_tt::ps_list' data-ref="ehci_tt::ps_list" data-ref-filename="ehci_tt..ps_list">ps_list</dfn>;	<i>/* Items using this TT */</i></td></tr>
+<tr><th id="626">626</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/usb/hcd.h.html#usb_tt" title='usb_tt' data-ref="usb_tt" data-ref-filename="usb_tt">usb_tt</a>		*<dfn class="decl field" id="ehci_tt::usb_tt" title='ehci_tt::usb_tt' data-ref="ehci_tt::usb_tt" data-ref-filename="ehci_tt..usb_tt">usb_tt</dfn>;</td></tr>
+<tr><th id="627">627</th><td>	<em>int</em>			<dfn class="decl field" id="ehci_tt::tt_port" title='ehci_tt::tt_port' data-ref="ehci_tt::tt_port" data-ref-filename="ehci_tt..tt_port">tt_port</dfn>;	<i>/* TT port number */</i></td></tr>
+<tr><th id="628">628</th><td>};</td></tr>
+<tr><th id="629">629</th><td></td></tr>
+<tr><th id="630">630</th><td><i>/*-------------------------------------------------------------------------*/</i></td></tr>
+<tr><th id="631">631</th><td></td></tr>
+<tr><th id="632">632</th><td><i>/* Prepare the PORTSC wakeup flags during controller suspend/resume */</i></td></tr>
+<tr><th id="633">633</th><td></td></tr>
+<tr><th id="634">634</th><td><u>#define <dfn class="macro" id="_M/ehci_prepare_ports_for_controller_suspend" data-ref="_M/ehci_prepare_ports_for_controller_suspend">ehci_prepare_ports_for_controller_suspend</dfn>(ehci, do_wakeup)	\</u></td></tr>
+<tr><th id="635">635</th><td><u>		ehci_adjust_port_wakeup_flags(ehci, true, do_wakeup)</u></td></tr>
+<tr><th id="636">636</th><td></td></tr>
+<tr><th id="637">637</th><td><u>#define <dfn class="macro" id="_M/ehci_prepare_ports_for_controller_resume" data-ref="_M/ehci_prepare_ports_for_controller_resume">ehci_prepare_ports_for_controller_resume</dfn>(ehci)			\</u></td></tr>
+<tr><th id="638">638</th><td><u>		ehci_adjust_port_wakeup_flags(ehci, false, false)</u></td></tr>
+<tr><th id="639">639</th><td></td></tr>
+<tr><th id="640">640</th><td><i>/*-------------------------------------------------------------------------*/</i></td></tr>
+<tr><th id="641">641</th><td></td></tr>
+<tr><th id="642">642</th><td><u>#<span data-ppcond="642">ifdef</span> <span class="macro" data-ref="_M/CONFIG_USB_EHCI_ROOT_HUB_TT">CONFIG_USB_EHCI_ROOT_HUB_TT</span></u></td></tr>
+<tr><th id="643">643</th><td></td></tr>
+<tr><th id="644">644</th><td><i>/*</i></td></tr>
+<tr><th id="645">645</th><td><i> * Some EHCI controllers have a Transaction Translator built into the</i></td></tr>
+<tr><th id="646">646</th><td><i> * root hub. This is a non-standard feature.  Each controller will need</i></td></tr>
+<tr><th id="647">647</th><td><i> * to add code to the following inline functions, and call them as</i></td></tr>
+<tr><th id="648">648</th><td><i> * needed (mostly in root hub code).</i></td></tr>
+<tr><th id="649">649</th><td><i> */</i></td></tr>
+<tr><th id="650">650</th><td></td></tr>
+<tr><th id="651">651</th><td><u>#define	ehci_is_TDI(e)			(ehci_to_hcd(e)-&gt;has_tt)</u></td></tr>
+<tr><th id="652">652</th><td></td></tr>
+<tr><th id="653">653</th><td><i>/* Returns the speed of a device attached to a port on the root hub. */</i></td></tr>
+<tr><th id="654">654</th><td><em>static</em> <b>inline</b> <em>unsigned</em> <em>int</em></td></tr>
+<tr><th id="655">655</th><td>ehci_port_speed(<b>struct</b> ehci_hcd *ehci, <em>unsigned</em> <em>int</em> portsc)</td></tr>
+<tr><th id="656">656</th><td>{</td></tr>
+<tr><th id="657">657</th><td>	<b>if</b> (ehci_is_TDI(ehci)) {</td></tr>
+<tr><th id="658">658</th><td>		<b>switch</b> ((portsc &gt;&gt; (ehci-&gt;has_hostpc ? <var>25</var> : <var>26</var>)) &amp; <var>3</var>) {</td></tr>
+<tr><th id="659">659</th><td>		<b>case</b> <var>0</var>:</td></tr>
+<tr><th id="660">660</th><td>			<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="661">661</th><td>		<b>case</b> <var>1</var>:</td></tr>
+<tr><th id="662">662</th><td>			<b>return</b> USB_PORT_STAT_LOW_SPEED;</td></tr>
+<tr><th id="663">663</th><td>		<b>case</b> <var>2</var>:</td></tr>
+<tr><th id="664">664</th><td>		<b>default</b>:</td></tr>
+<tr><th id="665">665</th><td>			<b>return</b> USB_PORT_STAT_HIGH_SPEED;</td></tr>
+<tr><th id="666">666</th><td>		}</td></tr>
+<tr><th id="667">667</th><td>	}</td></tr>
+<tr><th id="668">668</th><td>	<b>return</b> USB_PORT_STAT_HIGH_SPEED;</td></tr>
+<tr><th id="669">669</th><td>}</td></tr>
+<tr><th id="670">670</th><td></td></tr>
+<tr><th id="671">671</th><td><u>#<span data-ppcond="642">else</span></u></td></tr>
+<tr><th id="672">672</th><td></td></tr>
+<tr><th id="673">673</th><td><u>#define	<dfn class="macro" id="_M/ehci_is_TDI" data-ref="_M/ehci_is_TDI">ehci_is_TDI</dfn>(e)			(0)</u></td></tr>
+<tr><th id="674">674</th><td></td></tr>
+<tr><th id="675">675</th><td><u>#define	<dfn class="macro" id="_M/ehci_port_speed" data-ref="_M/ehci_port_speed">ehci_port_speed</dfn>(ehci, portsc)	USB_PORT_STAT_HIGH_SPEED</u></td></tr>
+<tr><th id="676">676</th><td><u>#<span data-ppcond="642">endif</span></u></td></tr>
+<tr><th id="677">677</th><td></td></tr>
+<tr><th id="678">678</th><td><i>/*-------------------------------------------------------------------------*/</i></td></tr>
+<tr><th id="679">679</th><td></td></tr>
+<tr><th id="680">680</th><td><u>#<span data-ppcond="680">ifdef</span> <span class="macro" data-ref="_M/CONFIG_PPC_83xx">CONFIG_PPC_83xx</span></u></td></tr>
+<tr><th id="681">681</th><td><i>/* Some Freescale processors have an erratum in which the TT</i></td></tr>
+<tr><th id="682">682</th><td><i> * port number in the queue head was 0..N-1 instead of 1..N.</i></td></tr>
+<tr><th id="683">683</th><td><i> */</i></td></tr>
+<tr><th id="684">684</th><td><u>#define	ehci_has_fsl_portno_bug(e)		((e)-&gt;has_fsl_port_bug)</u></td></tr>
+<tr><th id="685">685</th><td><u>#<span data-ppcond="680">else</span></u></td></tr>
+<tr><th id="686">686</th><td><u>#define	<dfn class="macro" id="_M/ehci_has_fsl_portno_bug" data-ref="_M/ehci_has_fsl_portno_bug">ehci_has_fsl_portno_bug</dfn>(e)		(0)</u></td></tr>
+<tr><th id="687">687</th><td><u>#<span data-ppcond="680">endif</span></u></td></tr>
+<tr><th id="688">688</th><td></td></tr>
+<tr><th id="689">689</th><td><u>#define <dfn class="macro" id="_M/PORTSC_FSL_PFSC" data-ref="_M/PORTSC_FSL_PFSC">PORTSC_FSL_PFSC</dfn>	24	/* Port Force Full-Speed Connect */</u></td></tr>
+<tr><th id="690">690</th><td></td></tr>
+<tr><th id="691">691</th><td><u>#<span data-ppcond="691">if</span> defined(<span class="macro" data-ref="_M/CONFIG_PPC_85xx">CONFIG_PPC_85xx</span>)</u></td></tr>
+<tr><th id="692">692</th><td><i>/* Some Freescale processors have an erratum (USB A-005275) in which</i></td></tr>
+<tr><th id="693">693</th><td><i> * incoming packets get corrupted in HS mode</i></td></tr>
+<tr><th id="694">694</th><td><i> */</i></td></tr>
+<tr><th id="695">695</th><td><u>#define ehci_has_fsl_hs_errata(e)	((e)-&gt;has_fsl_hs_errata)</u></td></tr>
+<tr><th id="696">696</th><td><u>#<span data-ppcond="691">else</span></u></td></tr>
+<tr><th id="697">697</th><td><u>#define <dfn class="macro" id="_M/ehci_has_fsl_hs_errata" data-ref="_M/ehci_has_fsl_hs_errata">ehci_has_fsl_hs_errata</dfn>(e)	(0)</u></td></tr>
+<tr><th id="698">698</th><td><u>#<span data-ppcond="691">endif</span></u></td></tr>
+<tr><th id="699">699</th><td></td></tr>
+<tr><th id="700">700</th><td><i>/*</i></td></tr>
+<tr><th id="701">701</th><td><i> * Some Freescale/NXP processors have an erratum (USB A-005697)</i></td></tr>
+<tr><th id="702">702</th><td><i> * in which we need to wait for 10ms for bus to enter suspend mode</i></td></tr>
+<tr><th id="703">703</th><td><i> * after setting SUSP bit.</i></td></tr>
+<tr><th id="704">704</th><td><i> */</i></td></tr>
+<tr><th id="705">705</th><td><u>#define <dfn class="macro" id="_M/ehci_has_fsl_susp_errata" data-ref="_M/ehci_has_fsl_susp_errata">ehci_has_fsl_susp_errata</dfn>(e)	((e)-&gt;has_fsl_susp_errata)</u></td></tr>
+<tr><th id="706">706</th><td></td></tr>
+<tr><th id="707">707</th><td><i>/*</i></td></tr>
+<tr><th id="708">708</th><td><i> * While most USB host controllers implement their registers in</i></td></tr>
+<tr><th id="709">709</th><td><i> * little-endian format, a minority (celleb companion chip) implement</i></td></tr>
+<tr><th id="710">710</th><td><i> * them in big endian format.</i></td></tr>
+<tr><th id="711">711</th><td><i> *</i></td></tr>
+<tr><th id="712">712</th><td><i> * This attempts to support either format at compile time without a</i></td></tr>
+<tr><th id="713">713</th><td><i> * runtime penalty, or both formats with the additional overhead</i></td></tr>
+<tr><th id="714">714</th><td><i> * of checking a flag bit.</i></td></tr>
+<tr><th id="715">715</th><td><i> *</i></td></tr>
+<tr><th id="716">716</th><td><i> * ehci_big_endian_capbase is a special quirk for controllers that</i></td></tr>
+<tr><th id="717">717</th><td><i> * implement the HC capability registers as separate registers and not</i></td></tr>
+<tr><th id="718">718</th><td><i> * as fields of a 32-bit register.</i></td></tr>
+<tr><th id="719">719</th><td><i> */</i></td></tr>
+<tr><th id="720">720</th><td></td></tr>
+<tr><th id="721">721</th><td><u>#<span data-ppcond="721">ifdef</span> <span class="macro" data-ref="_M/CONFIG_USB_EHCI_BIG_ENDIAN_MMIO">CONFIG_USB_EHCI_BIG_ENDIAN_MMIO</span></u></td></tr>
+<tr><th id="722">722</th><td><u>#define ehci_big_endian_mmio(e)		((e)-&gt;big_endian_mmio)</u></td></tr>
+<tr><th id="723">723</th><td><u>#define ehci_big_endian_capbase(e)	((e)-&gt;big_endian_capbase)</u></td></tr>
+<tr><th id="724">724</th><td><u>#<span data-ppcond="721">else</span></u></td></tr>
+<tr><th id="725">725</th><td><u>#define <dfn class="macro" id="_M/ehci_big_endian_mmio" data-ref="_M/ehci_big_endian_mmio">ehci_big_endian_mmio</dfn>(e)		0</u></td></tr>
+<tr><th id="726">726</th><td><u>#define <dfn class="macro" id="_M/ehci_big_endian_capbase" data-ref="_M/ehci_big_endian_capbase">ehci_big_endian_capbase</dfn>(e)	0</u></td></tr>
+<tr><th id="727">727</th><td><u>#<span data-ppcond="721">endif</span></u></td></tr>
+<tr><th id="728">728</th><td></td></tr>
+<tr><th id="729">729</th><td><i>/*</i></td></tr>
+<tr><th id="730">730</th><td><i> * Big-endian read/write functions are arch-specific.</i></td></tr>
+<tr><th id="731">731</th><td><i> * Other arches can be added if/when they're needed.</i></td></tr>
+<tr><th id="732">732</th><td><i> */</i></td></tr>
+<tr><th id="733">733</th><td><u>#<span data-ppcond="733">if</span> defined(<span class="macro" data-ref="_M/CONFIG_ARM">CONFIG_ARM</span>) &amp;&amp; defined(<span class="macro" data-ref="_M/CONFIG_ARCH_IXP4XX">CONFIG_ARCH_IXP4XX</span>)</u></td></tr>
+<tr><th id="734">734</th><td><u>#define readl_be(addr)		__raw_readl((__force unsigned *)addr)</u></td></tr>
+<tr><th id="735">735</th><td><u>#define writel_be(val, addr)	__raw_writel(val, (__force unsigned *)addr)</u></td></tr>
+<tr><th id="736">736</th><td><u>#<span data-ppcond="733">endif</span></u></td></tr>
+<tr><th id="737">737</th><td></td></tr>
+<tr><th id="738">738</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>int</em> <dfn class="decl def fn" id="ehci_readl" title='ehci_readl' data-ref="ehci_readl" data-ref-filename="ehci_readl">ehci_readl</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#ehci_hcd" title='ehci_hcd' data-ref="ehci_hcd" data-ref-filename="ehci_hcd">ehci_hcd</a> *<dfn class="local col3 decl" id="3ehci" title='ehci' data-type='const struct ehci_hcd *' data-ref="3ehci" data-ref-filename="3ehci">ehci</dfn>,</td></tr>
+<tr><th id="739">739</th><td>		<a class="typedef" href="../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a> <a class="macro" href="../../../include/linux/compiler_types.h.html#36" title="" data-ref="_M/__iomem">__iomem</a> *<dfn class="local col4 decl" id="4regs" title='regs' data-type='__u32 *' data-ref="4regs" data-ref-filename="4regs">regs</dfn>)</td></tr>
+<tr><th id="740">740</th><td>{</td></tr>
+<tr><th id="741">741</th><td><u>#<span data-ppcond="741">ifdef</span> <span class="macro" data-ref="_M/CONFIG_USB_EHCI_BIG_ENDIAN_MMIO">CONFIG_USB_EHCI_BIG_ENDIAN_MMIO</span></u></td></tr>
+<tr><th id="742">742</th><td>	<b>return</b> ehci_big_endian_mmio(ehci) ?</td></tr>
+<tr><th id="743">743</th><td>		readl_be(regs) :</td></tr>
+<tr><th id="744">744</th><td>		readl(regs);</td></tr>
+<tr><th id="745">745</th><td><u>#<span data-ppcond="741">else</span></u></td></tr>
+<tr><th id="746">746</th><td>	<b>return</b> <a class="macro" href="../../../arch/x86/include/asm/io.h.html#75" title="readl" data-ref="_M/readl">readl</a>(<a class="local col4 ref" href="#4regs" title='regs' data-ref="4regs" data-ref-filename="4regs">regs</a>);</td></tr>
+<tr><th id="747">747</th><td><u>#<span data-ppcond="741">endif</span></u></td></tr>
+<tr><th id="748">748</th><td>}</td></tr>
+<tr><th id="749">749</th><td></td></tr>
+<tr><th id="750">750</th><td><u>#<span data-ppcond="750">ifdef</span> <span class="macro" data-ref="_M/CONFIG_SOC_IMX28">CONFIG_SOC_IMX28</span></u></td></tr>
+<tr><th id="751">751</th><td><em>static</em> <b>inline</b> <em>void</em> imx28_ehci_writel(<em>const</em> <em>unsigned</em> <em>int</em> val,</td></tr>
+<tr><th id="752">752</th><td>		<em>volatile</em> __u32 __iomem *addr)</td></tr>
+<tr><th id="753">753</th><td>{</td></tr>
+<tr><th id="754">754</th><td>	<b>__asm__</b> (<q>"swp %0, %0, [%1]"</q> : : <q>"r"</q>(val), <q>"r"</q>(addr));</td></tr>
+<tr><th id="755">755</th><td>}</td></tr>
+<tr><th id="756">756</th><td><u>#<span data-ppcond="750">else</span></u></td></tr>
+<tr><th id="757">757</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="imx28_ehci_writel" title='imx28_ehci_writel' data-ref="imx28_ehci_writel" data-ref-filename="imx28_ehci_writel">imx28_ehci_writel</dfn>(<em>const</em> <em>unsigned</em> <em>int</em> <dfn class="local col5 decl" id="5val" title='val' data-type='const unsigned int' data-ref="5val" data-ref-filename="5val">val</dfn>,</td></tr>
+<tr><th id="758">758</th><td>		<em>volatile</em> <a class="typedef" href="../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a> <a class="macro" href="../../../include/linux/compiler_types.h.html#36" title="" data-ref="_M/__iomem">__iomem</a> *<dfn class="local col6 decl" id="6addr" title='addr' data-type='volatile __u32 *' data-ref="6addr" data-ref-filename="6addr">addr</dfn>)</td></tr>
+<tr><th id="759">759</th><td>{</td></tr>
+<tr><th id="760">760</th><td>}</td></tr>
+<tr><th id="761">761</th><td><u>#<span data-ppcond="750">endif</span></u></td></tr>
+<tr><th id="762">762</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="ehci_writel" title='ehci_writel' data-ref="ehci_writel" data-ref-filename="ehci_writel">ehci_writel</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#ehci_hcd" title='ehci_hcd' data-ref="ehci_hcd" data-ref-filename="ehci_hcd">ehci_hcd</a> *<dfn class="local col7 decl" id="7ehci" title='ehci' data-type='const struct ehci_hcd *' data-ref="7ehci" data-ref-filename="7ehci">ehci</dfn>,</td></tr>
+<tr><th id="763">763</th><td>		<em>const</em> <em>unsigned</em> <em>int</em> <dfn class="local col8 decl" id="8val" title='val' data-type='const unsigned int' data-ref="8val" data-ref-filename="8val">val</dfn>, <a class="typedef" href="../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a> <a class="macro" href="../../../include/linux/compiler_types.h.html#36" title="" data-ref="_M/__iomem">__iomem</a> *<dfn class="local col9 decl" id="9regs" title='regs' data-type='__u32 *' data-ref="9regs" data-ref-filename="9regs">regs</dfn>)</td></tr>
+<tr><th id="764">764</th><td>{</td></tr>
+<tr><th id="765">765</th><td><u>#<span data-ppcond="765">ifdef</span> <span class="macro" data-ref="_M/CONFIG_USB_EHCI_BIG_ENDIAN_MMIO">CONFIG_USB_EHCI_BIG_ENDIAN_MMIO</span></u></td></tr>
+<tr><th id="766">766</th><td>	ehci_big_endian_mmio(ehci) ?</td></tr>
+<tr><th id="767">767</th><td>		writel_be(val, regs) :</td></tr>
+<tr><th id="768">768</th><td>		writel(val, regs);</td></tr>
+<tr><th id="769">769</th><td><u>#<span data-ppcond="765">else</span></u></td></tr>
+<tr><th id="770">770</th><td>	<b>if</b> (<a class="local col7 ref" href="#7ehci" title='ehci' data-ref="7ehci" data-ref-filename="7ehci">ehci</a>-&gt;<a class="ref field" href="#ehci_hcd::imx28_write_fix" title='ehci_hcd::imx28_write_fix' data-ref="ehci_hcd::imx28_write_fix" data-ref-filename="ehci_hcd..imx28_write_fix">imx28_write_fix</a>)</td></tr>
+<tr><th id="771">771</th><td>		<a class="ref fn" href="#imx28_ehci_writel" title='imx28_ehci_writel' data-ref="imx28_ehci_writel" data-ref-filename="imx28_ehci_writel">imx28_ehci_writel</a>(<a class="local col8 ref" href="#8val" title='val' data-ref="8val" data-ref-filename="8val">val</a>, <a class="local col9 ref" href="#9regs" title='regs' data-ref="9regs" data-ref-filename="9regs">regs</a>);</td></tr>
+<tr><th id="772">772</th><td>	<b>else</b></td></tr>
+<tr><th id="773">773</th><td>		<a class="macro" href="../../../arch/x86/include/asm/io.h.html#85" title="writel" data-ref="_M/writel">writel</a>(<a class="local col8 ref" href="#8val" title='val' data-ref="8val" data-ref-filename="8val">val</a>, <a class="local col9 ref" href="#9regs" title='regs' data-ref="9regs" data-ref-filename="9regs">regs</a>);</td></tr>
+<tr><th id="774">774</th><td><u>#<span data-ppcond="765">endif</span></u></td></tr>
+<tr><th id="775">775</th><td>}</td></tr>
+<tr><th id="776">776</th><td></td></tr>
+<tr><th id="777">777</th><td><i>/*</i></td></tr>
+<tr><th id="778">778</th><td><i> * On certain ppc-44x SoC there is a HW issue, that could only worked around with</i></td></tr>
+<tr><th id="779">779</th><td><i> * explicit suspend/operate of OHCI. This function hereby makes sense only on that arch.</i></td></tr>
+<tr><th id="780">780</th><td><i> * Other common bits are dependent on has_amcc_usb23 quirk flag.</i></td></tr>
+<tr><th id="781">781</th><td><i> */</i></td></tr>
+<tr><th id="782">782</th><td><u>#<span data-ppcond="782">ifdef</span> <span class="macro" data-ref="_M/CONFIG_44x">CONFIG_44x</span></u></td></tr>
+<tr><th id="783">783</th><td><em>static</em> <b>inline</b> <em>void</em> set_ohci_hcfs(<b>struct</b> ehci_hcd *ehci, <em>int</em> operational)</td></tr>
+<tr><th id="784">784</th><td>{</td></tr>
+<tr><th id="785">785</th><td>	u32 hc_control;</td></tr>
+<tr><th id="786">786</th><td></td></tr>
+<tr><th id="787">787</th><td>	hc_control = (readl_be(ehci-&gt;ohci_hcctrl_reg) &amp; ~OHCI_CTRL_HCFS);</td></tr>
+<tr><th id="788">788</th><td>	<b>if</b> (operational)</td></tr>
+<tr><th id="789">789</th><td>		hc_control |= OHCI_USB_OPER;</td></tr>
+<tr><th id="790">790</th><td>	<b>else</b></td></tr>
+<tr><th id="791">791</th><td>		hc_control |= OHCI_USB_SUSPEND;</td></tr>
+<tr><th id="792">792</th><td></td></tr>
+<tr><th id="793">793</th><td>	writel_be(hc_control, ehci-&gt;ohci_hcctrl_reg);</td></tr>
+<tr><th id="794">794</th><td>	(<em>void</em>) readl_be(ehci-&gt;ohci_hcctrl_reg);</td></tr>
+<tr><th id="795">795</th><td>}</td></tr>
+<tr><th id="796">796</th><td><u>#<span data-ppcond="782">else</span></u></td></tr>
+<tr><th id="797">797</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="set_ohci_hcfs" title='set_ohci_hcfs' data-ref="set_ohci_hcfs" data-ref-filename="set_ohci_hcfs">set_ohci_hcfs</dfn>(<b>struct</b> <a class="type" href="#ehci_hcd" title='ehci_hcd' data-ref="ehci_hcd" data-ref-filename="ehci_hcd">ehci_hcd</a> *<dfn class="local col0 decl" id="10ehci" title='ehci' data-type='struct ehci_hcd *' data-ref="10ehci" data-ref-filename="10ehci">ehci</dfn>, <em>int</em> <dfn class="local col1 decl" id="11operational" title='operational' data-type='int' data-ref="11operational" data-ref-filename="11operational">operational</dfn>)</td></tr>
+<tr><th id="798">798</th><td>{ }</td></tr>
+<tr><th id="799">799</th><td><u>#<span data-ppcond="782">endif</span></u></td></tr>
+<tr><th id="800">800</th><td></td></tr>
+<tr><th id="801">801</th><td><i>/*-------------------------------------------------------------------------*/</i></td></tr>
+<tr><th id="802">802</th><td></td></tr>
+<tr><th id="803">803</th><td><i>/*</i></td></tr>
+<tr><th id="804">804</th><td><i> * The AMCC 440EPx not only implements its EHCI registers in big-endian</i></td></tr>
+<tr><th id="805">805</th><td><i> * format, but also its DMA data structures (descriptors).</i></td></tr>
+<tr><th id="806">806</th><td><i> *</i></td></tr>
+<tr><th id="807">807</th><td><i> * EHCI controllers accessed through PCI work normally (little-endian</i></td></tr>
+<tr><th id="808">808</th><td><i> * everywhere), so we won't bother supporting a BE-only mode for now.</i></td></tr>
+<tr><th id="809">809</th><td><i> */</i></td></tr>
+<tr><th id="810">810</th><td><u>#<span data-ppcond="810">ifdef</span> <span class="macro" data-ref="_M/CONFIG_USB_EHCI_BIG_ENDIAN_DESC">CONFIG_USB_EHCI_BIG_ENDIAN_DESC</span></u></td></tr>
+<tr><th id="811">811</th><td><u>#define ehci_big_endian_desc(e)		((e)-&gt;big_endian_desc)</u></td></tr>
+<tr><th id="812">812</th><td></td></tr>
+<tr><th id="813">813</th><td><i>/* cpu to ehci */</i></td></tr>
+<tr><th id="814">814</th><td><em>static</em> <b>inline</b> __hc32 cpu_to_hc32(<em>const</em> <b>struct</b> ehci_hcd *ehci, <em>const</em> u32 x)</td></tr>
+<tr><th id="815">815</th><td>{</td></tr>
+<tr><th id="816">816</th><td>	<b>return</b> ehci_big_endian_desc(ehci)</td></tr>
+<tr><th id="817">817</th><td>		? (__force __hc32)cpu_to_be32(x)</td></tr>
+<tr><th id="818">818</th><td>		: (__force __hc32)cpu_to_le32(x);</td></tr>
+<tr><th id="819">819</th><td>}</td></tr>
+<tr><th id="820">820</th><td></td></tr>
+<tr><th id="821">821</th><td><i>/* ehci to cpu */</i></td></tr>
+<tr><th id="822">822</th><td><em>static</em> <b>inline</b> u32 hc32_to_cpu(<em>const</em> <b>struct</b> ehci_hcd *ehci, <em>const</em> __hc32 x)</td></tr>
+<tr><th id="823">823</th><td>{</td></tr>
+<tr><th id="824">824</th><td>	<b>return</b> ehci_big_endian_desc(ehci)</td></tr>
+<tr><th id="825">825</th><td>		? be32_to_cpu((__force __be32)x)</td></tr>
+<tr><th id="826">826</th><td>		: le32_to_cpu((__force __le32)x);</td></tr>
+<tr><th id="827">827</th><td>}</td></tr>
+<tr><th id="828">828</th><td></td></tr>
+<tr><th id="829">829</th><td><em>static</em> <b>inline</b> u32 hc32_to_cpup(<em>const</em> <b>struct</b> ehci_hcd *ehci, <em>const</em> __hc32 *x)</td></tr>
+<tr><th id="830">830</th><td>{</td></tr>
+<tr><th id="831">831</th><td>	<b>return</b> ehci_big_endian_desc(ehci)</td></tr>
+<tr><th id="832">832</th><td>		? be32_to_cpup((__force __be32 *)x)</td></tr>
+<tr><th id="833">833</th><td>		: le32_to_cpup((__force __le32 *)x);</td></tr>
+<tr><th id="834">834</th><td>}</td></tr>
+<tr><th id="835">835</th><td></td></tr>
+<tr><th id="836">836</th><td><u>#<span data-ppcond="810">else</span></u></td></tr>
+<tr><th id="837">837</th><td></td></tr>
+<tr><th id="838">838</th><td><i>/* cpu to ehci */</i></td></tr>
+<tr><th id="839">839</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a> <dfn class="decl def fn" id="cpu_to_hc32" title='cpu_to_hc32' data-ref="cpu_to_hc32" data-ref-filename="cpu_to_hc32">cpu_to_hc32</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#ehci_hcd" title='ehci_hcd' data-ref="ehci_hcd" data-ref-filename="ehci_hcd">ehci_hcd</a> *<dfn class="local col2 decl" id="12ehci" title='ehci' data-type='const struct ehci_hcd *' data-ref="12ehci" data-ref-filename="12ehci">ehci</dfn>, <em>const</em> <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col3 decl" id="13x" title='x' data-type='const u32' data-ref="13x" data-ref-filename="13x">x</dfn>)</td></tr>
+<tr><th id="840">840</th><td>{</td></tr>
+<tr><th id="841">841</th><td>	<b>return</b> <a class="macro" href="../../../include/linux/byteorder/generic.h.html#88" title="__cpu_to_le32" data-ref="_M/cpu_to_le32">cpu_to_le32</a>(<a class="local col3 ref" href="#13x" title='x' data-ref="13x" data-ref-filename="13x">x</a>);</td></tr>
+<tr><th id="842">842</th><td>}</td></tr>
+<tr><th id="843">843</th><td></td></tr>
+<tr><th id="844">844</th><td><i>/* ehci to cpu */</i></td></tr>
+<tr><th id="845">845</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl def fn" id="hc32_to_cpu" title='hc32_to_cpu' data-ref="hc32_to_cpu" data-ref-filename="hc32_to_cpu">hc32_to_cpu</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#ehci_hcd" title='ehci_hcd' data-ref="ehci_hcd" data-ref-filename="ehci_hcd">ehci_hcd</a> *<dfn class="local col4 decl" id="14ehci" title='ehci' data-type='const struct ehci_hcd *' data-ref="14ehci" data-ref-filename="14ehci">ehci</dfn>, <em>const</em> <a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a> <dfn class="local col5 decl" id="15x" title='x' data-type='const __le32' data-ref="15x" data-ref-filename="15x">x</dfn>)</td></tr>
+<tr><th id="846">846</th><td>{</td></tr>
+<tr><th id="847">847</th><td>	<b>return</b> <a class="macro" href="../../../include/linux/byteorder/generic.h.html#89" title="__le32_to_cpu" data-ref="_M/le32_to_cpu">le32_to_cpu</a>(<a class="local col5 ref" href="#15x" title='x' data-ref="15x" data-ref-filename="15x">x</a>);</td></tr>
+<tr><th id="848">848</th><td>}</td></tr>
+<tr><th id="849">849</th><td></td></tr>
+<tr><th id="850">850</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl def fn" id="hc32_to_cpup" title='hc32_to_cpup' data-ref="hc32_to_cpup" data-ref-filename="hc32_to_cpup">hc32_to_cpup</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#ehci_hcd" title='ehci_hcd' data-ref="ehci_hcd" data-ref-filename="ehci_hcd">ehci_hcd</a> *<dfn class="local col6 decl" id="16ehci" title='ehci' data-type='const struct ehci_hcd *' data-ref="16ehci" data-ref-filename="16ehci">ehci</dfn>, <em>const</em> <a class="macro" href="#23" title="__le32" data-ref="_M/__hc32">__hc32</a> *<dfn class="local col7 decl" id="17x" title='x' data-type='const __le32 *' data-ref="17x" data-ref-filename="17x">x</dfn>)</td></tr>
+<tr><th id="851">851</th><td>{</td></tr>
+<tr><th id="852">852</th><td>	<b>return</b> <a class="macro" href="../../../include/linux/byteorder/generic.h.html#101" title="__le32_to_cpup" data-ref="_M/le32_to_cpup">le32_to_cpup</a>(<a class="local col7 ref" href="#17x" title='x' data-ref="17x" data-ref-filename="17x">x</a>);</td></tr>
+<tr><th id="853">853</th><td>}</td></tr>
+<tr><th id="854">854</th><td></td></tr>
+<tr><th id="855">855</th><td><u>#<span data-ppcond="810">endif</span></u></td></tr>
+<tr><th id="856">856</th><td></td></tr>
+<tr><th id="857">857</th><td><i>/*-------------------------------------------------------------------------*/</i></td></tr>
+<tr><th id="858">858</th><td></td></tr>
+<tr><th id="859">859</th><td><u>#define <dfn class="macro" id="_M/ehci_dbg" data-ref="_M/ehci_dbg">ehci_dbg</dfn>(ehci, fmt, args...) \</u></td></tr>
+<tr><th id="860">860</th><td><u>	dev_dbg(ehci_to_hcd(ehci)-&gt;self.controller, fmt, ## args)</u></td></tr>
+<tr><th id="861">861</th><td><u>#define <dfn class="macro" id="_M/ehci_err" data-ref="_M/ehci_err">ehci_err</dfn>(ehci, fmt, args...) \</u></td></tr>
+<tr><th id="862">862</th><td><u>	dev_err(ehci_to_hcd(ehci)-&gt;self.controller, fmt, ## args)</u></td></tr>
+<tr><th id="863">863</th><td><u>#define <dfn class="macro" id="_M/ehci_info" data-ref="_M/ehci_info">ehci_info</dfn>(ehci, fmt, args...) \</u></td></tr>
+<tr><th id="864">864</th><td><u>	dev_info(ehci_to_hcd(ehci)-&gt;self.controller, fmt, ## args)</u></td></tr>
+<tr><th id="865">865</th><td><u>#define <dfn class="macro" id="_M/ehci_warn" data-ref="_M/ehci_warn">ehci_warn</dfn>(ehci, fmt, args...) \</u></td></tr>
+<tr><th id="866">866</th><td><u>	dev_warn(ehci_to_hcd(ehci)-&gt;self.controller, fmt, ## args)</u></td></tr>
+<tr><th id="867">867</th><td></td></tr>
+<tr><th id="868">868</th><td><i>/*-------------------------------------------------------------------------*/</i></td></tr>
+<tr><th id="869">869</th><td></td></tr>
+<tr><th id="870">870</th><td><i>/* Declarations of things exported for use by ehci platform drivers */</i></td></tr>
+<tr><th id="871">871</th><td></td></tr>
+<tr><th id="872">872</th><td><b>struct</b> <dfn class="type def" id="ehci_driver_overrides" title='ehci_driver_overrides' data-ref="ehci_driver_overrides" data-ref-filename="ehci_driver_overrides">ehci_driver_overrides</dfn> {</td></tr>
+<tr><th id="873">873</th><td>	<a class="typedef" href="../../../include/linux/types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a>		<dfn class="decl field" id="ehci_driver_overrides::extra_priv_size" title='ehci_driver_overrides::extra_priv_size' data-ref="ehci_driver_overrides::extra_priv_size" data-ref-filename="ehci_driver_overrides..extra_priv_size">extra_priv_size</dfn>;</td></tr>
+<tr><th id="874">874</th><td>	<em>int</em>		(*<dfn class="decl field" id="ehci_driver_overrides::reset" title='ehci_driver_overrides::reset' data-ref="ehci_driver_overrides::reset" data-ref-filename="ehci_driver_overrides..reset">reset</dfn>)(<b>struct</b> <a class="type" href="../../../include/linux/usb/hcd.h.html#usb_hcd" title='usb_hcd' data-ref="usb_hcd" data-ref-filename="usb_hcd">usb_hcd</a> *<dfn class="local col8 decl" id="18hcd" title='hcd' data-type='struct usb_hcd *' data-ref="18hcd" data-ref-filename="18hcd">hcd</dfn>);</td></tr>
+<tr><th id="875">875</th><td>	<em>int</em>		(*<dfn class="decl field" id="ehci_driver_overrides::port_power" title='ehci_driver_overrides::port_power' data-ref="ehci_driver_overrides::port_power" data-ref-filename="ehci_driver_overrides..port_power">port_power</dfn>)(<b>struct</b> <a class="type" href="../../../include/linux/usb/hcd.h.html#usb_hcd" title='usb_hcd' data-ref="usb_hcd" data-ref-filename="usb_hcd">usb_hcd</a> *<dfn class="local col9 decl" id="19hcd" title='hcd' data-type='struct usb_hcd *' data-ref="19hcd" data-ref-filename="19hcd">hcd</dfn>,</td></tr>
+<tr><th id="876">876</th><td>				<em>int</em> <dfn class="local col0 decl" id="20portnum" title='portnum' data-type='int' data-ref="20portnum" data-ref-filename="20portnum">portnum</dfn>, <a class="typedef" href="../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col1 decl" id="21enable" title='enable' data-type='bool' data-ref="21enable" data-ref-filename="21enable">enable</dfn>);</td></tr>
+<tr><th id="877">877</th><td>};</td></tr>
+<tr><th id="878">878</th><td></td></tr>
+<tr><th id="879">879</th><td><b>extern</b> <em>void</em>	<a class="decl fn" href="ehci-hcd.c.html#ehci_init_driver" title='ehci_init_driver' data-ref="ehci_init_driver" data-ref-filename="ehci_init_driver" id="ehci_init_driver">ehci_init_driver</a>(<b>struct</b> <a class="type" href="../../../include/linux/usb/hcd.h.html#hc_driver" title='hc_driver' data-ref="hc_driver" data-ref-filename="hc_driver">hc_driver</a> *<dfn class="local col2 decl" id="22drv" title='drv' data-type='struct hc_driver *' data-ref="22drv" data-ref-filename="22drv">drv</dfn>,</td></tr>
+<tr><th id="880">880</th><td>				<em>const</em> <b>struct</b> <a class="type" href="#ehci_driver_overrides" title='ehci_driver_overrides' data-ref="ehci_driver_overrides" data-ref-filename="ehci_driver_overrides">ehci_driver_overrides</a> *<dfn class="local col3 decl" id="23over" title='over' data-type='const struct ehci_driver_overrides *' data-ref="23over" data-ref-filename="23over">over</dfn>);</td></tr>
+<tr><th id="881">881</th><td><b>extern</b> <em>int</em>	<a class="decl fn" href="ehci-hcd.c.html#ehci_setup" title='ehci_setup' data-ref="ehci_setup" data-ref-filename="ehci_setup" id="ehci_setup">ehci_setup</a>(<b>struct</b> <a class="type" href="../../../include/linux/usb/hcd.h.html#usb_hcd" title='usb_hcd' data-ref="usb_hcd" data-ref-filename="usb_hcd">usb_hcd</a> *<dfn class="local col4 decl" id="24hcd" title='hcd' data-type='struct usb_hcd *' data-ref="24hcd" data-ref-filename="24hcd">hcd</dfn>);</td></tr>
+<tr><th id="882">882</th><td><b>extern</b> <em>int</em>	<a class="decl fn" href="ehci-hcd.c.html#ehci_handshake" title='ehci_handshake' data-ref="ehci_handshake" data-ref-filename="ehci_handshake" id="ehci_handshake">ehci_handshake</a>(<b>struct</b> <a class="type" href="#ehci_hcd" title='ehci_hcd' data-ref="ehci_hcd" data-ref-filename="ehci_hcd">ehci_hcd</a> *<dfn class="local col5 decl" id="25ehci" title='ehci' data-type='struct ehci_hcd *' data-ref="25ehci" data-ref-filename="25ehci">ehci</dfn>, <em>void</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#36" title="" data-ref="_M/__iomem">__iomem</a> *<dfn class="local col6 decl" id="26ptr" title='ptr' data-type='void *' data-ref="26ptr" data-ref-filename="26ptr">ptr</dfn>,</td></tr>
+<tr><th id="883">883</th><td>				<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col7 decl" id="27mask" title='mask' data-type='u32' data-ref="27mask" data-ref-filename="27mask">mask</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col8 decl" id="28done" title='done' data-type='u32' data-ref="28done" data-ref-filename="28done">done</dfn>, <em>int</em> <dfn class="local col9 decl" id="29usec" title='usec' data-type='int' data-ref="29usec" data-ref-filename="29usec">usec</dfn>);</td></tr>
+<tr><th id="884">884</th><td><b>extern</b> <em>int</em>	<a class="decl fn" href="ehci-hcd.c.html#ehci_reset" title='ehci_reset' data-ref="ehci_reset" data-ref-filename="ehci_reset" id="ehci_reset">ehci_reset</a>(<b>struct</b> <a class="type" href="#ehci_hcd" title='ehci_hcd' data-ref="ehci_hcd" data-ref-filename="ehci_hcd">ehci_hcd</a> *<dfn class="local col0 decl" id="30ehci" title='ehci' data-type='struct ehci_hcd *' data-ref="30ehci" data-ref-filename="30ehci">ehci</dfn>);</td></tr>
+<tr><th id="885">885</th><td></td></tr>
+<tr><th id="886">886</th><td><b>extern</b> <em>int</em>	<a class="decl fn" href="ehci-hcd.c.html#ehci_suspend" title='ehci_suspend' data-ref="ehci_suspend" data-ref-filename="ehci_suspend" id="ehci_suspend">ehci_suspend</a>(<b>struct</b> <a class="type" href="../../../include/linux/usb/hcd.h.html#usb_hcd" title='usb_hcd' data-ref="usb_hcd" data-ref-filename="usb_hcd">usb_hcd</a> *<dfn class="local col1 decl" id="31hcd" title='hcd' data-type='struct usb_hcd *' data-ref="31hcd" data-ref-filename="31hcd">hcd</dfn>, <a class="typedef" href="../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col2 decl" id="32do_wakeup" title='do_wakeup' data-type='bool' data-ref="32do_wakeup" data-ref-filename="32do_wakeup">do_wakeup</dfn>);</td></tr>
+<tr><th id="887">887</th><td><b>extern</b> <em>int</em>	<a class="decl fn" href="ehci-hcd.c.html#ehci_resume" title='ehci_resume' data-ref="ehci_resume" data-ref-filename="ehci_resume" id="ehci_resume">ehci_resume</a>(<b>struct</b> <a class="type" href="../../../include/linux/usb/hcd.h.html#usb_hcd" title='usb_hcd' data-ref="usb_hcd" data-ref-filename="usb_hcd">usb_hcd</a> *<dfn class="local col3 decl" id="33hcd" title='hcd' data-type='struct usb_hcd *' data-ref="33hcd" data-ref-filename="33hcd">hcd</dfn>, <a class="typedef" href="../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col4 decl" id="34force_reset" title='force_reset' data-type='bool' data-ref="34force_reset" data-ref-filename="34force_reset">force_reset</dfn>);</td></tr>
+<tr><th id="888">888</th><td><b>extern</b> <em>void</em>	<a class="decl fn" href="ehci-hub.c.html#ehci_adjust_port_wakeup_flags" title='ehci_adjust_port_wakeup_flags' data-ref="ehci_adjust_port_wakeup_flags" data-ref-filename="ehci_adjust_port_wakeup_flags" id="ehci_adjust_port_wakeup_flags">ehci_adjust_port_wakeup_flags</a>(<b>struct</b> <a class="type" href="#ehci_hcd" title='ehci_hcd' data-ref="ehci_hcd" data-ref-filename="ehci_hcd">ehci_hcd</a> *<dfn class="local col5 decl" id="35ehci" title='ehci' data-type='struct ehci_hcd *' data-ref="35ehci" data-ref-filename="35ehci">ehci</dfn>,</td></tr>
+<tr><th id="889">889</th><td>			<a class="typedef" href="../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col6 decl" id="36suspending" title='suspending' data-type='bool' data-ref="36suspending" data-ref-filename="36suspending">suspending</dfn>, <a class="typedef" href="../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col7 decl" id="37do_wakeup" title='do_wakeup' data-type='bool' data-ref="37do_wakeup" data-ref-filename="37do_wakeup">do_wakeup</dfn>);</td></tr>
+<tr><th id="890">890</th><td></td></tr>
+<tr><th id="891">891</th><td><b>extern</b> <em>int</em>	<a class="decl fn" href="ehci-hub.c.html#ehci_hub_control" title='ehci_hub_control' data-ref="ehci_hub_control" data-ref-filename="ehci_hub_control" id="ehci_hub_control">ehci_hub_control</a>(<b>struct</b> <a class="type" href="../../../include/linux/usb/hcd.h.html#usb_hcd" title='usb_hcd' data-ref="usb_hcd" data-ref-filename="usb_hcd">usb_hcd</a>	*<dfn class="local col8 decl" id="38hcd" title='hcd' data-type='struct usb_hcd *' data-ref="38hcd" data-ref-filename="38hcd">hcd</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col9 decl" id="39typeReq" title='typeReq' data-type='u16' data-ref="39typeReq" data-ref-filename="39typeReq">typeReq</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col0 decl" id="40wValue" title='wValue' data-type='u16' data-ref="40wValue" data-ref-filename="40wValue">wValue</dfn>,</td></tr>
+<tr><th id="892">892</th><td>				 <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col1 decl" id="41wIndex" title='wIndex' data-type='u16' data-ref="41wIndex" data-ref-filename="41wIndex">wIndex</dfn>, <em>char</em> *<dfn class="local col2 decl" id="42buf" title='buf' data-type='char *' data-ref="42buf" data-ref-filename="42buf">buf</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col3 decl" id="43wLength" title='wLength' data-type='u16' data-ref="43wLength" data-ref-filename="43wLength">wLength</dfn>);</td></tr>
+<tr><th id="893">893</th><td></td></tr>
+<tr><th id="894">894</th><td><u>#<span data-ppcond="6">endif</span> /* __LINUX_EHCI_HCD_H */</u></td></tr>
+<tr><th id="895">895</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='ehci-hcd.c.html'>linux-5.3.1/drivers/usb/host/ehci-hcd.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

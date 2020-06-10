@@ -1,0 +1,36 @@
+<dec f='linux-5.3.1/include/linux/mmu_notifier.h' l='62' type='struct mm_struct *'/>
+<use f='linux-5.3.1/include/linux/mmu_notifier.h' l='313' u='r' c='mmu_notifier_invalidate_range_start'/>
+<use f='linux-5.3.1/include/linux/mmu_notifier.h' l='322' u='r' c='mmu_notifier_invalidate_range_start_nonblock'/>
+<use f='linux-5.3.1/include/linux/mmu_notifier.h' l='332' u='r' c='mmu_notifier_invalidate_range_end'/>
+<use f='linux-5.3.1/include/linux/mmu_notifier.h' l='339' u='r' c='mmu_notifier_invalidate_range_only_end'/>
+<use f='linux-5.3.1/include/linux/mmu_notifier.h' l='372' u='w' c='mmu_notifier_range_init'/>
+<offset>64</offset>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='175' u='r' c='__mmu_notifier_invalidate_range_start'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='175' u='r' c='__mmu_notifier_invalidate_range_start'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='175' u='r' c='__mmu_notifier_invalidate_range_start'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='175' u='r' c='__mmu_notifier_invalidate_range_start'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='175' u='r' c='__mmu_notifier_invalidate_range_start'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='175' u='r' c='__mmu_notifier_invalidate_range_start'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='175' u='r' c='__mmu_notifier_invalidate_range_start'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='175' u='r' c='__mmu_notifier_invalidate_range_start'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='175' u='r' c='__mmu_notifier_invalidate_range_start'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='175' u='r' c='__mmu_notifier_invalidate_range_start'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='175' u='r' c='__mmu_notifier_invalidate_range_start'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='175' u='r' c='__mmu_notifier_invalidate_range_start'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='175' u='r' c='__mmu_notifier_invalidate_range_start'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='175' u='r' c='__mmu_notifier_invalidate_range_start'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='199' u='r' c='__mmu_notifier_invalidate_range_end'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='199' u='r' c='__mmu_notifier_invalidate_range_end'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='199' u='r' c='__mmu_notifier_invalidate_range_end'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='199' u='r' c='__mmu_notifier_invalidate_range_end'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='199' u='r' c='__mmu_notifier_invalidate_range_end'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='199' u='r' c='__mmu_notifier_invalidate_range_end'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='199' u='r' c='__mmu_notifier_invalidate_range_end'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='199' u='r' c='__mmu_notifier_invalidate_range_end'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='199' u='r' c='__mmu_notifier_invalidate_range_end'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='199' u='r' c='__mmu_notifier_invalidate_range_end'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='199' u='r' c='__mmu_notifier_invalidate_range_end'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='199' u='r' c='__mmu_notifier_invalidate_range_end'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='199' u='r' c='__mmu_notifier_invalidate_range_end'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='199' u='r' c='__mmu_notifier_invalidate_range_end'/>
+<use f='linux-5.3.1/mm/mmu_notifier.c' l='214' u='r' c='__mmu_notifier_invalidate_range_end'/>

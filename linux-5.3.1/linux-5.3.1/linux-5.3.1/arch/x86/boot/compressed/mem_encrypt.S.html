@@ -1,0 +1,119 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>mem_encrypt.S source code [linux-5.3.1/arch/x86/boot/compressed/mem_encrypt.S] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/arch/x86/boot/compressed/mem_encrypt.S'; var root_path = '../../../../..'; var data_path = '../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../..'>linux-5.3.1</a>/<a href='../../..'>arch</a>/<a href='../..'>x86</a>/<a href='..'>boot</a>/<a href='./'>compressed</a>/<a href='mem_encrypt.S.html'>mem_encrypt.S</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0-only */</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * AMD Memory Encryption Support</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * Copyright (C) 2017 Advanced Micro Devices, Inc.</i></td></tr>
+<tr><th id="6">6</th><td><i> *</i></td></tr>
+<tr><th id="7">7</th><td><i> * Author: Tom Lendacky &lt;thomas.lendacky@amd.com&gt;</i></td></tr>
+<tr><th id="8">8</th><td><i> */</i></td></tr>
+<tr><th id="9">9</th><td></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="../../../../include/linux/linkage.h.html">&lt;linux/linkage.h&gt;</a></u></td></tr>
+<tr><th id="11">11</th><td></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="../../include/asm/processor-flags.h.html">&lt;asm/processor-flags.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="../../include/asm/msr.h.html">&lt;asm/msr.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="../../include/asm/asm-offsets.h.html">&lt;asm/asm-offsets.h&gt;</a></u></td></tr>
+<tr><th id="15">15</th><td></td></tr>
+<tr><th id="16">16</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>text</td></tr>
+<tr><th id="17">17</th><td>	.code32</td></tr>
+<tr><th id="18">18</th><td><a class="macro" href="../../../../include/linux/linkage.h.html#89" title=".globl get_sev_encryption_bit ; .p2align 4, 0x90 ; get_sev_encryption_bit:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="get_sev_encryption_bit" title='get_sev_encryption_bit' data-ref="get_sev_encryption_bit" data-ref-filename="get_sev_encryption_bit">get_sev_encryption_bit</dfn></span>)</td></tr>
+<tr><th id="19">19</th><td>	<span class='error' title="unknown type name &apos;xor&apos;">xor</span>	<span class='error' title="expected identifier or &apos;(&apos;">%</span>eax, %eax</td></tr>
+<tr><th id="20">20</th><td></td></tr>
+<tr><th id="21">21</th><td><u>#<span data-ppcond="21">ifdef</span> <span class="macro" data-ref="_M/CONFIG_AMD_MEM_ENCRYPT">CONFIG_AMD_MEM_ENCRYPT</span></u></td></tr>
+<tr><th id="22">22</th><td>	push	%ebx</td></tr>
+<tr><th id="23">23</th><td>	push	%ecx</td></tr>
+<tr><th id="24">24</th><td>	push	%edx</td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td>	<i>/* Check if running under a hypervisor */</i></td></tr>
+<tr><th id="27">27</th><td>	movl	$<var>1</var>, %eax</td></tr>
+<tr><th id="28">28</th><td>	cpuid</td></tr>
+<tr><th id="29">29</th><td>	bt	$<var>31</var>, %ecx		<i>/* Check the hypervisor bit */</i></td></tr>
+<tr><th id="30">30</th><td>	jnc	.Lno_sev</td></tr>
+<tr><th id="31">31</th><td></td></tr>
+<tr><th id="32">32</th><td>	movl	$<var>0x80000000</var>, %eax	<i>/* CPUID to check the highest leaf */</i></td></tr>
+<tr><th id="33">33</th><td>	cpuid</td></tr>
+<tr><th id="34">34</th><td>	cmpl	$<var>0x8000001f</var>, %eax	<i>/* See if 0x8000001f is available */</i></td></tr>
+<tr><th id="35">35</th><td>	jb	.Lno_sev</td></tr>
+<tr><th id="36">36</th><td></td></tr>
+<tr><th id="37">37</th><td>	<i>/*</i></td></tr>
+<tr><th id="38">38</th><td><i>	 * Check for the SEV feature:</i></td></tr>
+<tr><th id="39">39</th><td><i>	 *   CPUID Fn8000_001F[EAX] - Bit 1</i></td></tr>
+<tr><th id="40">40</th><td><i>	 *   CPUID Fn8000_001F[EBX] - Bits 5:0</i></td></tr>
+<tr><th id="41">41</th><td><i>	 *     Pagetable bit position used to indicate encryption</i></td></tr>
+<tr><th id="42">42</th><td><i>	 */</i></td></tr>
+<tr><th id="43">43</th><td>	movl	$<var>0x8000001f</var>, %eax</td></tr>
+<tr><th id="44">44</th><td>	cpuid</td></tr>
+<tr><th id="45">45</th><td>	bt	$<var>1</var>, %eax		<i>/* Check if SEV is available */</i></td></tr>
+<tr><th id="46">46</th><td>	jnc	.Lno_sev</td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td>	movl	$MSR_AMD64_SEV, %ecx	<i>/* Read the SEV MSR */</i></td></tr>
+<tr><th id="49">49</th><td>	rdmsr</td></tr>
+<tr><th id="50">50</th><td>	bt	$MSR_AMD64_SEV_ENABLED_BIT, %eax	<i>/* Check if SEV is active */</i></td></tr>
+<tr><th id="51">51</th><td>	jnc	.Lno_sev</td></tr>
+<tr><th id="52">52</th><td></td></tr>
+<tr><th id="53">53</th><td>	movl	%ebx, %eax</td></tr>
+<tr><th id="54">54</th><td>	andl	$<var>0x3f</var>, %eax		<i>/* Return the encryption bit location */</i></td></tr>
+<tr><th id="55">55</th><td>	jmp	.Lsev_exit</td></tr>
+<tr><th id="56">56</th><td></td></tr>
+<tr><th id="57">57</th><td>.Lno_sev:</td></tr>
+<tr><th id="58">58</th><td>	xor	%eax, %eax</td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td>.Lsev_exit:</td></tr>
+<tr><th id="61">61</th><td>	pop	%edx</td></tr>
+<tr><th id="62">62</th><td>	pop	%ecx</td></tr>
+<tr><th id="63">63</th><td>	pop	%ebx</td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td><u>#<span data-ppcond="21">endif</span>	/* CONFIG_AMD_MEM_ENCRYPT */</u></td></tr>
+<tr><th id="66">66</th><td></td></tr>
+<tr><th id="67">67</th><td>	ret</td></tr>
+<tr><th id="68">68</th><td><a class="macro" href="../../../../include/linux/linkage.h.html#113" title=".type get_sev_encryption_bit, @function ; .size get_sev_encryption_bit, .-get_sev_encryption_bit" data-ref="_M/ENDPROC">ENDPROC</a>(get_sev_encryption_bit)</td></tr>
+<tr><th id="69">69</th><td></td></tr>
+<tr><th id="70">70</th><td>	.code64</td></tr>
+<tr><th id="71">71</th><td><a class="macro" href="../../../../include/linux/linkage.h.html#89" title=".globl set_sev_encryption_mask ; .p2align 4, 0x90 ; set_sev_encryption_mask:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="set_sev_encryption_mask" title='set_sev_encryption_mask' data-ref="set_sev_encryption_mask" data-ref-filename="set_sev_encryption_mask">set_sev_encryption_mask</dfn></span>)</td></tr>
+<tr><th id="72">72</th><td><u>#<span data-ppcond="72">ifdef</span> <span class="macro" data-ref="_M/CONFIG_AMD_MEM_ENCRYPT">CONFIG_AMD_MEM_ENCRYPT</span></u></td></tr>
+<tr><th id="73">73</th><td>	push	%rbp</td></tr>
+<tr><th id="74">74</th><td>	push	%rdx</td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td>	movq	%rsp, %rbp		<i>/* Save current stack pointer */</i></td></tr>
+<tr><th id="77">77</th><td></td></tr>
+<tr><th id="78">78</th><td>	call	get_sev_encryption_bit	<i>/* Get the encryption bit position */</i></td></tr>
+<tr><th id="79">79</th><td>	testl	%eax, %eax</td></tr>
+<tr><th id="80">80</th><td>	jz	.Lno_sev_mask</td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td>	bts	%rax, sme_me_mask(%rip)	<i>/* Create the encryption mask */</i></td></tr>
+<tr><th id="83">83</th><td></td></tr>
+<tr><th id="84">84</th><td>.Lno_sev_mask:</td></tr>
+<tr><th id="85">85</th><td>	movq	%rbp, %rsp		<i>/* Restore original stack pointer */</i></td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td>	pop	%rdx</td></tr>
+<tr><th id="88">88</th><td>	pop	%rbp</td></tr>
+<tr><th id="89">89</th><td><u>#<span data-ppcond="72">endif</span></u></td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td>	<span class='error' title="unknown type name &apos;xor&apos;">xor</span>	<span class='error' title="expected identifier or &apos;(&apos;">%</span>rax, %rax</td></tr>
+<tr><th id="92">92</th><td>	ret</td></tr>
+<tr><th id="93">93</th><td><a class="macro" href="../../../../include/linux/linkage.h.html#113" title=".type set_sev_encryption_mask, @function ; .size set_sev_encryption_mask, .-set_sev_encryption_mask" data-ref="_M/ENDPROC">ENDPROC</a>(set_sev_encryption_mask)</td></tr>
+<tr><th id="94">94</th><td></td></tr>
+<tr><th id="95">95</th><td>	.data</td></tr>
+<tr><th id="96">96</th><td></td></tr>
+<tr><th id="97">97</th><td><u>#<span data-ppcond="97">ifdef</span> <span class="macro" data-ref="_M/CONFIG_AMD_MEM_ENCRYPT">CONFIG_AMD_MEM_ENCRYPT</span></u></td></tr>
+<tr><th id="98">98</th><td>	.balign	<var>8</var></td></tr>
+<tr><th id="99">99</th><td>GLOBAL(sme_me_mask)</td></tr>
+<tr><th id="100">100</th><td>	.quad	<var>0</var></td></tr>
+<tr><th id="101">101</th><td><u>#<span data-ppcond="97">endif</span></u></td></tr>
+<tr><th id="102">102</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

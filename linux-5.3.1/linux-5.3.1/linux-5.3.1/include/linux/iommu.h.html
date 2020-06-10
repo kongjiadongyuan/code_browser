@@ -1,0 +1,968 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>iommu.h source code [linux-5.3.1/include/linux/iommu.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="iommu_attr,iommu_cap,iommu_dev_features,iommu_device,iommu_domain,iommu_domain_geometry,iommu_fault_event,iommu_fault_param,iommu_fwspec,iommu_ops,iommu_param,iommu_resv_region,iommu_resv_type,iommu_sva,iommu_sva_ops "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/include/linux/iommu.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>include</a>/<a href='./'>linux</a>/<a href='iommu.h.html'>iommu.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0-only */</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * Copyright (C) 2007-2008 Advanced Micro Devices, Inc.</i></td></tr>
+<tr><th id="4">4</th><td><i> * Author: Joerg Roedel &lt;joerg.roedel@amd.com&gt;</i></td></tr>
+<tr><th id="5">5</th><td><i> */</i></td></tr>
+<tr><th id="6">6</th><td></td></tr>
+<tr><th id="7">7</th><td><u>#<span data-ppcond="7">ifndef</span> <span class="macro" data-ref="_M/__LINUX_IOMMU_H">__LINUX_IOMMU_H</span></u></td></tr>
+<tr><th id="8">8</th><td><u>#define <dfn class="macro" id="_M/__LINUX_IOMMU_H" data-ref="_M/__LINUX_IOMMU_H">__LINUX_IOMMU_H</dfn></u></td></tr>
+<tr><th id="9">9</th><td></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="scatterlist.h.html">&lt;linux/scatterlist.h&gt;</a></u></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="device.h.html">&lt;linux/device.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="types.h.html">&lt;linux/types.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="errno.h.html">&lt;linux/errno.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="err.h.html">&lt;linux/err.h&gt;</a></u></td></tr>
+<tr><th id="15">15</th><td><u>#include <a href="of.h.html">&lt;linux/of.h&gt;</a></u></td></tr>
+<tr><th id="16">16</th><td><u>#include <a href="../uapi/linux/iommu.h.html">&lt;uapi/linux/iommu.h&gt;</a></u></td></tr>
+<tr><th id="17">17</th><td></td></tr>
+<tr><th id="18">18</th><td><u>#define <dfn class="macro" id="_M/IOMMU_READ" data-ref="_M/IOMMU_READ">IOMMU_READ</dfn>	(1 &lt;&lt; 0)</u></td></tr>
+<tr><th id="19">19</th><td><u>#define <dfn class="macro" id="_M/IOMMU_WRITE" data-ref="_M/IOMMU_WRITE">IOMMU_WRITE</dfn>	(1 &lt;&lt; 1)</u></td></tr>
+<tr><th id="20">20</th><td><u>#define <dfn class="macro" id="_M/IOMMU_CACHE" data-ref="_M/IOMMU_CACHE">IOMMU_CACHE</dfn>	(1 &lt;&lt; 2) /* DMA cache coherency */</u></td></tr>
+<tr><th id="21">21</th><td><u>#define <dfn class="macro" id="_M/IOMMU_NOEXEC" data-ref="_M/IOMMU_NOEXEC">IOMMU_NOEXEC</dfn>	(1 &lt;&lt; 3)</u></td></tr>
+<tr><th id="22">22</th><td><u>#define <dfn class="macro" id="_M/IOMMU_MMIO" data-ref="_M/IOMMU_MMIO">IOMMU_MMIO</dfn>	(1 &lt;&lt; 4) /* e.g. things like MSI doorbells */</u></td></tr>
+<tr><th id="23">23</th><td><i>/*</i></td></tr>
+<tr><th id="24">24</th><td><i> * Where the bus hardware includes a privilege level as part of its access type</i></td></tr>
+<tr><th id="25">25</th><td><i> * markings, and certain devices are capable of issuing transactions marked as</i></td></tr>
+<tr><th id="26">26</th><td><i> * either 'supervisor' or 'user', the IOMMU_PRIV flag requests that the other</i></td></tr>
+<tr><th id="27">27</th><td><i> * given permission flags only apply to accesses at the higher privilege level,</i></td></tr>
+<tr><th id="28">28</th><td><i> * and that unprivileged transactions should have as little access as possible.</i></td></tr>
+<tr><th id="29">29</th><td><i> * This would usually imply the same permissions as kernel mappings on the CPU,</i></td></tr>
+<tr><th id="30">30</th><td><i> * if the IOMMU page table format is equivalent.</i></td></tr>
+<tr><th id="31">31</th><td><i> */</i></td></tr>
+<tr><th id="32">32</th><td><u>#define <dfn class="macro" id="_M/IOMMU_PRIV" data-ref="_M/IOMMU_PRIV">IOMMU_PRIV</dfn>	(1 &lt;&lt; 5)</u></td></tr>
+<tr><th id="33">33</th><td><i>/*</i></td></tr>
+<tr><th id="34">34</th><td><i> * Non-coherent masters on few Qualcomm SoCs can use this page protection flag</i></td></tr>
+<tr><th id="35">35</th><td><i> * to set correct cacheability attributes to use an outer level of cache -</i></td></tr>
+<tr><th id="36">36</th><td><i> * last level cache, aka system cache.</i></td></tr>
+<tr><th id="37">37</th><td><i> */</i></td></tr>
+<tr><th id="38">38</th><td><u>#define <dfn class="macro" id="_M/IOMMU_QCOM_SYS_CACHE" data-ref="_M/IOMMU_QCOM_SYS_CACHE">IOMMU_QCOM_SYS_CACHE</dfn>	(1 &lt;&lt; 6)</u></td></tr>
+<tr><th id="39">39</th><td></td></tr>
+<tr><th id="40">40</th><td><b>struct</b> <a class="type" href="#iommu_ops" title='iommu_ops' data-ref="iommu_ops" data-ref-filename="iommu_ops">iommu_ops</a>;</td></tr>
+<tr><th id="41">41</th><td><b>struct</b> <a class="type" href="device.h.html#iommu_group" title='iommu_group' data-ref="iommu_group" data-ref-filename="iommu_group" id="iommu_group">iommu_group</a>;</td></tr>
+<tr><th id="42">42</th><td><b>struct</b> <a class="type" href="device.h.html#bus_type" title='bus_type' data-ref="bus_type" data-ref-filename="bus_type" id="bus_type">bus_type</a>;</td></tr>
+<tr><th id="43">43</th><td><b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device" id="device">device</a>;</td></tr>
+<tr><th id="44">44</th><td><b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a>;</td></tr>
+<tr><th id="45">45</th><td><b>struct</b> <a class="type" href="notifier.h.html#notifier_block" title='notifier_block' data-ref="notifier_block" data-ref-filename="notifier_block" id="notifier_block">notifier_block</a>;</td></tr>
+<tr><th id="46">46</th><td><b>struct</b> <a class="type" href="#iommu_sva" title='iommu_sva' data-ref="iommu_sva" data-ref-filename="iommu_sva">iommu_sva</a>;</td></tr>
+<tr><th id="47">47</th><td><b>struct</b> <a class="type" href="#iommu_fault_event" title='iommu_fault_event' data-ref="iommu_fault_event" data-ref-filename="iommu_fault_event">iommu_fault_event</a>;</td></tr>
+<tr><th id="48">48</th><td></td></tr>
+<tr><th id="49">49</th><td><i>/* iommu fault flags */</i></td></tr>
+<tr><th id="50">50</th><td><u>#define <dfn class="macro" id="_M/IOMMU_FAULT_READ" data-ref="_M/IOMMU_FAULT_READ">IOMMU_FAULT_READ</dfn>	0x0</u></td></tr>
+<tr><th id="51">51</th><td><u>#define <dfn class="macro" id="_M/IOMMU_FAULT_WRITE" data-ref="_M/IOMMU_FAULT_WRITE">IOMMU_FAULT_WRITE</dfn>	0x1</u></td></tr>
+<tr><th id="52">52</th><td></td></tr>
+<tr><th id="53">53</th><td><b>typedef</b> <em>int</em> (*<dfn class="typedef" id="iommu_fault_handler_t" title='iommu_fault_handler_t' data-type='int (*)(struct iommu_domain *, struct device *, unsigned long, int, void *)' data-ref="iommu_fault_handler_t" data-ref-filename="iommu_fault_handler_t">iommu_fault_handler_t</dfn>)(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *,</td></tr>
+<tr><th id="54">54</th><td>			<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *, <em>unsigned</em> <em>long</em>, <em>int</em>, <em>void</em> *);</td></tr>
+<tr><th id="55">55</th><td><b>typedef</b> <em>int</em> (*<dfn class="typedef" id="iommu_mm_exit_handler_t" title='iommu_mm_exit_handler_t' data-type='int (*)(struct device *, struct iommu_sva *, void *)' data-ref="iommu_mm_exit_handler_t" data-ref-filename="iommu_mm_exit_handler_t">iommu_mm_exit_handler_t</dfn>)(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col2 decl" id="802dev" title='dev' data-type='struct device *' data-ref="802dev" data-ref-filename="802dev">dev</dfn>, <b>struct</b> <a class="type" href="#iommu_sva" title='iommu_sva' data-ref="iommu_sva" data-ref-filename="iommu_sva">iommu_sva</a> *,</td></tr>
+<tr><th id="56">56</th><td>				       <em>void</em> *);</td></tr>
+<tr><th id="57">57</th><td><b>typedef</b> <em>int</em> (*<dfn class="typedef" id="iommu_dev_fault_handler_t" title='iommu_dev_fault_handler_t' data-type='int (*)(struct iommu_fault *, void *)' data-ref="iommu_dev_fault_handler_t" data-ref-filename="iommu_dev_fault_handler_t">iommu_dev_fault_handler_t</dfn>)(<b>struct</b> <a class="type" href="../uapi/linux/iommu.h.html#iommu_fault" title='iommu_fault' data-ref="iommu_fault" data-ref-filename="iommu_fault">iommu_fault</a> *, <em>void</em> *);</td></tr>
+<tr><th id="58">58</th><td></td></tr>
+<tr><th id="59">59</th><td><b>struct</b> <dfn class="type def" id="iommu_domain_geometry" title='iommu_domain_geometry' data-ref="iommu_domain_geometry" data-ref-filename="iommu_domain_geometry">iommu_domain_geometry</dfn> {</td></tr>
+<tr><th id="60">60</th><td>	<a class="typedef" href="types.h.html#dma_addr_t" title='dma_addr_t' data-type='u64' data-ref="dma_addr_t" data-ref-filename="dma_addr_t">dma_addr_t</a> <dfn class="decl field" id="iommu_domain_geometry::aperture_start" title='iommu_domain_geometry::aperture_start' data-ref="iommu_domain_geometry::aperture_start" data-ref-filename="iommu_domain_geometry..aperture_start">aperture_start</dfn>; <i>/* First address that can be mapped    */</i></td></tr>
+<tr><th id="61">61</th><td>	<a class="typedef" href="types.h.html#dma_addr_t" title='dma_addr_t' data-type='u64' data-ref="dma_addr_t" data-ref-filename="dma_addr_t">dma_addr_t</a> <dfn class="decl field" id="iommu_domain_geometry::aperture_end" title='iommu_domain_geometry::aperture_end' data-ref="iommu_domain_geometry::aperture_end" data-ref-filename="iommu_domain_geometry..aperture_end">aperture_end</dfn>;   <i>/* Last address that can be mapped     */</i></td></tr>
+<tr><th id="62">62</th><td>	<a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="iommu_domain_geometry::force_aperture" title='iommu_domain_geometry::force_aperture' data-ref="iommu_domain_geometry::force_aperture" data-ref-filename="iommu_domain_geometry..force_aperture">force_aperture</dfn>;       <i>/* DMA only allowed in mappable range? */</i></td></tr>
+<tr><th id="63">63</th><td>};</td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td><i>/* Domain feature flags */</i></td></tr>
+<tr><th id="66">66</th><td><u>#define <dfn class="macro" id="_M/__IOMMU_DOMAIN_PAGING" data-ref="_M/__IOMMU_DOMAIN_PAGING">__IOMMU_DOMAIN_PAGING</dfn>	(1U &lt;&lt; 0)  /* Support for iommu_map/unmap */</u></td></tr>
+<tr><th id="67">67</th><td><u>#define <dfn class="macro" id="_M/__IOMMU_DOMAIN_DMA_API" data-ref="_M/__IOMMU_DOMAIN_DMA_API">__IOMMU_DOMAIN_DMA_API</dfn>	(1U &lt;&lt; 1)  /* Domain for use in DMA-API</u></td></tr>
+<tr><th id="68">68</th><td><u>					      implementation              */</u></td></tr>
+<tr><th id="69">69</th><td><u>#define <dfn class="macro" id="_M/__IOMMU_DOMAIN_PT" data-ref="_M/__IOMMU_DOMAIN_PT">__IOMMU_DOMAIN_PT</dfn>	(1U &lt;&lt; 2)  /* Domain is identity mapped   */</u></td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td><i>/*</i></td></tr>
+<tr><th id="72">72</th><td><i> * This are the possible domain-types</i></td></tr>
+<tr><th id="73">73</th><td><i> *</i></td></tr>
+<tr><th id="74">74</th><td><i> *	IOMMU_DOMAIN_BLOCKED	- All DMA is blocked, can be used to isolate</i></td></tr>
+<tr><th id="75">75</th><td><i> *				  devices</i></td></tr>
+<tr><th id="76">76</th><td><i> *	IOMMU_DOMAIN_IDENTITY	- DMA addresses are system physical addresses</i></td></tr>
+<tr><th id="77">77</th><td><i> *	IOMMU_DOMAIN_UNMANAGED	- DMA mappings managed by IOMMU-API user, used</i></td></tr>
+<tr><th id="78">78</th><td><i> *				  for VMs</i></td></tr>
+<tr><th id="79">79</th><td><i> *	IOMMU_DOMAIN_DMA	- Internally used for DMA-API implementations.</i></td></tr>
+<tr><th id="80">80</th><td><i> *				  This flag allows IOMMU drivers to implement</i></td></tr>
+<tr><th id="81">81</th><td><i> *				  certain optimizations for these domains</i></td></tr>
+<tr><th id="82">82</th><td><i> */</i></td></tr>
+<tr><th id="83">83</th><td><u>#define <dfn class="macro" id="_M/IOMMU_DOMAIN_BLOCKED" data-ref="_M/IOMMU_DOMAIN_BLOCKED">IOMMU_DOMAIN_BLOCKED</dfn>	(0U)</u></td></tr>
+<tr><th id="84">84</th><td><u>#define <dfn class="macro" id="_M/IOMMU_DOMAIN_IDENTITY" data-ref="_M/IOMMU_DOMAIN_IDENTITY">IOMMU_DOMAIN_IDENTITY</dfn>	(__IOMMU_DOMAIN_PT)</u></td></tr>
+<tr><th id="85">85</th><td><u>#define <dfn class="macro" id="_M/IOMMU_DOMAIN_UNMANAGED" data-ref="_M/IOMMU_DOMAIN_UNMANAGED">IOMMU_DOMAIN_UNMANAGED</dfn>	(__IOMMU_DOMAIN_PAGING)</u></td></tr>
+<tr><th id="86">86</th><td><u>#define <dfn class="macro" id="_M/IOMMU_DOMAIN_DMA" data-ref="_M/IOMMU_DOMAIN_DMA">IOMMU_DOMAIN_DMA</dfn>	(__IOMMU_DOMAIN_PAGING |	\</u></td></tr>
+<tr><th id="87">87</th><td><u>				 __IOMMU_DOMAIN_DMA_API)</u></td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td><b>struct</b> <dfn class="type def" id="iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</dfn> {</td></tr>
+<tr><th id="90">90</th><td>	<em>unsigned</em> <dfn class="decl field" id="iommu_domain::type" title='iommu_domain::type' data-ref="iommu_domain::type" data-ref-filename="iommu_domain..type">type</dfn>;</td></tr>
+<tr><th id="91">91</th><td>	<em>const</em> <b>struct</b> <a class="type" href="#iommu_ops" title='iommu_ops' data-ref="iommu_ops" data-ref-filename="iommu_ops">iommu_ops</a> *<dfn class="decl field" id="iommu_domain::ops" title='iommu_domain::ops' data-ref="iommu_domain::ops" data-ref-filename="iommu_domain..ops">ops</dfn>;</td></tr>
+<tr><th id="92">92</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="iommu_domain::pgsize_bitmap" title='iommu_domain::pgsize_bitmap' data-ref="iommu_domain::pgsize_bitmap" data-ref-filename="iommu_domain..pgsize_bitmap">pgsize_bitmap</dfn>;	<i>/* Bitmap of page sizes in use */</i></td></tr>
+<tr><th id="93">93</th><td>	<a class="typedef" href="#iommu_fault_handler_t" title='iommu_fault_handler_t' data-type='int (*)(struct iommu_domain *, struct device *, unsigned long, int, void *)' data-ref="iommu_fault_handler_t" data-ref-filename="iommu_fault_handler_t">iommu_fault_handler_t</a> <dfn class="decl field" id="iommu_domain::handler" title='iommu_domain::handler' data-ref="iommu_domain::handler" data-ref-filename="iommu_domain..handler">handler</dfn>;</td></tr>
+<tr><th id="94">94</th><td>	<em>void</em> *<dfn class="decl field" id="iommu_domain::handler_token" title='iommu_domain::handler_token' data-ref="iommu_domain::handler_token" data-ref-filename="iommu_domain..handler_token">handler_token</dfn>;</td></tr>
+<tr><th id="95">95</th><td>	<b>struct</b> <a class="type" href="#iommu_domain_geometry" title='iommu_domain_geometry' data-ref="iommu_domain_geometry" data-ref-filename="iommu_domain_geometry">iommu_domain_geometry</a> <dfn class="decl field" id="iommu_domain::geometry" title='iommu_domain::geometry' data-ref="iommu_domain::geometry" data-ref-filename="iommu_domain..geometry">geometry</dfn>;</td></tr>
+<tr><th id="96">96</th><td>	<em>void</em> *<dfn class="decl field" id="iommu_domain::iova_cookie" title='iommu_domain::iova_cookie' data-ref="iommu_domain::iova_cookie" data-ref-filename="iommu_domain..iova_cookie">iova_cookie</dfn>;</td></tr>
+<tr><th id="97">97</th><td>};</td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td><b>enum</b> <dfn class="type def" id="iommu_cap" title='iommu_cap' data-ref="iommu_cap" data-ref-filename="iommu_cap">iommu_cap</dfn> {</td></tr>
+<tr><th id="100">100</th><td>	<dfn class="enum" id="IOMMU_CAP_CACHE_COHERENCY" title='IOMMU_CAP_CACHE_COHERENCY' data-ref="IOMMU_CAP_CACHE_COHERENCY" data-ref-filename="IOMMU_CAP_CACHE_COHERENCY">IOMMU_CAP_CACHE_COHERENCY</dfn>,	<i>/* IOMMU can enforce cache coherent DMA</i></td></tr>
+<tr><th id="101">101</th><td><i>					   transactions */</i></td></tr>
+<tr><th id="102">102</th><td>	<dfn class="enum" id="IOMMU_CAP_INTR_REMAP" title='IOMMU_CAP_INTR_REMAP' data-ref="IOMMU_CAP_INTR_REMAP" data-ref-filename="IOMMU_CAP_INTR_REMAP">IOMMU_CAP_INTR_REMAP</dfn>,		<i>/* IOMMU supports interrupt isolation */</i></td></tr>
+<tr><th id="103">103</th><td>	<dfn class="enum" id="IOMMU_CAP_NOEXEC" title='IOMMU_CAP_NOEXEC' data-ref="IOMMU_CAP_NOEXEC" data-ref-filename="IOMMU_CAP_NOEXEC">IOMMU_CAP_NOEXEC</dfn>,		<i>/* IOMMU_NOEXEC flag */</i></td></tr>
+<tr><th id="104">104</th><td>};</td></tr>
+<tr><th id="105">105</th><td></td></tr>
+<tr><th id="106">106</th><td><i>/*</i></td></tr>
+<tr><th id="107">107</th><td><i> * Following constraints are specifc to FSL_PAMUV1:</i></td></tr>
+<tr><th id="108">108</th><td><i> *  -aperture must be power of 2, and naturally aligned</i></td></tr>
+<tr><th id="109">109</th><td><i> *  -number of windows must be power of 2, and address space size</i></td></tr>
+<tr><th id="110">110</th><td><i> *   of each window is determined by aperture size / # of windows</i></td></tr>
+<tr><th id="111">111</th><td><i> *  -the actual size of the mapped region of a window must be power</i></td></tr>
+<tr><th id="112">112</th><td><i> *   of 2 starting with 4KB and physical address must be naturally</i></td></tr>
+<tr><th id="113">113</th><td><i> *   aligned.</i></td></tr>
+<tr><th id="114">114</th><td><i> * DOMAIN_ATTR_FSL_PAMUV1 corresponds to the above mentioned contraints.</i></td></tr>
+<tr><th id="115">115</th><td><i> * The caller can invoke iommu_domain_get_attr to check if the underlying</i></td></tr>
+<tr><th id="116">116</th><td><i> * iommu implementation supports these constraints.</i></td></tr>
+<tr><th id="117">117</th><td><i> */</i></td></tr>
+<tr><th id="118">118</th><td></td></tr>
+<tr><th id="119">119</th><td><b>enum</b> <dfn class="type def" id="iommu_attr" title='iommu_attr' data-ref="iommu_attr" data-ref-filename="iommu_attr">iommu_attr</dfn> {</td></tr>
+<tr><th id="120">120</th><td>	<dfn class="enum" id="DOMAIN_ATTR_GEOMETRY" title='DOMAIN_ATTR_GEOMETRY' data-ref="DOMAIN_ATTR_GEOMETRY" data-ref-filename="DOMAIN_ATTR_GEOMETRY">DOMAIN_ATTR_GEOMETRY</dfn>,</td></tr>
+<tr><th id="121">121</th><td>	<dfn class="enum" id="DOMAIN_ATTR_PAGING" title='DOMAIN_ATTR_PAGING' data-ref="DOMAIN_ATTR_PAGING" data-ref-filename="DOMAIN_ATTR_PAGING">DOMAIN_ATTR_PAGING</dfn>,</td></tr>
+<tr><th id="122">122</th><td>	<dfn class="enum" id="DOMAIN_ATTR_WINDOWS" title='DOMAIN_ATTR_WINDOWS' data-ref="DOMAIN_ATTR_WINDOWS" data-ref-filename="DOMAIN_ATTR_WINDOWS">DOMAIN_ATTR_WINDOWS</dfn>,</td></tr>
+<tr><th id="123">123</th><td>	<dfn class="enum" id="DOMAIN_ATTR_FSL_PAMU_STASH" title='DOMAIN_ATTR_FSL_PAMU_STASH' data-ref="DOMAIN_ATTR_FSL_PAMU_STASH" data-ref-filename="DOMAIN_ATTR_FSL_PAMU_STASH">DOMAIN_ATTR_FSL_PAMU_STASH</dfn>,</td></tr>
+<tr><th id="124">124</th><td>	<dfn class="enum" id="DOMAIN_ATTR_FSL_PAMU_ENABLE" title='DOMAIN_ATTR_FSL_PAMU_ENABLE' data-ref="DOMAIN_ATTR_FSL_PAMU_ENABLE" data-ref-filename="DOMAIN_ATTR_FSL_PAMU_ENABLE">DOMAIN_ATTR_FSL_PAMU_ENABLE</dfn>,</td></tr>
+<tr><th id="125">125</th><td>	<dfn class="enum" id="DOMAIN_ATTR_FSL_PAMUV1" title='DOMAIN_ATTR_FSL_PAMUV1' data-ref="DOMAIN_ATTR_FSL_PAMUV1" data-ref-filename="DOMAIN_ATTR_FSL_PAMUV1">DOMAIN_ATTR_FSL_PAMUV1</dfn>,</td></tr>
+<tr><th id="126">126</th><td>	<dfn class="enum" id="DOMAIN_ATTR_NESTING" title='DOMAIN_ATTR_NESTING' data-ref="DOMAIN_ATTR_NESTING" data-ref-filename="DOMAIN_ATTR_NESTING">DOMAIN_ATTR_NESTING</dfn>,	<i>/* two stages of translation */</i></td></tr>
+<tr><th id="127">127</th><td>	<dfn class="enum" id="DOMAIN_ATTR_DMA_USE_FLUSH_QUEUE" title='DOMAIN_ATTR_DMA_USE_FLUSH_QUEUE' data-ref="DOMAIN_ATTR_DMA_USE_FLUSH_QUEUE" data-ref-filename="DOMAIN_ATTR_DMA_USE_FLUSH_QUEUE">DOMAIN_ATTR_DMA_USE_FLUSH_QUEUE</dfn>,</td></tr>
+<tr><th id="128">128</th><td>	<dfn class="enum" id="DOMAIN_ATTR_MAX" title='DOMAIN_ATTR_MAX' data-ref="DOMAIN_ATTR_MAX" data-ref-filename="DOMAIN_ATTR_MAX">DOMAIN_ATTR_MAX</dfn>,</td></tr>
+<tr><th id="129">129</th><td>};</td></tr>
+<tr><th id="130">130</th><td></td></tr>
+<tr><th id="131">131</th><td><i>/* These are the possible reserved region types */</i></td></tr>
+<tr><th id="132">132</th><td><b>enum</b> <dfn class="type def" id="iommu_resv_type" title='iommu_resv_type' data-ref="iommu_resv_type" data-ref-filename="iommu_resv_type">iommu_resv_type</dfn> {</td></tr>
+<tr><th id="133">133</th><td>	<i>/* Memory regions which must be mapped 1:1 at all times */</i></td></tr>
+<tr><th id="134">134</th><td>	<dfn class="enum" id="IOMMU_RESV_DIRECT" title='IOMMU_RESV_DIRECT' data-ref="IOMMU_RESV_DIRECT" data-ref-filename="IOMMU_RESV_DIRECT">IOMMU_RESV_DIRECT</dfn>,</td></tr>
+<tr><th id="135">135</th><td>	<i>/*</i></td></tr>
+<tr><th id="136">136</th><td><i>	 * Memory regions which are advertised to be 1:1 but are</i></td></tr>
+<tr><th id="137">137</th><td><i>	 * commonly considered relaxable in some conditions,</i></td></tr>
+<tr><th id="138">138</th><td><i>	 * for instance in device assignment use case (USB, Graphics)</i></td></tr>
+<tr><th id="139">139</th><td><i>	 */</i></td></tr>
+<tr><th id="140">140</th><td>	<dfn class="enum" id="IOMMU_RESV_DIRECT_RELAXABLE" title='IOMMU_RESV_DIRECT_RELAXABLE' data-ref="IOMMU_RESV_DIRECT_RELAXABLE" data-ref-filename="IOMMU_RESV_DIRECT_RELAXABLE">IOMMU_RESV_DIRECT_RELAXABLE</dfn>,</td></tr>
+<tr><th id="141">141</th><td>	<i>/* Arbitrary "never map this or give it to a device" address ranges */</i></td></tr>
+<tr><th id="142">142</th><td>	<dfn class="enum" id="IOMMU_RESV_RESERVED" title='IOMMU_RESV_RESERVED' data-ref="IOMMU_RESV_RESERVED" data-ref-filename="IOMMU_RESV_RESERVED">IOMMU_RESV_RESERVED</dfn>,</td></tr>
+<tr><th id="143">143</th><td>	<i>/* Hardware MSI region (untranslated) */</i></td></tr>
+<tr><th id="144">144</th><td>	<dfn class="enum" id="IOMMU_RESV_MSI" title='IOMMU_RESV_MSI' data-ref="IOMMU_RESV_MSI" data-ref-filename="IOMMU_RESV_MSI">IOMMU_RESV_MSI</dfn>,</td></tr>
+<tr><th id="145">145</th><td>	<i>/* Software-managed MSI translation window */</i></td></tr>
+<tr><th id="146">146</th><td>	<dfn class="enum" id="IOMMU_RESV_SW_MSI" title='IOMMU_RESV_SW_MSI' data-ref="IOMMU_RESV_SW_MSI" data-ref-filename="IOMMU_RESV_SW_MSI">IOMMU_RESV_SW_MSI</dfn>,</td></tr>
+<tr><th id="147">147</th><td>};</td></tr>
+<tr><th id="148">148</th><td></td></tr>
+<tr><th id="149">149</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="150">150</th><td><i class="doc"> * struct iommu_resv_region - descriptor for a reserved memory region</i></td></tr>
+<tr><th id="151">151</th><td><i class="doc"> *<span class="command"> @list</span>: Linked list pointers</i></td></tr>
+<tr><th id="152">152</th><td><i class="doc"> *<span class="command"> @start</span>: System physical start address of the region</i></td></tr>
+<tr><th id="153">153</th><td><i class="doc"> *<span class="command"> @length</span>: Length of the region in bytes</i></td></tr>
+<tr><th id="154">154</th><td><i class="doc"> *<span class="command"> @prot</span>: IOMMU Protection flags (READ/WRITE/...)</i></td></tr>
+<tr><th id="155">155</th><td><i class="doc"> *<span class="command"> @type</span>: Type of the reserved region</i></td></tr>
+<tr><th id="156">156</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="157">157</th><td><b>struct</b> <dfn class="type def" id="iommu_resv_region" title='iommu_resv_region' data-ref="iommu_resv_region" data-ref-filename="iommu_resv_region">iommu_resv_region</dfn> {</td></tr>
+<tr><th id="158">158</th><td>	<b>struct</b> <a class="type" href="types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="iommu_resv_region::list" title='iommu_resv_region::list' data-ref="iommu_resv_region::list" data-ref-filename="iommu_resv_region..list">list</dfn>;</td></tr>
+<tr><th id="159">159</th><td>	<a class="typedef" href="types.h.html#phys_addr_t" title='phys_addr_t' data-type='u64' data-ref="phys_addr_t" data-ref-filename="phys_addr_t">phys_addr_t</a>		<dfn class="decl field" id="iommu_resv_region::start" title='iommu_resv_region::start' data-ref="iommu_resv_region::start" data-ref-filename="iommu_resv_region..start">start</dfn>;</td></tr>
+<tr><th id="160">160</th><td>	<a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a>			<dfn class="decl field" id="iommu_resv_region::length" title='iommu_resv_region::length' data-ref="iommu_resv_region::length" data-ref-filename="iommu_resv_region..length">length</dfn>;</td></tr>
+<tr><th id="161">161</th><td>	<em>int</em>			<dfn class="decl field" id="iommu_resv_region::prot" title='iommu_resv_region::prot' data-ref="iommu_resv_region::prot" data-ref-filename="iommu_resv_region..prot">prot</dfn>;</td></tr>
+<tr><th id="162">162</th><td>	<b>enum</b> <a class="type" href="#iommu_resv_type" title='iommu_resv_type' data-ref="iommu_resv_type" data-ref-filename="iommu_resv_type">iommu_resv_type</a>	<dfn class="decl field" id="iommu_resv_region::type" title='iommu_resv_region::type' data-ref="iommu_resv_region::type" data-ref-filename="iommu_resv_region..type">type</dfn>;</td></tr>
+<tr><th id="163">163</th><td>};</td></tr>
+<tr><th id="164">164</th><td></td></tr>
+<tr><th id="165">165</th><td><i>/* Per device IOMMU features */</i></td></tr>
+<tr><th id="166">166</th><td><b>enum</b> <dfn class="type def" id="iommu_dev_features" title='iommu_dev_features' data-ref="iommu_dev_features" data-ref-filename="iommu_dev_features">iommu_dev_features</dfn> {</td></tr>
+<tr><th id="167">167</th><td>	<dfn class="enum" id="IOMMU_DEV_FEAT_AUX" title='IOMMU_DEV_FEAT_AUX' data-ref="IOMMU_DEV_FEAT_AUX" data-ref-filename="IOMMU_DEV_FEAT_AUX">IOMMU_DEV_FEAT_AUX</dfn>,	<i>/* Aux-domain feature */</i></td></tr>
+<tr><th id="168">168</th><td>	<dfn class="enum" id="IOMMU_DEV_FEAT_SVA" title='IOMMU_DEV_FEAT_SVA' data-ref="IOMMU_DEV_FEAT_SVA" data-ref-filename="IOMMU_DEV_FEAT_SVA">IOMMU_DEV_FEAT_SVA</dfn>,	<i>/* Shared Virtual Addresses */</i></td></tr>
+<tr><th id="169">169</th><td>};</td></tr>
+<tr><th id="170">170</th><td></td></tr>
+<tr><th id="171">171</th><td><u>#define <dfn class="macro" id="_M/IOMMU_PASID_INVALID" data-ref="_M/IOMMU_PASID_INVALID">IOMMU_PASID_INVALID</dfn>	(-1U)</u></td></tr>
+<tr><th id="172">172</th><td></td></tr>
+<tr><th id="173">173</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="174">174</th><td><i class="doc"> * struct iommu_sva_ops - device driver callbacks for an SVA context</i></td></tr>
+<tr><th id="175">175</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="176">176</th><td><i class="doc"> *<span class="command"> @mm</span><span class="arg">_exit:</span> called when the mm is about to be torn down by exit_mmap. After</i></td></tr>
+<tr><th id="177">177</th><td><i class="doc"> *          <span class="command"> @mm</span><span class="arg">_exit</span> returns, the device must not issue any more transaction</i></td></tr>
+<tr><th id="178">178</th><td><i class="doc"> *           with the PASID given as argument.</i></td></tr>
+<tr><th id="179">179</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="180">180</th><td><i class="doc"> *           The<span class="command"> @mm</span><span class="arg">_exit</span> handler is allowed to sleep. Be careful about the</i></td></tr>
+<tr><th id="181">181</th><td><i class="doc"> *           locks taken in<span class="command"> @mm</span><span class="arg">_exit,</span> because they might lead to deadlocks if</i></td></tr>
+<tr><th id="182">182</th><td><i class="doc"> *           they are also held when dropping references to the mm. Consider the</i></td></tr>
+<tr><th id="183">183</th><td><i class="doc"> *           following call chain:</i></td></tr>
+<tr><th id="184">184</th><td><i class="doc"> *           mutex_lock(A); mmput(mm) -&gt; exit_mm() -&gt;<span class="command"> @mm</span><span class="arg">_exit()</span> -&gt; mutex_lock(A)</i></td></tr>
+<tr><th id="185">185</th><td><i class="doc"> *           Using mmput_async() prevents this scenario.</i></td></tr>
+<tr><th id="186">186</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="187">187</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="188">188</th><td><b>struct</b> <dfn class="type def" id="iommu_sva_ops" title='iommu_sva_ops' data-ref="iommu_sva_ops" data-ref-filename="iommu_sva_ops">iommu_sva_ops</dfn> {</td></tr>
+<tr><th id="189">189</th><td>	<a class="typedef" href="#iommu_mm_exit_handler_t" title='iommu_mm_exit_handler_t' data-type='int (*)(struct device *, struct iommu_sva *, void *)' data-ref="iommu_mm_exit_handler_t" data-ref-filename="iommu_mm_exit_handler_t">iommu_mm_exit_handler_t</a> <dfn class="decl field" id="iommu_sva_ops::mm_exit" title='iommu_sva_ops::mm_exit' data-ref="iommu_sva_ops::mm_exit" data-ref-filename="iommu_sva_ops..mm_exit">mm_exit</dfn>;</td></tr>
+<tr><th id="190">190</th><td>};</td></tr>
+<tr><th id="191">191</th><td></td></tr>
+<tr><th id="192">192</th><td><u>#<span data-ppcond="192">ifdef</span> <a class="macro" href="../generated/autoconf.h.html#1224" data-ref="_M/CONFIG_IOMMU_API">CONFIG_IOMMU_API</a></u></td></tr>
+<tr><th id="193">193</th><td></td></tr>
+<tr><th id="194">194</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="195">195</th><td><i class="doc"> * struct iommu_ops - iommu ops and capabilities</i></td></tr>
+<tr><th id="196">196</th><td><i class="doc"> *<span class="command"> @capable</span>: check capability</i></td></tr>
+<tr><th id="197">197</th><td><i class="doc"> *<span class="command"> @domain</span>_alloc: allocate iommu domain</i></td></tr>
+<tr><th id="198">198</th><td><i class="doc"> *<span class="command"> @domain</span>_free: free iommu domain</i></td></tr>
+<tr><th id="199">199</th><td><i class="doc"> *<span class="command"> @attach</span>_dev: attach device to an iommu domain</i></td></tr>
+<tr><th id="200">200</th><td><i class="doc"> *<span class="command"> @detach</span>_dev: detach device from an iommu domain</i></td></tr>
+<tr><th id="201">201</th><td><i class="doc"> *<span class="command"> @map</span>: map a physically contiguous memory region to an iommu domain</i></td></tr>
+<tr><th id="202">202</th><td><i class="doc"> *<span class="command"> @unmap</span>: unmap a physically contiguous memory region from an iommu domain</i></td></tr>
+<tr><th id="203">203</th><td><i class="doc"> *<span class="command"> @flush</span>_iotlb_all: Synchronously flush all hardware TLBs for this domain</i></td></tr>
+<tr><th id="204">204</th><td><i class="doc"> *<span class="command"> @iotlb</span>_range_add: Add a given iova range to the flush queue for this domain</i></td></tr>
+<tr><th id="205">205</th><td><i class="doc"> *<span class="command"> @iotlb</span>_sync_map: Sync mappings created recently using<span class="command"> @map</span> to the hardware</i></td></tr>
+<tr><th id="206">206</th><td><i class="doc"> *<span class="command"> @iotlb</span>_sync: Flush all queued ranges from the hardware TLBs and empty flush</i></td></tr>
+<tr><th id="207">207</th><td><i class="doc"> *            queue</i></td></tr>
+<tr><th id="208">208</th><td><i class="doc"> *<span class="command"> @iova</span>_to_phys: translate iova to physical address</i></td></tr>
+<tr><th id="209">209</th><td><i class="doc"> *<span class="command"> @add</span>_device: add device to iommu grouping</i></td></tr>
+<tr><th id="210">210</th><td><i class="doc"> *<span class="command"> @remove</span>_device: remove device from iommu grouping</i></td></tr>
+<tr><th id="211">211</th><td><i class="doc"> *<span class="command"> @device</span>_group: find iommu group for a particular device</i></td></tr>
+<tr><th id="212">212</th><td><i class="doc"> *<span class="command"> @domain</span>_get_attr: Query domain attributes</i></td></tr>
+<tr><th id="213">213</th><td><i class="doc"> *<span class="command"> @domain</span>_set_attr: Change domain attributes</i></td></tr>
+<tr><th id="214">214</th><td><i class="doc"> *<span class="command"> @get</span>_resv_regions: Request list of reserved regions for a device</i></td></tr>
+<tr><th id="215">215</th><td><i class="doc"> *<span class="command"> @put</span>_resv_regions: Free list of reserved regions for a device</i></td></tr>
+<tr><th id="216">216</th><td><i class="doc"> *<span class="command"> @apply</span>_resv_region: Temporary helper call-back for iova reserved ranges</i></td></tr>
+<tr><th id="217">217</th><td><i class="doc"> *<span class="command"> @domain</span>_window_enable: Configure and enable a particular window for a domain</i></td></tr>
+<tr><th id="218">218</th><td><i class="doc"> *<span class="command"> @domain</span>_window_disable: Disable a particular window for a domain</i></td></tr>
+<tr><th id="219">219</th><td><i class="doc"> *<span class="command"> @of</span>_xlate: add OF master IDs to iommu grouping</i></td></tr>
+<tr><th id="220">220</th><td><i class="doc"> *<span class="command"> @is</span>_attach_deferred: Check if domain attach should be deferred from iommu</i></td></tr>
+<tr><th id="221">221</th><td><i class="doc"> *                      driver init to device driver init (default no)</i></td></tr>
+<tr><th id="222">222</th><td><i class="doc"> * <span class="command">@dev</span>_<span class="verb">has/enable/disable_feat: per device entries to check/enable/disable</span></i></td></tr>
+<tr><th id="223">223</th><td><i class="doc"> *                               iommu specific features.</i></td></tr>
+<tr><th id="224">224</th><td><i class="doc"> * <span class="command">@dev</span>_<span class="verb">feat_enabled: check enabled feature</span></i></td></tr>
+<tr><th id="225">225</th><td><i class="doc"> *<span class="command"> @aux</span>_attach/detach_dev: aux-domain specific attach/detach entries.</i></td></tr>
+<tr><th id="226">226</th><td><i class="doc"> *<span class="command"> @aux</span>_get_pasid: get the pasid given an aux-domain</i></td></tr>
+<tr><th id="227">227</th><td><i class="doc"> * <span class="command">@sv</span>a_bind: Bind process address space to device</i></td></tr>
+<tr><th id="228">228</th><td><i class="doc"> * <span class="command">@sv</span>a_unbind: Unbind process address space from device</i></td></tr>
+<tr><th id="229">229</th><td><i class="doc"> * <span class="command">@sv</span>a_get_pasid: Get PASID associated to a SVA handle</i></td></tr>
+<tr><th id="230">230</th><td><i class="doc"> *<span class="command"> @page</span>_response: handle page request response</i></td></tr>
+<tr><th id="231">231</th><td><i class="doc"> *<span class="command"> @pgsize</span>_bitmap: bitmap of all possible supported page sizes</i></td></tr>
+<tr><th id="232">232</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="233">233</th><td><b>struct</b> <dfn class="type def" id="iommu_ops" title='iommu_ops' data-ref="iommu_ops" data-ref-filename="iommu_ops">iommu_ops</dfn> {</td></tr>
+<tr><th id="234">234</th><td>	<a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> (*<dfn class="decl field" id="iommu_ops::capable" title='iommu_ops::capable' data-ref="iommu_ops::capable" data-ref-filename="iommu_ops..capable">capable</dfn>)(<b>enum</b> <a class="type" href="#iommu_cap" title='iommu_cap' data-ref="iommu_cap" data-ref-filename="iommu_cap">iommu_cap</a>);</td></tr>
+<tr><th id="235">235</th><td></td></tr>
+<tr><th id="236">236</th><td>	<i>/* Domain allocation and freeing by the iommu driver */</i></td></tr>
+<tr><th id="237">237</th><td>	<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *(*<dfn class="decl field" id="iommu_ops::domain_alloc" title='iommu_ops::domain_alloc' data-ref="iommu_ops::domain_alloc" data-ref-filename="iommu_ops..domain_alloc">domain_alloc</dfn>)(<em>unsigned</em> <dfn class="local col3 decl" id="803iommu_domain_type" title='iommu_domain_type' data-type='unsigned int' data-ref="803iommu_domain_type" data-ref-filename="803iommu_domain_type">iommu_domain_type</dfn>);</td></tr>
+<tr><th id="238">238</th><td>	<em>void</em> (*<dfn class="decl field" id="iommu_ops::domain_free" title='iommu_ops::domain_free' data-ref="iommu_ops::domain_free" data-ref-filename="iommu_ops..domain_free">domain_free</dfn>)(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *);</td></tr>
+<tr><th id="239">239</th><td></td></tr>
+<tr><th id="240">240</th><td>	<em>int</em> (*<dfn class="decl field" id="iommu_ops::attach_dev" title='iommu_ops::attach_dev' data-ref="iommu_ops::attach_dev" data-ref-filename="iommu_ops..attach_dev">attach_dev</dfn>)(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col4 decl" id="804domain" title='domain' data-type='struct iommu_domain *' data-ref="804domain" data-ref-filename="804domain">domain</dfn>, <b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col5 decl" id="805dev" title='dev' data-type='struct device *' data-ref="805dev" data-ref-filename="805dev">dev</dfn>);</td></tr>
+<tr><th id="241">241</th><td>	<em>void</em> (*<dfn class="decl field" id="iommu_ops::detach_dev" title='iommu_ops::detach_dev' data-ref="iommu_ops::detach_dev" data-ref-filename="iommu_ops..detach_dev">detach_dev</dfn>)(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col6 decl" id="806domain" title='domain' data-type='struct iommu_domain *' data-ref="806domain" data-ref-filename="806domain">domain</dfn>, <b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col7 decl" id="807dev" title='dev' data-type='struct device *' data-ref="807dev" data-ref-filename="807dev">dev</dfn>);</td></tr>
+<tr><th id="242">242</th><td>	<em>int</em> (*<dfn class="decl field" id="iommu_ops::map" title='iommu_ops::map' data-ref="iommu_ops::map" data-ref-filename="iommu_ops..map">map</dfn>)(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col8 decl" id="808domain" title='domain' data-type='struct iommu_domain *' data-ref="808domain" data-ref-filename="808domain">domain</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col9 decl" id="809iova" title='iova' data-type='unsigned long' data-ref="809iova" data-ref-filename="809iova">iova</dfn>,</td></tr>
+<tr><th id="243">243</th><td>		   <a class="typedef" href="types.h.html#phys_addr_t" title='phys_addr_t' data-type='u64' data-ref="phys_addr_t" data-ref-filename="phys_addr_t">phys_addr_t</a> <dfn class="local col0 decl" id="810paddr" title='paddr' data-type='phys_addr_t' data-ref="810paddr" data-ref-filename="810paddr">paddr</dfn>, <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col1 decl" id="811size" title='size' data-type='size_t' data-ref="811size" data-ref-filename="811size">size</dfn>, <em>int</em> <dfn class="local col2 decl" id="812prot" title='prot' data-type='int' data-ref="812prot" data-ref-filename="812prot">prot</dfn>);</td></tr>
+<tr><th id="244">244</th><td>	<a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> (*<dfn class="decl field" id="iommu_ops::unmap" title='iommu_ops::unmap' data-ref="iommu_ops::unmap" data-ref-filename="iommu_ops..unmap">unmap</dfn>)(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col3 decl" id="813domain" title='domain' data-type='struct iommu_domain *' data-ref="813domain" data-ref-filename="813domain">domain</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col4 decl" id="814iova" title='iova' data-type='unsigned long' data-ref="814iova" data-ref-filename="814iova">iova</dfn>,</td></tr>
+<tr><th id="245">245</th><td>		     <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col5 decl" id="815size" title='size' data-type='size_t' data-ref="815size" data-ref-filename="815size">size</dfn>);</td></tr>
+<tr><th id="246">246</th><td>	<em>void</em> (*<dfn class="decl field" id="iommu_ops::flush_iotlb_all" title='iommu_ops::flush_iotlb_all' data-ref="iommu_ops::flush_iotlb_all" data-ref-filename="iommu_ops..flush_iotlb_all">flush_iotlb_all</dfn>)(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col6 decl" id="816domain" title='domain' data-type='struct iommu_domain *' data-ref="816domain" data-ref-filename="816domain">domain</dfn>);</td></tr>
+<tr><th id="247">247</th><td>	<em>void</em> (*<dfn class="decl field" id="iommu_ops::iotlb_range_add" title='iommu_ops::iotlb_range_add' data-ref="iommu_ops::iotlb_range_add" data-ref-filename="iommu_ops..iotlb_range_add">iotlb_range_add</dfn>)(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col7 decl" id="817domain" title='domain' data-type='struct iommu_domain *' data-ref="817domain" data-ref-filename="817domain">domain</dfn>,</td></tr>
+<tr><th id="248">248</th><td>				<em>unsigned</em> <em>long</em> <dfn class="local col8 decl" id="818iova" title='iova' data-type='unsigned long' data-ref="818iova" data-ref-filename="818iova">iova</dfn>, <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col9 decl" id="819size" title='size' data-type='size_t' data-ref="819size" data-ref-filename="819size">size</dfn>);</td></tr>
+<tr><th id="249">249</th><td>	<em>void</em> (*<dfn class="decl field" id="iommu_ops::iotlb_sync_map" title='iommu_ops::iotlb_sync_map' data-ref="iommu_ops::iotlb_sync_map" data-ref-filename="iommu_ops..iotlb_sync_map">iotlb_sync_map</dfn>)(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col0 decl" id="820domain" title='domain' data-type='struct iommu_domain *' data-ref="820domain" data-ref-filename="820domain">domain</dfn>);</td></tr>
+<tr><th id="250">250</th><td>	<em>void</em> (*<dfn class="decl field" id="iommu_ops::iotlb_sync" title='iommu_ops::iotlb_sync' data-ref="iommu_ops::iotlb_sync" data-ref-filename="iommu_ops..iotlb_sync">iotlb_sync</dfn>)(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col1 decl" id="821domain" title='domain' data-type='struct iommu_domain *' data-ref="821domain" data-ref-filename="821domain">domain</dfn>);</td></tr>
+<tr><th id="251">251</th><td>	<a class="typedef" href="types.h.html#phys_addr_t" title='phys_addr_t' data-type='u64' data-ref="phys_addr_t" data-ref-filename="phys_addr_t">phys_addr_t</a> (*<dfn class="decl field" id="iommu_ops::iova_to_phys" title='iommu_ops::iova_to_phys' data-ref="iommu_ops::iova_to_phys" data-ref-filename="iommu_ops..iova_to_phys">iova_to_phys</dfn>)(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col2 decl" id="822domain" title='domain' data-type='struct iommu_domain *' data-ref="822domain" data-ref-filename="822domain">domain</dfn>, <a class="typedef" href="types.h.html#dma_addr_t" title='dma_addr_t' data-type='u64' data-ref="dma_addr_t" data-ref-filename="dma_addr_t">dma_addr_t</a> <dfn class="local col3 decl" id="823iova" title='iova' data-type='dma_addr_t' data-ref="823iova" data-ref-filename="823iova">iova</dfn>);</td></tr>
+<tr><th id="252">252</th><td>	<em>int</em> (*<dfn class="decl field" id="iommu_ops::add_device" title='iommu_ops::add_device' data-ref="iommu_ops::add_device" data-ref-filename="iommu_ops..add_device">add_device</dfn>)(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col4 decl" id="824dev" title='dev' data-type='struct device *' data-ref="824dev" data-ref-filename="824dev">dev</dfn>);</td></tr>
+<tr><th id="253">253</th><td>	<em>void</em> (*<dfn class="decl field" id="iommu_ops::remove_device" title='iommu_ops::remove_device' data-ref="iommu_ops::remove_device" data-ref-filename="iommu_ops..remove_device">remove_device</dfn>)(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col5 decl" id="825dev" title='dev' data-type='struct device *' data-ref="825dev" data-ref-filename="825dev">dev</dfn>);</td></tr>
+<tr><th id="254">254</th><td>	<b>struct</b> <a class="type" href="device.h.html#iommu_group" title='iommu_group' data-ref="iommu_group" data-ref-filename="iommu_group">iommu_group</a> *(*<dfn class="decl field" id="iommu_ops::device_group" title='iommu_ops::device_group' data-ref="iommu_ops::device_group" data-ref-filename="iommu_ops..device_group">device_group</dfn>)(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col6 decl" id="826dev" title='dev' data-type='struct device *' data-ref="826dev" data-ref-filename="826dev">dev</dfn>);</td></tr>
+<tr><th id="255">255</th><td>	<em>int</em> (*<dfn class="decl field" id="iommu_ops::domain_get_attr" title='iommu_ops::domain_get_attr' data-ref="iommu_ops::domain_get_attr" data-ref-filename="iommu_ops..domain_get_attr">domain_get_attr</dfn>)(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col7 decl" id="827domain" title='domain' data-type='struct iommu_domain *' data-ref="827domain" data-ref-filename="827domain">domain</dfn>,</td></tr>
+<tr><th id="256">256</th><td>			       <b>enum</b> <a class="type" href="#iommu_attr" title='iommu_attr' data-ref="iommu_attr" data-ref-filename="iommu_attr">iommu_attr</a> <dfn class="local col8 decl" id="828attr" title='attr' data-type='enum iommu_attr' data-ref="828attr" data-ref-filename="828attr">attr</dfn>, <em>void</em> *<dfn class="local col9 decl" id="829data" title='data' data-type='void *' data-ref="829data" data-ref-filename="829data">data</dfn>);</td></tr>
+<tr><th id="257">257</th><td>	<em>int</em> (*<dfn class="decl field" id="iommu_ops::domain_set_attr" title='iommu_ops::domain_set_attr' data-ref="iommu_ops::domain_set_attr" data-ref-filename="iommu_ops..domain_set_attr">domain_set_attr</dfn>)(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col0 decl" id="830domain" title='domain' data-type='struct iommu_domain *' data-ref="830domain" data-ref-filename="830domain">domain</dfn>,</td></tr>
+<tr><th id="258">258</th><td>			       <b>enum</b> <a class="type" href="#iommu_attr" title='iommu_attr' data-ref="iommu_attr" data-ref-filename="iommu_attr">iommu_attr</a> <dfn class="local col1 decl" id="831attr" title='attr' data-type='enum iommu_attr' data-ref="831attr" data-ref-filename="831attr">attr</dfn>, <em>void</em> *<dfn class="local col2 decl" id="832data" title='data' data-type='void *' data-ref="832data" data-ref-filename="832data">data</dfn>);</td></tr>
+<tr><th id="259">259</th><td></td></tr>
+<tr><th id="260">260</th><td>	<i>/* Request/Free a list of reserved regions for a device */</i></td></tr>
+<tr><th id="261">261</th><td>	<em>void</em> (*<dfn class="decl field" id="iommu_ops::get_resv_regions" title='iommu_ops::get_resv_regions' data-ref="iommu_ops::get_resv_regions" data-ref-filename="iommu_ops..get_resv_regions">get_resv_regions</dfn>)(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col3 decl" id="833dev" title='dev' data-type='struct device *' data-ref="833dev" data-ref-filename="833dev">dev</dfn>, <b>struct</b> <a class="type" href="types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> *<dfn class="local col4 decl" id="834list" title='list' data-type='struct list_head *' data-ref="834list" data-ref-filename="834list">list</dfn>);</td></tr>
+<tr><th id="262">262</th><td>	<em>void</em> (*<dfn class="decl field" id="iommu_ops::put_resv_regions" title='iommu_ops::put_resv_regions' data-ref="iommu_ops::put_resv_regions" data-ref-filename="iommu_ops..put_resv_regions">put_resv_regions</dfn>)(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col5 decl" id="835dev" title='dev' data-type='struct device *' data-ref="835dev" data-ref-filename="835dev">dev</dfn>, <b>struct</b> <a class="type" href="types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> *<dfn class="local col6 decl" id="836list" title='list' data-type='struct list_head *' data-ref="836list" data-ref-filename="836list">list</dfn>);</td></tr>
+<tr><th id="263">263</th><td>	<em>void</em> (*<dfn class="decl field" id="iommu_ops::apply_resv_region" title='iommu_ops::apply_resv_region' data-ref="iommu_ops::apply_resv_region" data-ref-filename="iommu_ops..apply_resv_region">apply_resv_region</dfn>)(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col7 decl" id="837dev" title='dev' data-type='struct device *' data-ref="837dev" data-ref-filename="837dev">dev</dfn>,</td></tr>
+<tr><th id="264">264</th><td>				  <b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col8 decl" id="838domain" title='domain' data-type='struct iommu_domain *' data-ref="838domain" data-ref-filename="838domain">domain</dfn>,</td></tr>
+<tr><th id="265">265</th><td>				  <b>struct</b> <a class="type" href="#iommu_resv_region" title='iommu_resv_region' data-ref="iommu_resv_region" data-ref-filename="iommu_resv_region">iommu_resv_region</a> *<dfn class="local col9 decl" id="839region" title='region' data-type='struct iommu_resv_region *' data-ref="839region" data-ref-filename="839region">region</dfn>);</td></tr>
+<tr><th id="266">266</th><td></td></tr>
+<tr><th id="267">267</th><td>	<i>/* Window handling functions */</i></td></tr>
+<tr><th id="268">268</th><td>	<em>int</em> (*<dfn class="decl field" id="iommu_ops::domain_window_enable" title='iommu_ops::domain_window_enable' data-ref="iommu_ops::domain_window_enable" data-ref-filename="iommu_ops..domain_window_enable">domain_window_enable</dfn>)(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col0 decl" id="840domain" title='domain' data-type='struct iommu_domain *' data-ref="840domain" data-ref-filename="840domain">domain</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col1 decl" id="841wnd_nr" title='wnd_nr' data-type='u32' data-ref="841wnd_nr" data-ref-filename="841wnd_nr">wnd_nr</dfn>,</td></tr>
+<tr><th id="269">269</th><td>				    <a class="typedef" href="types.h.html#phys_addr_t" title='phys_addr_t' data-type='u64' data-ref="phys_addr_t" data-ref-filename="phys_addr_t">phys_addr_t</a> <dfn class="local col2 decl" id="842paddr" title='paddr' data-type='phys_addr_t' data-ref="842paddr" data-ref-filename="842paddr">paddr</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col3 decl" id="843size" title='size' data-type='u64' data-ref="843size" data-ref-filename="843size">size</dfn>, <em>int</em> <dfn class="local col4 decl" id="844prot" title='prot' data-type='int' data-ref="844prot" data-ref-filename="844prot">prot</dfn>);</td></tr>
+<tr><th id="270">270</th><td>	<em>void</em> (*<dfn class="decl field" id="iommu_ops::domain_window_disable" title='iommu_ops::domain_window_disable' data-ref="iommu_ops::domain_window_disable" data-ref-filename="iommu_ops..domain_window_disable">domain_window_disable</dfn>)(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col5 decl" id="845domain" title='domain' data-type='struct iommu_domain *' data-ref="845domain" data-ref-filename="845domain">domain</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col6 decl" id="846wnd_nr" title='wnd_nr' data-type='u32' data-ref="846wnd_nr" data-ref-filename="846wnd_nr">wnd_nr</dfn>);</td></tr>
+<tr><th id="271">271</th><td></td></tr>
+<tr><th id="272">272</th><td>	<em>int</em> (*<dfn class="decl field" id="iommu_ops::of_xlate" title='iommu_ops::of_xlate' data-ref="iommu_ops::of_xlate" data-ref-filename="iommu_ops..of_xlate">of_xlate</dfn>)(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col7 decl" id="847dev" title='dev' data-type='struct device *' data-ref="847dev" data-ref-filename="847dev">dev</dfn>, <b>struct</b> <a class="type" href="of.h.html#of_phandle_args" title='of_phandle_args' data-ref="of_phandle_args" data-ref-filename="of_phandle_args">of_phandle_args</a> *<dfn class="local col8 decl" id="848args" title='args' data-type='struct of_phandle_args *' data-ref="848args" data-ref-filename="848args">args</dfn>);</td></tr>
+<tr><th id="273">273</th><td>	<a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> (*<dfn class="decl field" id="iommu_ops::is_attach_deferred" title='iommu_ops::is_attach_deferred' data-ref="iommu_ops::is_attach_deferred" data-ref-filename="iommu_ops..is_attach_deferred">is_attach_deferred</dfn>)(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col9 decl" id="849domain" title='domain' data-type='struct iommu_domain *' data-ref="849domain" data-ref-filename="849domain">domain</dfn>, <b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col0 decl" id="850dev" title='dev' data-type='struct device *' data-ref="850dev" data-ref-filename="850dev">dev</dfn>);</td></tr>
+<tr><th id="274">274</th><td></td></tr>
+<tr><th id="275">275</th><td>	<i>/* Per device IOMMU features */</i></td></tr>
+<tr><th id="276">276</th><td>	<a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> (*<dfn class="decl field" id="iommu_ops::dev_has_feat" title='iommu_ops::dev_has_feat' data-ref="iommu_ops::dev_has_feat" data-ref-filename="iommu_ops..dev_has_feat">dev_has_feat</dfn>)(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col1 decl" id="851dev" title='dev' data-type='struct device *' data-ref="851dev" data-ref-filename="851dev">dev</dfn>, <b>enum</b> <a class="type" href="#iommu_dev_features" title='iommu_dev_features' data-ref="iommu_dev_features" data-ref-filename="iommu_dev_features">iommu_dev_features</a> <dfn class="local col2 decl" id="852f" title='f' data-type='enum iommu_dev_features' data-ref="852f" data-ref-filename="852f">f</dfn>);</td></tr>
+<tr><th id="277">277</th><td>	<a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> (*<dfn class="decl field" id="iommu_ops::dev_feat_enabled" title='iommu_ops::dev_feat_enabled' data-ref="iommu_ops::dev_feat_enabled" data-ref-filename="iommu_ops..dev_feat_enabled">dev_feat_enabled</dfn>)(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col3 decl" id="853dev" title='dev' data-type='struct device *' data-ref="853dev" data-ref-filename="853dev">dev</dfn>, <b>enum</b> <a class="type" href="#iommu_dev_features" title='iommu_dev_features' data-ref="iommu_dev_features" data-ref-filename="iommu_dev_features">iommu_dev_features</a> <dfn class="local col4 decl" id="854f" title='f' data-type='enum iommu_dev_features' data-ref="854f" data-ref-filename="854f">f</dfn>);</td></tr>
+<tr><th id="278">278</th><td>	<em>int</em> (*<dfn class="decl field" id="iommu_ops::dev_enable_feat" title='iommu_ops::dev_enable_feat' data-ref="iommu_ops::dev_enable_feat" data-ref-filename="iommu_ops..dev_enable_feat">dev_enable_feat</dfn>)(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col5 decl" id="855dev" title='dev' data-type='struct device *' data-ref="855dev" data-ref-filename="855dev">dev</dfn>, <b>enum</b> <a class="type" href="#iommu_dev_features" title='iommu_dev_features' data-ref="iommu_dev_features" data-ref-filename="iommu_dev_features">iommu_dev_features</a> <dfn class="local col6 decl" id="856f" title='f' data-type='enum iommu_dev_features' data-ref="856f" data-ref-filename="856f">f</dfn>);</td></tr>
+<tr><th id="279">279</th><td>	<em>int</em> (*<dfn class="decl field" id="iommu_ops::dev_disable_feat" title='iommu_ops::dev_disable_feat' data-ref="iommu_ops::dev_disable_feat" data-ref-filename="iommu_ops..dev_disable_feat">dev_disable_feat</dfn>)(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col7 decl" id="857dev" title='dev' data-type='struct device *' data-ref="857dev" data-ref-filename="857dev">dev</dfn>, <b>enum</b> <a class="type" href="#iommu_dev_features" title='iommu_dev_features' data-ref="iommu_dev_features" data-ref-filename="iommu_dev_features">iommu_dev_features</a> <dfn class="local col8 decl" id="858f" title='f' data-type='enum iommu_dev_features' data-ref="858f" data-ref-filename="858f">f</dfn>);</td></tr>
+<tr><th id="280">280</th><td></td></tr>
+<tr><th id="281">281</th><td>	<i>/* Aux-domain specific attach/detach entries */</i></td></tr>
+<tr><th id="282">282</th><td>	<em>int</em> (*<dfn class="decl field" id="iommu_ops::aux_attach_dev" title='iommu_ops::aux_attach_dev' data-ref="iommu_ops::aux_attach_dev" data-ref-filename="iommu_ops..aux_attach_dev">aux_attach_dev</dfn>)(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col9 decl" id="859domain" title='domain' data-type='struct iommu_domain *' data-ref="859domain" data-ref-filename="859domain">domain</dfn>, <b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col0 decl" id="860dev" title='dev' data-type='struct device *' data-ref="860dev" data-ref-filename="860dev">dev</dfn>);</td></tr>
+<tr><th id="283">283</th><td>	<em>void</em> (*<dfn class="decl field" id="iommu_ops::aux_detach_dev" title='iommu_ops::aux_detach_dev' data-ref="iommu_ops::aux_detach_dev" data-ref-filename="iommu_ops..aux_detach_dev">aux_detach_dev</dfn>)(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col1 decl" id="861domain" title='domain' data-type='struct iommu_domain *' data-ref="861domain" data-ref-filename="861domain">domain</dfn>, <b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col2 decl" id="862dev" title='dev' data-type='struct device *' data-ref="862dev" data-ref-filename="862dev">dev</dfn>);</td></tr>
+<tr><th id="284">284</th><td>	<em>int</em> (*<dfn class="decl field" id="iommu_ops::aux_get_pasid" title='iommu_ops::aux_get_pasid' data-ref="iommu_ops::aux_get_pasid" data-ref-filename="iommu_ops..aux_get_pasid">aux_get_pasid</dfn>)(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col3 decl" id="863domain" title='domain' data-type='struct iommu_domain *' data-ref="863domain" data-ref-filename="863domain">domain</dfn>, <b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col4 decl" id="864dev" title='dev' data-type='struct device *' data-ref="864dev" data-ref-filename="864dev">dev</dfn>);</td></tr>
+<tr><th id="285">285</th><td></td></tr>
+<tr><th id="286">286</th><td>	<b>struct</b> <a class="type" href="#iommu_sva" title='iommu_sva' data-ref="iommu_sva" data-ref-filename="iommu_sva">iommu_sva</a> *(*<dfn class="decl field" id="iommu_ops::sva_bind" title='iommu_ops::sva_bind' data-ref="iommu_ops::sva_bind" data-ref-filename="iommu_ops..sva_bind">sva_bind</dfn>)(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col5 decl" id="865dev" title='dev' data-type='struct device *' data-ref="865dev" data-ref-filename="865dev">dev</dfn>, <b>struct</b> <a class="type" href="mm_types.h.html#mm_struct" title='mm_struct' data-ref="mm_struct" data-ref-filename="mm_struct">mm_struct</a> *<dfn class="local col6 decl" id="866mm" title='mm' data-type='struct mm_struct *' data-ref="866mm" data-ref-filename="866mm">mm</dfn>,</td></tr>
+<tr><th id="287">287</th><td>				      <em>void</em> *<dfn class="local col7 decl" id="867drvdata" title='drvdata' data-type='void *' data-ref="867drvdata" data-ref-filename="867drvdata">drvdata</dfn>);</td></tr>
+<tr><th id="288">288</th><td>	<em>void</em> (*<dfn class="decl field" id="iommu_ops::sva_unbind" title='iommu_ops::sva_unbind' data-ref="iommu_ops::sva_unbind" data-ref-filename="iommu_ops..sva_unbind">sva_unbind</dfn>)(<b>struct</b> <a class="type" href="#iommu_sva" title='iommu_sva' data-ref="iommu_sva" data-ref-filename="iommu_sva">iommu_sva</a> *<dfn class="local col8 decl" id="868handle" title='handle' data-type='struct iommu_sva *' data-ref="868handle" data-ref-filename="868handle">handle</dfn>);</td></tr>
+<tr><th id="289">289</th><td>	<em>int</em> (*<dfn class="decl field" id="iommu_ops::sva_get_pasid" title='iommu_ops::sva_get_pasid' data-ref="iommu_ops::sva_get_pasid" data-ref-filename="iommu_ops..sva_get_pasid">sva_get_pasid</dfn>)(<b>struct</b> <a class="type" href="#iommu_sva" title='iommu_sva' data-ref="iommu_sva" data-ref-filename="iommu_sva">iommu_sva</a> *<dfn class="local col9 decl" id="869handle" title='handle' data-type='struct iommu_sva *' data-ref="869handle" data-ref-filename="869handle">handle</dfn>);</td></tr>
+<tr><th id="290">290</th><td></td></tr>
+<tr><th id="291">291</th><td>	<em>int</em> (*<dfn class="decl field" id="iommu_ops::page_response" title='iommu_ops::page_response' data-ref="iommu_ops::page_response" data-ref-filename="iommu_ops..page_response">page_response</dfn>)(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col0 decl" id="870dev" title='dev' data-type='struct device *' data-ref="870dev" data-ref-filename="870dev">dev</dfn>,</td></tr>
+<tr><th id="292">292</th><td>			     <b>struct</b> <a class="type" href="#iommu_fault_event" title='iommu_fault_event' data-ref="iommu_fault_event" data-ref-filename="iommu_fault_event">iommu_fault_event</a> *<dfn class="local col1 decl" id="871evt" title='evt' data-type='struct iommu_fault_event *' data-ref="871evt" data-ref-filename="871evt">evt</dfn>,</td></tr>
+<tr><th id="293">293</th><td>			     <b>struct</b> <a class="type" href="../uapi/linux/iommu.h.html#iommu_page_response" title='iommu_page_response' data-ref="iommu_page_response" data-ref-filename="iommu_page_response">iommu_page_response</a> *<dfn class="local col2 decl" id="872msg" title='msg' data-type='struct iommu_page_response *' data-ref="872msg" data-ref-filename="872msg">msg</dfn>);</td></tr>
+<tr><th id="294">294</th><td></td></tr>
+<tr><th id="295">295</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="iommu_ops::pgsize_bitmap" title='iommu_ops::pgsize_bitmap' data-ref="iommu_ops::pgsize_bitmap" data-ref-filename="iommu_ops..pgsize_bitmap">pgsize_bitmap</dfn>;</td></tr>
+<tr><th id="296">296</th><td>};</td></tr>
+<tr><th id="297">297</th><td></td></tr>
+<tr><th id="298">298</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="299">299</th><td><i class="doc"> * struct iommu_device - IOMMU core representation of one IOMMU hardware</i></td></tr>
+<tr><th id="300">300</th><td><i class="doc"> *			 instance</i></td></tr>
+<tr><th id="301">301</th><td><i class="doc"> *<span class="command"> @list</span>: Used by the iommu-core to keep a list of registered iommus</i></td></tr>
+<tr><th id="302">302</th><td><i class="doc"> *<span class="command"> @ops</span>: iommu-ops for talking to this iommu</i></td></tr>
+<tr><th id="303">303</th><td><i class="doc"> * <span class="command">@dev</span>:<span class="verb"> struct device for sysfs handling</span></i></td></tr>
+<tr><th id="304">304</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="305">305</th><td><b>struct</b> <dfn class="type def" id="iommu_device" title='iommu_device' data-ref="iommu_device" data-ref-filename="iommu_device">iommu_device</dfn> {</td></tr>
+<tr><th id="306">306</th><td>	<b>struct</b> <a class="type" href="types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="iommu_device::list" title='iommu_device::list' data-ref="iommu_device::list" data-ref-filename="iommu_device..list">list</dfn>;</td></tr>
+<tr><th id="307">307</th><td>	<em>const</em> <b>struct</b> <a class="type" href="#iommu_ops" title='iommu_ops' data-ref="iommu_ops" data-ref-filename="iommu_ops">iommu_ops</a> *<dfn class="decl field" id="iommu_device::ops" title='iommu_device::ops' data-ref="iommu_device::ops" data-ref-filename="iommu_device..ops">ops</dfn>;</td></tr>
+<tr><th id="308">308</th><td>	<b>struct</b> <a class="type" href="fwnode.h.html#fwnode_handle" title='fwnode_handle' data-ref="fwnode_handle" data-ref-filename="fwnode_handle">fwnode_handle</a> *<dfn class="decl field" id="iommu_device::fwnode" title='iommu_device::fwnode' data-ref="iommu_device::fwnode" data-ref-filename="iommu_device..fwnode">fwnode</dfn>;</td></tr>
+<tr><th id="309">309</th><td>	<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="decl field" id="iommu_device::dev" title='iommu_device::dev' data-ref="iommu_device::dev" data-ref-filename="iommu_device..dev">dev</dfn>;</td></tr>
+<tr><th id="310">310</th><td>};</td></tr>
+<tr><th id="311">311</th><td></td></tr>
+<tr><th id="312">312</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="313">313</th><td><i class="doc"> * struct iommu_fault_event - Generic fault event</i></td></tr>
+<tr><th id="314">314</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="315">315</th><td><i class="doc"> * Can represent recoverable faults such as a page requests or</i></td></tr>
+<tr><th id="316">316</th><td><i class="doc"> * unrecoverable faults such as DMA or IRQ remapping faults.</i></td></tr>
+<tr><th id="317">317</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="318">318</th><td><i class="doc"> *<span class="command"> @fault</span>: fault descriptor</i></td></tr>
+<tr><th id="319">319</th><td><i class="doc"> *<span class="command"> @list</span>: pending fault event list, used for tracking responses</i></td></tr>
+<tr><th id="320">320</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="321">321</th><td><b>struct</b> <dfn class="type def" id="iommu_fault_event" title='iommu_fault_event' data-ref="iommu_fault_event" data-ref-filename="iommu_fault_event">iommu_fault_event</dfn> {</td></tr>
+<tr><th id="322">322</th><td>	<b>struct</b> <a class="type" href="../uapi/linux/iommu.h.html#iommu_fault" title='iommu_fault' data-ref="iommu_fault" data-ref-filename="iommu_fault">iommu_fault</a> <dfn class="decl field" id="iommu_fault_event::fault" title='iommu_fault_event::fault' data-ref="iommu_fault_event::fault" data-ref-filename="iommu_fault_event..fault">fault</dfn>;</td></tr>
+<tr><th id="323">323</th><td>	<b>struct</b> <a class="type" href="types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="iommu_fault_event::list" title='iommu_fault_event::list' data-ref="iommu_fault_event::list" data-ref-filename="iommu_fault_event..list">list</dfn>;</td></tr>
+<tr><th id="324">324</th><td>};</td></tr>
+<tr><th id="325">325</th><td></td></tr>
+<tr><th id="326">326</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="327">327</th><td><i class="doc"> * struct iommu_fault_param - per-device IOMMU fault data</i></td></tr>
+<tr><th id="328">328</th><td><i class="doc"> *<span class="command"> @handler</span>: Callback function to handle IOMMU faults at device level</i></td></tr>
+<tr><th id="329">329</th><td><i class="doc"> * <span class="command">@data</span>: handler private data</i></td></tr>
+<tr><th id="330">330</th><td><i class="doc"> *<span class="command"> @faults</span>: holds the pending faults which needs response</i></td></tr>
+<tr><th id="331">331</th><td><i class="doc"> *<span class="command"> @lock</span>: protect pending faults list</i></td></tr>
+<tr><th id="332">332</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="333">333</th><td><b>struct</b> <dfn class="type def" id="iommu_fault_param" title='iommu_fault_param' data-ref="iommu_fault_param" data-ref-filename="iommu_fault_param">iommu_fault_param</dfn> {</td></tr>
+<tr><th id="334">334</th><td>	<a class="typedef" href="#iommu_dev_fault_handler_t" title='iommu_dev_fault_handler_t' data-type='int (*)(struct iommu_fault *, void *)' data-ref="iommu_dev_fault_handler_t" data-ref-filename="iommu_dev_fault_handler_t">iommu_dev_fault_handler_t</a> <dfn class="decl field" id="iommu_fault_param::handler" title='iommu_fault_param::handler' data-ref="iommu_fault_param::handler" data-ref-filename="iommu_fault_param..handler">handler</dfn>;</td></tr>
+<tr><th id="335">335</th><td>	<em>void</em> *<dfn class="decl field" id="iommu_fault_param::data" title='iommu_fault_param::data' data-ref="iommu_fault_param::data" data-ref-filename="iommu_fault_param..data">data</dfn>;</td></tr>
+<tr><th id="336">336</th><td>	<b>struct</b> <a class="type" href="types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="iommu_fault_param::faults" title='iommu_fault_param::faults' data-ref="iommu_fault_param::faults" data-ref-filename="iommu_fault_param..faults">faults</dfn>;</td></tr>
+<tr><th id="337">337</th><td>	<b>struct</b> <a class="type" href="mutex.h.html#mutex" title='mutex' data-ref="mutex" data-ref-filename="mutex">mutex</a> <dfn class="decl field" id="iommu_fault_param::lock" title='iommu_fault_param::lock' data-ref="iommu_fault_param::lock" data-ref-filename="iommu_fault_param..lock">lock</dfn>;</td></tr>
+<tr><th id="338">338</th><td>};</td></tr>
+<tr><th id="339">339</th><td></td></tr>
+<tr><th id="340">340</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="341">341</th><td><i class="doc"> * struct iommu_param - collection of per-device IOMMU data</i></td></tr>
+<tr><th id="342">342</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="343">343</th><td><i class="doc"> *<span class="command"> @fault</span>_param: IOMMU detected device fault reporting data</i></td></tr>
+<tr><th id="344">344</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="345">345</th><td><i class="doc"> * TODO: migrate other per device data pointers under iommu_dev_data, e.g.</i></td></tr>
+<tr><th id="346">346</th><td><i class="doc"> *	struct iommu_group	*iommu_group;</i></td></tr>
+<tr><th id="347">347</th><td><i class="doc"> *	struct iommu_fwspec	*iommu_fwspec;</i></td></tr>
+<tr><th id="348">348</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="349">349</th><td><b>struct</b> <dfn class="type def" id="iommu_param" title='iommu_param' data-ref="iommu_param" data-ref-filename="iommu_param">iommu_param</dfn> {</td></tr>
+<tr><th id="350">350</th><td>	<b>struct</b> <a class="type" href="mutex.h.html#mutex" title='mutex' data-ref="mutex" data-ref-filename="mutex">mutex</a> <dfn class="decl field" id="iommu_param::lock" title='iommu_param::lock' data-ref="iommu_param::lock" data-ref-filename="iommu_param..lock">lock</dfn>;</td></tr>
+<tr><th id="351">351</th><td>	<b>struct</b> <a class="type" href="#iommu_fault_param" title='iommu_fault_param' data-ref="iommu_fault_param" data-ref-filename="iommu_fault_param">iommu_fault_param</a> *<dfn class="decl field" id="iommu_param::fault_param" title='iommu_param::fault_param' data-ref="iommu_param::fault_param" data-ref-filename="iommu_param..fault_param">fault_param</dfn>;</td></tr>
+<tr><th id="352">352</th><td>};</td></tr>
+<tr><th id="353">353</th><td></td></tr>
+<tr><th id="354">354</th><td><em>int</em>  <dfn class="decl fn" id="iommu_device_register" title='iommu_device_register' data-ref="iommu_device_register" data-ref-filename="iommu_device_register">iommu_device_register</dfn>(<b>struct</b> <a class="type" href="#iommu_device" title='iommu_device' data-ref="iommu_device" data-ref-filename="iommu_device">iommu_device</a> *<dfn class="local col3 decl" id="873iommu" title='iommu' data-type='struct iommu_device *' data-ref="873iommu" data-ref-filename="873iommu">iommu</dfn>);</td></tr>
+<tr><th id="355">355</th><td><em>void</em> <dfn class="decl fn" id="iommu_device_unregister" title='iommu_device_unregister' data-ref="iommu_device_unregister" data-ref-filename="iommu_device_unregister">iommu_device_unregister</dfn>(<b>struct</b> <a class="type" href="#iommu_device" title='iommu_device' data-ref="iommu_device" data-ref-filename="iommu_device">iommu_device</a> *<dfn class="local col4 decl" id="874iommu" title='iommu' data-type='struct iommu_device *' data-ref="874iommu" data-ref-filename="874iommu">iommu</dfn>);</td></tr>
+<tr><th id="356">356</th><td><em>int</em>  <dfn class="decl fn" id="iommu_device_sysfs_add" title='iommu_device_sysfs_add' data-ref="iommu_device_sysfs_add" data-ref-filename="iommu_device_sysfs_add">iommu_device_sysfs_add</dfn>(<b>struct</b> <a class="type" href="#iommu_device" title='iommu_device' data-ref="iommu_device" data-ref-filename="iommu_device">iommu_device</a> *<dfn class="local col5 decl" id="875iommu" title='iommu' data-type='struct iommu_device *' data-ref="875iommu" data-ref-filename="875iommu">iommu</dfn>,</td></tr>
+<tr><th id="357">357</th><td>			    <b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col6 decl" id="876parent" title='parent' data-type='struct device *' data-ref="876parent" data-ref-filename="876parent">parent</dfn>,</td></tr>
+<tr><th id="358">358</th><td>			    <em>const</em> <b>struct</b> <a class="type" href="sysfs.h.html#attribute_group" title='attribute_group' data-ref="attribute_group" data-ref-filename="attribute_group">attribute_group</a> **<dfn class="local col7 decl" id="877groups" title='groups' data-type='const struct attribute_group **' data-ref="877groups" data-ref-filename="877groups">groups</dfn>,</td></tr>
+<tr><th id="359">359</th><td>			    <em>const</em> <em>char</em> *<dfn class="local col8 decl" id="878fmt" title='fmt' data-type='const char *' data-ref="878fmt" data-ref-filename="878fmt">fmt</dfn>, ...) <a class="macro" href="compiler_attributes.h.html#157" title="__attribute__((__format__(printf, 4, 5)))" data-ref="_M/__printf">__printf</a>(<var>4</var>, <var>5</var>);</td></tr>
+<tr><th id="360">360</th><td><em>void</em> <dfn class="decl fn" id="iommu_device_sysfs_remove" title='iommu_device_sysfs_remove' data-ref="iommu_device_sysfs_remove" data-ref-filename="iommu_device_sysfs_remove">iommu_device_sysfs_remove</dfn>(<b>struct</b> <a class="type" href="#iommu_device" title='iommu_device' data-ref="iommu_device" data-ref-filename="iommu_device">iommu_device</a> *<dfn class="local col9 decl" id="879iommu" title='iommu' data-type='struct iommu_device *' data-ref="879iommu" data-ref-filename="879iommu">iommu</dfn>);</td></tr>
+<tr><th id="361">361</th><td><em>int</em>  <dfn class="decl fn" id="iommu_device_link" title='iommu_device_link' data-ref="iommu_device_link" data-ref-filename="iommu_device_link">iommu_device_link</dfn>(<b>struct</b> <a class="type" href="#iommu_device" title='iommu_device' data-ref="iommu_device" data-ref-filename="iommu_device">iommu_device</a>   *<dfn class="local col0 decl" id="880iommu" title='iommu' data-type='struct iommu_device *' data-ref="880iommu" data-ref-filename="880iommu">iommu</dfn>, <b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col1 decl" id="881link" title='link' data-type='struct device *' data-ref="881link" data-ref-filename="881link">link</dfn>);</td></tr>
+<tr><th id="362">362</th><td><em>void</em> <dfn class="decl fn" id="iommu_device_unlink" title='iommu_device_unlink' data-ref="iommu_device_unlink" data-ref-filename="iommu_device_unlink">iommu_device_unlink</dfn>(<b>struct</b> <a class="type" href="#iommu_device" title='iommu_device' data-ref="iommu_device" data-ref-filename="iommu_device">iommu_device</a> *<dfn class="local col2 decl" id="882iommu" title='iommu' data-type='struct iommu_device *' data-ref="882iommu" data-ref-filename="882iommu">iommu</dfn>, <b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col3 decl" id="883link" title='link' data-type='struct device *' data-ref="883link" data-ref-filename="883link">link</dfn>);</td></tr>
+<tr><th id="363">363</th><td></td></tr>
+<tr><th id="364">364</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="iommu_device_set_ops" title='iommu_device_set_ops' data-ref="iommu_device_set_ops" data-ref-filename="iommu_device_set_ops">iommu_device_set_ops</dfn>(<b>struct</b> <a class="type" href="#iommu_device" title='iommu_device' data-ref="iommu_device" data-ref-filename="iommu_device">iommu_device</a> *<dfn class="local col4 decl" id="884iommu" title='iommu' data-type='struct iommu_device *' data-ref="884iommu" data-ref-filename="884iommu">iommu</dfn>,</td></tr>
+<tr><th id="365">365</th><td>					<em>const</em> <b>struct</b> <a class="type" href="#iommu_ops" title='iommu_ops' data-ref="iommu_ops" data-ref-filename="iommu_ops">iommu_ops</a> *<dfn class="local col5 decl" id="885ops" title='ops' data-type='const struct iommu_ops *' data-ref="885ops" data-ref-filename="885ops">ops</dfn>)</td></tr>
+<tr><th id="366">366</th><td>{</td></tr>
+<tr><th id="367">367</th><td>	<a class="local col4 ref" href="#884iommu" title='iommu' data-ref="884iommu" data-ref-filename="884iommu">iommu</a>-&gt;<a class="ref field" href="#iommu_device::ops" title='iommu_device::ops' data-ref="iommu_device::ops" data-ref-filename="iommu_device..ops">ops</a> = <a class="local col5 ref" href="#885ops" title='ops' data-ref="885ops" data-ref-filename="885ops">ops</a>;</td></tr>
+<tr><th id="368">368</th><td>}</td></tr>
+<tr><th id="369">369</th><td></td></tr>
+<tr><th id="370">370</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="iommu_device_set_fwnode" title='iommu_device_set_fwnode' data-ref="iommu_device_set_fwnode" data-ref-filename="iommu_device_set_fwnode">iommu_device_set_fwnode</dfn>(<b>struct</b> <a class="type" href="#iommu_device" title='iommu_device' data-ref="iommu_device" data-ref-filename="iommu_device">iommu_device</a> *<dfn class="local col6 decl" id="886iommu" title='iommu' data-type='struct iommu_device *' data-ref="886iommu" data-ref-filename="886iommu">iommu</dfn>,</td></tr>
+<tr><th id="371">371</th><td>					   <b>struct</b> <a class="type" href="fwnode.h.html#fwnode_handle" title='fwnode_handle' data-ref="fwnode_handle" data-ref-filename="fwnode_handle">fwnode_handle</a> *<dfn class="local col7 decl" id="887fwnode" title='fwnode' data-type='struct fwnode_handle *' data-ref="887fwnode" data-ref-filename="887fwnode">fwnode</dfn>)</td></tr>
+<tr><th id="372">372</th><td>{</td></tr>
+<tr><th id="373">373</th><td>	<a class="local col6 ref" href="#886iommu" title='iommu' data-ref="886iommu" data-ref-filename="886iommu">iommu</a>-&gt;<a class="ref field" href="#iommu_device::fwnode" title='iommu_device::fwnode' data-ref="iommu_device::fwnode" data-ref-filename="iommu_device..fwnode">fwnode</a> = <a class="local col7 ref" href="#887fwnode" title='fwnode' data-ref="887fwnode" data-ref-filename="887fwnode">fwnode</a>;</td></tr>
+<tr><th id="374">374</th><td>}</td></tr>
+<tr><th id="375">375</th><td></td></tr>
+<tr><th id="376">376</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="#iommu_device" title='iommu_device' data-ref="iommu_device" data-ref-filename="iommu_device">iommu_device</a> *<dfn class="decl def fn" id="dev_to_iommu_device" title='dev_to_iommu_device' data-ref="dev_to_iommu_device" data-ref-filename="dev_to_iommu_device">dev_to_iommu_device</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col8 decl" id="888dev" title='dev' data-type='struct device *' data-ref="888dev" data-ref-filename="888dev">dev</dfn>)</td></tr>
+<tr><th id="377">377</th><td>{</td></tr>
+<tr><th id="378">378</th><td>	<b>return</b> (<b>struct</b> <a class="type" href="#iommu_device" title='iommu_device' data-ref="iommu_device" data-ref-filename="iommu_device">iommu_device</a> *)<a class="ref fn" href="device.h.html#dev_get_drvdata" title='dev_get_drvdata' data-ref="dev_get_drvdata" data-ref-filename="dev_get_drvdata">dev_get_drvdata</a>(<a class="local col8 ref" href="#888dev" title='dev' data-ref="888dev" data-ref-filename="888dev">dev</a>);</td></tr>
+<tr><th id="379">379</th><td>}</td></tr>
+<tr><th id="380">380</th><td></td></tr>
+<tr><th id="381">381</th><td><u>#define <dfn class="macro" id="_M/IOMMU_GROUP_NOTIFY_ADD_DEVICE" data-ref="_M/IOMMU_GROUP_NOTIFY_ADD_DEVICE">IOMMU_GROUP_NOTIFY_ADD_DEVICE</dfn>		1 /* Device added */</u></td></tr>
+<tr><th id="382">382</th><td><u>#define <dfn class="macro" id="_M/IOMMU_GROUP_NOTIFY_DEL_DEVICE" data-ref="_M/IOMMU_GROUP_NOTIFY_DEL_DEVICE">IOMMU_GROUP_NOTIFY_DEL_DEVICE</dfn>		2 /* Pre Device removed */</u></td></tr>
+<tr><th id="383">383</th><td><u>#define <dfn class="macro" id="_M/IOMMU_GROUP_NOTIFY_BIND_DRIVER" data-ref="_M/IOMMU_GROUP_NOTIFY_BIND_DRIVER">IOMMU_GROUP_NOTIFY_BIND_DRIVER</dfn>		3 /* Pre Driver bind */</u></td></tr>
+<tr><th id="384">384</th><td><u>#define <dfn class="macro" id="_M/IOMMU_GROUP_NOTIFY_BOUND_DRIVER" data-ref="_M/IOMMU_GROUP_NOTIFY_BOUND_DRIVER">IOMMU_GROUP_NOTIFY_BOUND_DRIVER</dfn>		4 /* Post Driver bind */</u></td></tr>
+<tr><th id="385">385</th><td><u>#define <dfn class="macro" id="_M/IOMMU_GROUP_NOTIFY_UNBIND_DRIVER" data-ref="_M/IOMMU_GROUP_NOTIFY_UNBIND_DRIVER">IOMMU_GROUP_NOTIFY_UNBIND_DRIVER</dfn>	5 /* Pre Driver unbind */</u></td></tr>
+<tr><th id="386">386</th><td><u>#define <dfn class="macro" id="_M/IOMMU_GROUP_NOTIFY_UNBOUND_DRIVER" data-ref="_M/IOMMU_GROUP_NOTIFY_UNBOUND_DRIVER">IOMMU_GROUP_NOTIFY_UNBOUND_DRIVER</dfn>	6 /* Post Driver unbind */</u></td></tr>
+<tr><th id="387">387</th><td></td></tr>
+<tr><th id="388">388</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="bus_set_iommu" title='bus_set_iommu' data-ref="bus_set_iommu" data-ref-filename="bus_set_iommu">bus_set_iommu</dfn>(<b>struct</b> <a class="type" href="device.h.html#bus_type" title='bus_type' data-ref="bus_type" data-ref-filename="bus_type">bus_type</a> *<dfn class="local col9 decl" id="889bus" title='bus' data-type='struct bus_type *' data-ref="889bus" data-ref-filename="889bus">bus</dfn>, <em>const</em> <b>struct</b> <a class="type" href="#iommu_ops" title='iommu_ops' data-ref="iommu_ops" data-ref-filename="iommu_ops">iommu_ops</a> *<dfn class="local col0 decl" id="890ops" title='ops' data-type='const struct iommu_ops *' data-ref="890ops" data-ref-filename="890ops">ops</dfn>);</td></tr>
+<tr><th id="389">389</th><td><b>extern</b> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl fn" id="iommu_present" title='iommu_present' data-ref="iommu_present" data-ref-filename="iommu_present">iommu_present</dfn>(<b>struct</b> <a class="type" href="device.h.html#bus_type" title='bus_type' data-ref="bus_type" data-ref-filename="bus_type">bus_type</a> *<dfn class="local col1 decl" id="891bus" title='bus' data-type='struct bus_type *' data-ref="891bus" data-ref-filename="891bus">bus</dfn>);</td></tr>
+<tr><th id="390">390</th><td><b>extern</b> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl fn" id="iommu_capable" title='iommu_capable' data-ref="iommu_capable" data-ref-filename="iommu_capable">iommu_capable</dfn>(<b>struct</b> <a class="type" href="device.h.html#bus_type" title='bus_type' data-ref="bus_type" data-ref-filename="bus_type">bus_type</a> *<dfn class="local col2 decl" id="892bus" title='bus' data-type='struct bus_type *' data-ref="892bus" data-ref-filename="892bus">bus</dfn>, <b>enum</b> <a class="type" href="#iommu_cap" title='iommu_cap' data-ref="iommu_cap" data-ref-filename="iommu_cap">iommu_cap</a> <dfn class="local col3 decl" id="893cap" title='cap' data-type='enum iommu_cap' data-ref="893cap" data-ref-filename="893cap">cap</dfn>);</td></tr>
+<tr><th id="391">391</th><td><b>extern</b> <b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="decl fn" id="iommu_domain_alloc" title='iommu_domain_alloc' data-ref="iommu_domain_alloc" data-ref-filename="iommu_domain_alloc">iommu_domain_alloc</dfn>(<b>struct</b> <a class="type" href="device.h.html#bus_type" title='bus_type' data-ref="bus_type" data-ref-filename="bus_type">bus_type</a> *<dfn class="local col4 decl" id="894bus" title='bus' data-type='struct bus_type *' data-ref="894bus" data-ref-filename="894bus">bus</dfn>);</td></tr>
+<tr><th id="392">392</th><td><b>extern</b> <b>struct</b> <a class="type" href="device.h.html#iommu_group" title='iommu_group' data-ref="iommu_group" data-ref-filename="iommu_group">iommu_group</a> *<dfn class="decl fn" id="iommu_group_get_by_id" title='iommu_group_get_by_id' data-ref="iommu_group_get_by_id" data-ref-filename="iommu_group_get_by_id">iommu_group_get_by_id</dfn>(<em>int</em> <dfn class="local col5 decl" id="895id" title='id' data-type='int' data-ref="895id" data-ref-filename="895id">id</dfn>);</td></tr>
+<tr><th id="393">393</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="iommu_domain_free" title='iommu_domain_free' data-ref="iommu_domain_free" data-ref-filename="iommu_domain_free">iommu_domain_free</dfn>(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col6 decl" id="896domain" title='domain' data-type='struct iommu_domain *' data-ref="896domain" data-ref-filename="896domain">domain</dfn>);</td></tr>
+<tr><th id="394">394</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="iommu_attach_device" title='iommu_attach_device' data-ref="iommu_attach_device" data-ref-filename="iommu_attach_device">iommu_attach_device</dfn>(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col7 decl" id="897domain" title='domain' data-type='struct iommu_domain *' data-ref="897domain" data-ref-filename="897domain">domain</dfn>,</td></tr>
+<tr><th id="395">395</th><td>			       <b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col8 decl" id="898dev" title='dev' data-type='struct device *' data-ref="898dev" data-ref-filename="898dev">dev</dfn>);</td></tr>
+<tr><th id="396">396</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="iommu_detach_device" title='iommu_detach_device' data-ref="iommu_detach_device" data-ref-filename="iommu_detach_device">iommu_detach_device</dfn>(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col9 decl" id="899domain" title='domain' data-type='struct iommu_domain *' data-ref="899domain" data-ref-filename="899domain">domain</dfn>,</td></tr>
+<tr><th id="397">397</th><td>				<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col0 decl" id="900dev" title='dev' data-type='struct device *' data-ref="900dev" data-ref-filename="900dev">dev</dfn>);</td></tr>
+<tr><th id="398">398</th><td><b>extern</b> <b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="decl fn" id="iommu_get_domain_for_dev" title='iommu_get_domain_for_dev' data-ref="iommu_get_domain_for_dev" data-ref-filename="iommu_get_domain_for_dev">iommu_get_domain_for_dev</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col1 decl" id="901dev" title='dev' data-type='struct device *' data-ref="901dev" data-ref-filename="901dev">dev</dfn>);</td></tr>
+<tr><th id="399">399</th><td><b>extern</b> <b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="decl fn" id="iommu_get_dma_domain" title='iommu_get_dma_domain' data-ref="iommu_get_dma_domain" data-ref-filename="iommu_get_dma_domain">iommu_get_dma_domain</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col2 decl" id="902dev" title='dev' data-type='struct device *' data-ref="902dev" data-ref-filename="902dev">dev</dfn>);</td></tr>
+<tr><th id="400">400</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="iommu_map" title='iommu_map' data-ref="iommu_map" data-ref-filename="iommu_map">iommu_map</dfn>(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col3 decl" id="903domain" title='domain' data-type='struct iommu_domain *' data-ref="903domain" data-ref-filename="903domain">domain</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col4 decl" id="904iova" title='iova' data-type='unsigned long' data-ref="904iova" data-ref-filename="904iova">iova</dfn>,</td></tr>
+<tr><th id="401">401</th><td>		     <a class="typedef" href="types.h.html#phys_addr_t" title='phys_addr_t' data-type='u64' data-ref="phys_addr_t" data-ref-filename="phys_addr_t">phys_addr_t</a> <dfn class="local col5 decl" id="905paddr" title='paddr' data-type='phys_addr_t' data-ref="905paddr" data-ref-filename="905paddr">paddr</dfn>, <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col6 decl" id="906size" title='size' data-type='size_t' data-ref="906size" data-ref-filename="906size">size</dfn>, <em>int</em> <dfn class="local col7 decl" id="907prot" title='prot' data-type='int' data-ref="907prot" data-ref-filename="907prot">prot</dfn>);</td></tr>
+<tr><th id="402">402</th><td><b>extern</b> <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="decl fn" id="iommu_unmap" title='iommu_unmap' data-ref="iommu_unmap" data-ref-filename="iommu_unmap">iommu_unmap</dfn>(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col8 decl" id="908domain" title='domain' data-type='struct iommu_domain *' data-ref="908domain" data-ref-filename="908domain">domain</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col9 decl" id="909iova" title='iova' data-type='unsigned long' data-ref="909iova" data-ref-filename="909iova">iova</dfn>,</td></tr>
+<tr><th id="403">403</th><td>			  <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col0 decl" id="910size" title='size' data-type='size_t' data-ref="910size" data-ref-filename="910size">size</dfn>);</td></tr>
+<tr><th id="404">404</th><td><b>extern</b> <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="decl fn" id="iommu_unmap_fast" title='iommu_unmap_fast' data-ref="iommu_unmap_fast" data-ref-filename="iommu_unmap_fast">iommu_unmap_fast</dfn>(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col1 decl" id="911domain" title='domain' data-type='struct iommu_domain *' data-ref="911domain" data-ref-filename="911domain">domain</dfn>,</td></tr>
+<tr><th id="405">405</th><td>			       <em>unsigned</em> <em>long</em> <dfn class="local col2 decl" id="912iova" title='iova' data-type='unsigned long' data-ref="912iova" data-ref-filename="912iova">iova</dfn>, <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col3 decl" id="913size" title='size' data-type='size_t' data-ref="913size" data-ref-filename="913size">size</dfn>);</td></tr>
+<tr><th id="406">406</th><td><b>extern</b> <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="decl fn" id="iommu_map_sg" title='iommu_map_sg' data-ref="iommu_map_sg" data-ref-filename="iommu_map_sg">iommu_map_sg</dfn>(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col4 decl" id="914domain" title='domain' data-type='struct iommu_domain *' data-ref="914domain" data-ref-filename="914domain">domain</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col5 decl" id="915iova" title='iova' data-type='unsigned long' data-ref="915iova" data-ref-filename="915iova">iova</dfn>,</td></tr>
+<tr><th id="407">407</th><td>			   <b>struct</b> <a class="type" href="scatterlist.h.html#scatterlist" title='scatterlist' data-ref="scatterlist" data-ref-filename="scatterlist">scatterlist</a> *<dfn class="local col6 decl" id="916sg" title='sg' data-type='struct scatterlist *' data-ref="916sg" data-ref-filename="916sg">sg</dfn>,<em>unsigned</em> <em>int</em> <dfn class="local col7 decl" id="917nents" title='nents' data-type='unsigned int' data-ref="917nents" data-ref-filename="917nents">nents</dfn>, <em>int</em> <dfn class="local col8 decl" id="918prot" title='prot' data-type='int' data-ref="918prot" data-ref-filename="918prot">prot</dfn>);</td></tr>
+<tr><th id="408">408</th><td><b>extern</b> <a class="typedef" href="types.h.html#phys_addr_t" title='phys_addr_t' data-type='u64' data-ref="phys_addr_t" data-ref-filename="phys_addr_t">phys_addr_t</a> <dfn class="decl fn" id="iommu_iova_to_phys" title='iommu_iova_to_phys' data-ref="iommu_iova_to_phys" data-ref-filename="iommu_iova_to_phys">iommu_iova_to_phys</dfn>(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col9 decl" id="919domain" title='domain' data-type='struct iommu_domain *' data-ref="919domain" data-ref-filename="919domain">domain</dfn>, <a class="typedef" href="types.h.html#dma_addr_t" title='dma_addr_t' data-type='u64' data-ref="dma_addr_t" data-ref-filename="dma_addr_t">dma_addr_t</a> <dfn class="local col0 decl" id="920iova" title='iova' data-type='dma_addr_t' data-ref="920iova" data-ref-filename="920iova">iova</dfn>);</td></tr>
+<tr><th id="409">409</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="iommu_set_fault_handler" title='iommu_set_fault_handler' data-ref="iommu_set_fault_handler" data-ref-filename="iommu_set_fault_handler">iommu_set_fault_handler</dfn>(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col1 decl" id="921domain" title='domain' data-type='struct iommu_domain *' data-ref="921domain" data-ref-filename="921domain">domain</dfn>,</td></tr>
+<tr><th id="410">410</th><td>			<a class="typedef" href="#iommu_fault_handler_t" title='iommu_fault_handler_t' data-type='int (*)(struct iommu_domain *, struct device *, unsigned long, int, void *)' data-ref="iommu_fault_handler_t" data-ref-filename="iommu_fault_handler_t">iommu_fault_handler_t</a> <dfn class="local col2 decl" id="922handler" title='handler' data-type='iommu_fault_handler_t' data-ref="922handler" data-ref-filename="922handler">handler</dfn>, <em>void</em> *<dfn class="local col3 decl" id="923token" title='token' data-type='void *' data-ref="923token" data-ref-filename="923token">token</dfn>);</td></tr>
+<tr><th id="411">411</th><td></td></tr>
+<tr><th id="412">412</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="iommu_get_resv_regions" title='iommu_get_resv_regions' data-ref="iommu_get_resv_regions" data-ref-filename="iommu_get_resv_regions">iommu_get_resv_regions</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col4 decl" id="924dev" title='dev' data-type='struct device *' data-ref="924dev" data-ref-filename="924dev">dev</dfn>, <b>struct</b> <a class="type" href="types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> *<dfn class="local col5 decl" id="925list" title='list' data-type='struct list_head *' data-ref="925list" data-ref-filename="925list">list</dfn>);</td></tr>
+<tr><th id="413">413</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="iommu_put_resv_regions" title='iommu_put_resv_regions' data-ref="iommu_put_resv_regions" data-ref-filename="iommu_put_resv_regions">iommu_put_resv_regions</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col6 decl" id="926dev" title='dev' data-type='struct device *' data-ref="926dev" data-ref-filename="926dev">dev</dfn>, <b>struct</b> <a class="type" href="types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> *<dfn class="local col7 decl" id="927list" title='list' data-type='struct list_head *' data-ref="927list" data-ref-filename="927list">list</dfn>);</td></tr>
+<tr><th id="414">414</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="iommu_request_dm_for_dev" title='iommu_request_dm_for_dev' data-ref="iommu_request_dm_for_dev" data-ref-filename="iommu_request_dm_for_dev">iommu_request_dm_for_dev</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col8 decl" id="928dev" title='dev' data-type='struct device *' data-ref="928dev" data-ref-filename="928dev">dev</dfn>);</td></tr>
+<tr><th id="415">415</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="iommu_request_dma_domain_for_dev" title='iommu_request_dma_domain_for_dev' data-ref="iommu_request_dma_domain_for_dev" data-ref-filename="iommu_request_dma_domain_for_dev">iommu_request_dma_domain_for_dev</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col9 decl" id="929dev" title='dev' data-type='struct device *' data-ref="929dev" data-ref-filename="929dev">dev</dfn>);</td></tr>
+<tr><th id="416">416</th><td><b>extern</b> <b>struct</b> <a class="type" href="#iommu_resv_region" title='iommu_resv_region' data-ref="iommu_resv_region" data-ref-filename="iommu_resv_region">iommu_resv_region</a> *</td></tr>
+<tr><th id="417">417</th><td><dfn class="decl fn" id="iommu_alloc_resv_region" title='iommu_alloc_resv_region' data-ref="iommu_alloc_resv_region" data-ref-filename="iommu_alloc_resv_region">iommu_alloc_resv_region</dfn>(<a class="typedef" href="types.h.html#phys_addr_t" title='phys_addr_t' data-type='u64' data-ref="phys_addr_t" data-ref-filename="phys_addr_t">phys_addr_t</a> <dfn class="local col0 decl" id="930start" title='start' data-type='phys_addr_t' data-ref="930start" data-ref-filename="930start">start</dfn>, <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col1 decl" id="931length" title='length' data-type='size_t' data-ref="931length" data-ref-filename="931length">length</dfn>, <em>int</em> <dfn class="local col2 decl" id="932prot" title='prot' data-type='int' data-ref="932prot" data-ref-filename="932prot">prot</dfn>,</td></tr>
+<tr><th id="418">418</th><td>			<b>enum</b> <a class="type" href="#iommu_resv_type" title='iommu_resv_type' data-ref="iommu_resv_type" data-ref-filename="iommu_resv_type">iommu_resv_type</a> <dfn class="local col3 decl" id="933type" title='type' data-type='enum iommu_resv_type' data-ref="933type" data-ref-filename="933type">type</dfn>);</td></tr>
+<tr><th id="419">419</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="iommu_get_group_resv_regions" title='iommu_get_group_resv_regions' data-ref="iommu_get_group_resv_regions" data-ref-filename="iommu_get_group_resv_regions">iommu_get_group_resv_regions</dfn>(<b>struct</b> <a class="type" href="device.h.html#iommu_group" title='iommu_group' data-ref="iommu_group" data-ref-filename="iommu_group">iommu_group</a> *<dfn class="local col4 decl" id="934group" title='group' data-type='struct iommu_group *' data-ref="934group" data-ref-filename="934group">group</dfn>,</td></tr>
+<tr><th id="420">420</th><td>					<b>struct</b> <a class="type" href="types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> *<dfn class="local col5 decl" id="935head" title='head' data-type='struct list_head *' data-ref="935head" data-ref-filename="935head">head</dfn>);</td></tr>
+<tr><th id="421">421</th><td></td></tr>
+<tr><th id="422">422</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="iommu_attach_group" title='iommu_attach_group' data-ref="iommu_attach_group" data-ref-filename="iommu_attach_group">iommu_attach_group</dfn>(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col6 decl" id="936domain" title='domain' data-type='struct iommu_domain *' data-ref="936domain" data-ref-filename="936domain">domain</dfn>,</td></tr>
+<tr><th id="423">423</th><td>			      <b>struct</b> <a class="type" href="device.h.html#iommu_group" title='iommu_group' data-ref="iommu_group" data-ref-filename="iommu_group">iommu_group</a> *<dfn class="local col7 decl" id="937group" title='group' data-type='struct iommu_group *' data-ref="937group" data-ref-filename="937group">group</dfn>);</td></tr>
+<tr><th id="424">424</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="iommu_detach_group" title='iommu_detach_group' data-ref="iommu_detach_group" data-ref-filename="iommu_detach_group">iommu_detach_group</dfn>(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col8 decl" id="938domain" title='domain' data-type='struct iommu_domain *' data-ref="938domain" data-ref-filename="938domain">domain</dfn>,</td></tr>
+<tr><th id="425">425</th><td>			       <b>struct</b> <a class="type" href="device.h.html#iommu_group" title='iommu_group' data-ref="iommu_group" data-ref-filename="iommu_group">iommu_group</a> *<dfn class="local col9 decl" id="939group" title='group' data-type='struct iommu_group *' data-ref="939group" data-ref-filename="939group">group</dfn>);</td></tr>
+<tr><th id="426">426</th><td><b>extern</b> <b>struct</b> <a class="type" href="device.h.html#iommu_group" title='iommu_group' data-ref="iommu_group" data-ref-filename="iommu_group">iommu_group</a> *<dfn class="decl fn" id="iommu_group_alloc" title='iommu_group_alloc' data-ref="iommu_group_alloc" data-ref-filename="iommu_group_alloc">iommu_group_alloc</dfn>(<em>void</em>);</td></tr>
+<tr><th id="427">427</th><td><b>extern</b> <em>void</em> *<dfn class="decl fn" id="iommu_group_get_iommudata" title='iommu_group_get_iommudata' data-ref="iommu_group_get_iommudata" data-ref-filename="iommu_group_get_iommudata">iommu_group_get_iommudata</dfn>(<b>struct</b> <a class="type" href="device.h.html#iommu_group" title='iommu_group' data-ref="iommu_group" data-ref-filename="iommu_group">iommu_group</a> *<dfn class="local col0 decl" id="940group" title='group' data-type='struct iommu_group *' data-ref="940group" data-ref-filename="940group">group</dfn>);</td></tr>
+<tr><th id="428">428</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="iommu_group_set_iommudata" title='iommu_group_set_iommudata' data-ref="iommu_group_set_iommudata" data-ref-filename="iommu_group_set_iommudata">iommu_group_set_iommudata</dfn>(<b>struct</b> <a class="type" href="device.h.html#iommu_group" title='iommu_group' data-ref="iommu_group" data-ref-filename="iommu_group">iommu_group</a> *<dfn class="local col1 decl" id="941group" title='group' data-type='struct iommu_group *' data-ref="941group" data-ref-filename="941group">group</dfn>,</td></tr>
+<tr><th id="429">429</th><td>				      <em>void</em> *<dfn class="local col2 decl" id="942iommu_data" title='iommu_data' data-type='void *' data-ref="942iommu_data" data-ref-filename="942iommu_data">iommu_data</dfn>,</td></tr>
+<tr><th id="430">430</th><td>				      <em>void</em> (*<dfn class="local col3 decl" id="943release" title='release' data-type='void (*)(void *)' data-ref="943release" data-ref-filename="943release">release</dfn>)(<em>void</em> *<dfn class="local col4 decl" id="944iommu_data" title='iommu_data' data-type='void *' data-ref="944iommu_data" data-ref-filename="944iommu_data">iommu_data</dfn>));</td></tr>
+<tr><th id="431">431</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="iommu_group_set_name" title='iommu_group_set_name' data-ref="iommu_group_set_name" data-ref-filename="iommu_group_set_name">iommu_group_set_name</dfn>(<b>struct</b> <a class="type" href="device.h.html#iommu_group" title='iommu_group' data-ref="iommu_group" data-ref-filename="iommu_group">iommu_group</a> *<dfn class="local col5 decl" id="945group" title='group' data-type='struct iommu_group *' data-ref="945group" data-ref-filename="945group">group</dfn>, <em>const</em> <em>char</em> *<dfn class="local col6 decl" id="946name" title='name' data-type='const char *' data-ref="946name" data-ref-filename="946name">name</dfn>);</td></tr>
+<tr><th id="432">432</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="iommu_group_add_device" title='iommu_group_add_device' data-ref="iommu_group_add_device" data-ref-filename="iommu_group_add_device">iommu_group_add_device</dfn>(<b>struct</b> <a class="type" href="device.h.html#iommu_group" title='iommu_group' data-ref="iommu_group" data-ref-filename="iommu_group">iommu_group</a> *<dfn class="local col7 decl" id="947group" title='group' data-type='struct iommu_group *' data-ref="947group" data-ref-filename="947group">group</dfn>,</td></tr>
+<tr><th id="433">433</th><td>				  <b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col8 decl" id="948dev" title='dev' data-type='struct device *' data-ref="948dev" data-ref-filename="948dev">dev</dfn>);</td></tr>
+<tr><th id="434">434</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="iommu_group_remove_device" title='iommu_group_remove_device' data-ref="iommu_group_remove_device" data-ref-filename="iommu_group_remove_device">iommu_group_remove_device</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col9 decl" id="949dev" title='dev' data-type='struct device *' data-ref="949dev" data-ref-filename="949dev">dev</dfn>);</td></tr>
+<tr><th id="435">435</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="iommu_group_for_each_dev" title='iommu_group_for_each_dev' data-ref="iommu_group_for_each_dev" data-ref-filename="iommu_group_for_each_dev">iommu_group_for_each_dev</dfn>(<b>struct</b> <a class="type" href="device.h.html#iommu_group" title='iommu_group' data-ref="iommu_group" data-ref-filename="iommu_group">iommu_group</a> *<dfn class="local col0 decl" id="950group" title='group' data-type='struct iommu_group *' data-ref="950group" data-ref-filename="950group">group</dfn>, <em>void</em> *<dfn class="local col1 decl" id="951data" title='data' data-type='void *' data-ref="951data" data-ref-filename="951data">data</dfn>,</td></tr>
+<tr><th id="436">436</th><td>				    <em>int</em> (*<dfn class="local col2 decl" id="952fn" title='fn' data-type='int (*)(struct device *, void *)' data-ref="952fn" data-ref-filename="952fn">fn</dfn>)(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *, <em>void</em> *));</td></tr>
+<tr><th id="437">437</th><td><b>extern</b> <b>struct</b> <a class="type" href="device.h.html#iommu_group" title='iommu_group' data-ref="iommu_group" data-ref-filename="iommu_group">iommu_group</a> *<dfn class="decl fn" id="iommu_group_get" title='iommu_group_get' data-ref="iommu_group_get" data-ref-filename="iommu_group_get">iommu_group_get</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col3 decl" id="953dev" title='dev' data-type='struct device *' data-ref="953dev" data-ref-filename="953dev">dev</dfn>);</td></tr>
+<tr><th id="438">438</th><td><b>extern</b> <b>struct</b> <a class="type" href="device.h.html#iommu_group" title='iommu_group' data-ref="iommu_group" data-ref-filename="iommu_group">iommu_group</a> *<dfn class="decl fn" id="iommu_group_ref_get" title='iommu_group_ref_get' data-ref="iommu_group_ref_get" data-ref-filename="iommu_group_ref_get">iommu_group_ref_get</dfn>(<b>struct</b> <a class="type" href="device.h.html#iommu_group" title='iommu_group' data-ref="iommu_group" data-ref-filename="iommu_group">iommu_group</a> *<dfn class="local col4 decl" id="954group" title='group' data-type='struct iommu_group *' data-ref="954group" data-ref-filename="954group">group</dfn>);</td></tr>
+<tr><th id="439">439</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="iommu_group_put" title='iommu_group_put' data-ref="iommu_group_put" data-ref-filename="iommu_group_put">iommu_group_put</dfn>(<b>struct</b> <a class="type" href="device.h.html#iommu_group" title='iommu_group' data-ref="iommu_group" data-ref-filename="iommu_group">iommu_group</a> *<dfn class="local col5 decl" id="955group" title='group' data-type='struct iommu_group *' data-ref="955group" data-ref-filename="955group">group</dfn>);</td></tr>
+<tr><th id="440">440</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="iommu_group_register_notifier" title='iommu_group_register_notifier' data-ref="iommu_group_register_notifier" data-ref-filename="iommu_group_register_notifier">iommu_group_register_notifier</dfn>(<b>struct</b> <a class="type" href="device.h.html#iommu_group" title='iommu_group' data-ref="iommu_group" data-ref-filename="iommu_group">iommu_group</a> *<dfn class="local col6 decl" id="956group" title='group' data-type='struct iommu_group *' data-ref="956group" data-ref-filename="956group">group</dfn>,</td></tr>
+<tr><th id="441">441</th><td>					 <b>struct</b> <a class="type" href="notifier.h.html#notifier_block" title='notifier_block' data-ref="notifier_block" data-ref-filename="notifier_block">notifier_block</a> *<dfn class="local col7 decl" id="957nb" title='nb' data-type='struct notifier_block *' data-ref="957nb" data-ref-filename="957nb">nb</dfn>);</td></tr>
+<tr><th id="442">442</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="iommu_group_unregister_notifier" title='iommu_group_unregister_notifier' data-ref="iommu_group_unregister_notifier" data-ref-filename="iommu_group_unregister_notifier">iommu_group_unregister_notifier</dfn>(<b>struct</b> <a class="type" href="device.h.html#iommu_group" title='iommu_group' data-ref="iommu_group" data-ref-filename="iommu_group">iommu_group</a> *<dfn class="local col8 decl" id="958group" title='group' data-type='struct iommu_group *' data-ref="958group" data-ref-filename="958group">group</dfn>,</td></tr>
+<tr><th id="443">443</th><td>					   <b>struct</b> <a class="type" href="notifier.h.html#notifier_block" title='notifier_block' data-ref="notifier_block" data-ref-filename="notifier_block">notifier_block</a> *<dfn class="local col9 decl" id="959nb" title='nb' data-type='struct notifier_block *' data-ref="959nb" data-ref-filename="959nb">nb</dfn>);</td></tr>
+<tr><th id="444">444</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="iommu_register_device_fault_handler" title='iommu_register_device_fault_handler' data-ref="iommu_register_device_fault_handler" data-ref-filename="iommu_register_device_fault_handler">iommu_register_device_fault_handler</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col0 decl" id="960dev" title='dev' data-type='struct device *' data-ref="960dev" data-ref-filename="960dev">dev</dfn>,</td></tr>
+<tr><th id="445">445</th><td>					<a class="typedef" href="#iommu_dev_fault_handler_t" title='iommu_dev_fault_handler_t' data-type='int (*)(struct iommu_fault *, void *)' data-ref="iommu_dev_fault_handler_t" data-ref-filename="iommu_dev_fault_handler_t">iommu_dev_fault_handler_t</a> <dfn class="local col1 decl" id="961handler" title='handler' data-type='iommu_dev_fault_handler_t' data-ref="961handler" data-ref-filename="961handler">handler</dfn>,</td></tr>
+<tr><th id="446">446</th><td>					<em>void</em> *<dfn class="local col2 decl" id="962data" title='data' data-type='void *' data-ref="962data" data-ref-filename="962data">data</dfn>);</td></tr>
+<tr><th id="447">447</th><td></td></tr>
+<tr><th id="448">448</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="iommu_unregister_device_fault_handler" title='iommu_unregister_device_fault_handler' data-ref="iommu_unregister_device_fault_handler" data-ref-filename="iommu_unregister_device_fault_handler">iommu_unregister_device_fault_handler</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col3 decl" id="963dev" title='dev' data-type='struct device *' data-ref="963dev" data-ref-filename="963dev">dev</dfn>);</td></tr>
+<tr><th id="449">449</th><td></td></tr>
+<tr><th id="450">450</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="iommu_report_device_fault" title='iommu_report_device_fault' data-ref="iommu_report_device_fault" data-ref-filename="iommu_report_device_fault">iommu_report_device_fault</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col4 decl" id="964dev" title='dev' data-type='struct device *' data-ref="964dev" data-ref-filename="964dev">dev</dfn>,</td></tr>
+<tr><th id="451">451</th><td>				     <b>struct</b> <a class="type" href="#iommu_fault_event" title='iommu_fault_event' data-ref="iommu_fault_event" data-ref-filename="iommu_fault_event">iommu_fault_event</a> *<dfn class="local col5 decl" id="965evt" title='evt' data-type='struct iommu_fault_event *' data-ref="965evt" data-ref-filename="965evt">evt</dfn>);</td></tr>
+<tr><th id="452">452</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="iommu_page_response" title='iommu_page_response' data-ref="iommu_page_response" data-ref-filename="iommu_page_response">iommu_page_response</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col6 decl" id="966dev" title='dev' data-type='struct device *' data-ref="966dev" data-ref-filename="966dev">dev</dfn>,</td></tr>
+<tr><th id="453">453</th><td>			       <b>struct</b> <a class="type" href="../uapi/linux/iommu.h.html#iommu_page_response" title='iommu_page_response' data-ref="iommu_page_response" data-ref-filename="iommu_page_response">iommu_page_response</a> *<dfn class="local col7 decl" id="967msg" title='msg' data-type='struct iommu_page_response *' data-ref="967msg" data-ref-filename="967msg">msg</dfn>);</td></tr>
+<tr><th id="454">454</th><td></td></tr>
+<tr><th id="455">455</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="iommu_group_id" title='iommu_group_id' data-ref="iommu_group_id" data-ref-filename="iommu_group_id">iommu_group_id</dfn>(<b>struct</b> <a class="type" href="device.h.html#iommu_group" title='iommu_group' data-ref="iommu_group" data-ref-filename="iommu_group">iommu_group</a> *<dfn class="local col8 decl" id="968group" title='group' data-type='struct iommu_group *' data-ref="968group" data-ref-filename="968group">group</dfn>);</td></tr>
+<tr><th id="456">456</th><td><b>extern</b> <b>struct</b> <a class="type" href="device.h.html#iommu_group" title='iommu_group' data-ref="iommu_group" data-ref-filename="iommu_group">iommu_group</a> *<dfn class="decl fn" id="iommu_group_get_for_dev" title='iommu_group_get_for_dev' data-ref="iommu_group_get_for_dev" data-ref-filename="iommu_group_get_for_dev">iommu_group_get_for_dev</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col9 decl" id="969dev" title='dev' data-type='struct device *' data-ref="969dev" data-ref-filename="969dev">dev</dfn>);</td></tr>
+<tr><th id="457">457</th><td><b>extern</b> <b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="decl fn" id="iommu_group_default_domain" title='iommu_group_default_domain' data-ref="iommu_group_default_domain" data-ref-filename="iommu_group_default_domain">iommu_group_default_domain</dfn>(<b>struct</b> <a class="type" href="device.h.html#iommu_group" title='iommu_group' data-ref="iommu_group" data-ref-filename="iommu_group">iommu_group</a> *);</td></tr>
+<tr><th id="458">458</th><td></td></tr>
+<tr><th id="459">459</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="iommu_domain_get_attr" title='iommu_domain_get_attr' data-ref="iommu_domain_get_attr" data-ref-filename="iommu_domain_get_attr">iommu_domain_get_attr</dfn>(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col0 decl" id="970domain" title='domain' data-type='struct iommu_domain *' data-ref="970domain" data-ref-filename="970domain">domain</dfn>, <b>enum</b> <a class="type" href="#iommu_attr" title='iommu_attr' data-ref="iommu_attr" data-ref-filename="iommu_attr">iommu_attr</a>,</td></tr>
+<tr><th id="460">460</th><td>				 <em>void</em> *<dfn class="local col1 decl" id="971data" title='data' data-type='void *' data-ref="971data" data-ref-filename="971data">data</dfn>);</td></tr>
+<tr><th id="461">461</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="iommu_domain_set_attr" title='iommu_domain_set_attr' data-ref="iommu_domain_set_attr" data-ref-filename="iommu_domain_set_attr">iommu_domain_set_attr</dfn>(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col2 decl" id="972domain" title='domain' data-type='struct iommu_domain *' data-ref="972domain" data-ref-filename="972domain">domain</dfn>, <b>enum</b> <a class="type" href="#iommu_attr" title='iommu_attr' data-ref="iommu_attr" data-ref-filename="iommu_attr">iommu_attr</a>,</td></tr>
+<tr><th id="462">462</th><td>				 <em>void</em> *<dfn class="local col3 decl" id="973data" title='data' data-type='void *' data-ref="973data" data-ref-filename="973data">data</dfn>);</td></tr>
+<tr><th id="463">463</th><td></td></tr>
+<tr><th id="464">464</th><td><i>/* Window handling function prototypes */</i></td></tr>
+<tr><th id="465">465</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="iommu_domain_window_enable" title='iommu_domain_window_enable' data-ref="iommu_domain_window_enable" data-ref-filename="iommu_domain_window_enable">iommu_domain_window_enable</dfn>(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col4 decl" id="974domain" title='domain' data-type='struct iommu_domain *' data-ref="974domain" data-ref-filename="974domain">domain</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col5 decl" id="975wnd_nr" title='wnd_nr' data-type='u32' data-ref="975wnd_nr" data-ref-filename="975wnd_nr">wnd_nr</dfn>,</td></tr>
+<tr><th id="466">466</th><td>				      <a class="typedef" href="types.h.html#phys_addr_t" title='phys_addr_t' data-type='u64' data-ref="phys_addr_t" data-ref-filename="phys_addr_t">phys_addr_t</a> <dfn class="local col6 decl" id="976offset" title='offset' data-type='phys_addr_t' data-ref="976offset" data-ref-filename="976offset">offset</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col7 decl" id="977size" title='size' data-type='u64' data-ref="977size" data-ref-filename="977size">size</dfn>,</td></tr>
+<tr><th id="467">467</th><td>				      <em>int</em> <dfn class="local col8 decl" id="978prot" title='prot' data-type='int' data-ref="978prot" data-ref-filename="978prot">prot</dfn>);</td></tr>
+<tr><th id="468">468</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="iommu_domain_window_disable" title='iommu_domain_window_disable' data-ref="iommu_domain_window_disable" data-ref-filename="iommu_domain_window_disable">iommu_domain_window_disable</dfn>(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col9 decl" id="979domain" title='domain' data-type='struct iommu_domain *' data-ref="979domain" data-ref-filename="979domain">domain</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col0 decl" id="980wnd_nr" title='wnd_nr' data-type='u32' data-ref="980wnd_nr" data-ref-filename="980wnd_nr">wnd_nr</dfn>);</td></tr>
+<tr><th id="469">469</th><td></td></tr>
+<tr><th id="470">470</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="report_iommu_fault" title='report_iommu_fault' data-ref="report_iommu_fault" data-ref-filename="report_iommu_fault">report_iommu_fault</dfn>(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col1 decl" id="981domain" title='domain' data-type='struct iommu_domain *' data-ref="981domain" data-ref-filename="981domain">domain</dfn>, <b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col2 decl" id="982dev" title='dev' data-type='struct device *' data-ref="982dev" data-ref-filename="982dev">dev</dfn>,</td></tr>
+<tr><th id="471">471</th><td>			      <em>unsigned</em> <em>long</em> <dfn class="local col3 decl" id="983iova" title='iova' data-type='unsigned long' data-ref="983iova" data-ref-filename="983iova">iova</dfn>, <em>int</em> <dfn class="local col4 decl" id="984flags" title='flags' data-type='int' data-ref="984flags" data-ref-filename="984flags">flags</dfn>);</td></tr>
+<tr><th id="472">472</th><td></td></tr>
+<tr><th id="473">473</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="iommu_flush_tlb_all" title='iommu_flush_tlb_all' data-ref="iommu_flush_tlb_all" data-ref-filename="iommu_flush_tlb_all">iommu_flush_tlb_all</dfn>(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col5 decl" id="985domain" title='domain' data-type='struct iommu_domain *' data-ref="985domain" data-ref-filename="985domain">domain</dfn>)</td></tr>
+<tr><th id="474">474</th><td>{</td></tr>
+<tr><th id="475">475</th><td>	<b>if</b> (<a class="local col5 ref" href="#985domain" title='domain' data-ref="985domain" data-ref-filename="985domain">domain</a>-&gt;<a class="ref field" href="#iommu_domain::ops" title='iommu_domain::ops' data-ref="iommu_domain::ops" data-ref-filename="iommu_domain..ops">ops</a>-&gt;<a class="ref field" href="#iommu_ops::flush_iotlb_all" title='iommu_ops::flush_iotlb_all' data-ref="iommu_ops::flush_iotlb_all" data-ref-filename="iommu_ops..flush_iotlb_all">flush_iotlb_all</a>)</td></tr>
+<tr><th id="476">476</th><td>		<a class="local col5 ref" href="#985domain" title='domain' data-ref="985domain" data-ref-filename="985domain">domain</a>-&gt;<a class="ref field" href="#iommu_domain::ops" title='iommu_domain::ops' data-ref="iommu_domain::ops" data-ref-filename="iommu_domain..ops">ops</a>-&gt;<a class="ref field" href="#iommu_ops::flush_iotlb_all" title='iommu_ops::flush_iotlb_all' data-ref="iommu_ops::flush_iotlb_all" data-ref-filename="iommu_ops..flush_iotlb_all">flush_iotlb_all</a>(<a class="local col5 ref" href="#985domain" title='domain' data-ref="985domain" data-ref-filename="985domain">domain</a>);</td></tr>
+<tr><th id="477">477</th><td>}</td></tr>
+<tr><th id="478">478</th><td></td></tr>
+<tr><th id="479">479</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="iommu_tlb_range_add" title='iommu_tlb_range_add' data-ref="iommu_tlb_range_add" data-ref-filename="iommu_tlb_range_add">iommu_tlb_range_add</dfn>(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col6 decl" id="986domain" title='domain' data-type='struct iommu_domain *' data-ref="986domain" data-ref-filename="986domain">domain</dfn>,</td></tr>
+<tr><th id="480">480</th><td>				       <em>unsigned</em> <em>long</em> <dfn class="local col7 decl" id="987iova" title='iova' data-type='unsigned long' data-ref="987iova" data-ref-filename="987iova">iova</dfn>, <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col8 decl" id="988size" title='size' data-type='size_t' data-ref="988size" data-ref-filename="988size">size</dfn>)</td></tr>
+<tr><th id="481">481</th><td>{</td></tr>
+<tr><th id="482">482</th><td>	<b>if</b> (<a class="local col6 ref" href="#986domain" title='domain' data-ref="986domain" data-ref-filename="986domain">domain</a>-&gt;<a class="ref field" href="#iommu_domain::ops" title='iommu_domain::ops' data-ref="iommu_domain::ops" data-ref-filename="iommu_domain..ops">ops</a>-&gt;<a class="ref field" href="#iommu_ops::iotlb_range_add" title='iommu_ops::iotlb_range_add' data-ref="iommu_ops::iotlb_range_add" data-ref-filename="iommu_ops..iotlb_range_add">iotlb_range_add</a>)</td></tr>
+<tr><th id="483">483</th><td>		<a class="local col6 ref" href="#986domain" title='domain' data-ref="986domain" data-ref-filename="986domain">domain</a>-&gt;<a class="ref field" href="#iommu_domain::ops" title='iommu_domain::ops' data-ref="iommu_domain::ops" data-ref-filename="iommu_domain..ops">ops</a>-&gt;<a class="ref field" href="#iommu_ops::iotlb_range_add" title='iommu_ops::iotlb_range_add' data-ref="iommu_ops::iotlb_range_add" data-ref-filename="iommu_ops..iotlb_range_add">iotlb_range_add</a>(<a class="local col6 ref" href="#986domain" title='domain' data-ref="986domain" data-ref-filename="986domain">domain</a>, <a class="local col7 ref" href="#987iova" title='iova' data-ref="987iova" data-ref-filename="987iova">iova</a>, <a class="local col8 ref" href="#988size" title='size' data-ref="988size" data-ref-filename="988size">size</a>);</td></tr>
+<tr><th id="484">484</th><td>}</td></tr>
+<tr><th id="485">485</th><td></td></tr>
+<tr><th id="486">486</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="iommu_tlb_sync" title='iommu_tlb_sync' data-ref="iommu_tlb_sync" data-ref-filename="iommu_tlb_sync">iommu_tlb_sync</dfn>(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col9 decl" id="989domain" title='domain' data-type='struct iommu_domain *' data-ref="989domain" data-ref-filename="989domain">domain</dfn>)</td></tr>
+<tr><th id="487">487</th><td>{</td></tr>
+<tr><th id="488">488</th><td>	<b>if</b> (<a class="local col9 ref" href="#989domain" title='domain' data-ref="989domain" data-ref-filename="989domain">domain</a>-&gt;<a class="ref field" href="#iommu_domain::ops" title='iommu_domain::ops' data-ref="iommu_domain::ops" data-ref-filename="iommu_domain..ops">ops</a>-&gt;<a class="ref field" href="#iommu_ops::iotlb_sync" title='iommu_ops::iotlb_sync' data-ref="iommu_ops::iotlb_sync" data-ref-filename="iommu_ops..iotlb_sync">iotlb_sync</a>)</td></tr>
+<tr><th id="489">489</th><td>		<a class="local col9 ref" href="#989domain" title='domain' data-ref="989domain" data-ref-filename="989domain">domain</a>-&gt;<a class="ref field" href="#iommu_domain::ops" title='iommu_domain::ops' data-ref="iommu_domain::ops" data-ref-filename="iommu_domain..ops">ops</a>-&gt;<a class="ref field" href="#iommu_ops::iotlb_sync" title='iommu_ops::iotlb_sync' data-ref="iommu_ops::iotlb_sync" data-ref-filename="iommu_ops..iotlb_sync">iotlb_sync</a>(<a class="local col9 ref" href="#989domain" title='domain' data-ref="989domain" data-ref-filename="989domain">domain</a>);</td></tr>
+<tr><th id="490">490</th><td>}</td></tr>
+<tr><th id="491">491</th><td></td></tr>
+<tr><th id="492">492</th><td><i>/* PCI device grouping function */</i></td></tr>
+<tr><th id="493">493</th><td><b>extern</b> <b>struct</b> <a class="type" href="device.h.html#iommu_group" title='iommu_group' data-ref="iommu_group" data-ref-filename="iommu_group">iommu_group</a> *<dfn class="decl fn" id="pci_device_group" title='pci_device_group' data-ref="pci_device_group" data-ref-filename="pci_device_group">pci_device_group</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col0 decl" id="990dev" title='dev' data-type='struct device *' data-ref="990dev" data-ref-filename="990dev">dev</dfn>);</td></tr>
+<tr><th id="494">494</th><td><i>/* Generic device grouping function */</i></td></tr>
+<tr><th id="495">495</th><td><b>extern</b> <b>struct</b> <a class="type" href="device.h.html#iommu_group" title='iommu_group' data-ref="iommu_group" data-ref-filename="iommu_group">iommu_group</a> *<dfn class="decl fn" id="generic_device_group" title='generic_device_group' data-ref="generic_device_group" data-ref-filename="generic_device_group">generic_device_group</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col1 decl" id="991dev" title='dev' data-type='struct device *' data-ref="991dev" data-ref-filename="991dev">dev</dfn>);</td></tr>
+<tr><th id="496">496</th><td><i>/* FSL-MC device grouping function */</i></td></tr>
+<tr><th id="497">497</th><td><b>struct</b> <a class="type" href="device.h.html#iommu_group" title='iommu_group' data-ref="iommu_group" data-ref-filename="iommu_group">iommu_group</a> *<dfn class="decl fn" id="fsl_mc_device_group" title='fsl_mc_device_group' data-ref="fsl_mc_device_group" data-ref-filename="fsl_mc_device_group">fsl_mc_device_group</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col2 decl" id="992dev" title='dev' data-type='struct device *' data-ref="992dev" data-ref-filename="992dev">dev</dfn>);</td></tr>
+<tr><th id="498">498</th><td></td></tr>
+<tr><th id="499">499</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="500">500</th><td><i class="doc"> * struct iommu_fwspec - per-device IOMMU instance data</i></td></tr>
+<tr><th id="501">501</th><td><i class="doc"> *<span class="command"> @ops</span>: ops for this device's IOMMU</i></td></tr>
+<tr><th id="502">502</th><td><i class="doc"> *<span class="command"> @iommu</span>_fwnode: firmware handle for this device's IOMMU</i></td></tr>
+<tr><th id="503">503</th><td><i class="doc"> *<span class="command"> @iommu</span>_priv: IOMMU driver private data for this device</i></td></tr>
+<tr><th id="504">504</th><td><i class="doc"> * <span class="command">@num_</span><span class="verb">ids: number of associated device IDs</span></i></td></tr>
+<tr><th id="505">505</th><td><i class="doc"> *<span class="command"> @ids</span>: IDs which this device may present to the IOMMU</i></td></tr>
+<tr><th id="506">506</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="507">507</th><td><b>struct</b> <dfn class="type def" id="iommu_fwspec" title='iommu_fwspec' data-ref="iommu_fwspec" data-ref-filename="iommu_fwspec">iommu_fwspec</dfn> {</td></tr>
+<tr><th id="508">508</th><td>	<em>const</em> <b>struct</b> <a class="type" href="#iommu_ops" title='iommu_ops' data-ref="iommu_ops" data-ref-filename="iommu_ops">iommu_ops</a>	*<dfn class="decl field" id="iommu_fwspec::ops" title='iommu_fwspec::ops' data-ref="iommu_fwspec::ops" data-ref-filename="iommu_fwspec..ops">ops</dfn>;</td></tr>
+<tr><th id="509">509</th><td>	<b>struct</b> <a class="type" href="fwnode.h.html#fwnode_handle" title='fwnode_handle' data-ref="fwnode_handle" data-ref-filename="fwnode_handle">fwnode_handle</a>	*<dfn class="decl field" id="iommu_fwspec::iommu_fwnode" title='iommu_fwspec::iommu_fwnode' data-ref="iommu_fwspec::iommu_fwnode" data-ref-filename="iommu_fwspec..iommu_fwnode">iommu_fwnode</dfn>;</td></tr>
+<tr><th id="510">510</th><td>	<em>void</em>			*<dfn class="decl field" id="iommu_fwspec::iommu_priv" title='iommu_fwspec::iommu_priv' data-ref="iommu_fwspec::iommu_priv" data-ref-filename="iommu_fwspec..iommu_priv">iommu_priv</dfn>;</td></tr>
+<tr><th id="511">511</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>			<dfn class="decl field" id="iommu_fwspec::flags" title='iommu_fwspec::flags' data-ref="iommu_fwspec::flags" data-ref-filename="iommu_fwspec..flags">flags</dfn>;</td></tr>
+<tr><th id="512">512</th><td>	<em>unsigned</em> <em>int</em>		<dfn class="decl field" id="iommu_fwspec::num_ids" title='iommu_fwspec::num_ids' data-ref="iommu_fwspec::num_ids" data-ref-filename="iommu_fwspec..num_ids">num_ids</dfn>;</td></tr>
+<tr><th id="513">513</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>			<dfn class="decl field" id="iommu_fwspec::ids" title='iommu_fwspec::ids' data-ref="iommu_fwspec::ids" data-ref-filename="iommu_fwspec..ids">ids</dfn>[<var>1</var>];</td></tr>
+<tr><th id="514">514</th><td>};</td></tr>
+<tr><th id="515">515</th><td></td></tr>
+<tr><th id="516">516</th><td><i>/* ATS is supported */</i></td></tr>
+<tr><th id="517">517</th><td><u>#define <dfn class="macro" id="_M/IOMMU_FWSPEC_PCI_RC_ATS" data-ref="_M/IOMMU_FWSPEC_PCI_RC_ATS">IOMMU_FWSPEC_PCI_RC_ATS</dfn>			(1 &lt;&lt; 0)</u></td></tr>
+<tr><th id="518">518</th><td></td></tr>
+<tr><th id="519">519</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="520">520</th><td><i class="doc"> * struct iommu_sva - handle to a device-mm bond</i></td></tr>
+<tr><th id="521">521</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="522">522</th><td><b>struct</b> <dfn class="type def" id="iommu_sva" title='iommu_sva' data-ref="iommu_sva" data-ref-filename="iommu_sva">iommu_sva</dfn> {</td></tr>
+<tr><th id="523">523</th><td>	<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a>			*<dfn class="decl field" id="iommu_sva::dev" title='iommu_sva::dev' data-ref="iommu_sva::dev" data-ref-filename="iommu_sva..dev">dev</dfn>;</td></tr>
+<tr><th id="524">524</th><td>	<em>const</em> <b>struct</b> <a class="type" href="#iommu_sva_ops" title='iommu_sva_ops' data-ref="iommu_sva_ops" data-ref-filename="iommu_sva_ops">iommu_sva_ops</a>	*<dfn class="decl field" id="iommu_sva::ops" title='iommu_sva::ops' data-ref="iommu_sva::ops" data-ref-filename="iommu_sva..ops">ops</dfn>;</td></tr>
+<tr><th id="525">525</th><td>};</td></tr>
+<tr><th id="526">526</th><td></td></tr>
+<tr><th id="527">527</th><td><em>int</em> <dfn class="decl fn" id="iommu_fwspec_init" title='iommu_fwspec_init' data-ref="iommu_fwspec_init" data-ref-filename="iommu_fwspec_init">iommu_fwspec_init</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col3 decl" id="993dev" title='dev' data-type='struct device *' data-ref="993dev" data-ref-filename="993dev">dev</dfn>, <b>struct</b> <a class="type" href="fwnode.h.html#fwnode_handle" title='fwnode_handle' data-ref="fwnode_handle" data-ref-filename="fwnode_handle">fwnode_handle</a> *<dfn class="local col4 decl" id="994iommu_fwnode" title='iommu_fwnode' data-type='struct fwnode_handle *' data-ref="994iommu_fwnode" data-ref-filename="994iommu_fwnode">iommu_fwnode</dfn>,</td></tr>
+<tr><th id="528">528</th><td>		      <em>const</em> <b>struct</b> <a class="type" href="#iommu_ops" title='iommu_ops' data-ref="iommu_ops" data-ref-filename="iommu_ops">iommu_ops</a> *<dfn class="local col5 decl" id="995ops" title='ops' data-type='const struct iommu_ops *' data-ref="995ops" data-ref-filename="995ops">ops</dfn>);</td></tr>
+<tr><th id="529">529</th><td><em>void</em> <dfn class="decl fn" id="iommu_fwspec_free" title='iommu_fwspec_free' data-ref="iommu_fwspec_free" data-ref-filename="iommu_fwspec_free">iommu_fwspec_free</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col6 decl" id="996dev" title='dev' data-type='struct device *' data-ref="996dev" data-ref-filename="996dev">dev</dfn>);</td></tr>
+<tr><th id="530">530</th><td><em>int</em> <dfn class="decl fn" id="iommu_fwspec_add_ids" title='iommu_fwspec_add_ids' data-ref="iommu_fwspec_add_ids" data-ref-filename="iommu_fwspec_add_ids">iommu_fwspec_add_ids</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col7 decl" id="997dev" title='dev' data-type='struct device *' data-ref="997dev" data-ref-filename="997dev">dev</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> *<dfn class="local col8 decl" id="998ids" title='ids' data-type='u32 *' data-ref="998ids" data-ref-filename="998ids">ids</dfn>, <em>int</em> <dfn class="local col9 decl" id="999num_ids" title='num_ids' data-type='int' data-ref="999num_ids" data-ref-filename="999num_ids">num_ids</dfn>);</td></tr>
+<tr><th id="531">531</th><td><em>const</em> <b>struct</b> <a class="type" href="#iommu_ops" title='iommu_ops' data-ref="iommu_ops" data-ref-filename="iommu_ops">iommu_ops</a> *<dfn class="decl fn" id="iommu_ops_from_fwnode" title='iommu_ops_from_fwnode' data-ref="iommu_ops_from_fwnode" data-ref-filename="iommu_ops_from_fwnode">iommu_ops_from_fwnode</dfn>(<b>struct</b> <a class="type" href="fwnode.h.html#fwnode_handle" title='fwnode_handle' data-ref="fwnode_handle" data-ref-filename="fwnode_handle">fwnode_handle</a> *<dfn class="local col0 decl" id="1000fwnode" title='fwnode' data-type='struct fwnode_handle *' data-ref="1000fwnode" data-ref-filename="1000fwnode">fwnode</dfn>);</td></tr>
+<tr><th id="532">532</th><td></td></tr>
+<tr><th id="533">533</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="#iommu_fwspec" title='iommu_fwspec' data-ref="iommu_fwspec" data-ref-filename="iommu_fwspec">iommu_fwspec</a> *<dfn class="decl def fn" id="dev_iommu_fwspec_get" title='dev_iommu_fwspec_get' data-ref="dev_iommu_fwspec_get" data-ref-filename="dev_iommu_fwspec_get">dev_iommu_fwspec_get</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col1 decl" id="1001dev" title='dev' data-type='struct device *' data-ref="1001dev" data-ref-filename="1001dev">dev</dfn>)</td></tr>
+<tr><th id="534">534</th><td>{</td></tr>
+<tr><th id="535">535</th><td>	<b>return</b> <a class="local col1 ref" href="#1001dev" title='dev' data-ref="1001dev" data-ref-filename="1001dev">dev</a>-&gt;<a class="ref field" href="device.h.html#device::iommu_fwspec" title='device::iommu_fwspec' data-ref="device::iommu_fwspec" data-ref-filename="device..iommu_fwspec">iommu_fwspec</a>;</td></tr>
+<tr><th id="536">536</th><td>}</td></tr>
+<tr><th id="537">537</th><td></td></tr>
+<tr><th id="538">538</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="dev_iommu_fwspec_set" title='dev_iommu_fwspec_set' data-ref="dev_iommu_fwspec_set" data-ref-filename="dev_iommu_fwspec_set">dev_iommu_fwspec_set</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col2 decl" id="1002dev" title='dev' data-type='struct device *' data-ref="1002dev" data-ref-filename="1002dev">dev</dfn>,</td></tr>
+<tr><th id="539">539</th><td>					<b>struct</b> <a class="type" href="#iommu_fwspec" title='iommu_fwspec' data-ref="iommu_fwspec" data-ref-filename="iommu_fwspec">iommu_fwspec</a> *<dfn class="local col3 decl" id="1003fwspec" title='fwspec' data-type='struct iommu_fwspec *' data-ref="1003fwspec" data-ref-filename="1003fwspec">fwspec</dfn>)</td></tr>
+<tr><th id="540">540</th><td>{</td></tr>
+<tr><th id="541">541</th><td>	<a class="local col2 ref" href="#1002dev" title='dev' data-ref="1002dev" data-ref-filename="1002dev">dev</a>-&gt;<a class="ref field" href="device.h.html#device::iommu_fwspec" title='device::iommu_fwspec' data-ref="device::iommu_fwspec" data-ref-filename="device..iommu_fwspec">iommu_fwspec</a> = <a class="local col3 ref" href="#1003fwspec" title='fwspec' data-ref="1003fwspec" data-ref-filename="1003fwspec">fwspec</a>;</td></tr>
+<tr><th id="542">542</th><td>}</td></tr>
+<tr><th id="543">543</th><td></td></tr>
+<tr><th id="544">544</th><td><em>int</em> <dfn class="decl fn" id="iommu_probe_device" title='iommu_probe_device' data-ref="iommu_probe_device" data-ref-filename="iommu_probe_device">iommu_probe_device</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col4 decl" id="1004dev" title='dev' data-type='struct device *' data-ref="1004dev" data-ref-filename="1004dev">dev</dfn>);</td></tr>
+<tr><th id="545">545</th><td><em>void</em> <dfn class="decl fn" id="iommu_release_device" title='iommu_release_device' data-ref="iommu_release_device" data-ref-filename="iommu_release_device">iommu_release_device</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col5 decl" id="1005dev" title='dev' data-type='struct device *' data-ref="1005dev" data-ref-filename="1005dev">dev</dfn>);</td></tr>
+<tr><th id="546">546</th><td></td></tr>
+<tr><th id="547">547</th><td><a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl fn" id="iommu_dev_has_feature" title='iommu_dev_has_feature' data-ref="iommu_dev_has_feature" data-ref-filename="iommu_dev_has_feature">iommu_dev_has_feature</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col6 decl" id="1006dev" title='dev' data-type='struct device *' data-ref="1006dev" data-ref-filename="1006dev">dev</dfn>, <b>enum</b> <a class="type" href="#iommu_dev_features" title='iommu_dev_features' data-ref="iommu_dev_features" data-ref-filename="iommu_dev_features">iommu_dev_features</a> <dfn class="local col7 decl" id="1007f" title='f' data-type='enum iommu_dev_features' data-ref="1007f" data-ref-filename="1007f">f</dfn>);</td></tr>
+<tr><th id="548">548</th><td><em>int</em> <dfn class="decl fn" id="iommu_dev_enable_feature" title='iommu_dev_enable_feature' data-ref="iommu_dev_enable_feature" data-ref-filename="iommu_dev_enable_feature">iommu_dev_enable_feature</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col8 decl" id="1008dev" title='dev' data-type='struct device *' data-ref="1008dev" data-ref-filename="1008dev">dev</dfn>, <b>enum</b> <a class="type" href="#iommu_dev_features" title='iommu_dev_features' data-ref="iommu_dev_features" data-ref-filename="iommu_dev_features">iommu_dev_features</a> <dfn class="local col9 decl" id="1009f" title='f' data-type='enum iommu_dev_features' data-ref="1009f" data-ref-filename="1009f">f</dfn>);</td></tr>
+<tr><th id="549">549</th><td><em>int</em> <dfn class="decl fn" id="iommu_dev_disable_feature" title='iommu_dev_disable_feature' data-ref="iommu_dev_disable_feature" data-ref-filename="iommu_dev_disable_feature">iommu_dev_disable_feature</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col0 decl" id="1010dev" title='dev' data-type='struct device *' data-ref="1010dev" data-ref-filename="1010dev">dev</dfn>, <b>enum</b> <a class="type" href="#iommu_dev_features" title='iommu_dev_features' data-ref="iommu_dev_features" data-ref-filename="iommu_dev_features">iommu_dev_features</a> <dfn class="local col1 decl" id="1011f" title='f' data-type='enum iommu_dev_features' data-ref="1011f" data-ref-filename="1011f">f</dfn>);</td></tr>
+<tr><th id="550">550</th><td><a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl fn" id="iommu_dev_feature_enabled" title='iommu_dev_feature_enabled' data-ref="iommu_dev_feature_enabled" data-ref-filename="iommu_dev_feature_enabled">iommu_dev_feature_enabled</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col2 decl" id="1012dev" title='dev' data-type='struct device *' data-ref="1012dev" data-ref-filename="1012dev">dev</dfn>, <b>enum</b> <a class="type" href="#iommu_dev_features" title='iommu_dev_features' data-ref="iommu_dev_features" data-ref-filename="iommu_dev_features">iommu_dev_features</a> <dfn class="local col3 decl" id="1013f" title='f' data-type='enum iommu_dev_features' data-ref="1013f" data-ref-filename="1013f">f</dfn>);</td></tr>
+<tr><th id="551">551</th><td><em>int</em> <dfn class="decl fn" id="iommu_aux_attach_device" title='iommu_aux_attach_device' data-ref="iommu_aux_attach_device" data-ref-filename="iommu_aux_attach_device">iommu_aux_attach_device</dfn>(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col4 decl" id="1014domain" title='domain' data-type='struct iommu_domain *' data-ref="1014domain" data-ref-filename="1014domain">domain</dfn>, <b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col5 decl" id="1015dev" title='dev' data-type='struct device *' data-ref="1015dev" data-ref-filename="1015dev">dev</dfn>);</td></tr>
+<tr><th id="552">552</th><td><em>void</em> <dfn class="decl fn" id="iommu_aux_detach_device" title='iommu_aux_detach_device' data-ref="iommu_aux_detach_device" data-ref-filename="iommu_aux_detach_device">iommu_aux_detach_device</dfn>(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col6 decl" id="1016domain" title='domain' data-type='struct iommu_domain *' data-ref="1016domain" data-ref-filename="1016domain">domain</dfn>, <b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col7 decl" id="1017dev" title='dev' data-type='struct device *' data-ref="1017dev" data-ref-filename="1017dev">dev</dfn>);</td></tr>
+<tr><th id="553">553</th><td><em>int</em> <dfn class="decl fn" id="iommu_aux_get_pasid" title='iommu_aux_get_pasid' data-ref="iommu_aux_get_pasid" data-ref-filename="iommu_aux_get_pasid">iommu_aux_get_pasid</dfn>(<b>struct</b> <a class="type" href="#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> *<dfn class="local col8 decl" id="1018domain" title='domain' data-type='struct iommu_domain *' data-ref="1018domain" data-ref-filename="1018domain">domain</dfn>, <b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col9 decl" id="1019dev" title='dev' data-type='struct device *' data-ref="1019dev" data-ref-filename="1019dev">dev</dfn>);</td></tr>
+<tr><th id="554">554</th><td></td></tr>
+<tr><th id="555">555</th><td><b>struct</b> <a class="type" href="#iommu_sva" title='iommu_sva' data-ref="iommu_sva" data-ref-filename="iommu_sva">iommu_sva</a> *<dfn class="decl fn" id="iommu_sva_bind_device" title='iommu_sva_bind_device' data-ref="iommu_sva_bind_device" data-ref-filename="iommu_sva_bind_device">iommu_sva_bind_device</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col0 decl" id="1020dev" title='dev' data-type='struct device *' data-ref="1020dev" data-ref-filename="1020dev">dev</dfn>,</td></tr>
+<tr><th id="556">556</th><td>					<b>struct</b> <a class="type" href="mm_types.h.html#mm_struct" title='mm_struct' data-ref="mm_struct" data-ref-filename="mm_struct">mm_struct</a> *<dfn class="local col1 decl" id="1021mm" title='mm' data-type='struct mm_struct *' data-ref="1021mm" data-ref-filename="1021mm">mm</dfn>,</td></tr>
+<tr><th id="557">557</th><td>					<em>void</em> *<dfn class="local col2 decl" id="1022drvdata" title='drvdata' data-type='void *' data-ref="1022drvdata" data-ref-filename="1022drvdata">drvdata</dfn>);</td></tr>
+<tr><th id="558">558</th><td><em>void</em> <dfn class="decl fn" id="iommu_sva_unbind_device" title='iommu_sva_unbind_device' data-ref="iommu_sva_unbind_device" data-ref-filename="iommu_sva_unbind_device">iommu_sva_unbind_device</dfn>(<b>struct</b> <a class="type" href="#iommu_sva" title='iommu_sva' data-ref="iommu_sva" data-ref-filename="iommu_sva">iommu_sva</a> *<dfn class="local col3 decl" id="1023handle" title='handle' data-type='struct iommu_sva *' data-ref="1023handle" data-ref-filename="1023handle">handle</dfn>);</td></tr>
+<tr><th id="559">559</th><td><em>int</em> <dfn class="decl fn" id="iommu_sva_set_ops" title='iommu_sva_set_ops' data-ref="iommu_sva_set_ops" data-ref-filename="iommu_sva_set_ops">iommu_sva_set_ops</dfn>(<b>struct</b> <a class="type" href="#iommu_sva" title='iommu_sva' data-ref="iommu_sva" data-ref-filename="iommu_sva">iommu_sva</a> *<dfn class="local col4 decl" id="1024handle" title='handle' data-type='struct iommu_sva *' data-ref="1024handle" data-ref-filename="1024handle">handle</dfn>,</td></tr>
+<tr><th id="560">560</th><td>		      <em>const</em> <b>struct</b> <a class="type" href="#iommu_sva_ops" title='iommu_sva_ops' data-ref="iommu_sva_ops" data-ref-filename="iommu_sva_ops">iommu_sva_ops</a> *<dfn class="local col5 decl" id="1025ops" title='ops' data-type='const struct iommu_sva_ops *' data-ref="1025ops" data-ref-filename="1025ops">ops</dfn>);</td></tr>
+<tr><th id="561">561</th><td><em>int</em> <dfn class="decl fn" id="iommu_sva_get_pasid" title='iommu_sva_get_pasid' data-ref="iommu_sva_get_pasid" data-ref-filename="iommu_sva_get_pasid">iommu_sva_get_pasid</dfn>(<b>struct</b> <a class="type" href="#iommu_sva" title='iommu_sva' data-ref="iommu_sva" data-ref-filename="iommu_sva">iommu_sva</a> *<dfn class="local col6 decl" id="1026handle" title='handle' data-type='struct iommu_sva *' data-ref="1026handle" data-ref-filename="1026handle">handle</dfn>);</td></tr>
+<tr><th id="562">562</th><td></td></tr>
+<tr><th id="563">563</th><td><u>#<span data-ppcond="192">else</span> /* CONFIG_IOMMU_API */</u></td></tr>
+<tr><th id="564">564</th><td></td></tr>
+<tr><th id="565">565</th><td><b>struct</b> iommu_ops {};</td></tr>
+<tr><th id="566">566</th><td><b>struct</b> iommu_group {};</td></tr>
+<tr><th id="567">567</th><td><b>struct</b> iommu_fwspec {};</td></tr>
+<tr><th id="568">568</th><td><b>struct</b> iommu_device {};</td></tr>
+<tr><th id="569">569</th><td><b>struct</b> iommu_fault_param {};</td></tr>
+<tr><th id="570">570</th><td></td></tr>
+<tr><th id="571">571</th><td><em>static</em> <b>inline</b> bool iommu_present(<b>struct</b> bus_type *bus)</td></tr>
+<tr><th id="572">572</th><td>{</td></tr>
+<tr><th id="573">573</th><td>	<b>return</b> false;</td></tr>
+<tr><th id="574">574</th><td>}</td></tr>
+<tr><th id="575">575</th><td></td></tr>
+<tr><th id="576">576</th><td><em>static</em> <b>inline</b> bool iommu_capable(<b>struct</b> bus_type *bus, <b>enum</b> iommu_cap cap)</td></tr>
+<tr><th id="577">577</th><td>{</td></tr>
+<tr><th id="578">578</th><td>	<b>return</b> false;</td></tr>
+<tr><th id="579">579</th><td>}</td></tr>
+<tr><th id="580">580</th><td></td></tr>
+<tr><th id="581">581</th><td><em>static</em> <b>inline</b> <b>struct</b> iommu_domain *iommu_domain_alloc(<b>struct</b> bus_type *bus)</td></tr>
+<tr><th id="582">582</th><td>{</td></tr>
+<tr><th id="583">583</th><td>	<b>return</b> NULL;</td></tr>
+<tr><th id="584">584</th><td>}</td></tr>
+<tr><th id="585">585</th><td></td></tr>
+<tr><th id="586">586</th><td><em>static</em> <b>inline</b> <b>struct</b> iommu_group *iommu_group_get_by_id(<em>int</em> id)</td></tr>
+<tr><th id="587">587</th><td>{</td></tr>
+<tr><th id="588">588</th><td>	<b>return</b> NULL;</td></tr>
+<tr><th id="589">589</th><td>}</td></tr>
+<tr><th id="590">590</th><td></td></tr>
+<tr><th id="591">591</th><td><em>static</em> <b>inline</b> <em>void</em> iommu_domain_free(<b>struct</b> iommu_domain *domain)</td></tr>
+<tr><th id="592">592</th><td>{</td></tr>
+<tr><th id="593">593</th><td>}</td></tr>
+<tr><th id="594">594</th><td></td></tr>
+<tr><th id="595">595</th><td><em>static</em> <b>inline</b> <em>int</em> iommu_attach_device(<b>struct</b> iommu_domain *domain,</td></tr>
+<tr><th id="596">596</th><td>				      <b>struct</b> device *dev)</td></tr>
+<tr><th id="597">597</th><td>{</td></tr>
+<tr><th id="598">598</th><td>	<b>return</b> -ENODEV;</td></tr>
+<tr><th id="599">599</th><td>}</td></tr>
+<tr><th id="600">600</th><td></td></tr>
+<tr><th id="601">601</th><td><em>static</em> <b>inline</b> <em>void</em> iommu_detach_device(<b>struct</b> iommu_domain *domain,</td></tr>
+<tr><th id="602">602</th><td>				       <b>struct</b> device *dev)</td></tr>
+<tr><th id="603">603</th><td>{</td></tr>
+<tr><th id="604">604</th><td>}</td></tr>
+<tr><th id="605">605</th><td></td></tr>
+<tr><th id="606">606</th><td><em>static</em> <b>inline</b> <b>struct</b> iommu_domain *iommu_get_domain_for_dev(<b>struct</b> device *dev)</td></tr>
+<tr><th id="607">607</th><td>{</td></tr>
+<tr><th id="608">608</th><td>	<b>return</b> NULL;</td></tr>
+<tr><th id="609">609</th><td>}</td></tr>
+<tr><th id="610">610</th><td></td></tr>
+<tr><th id="611">611</th><td><em>static</em> <b>inline</b> <em>int</em> iommu_map(<b>struct</b> iommu_domain *domain, <em>unsigned</em> <em>long</em> iova,</td></tr>
+<tr><th id="612">612</th><td>			    phys_addr_t paddr, size_t size, <em>int</em> prot)</td></tr>
+<tr><th id="613">613</th><td>{</td></tr>
+<tr><th id="614">614</th><td>	<b>return</b> -ENODEV;</td></tr>
+<tr><th id="615">615</th><td>}</td></tr>
+<tr><th id="616">616</th><td></td></tr>
+<tr><th id="617">617</th><td><em>static</em> <b>inline</b> size_t iommu_unmap(<b>struct</b> iommu_domain *domain,</td></tr>
+<tr><th id="618">618</th><td>				 <em>unsigned</em> <em>long</em> iova, size_t size)</td></tr>
+<tr><th id="619">619</th><td>{</td></tr>
+<tr><th id="620">620</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="621">621</th><td>}</td></tr>
+<tr><th id="622">622</th><td></td></tr>
+<tr><th id="623">623</th><td><em>static</em> <b>inline</b> size_t iommu_unmap_fast(<b>struct</b> iommu_domain *domain,</td></tr>
+<tr><th id="624">624</th><td>				      <em>unsigned</em> <em>long</em> iova, <em>int</em> gfp_order)</td></tr>
+<tr><th id="625">625</th><td>{</td></tr>
+<tr><th id="626">626</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="627">627</th><td>}</td></tr>
+<tr><th id="628">628</th><td></td></tr>
+<tr><th id="629">629</th><td><em>static</em> <b>inline</b> size_t iommu_map_sg(<b>struct</b> iommu_domain *domain,</td></tr>
+<tr><th id="630">630</th><td>				  <em>unsigned</em> <em>long</em> iova, <b>struct</b> scatterlist *sg,</td></tr>
+<tr><th id="631">631</th><td>				  <em>unsigned</em> <em>int</em> nents, <em>int</em> prot)</td></tr>
+<tr><th id="632">632</th><td>{</td></tr>
+<tr><th id="633">633</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="634">634</th><td>}</td></tr>
+<tr><th id="635">635</th><td></td></tr>
+<tr><th id="636">636</th><td><em>static</em> <b>inline</b> <em>void</em> iommu_flush_tlb_all(<b>struct</b> iommu_domain *domain)</td></tr>
+<tr><th id="637">637</th><td>{</td></tr>
+<tr><th id="638">638</th><td>}</td></tr>
+<tr><th id="639">639</th><td></td></tr>
+<tr><th id="640">640</th><td><em>static</em> <b>inline</b> <em>void</em> iommu_tlb_range_add(<b>struct</b> iommu_domain *domain,</td></tr>
+<tr><th id="641">641</th><td>				       <em>unsigned</em> <em>long</em> iova, size_t size)</td></tr>
+<tr><th id="642">642</th><td>{</td></tr>
+<tr><th id="643">643</th><td>}</td></tr>
+<tr><th id="644">644</th><td></td></tr>
+<tr><th id="645">645</th><td><em>static</em> <b>inline</b> <em>void</em> iommu_tlb_sync(<b>struct</b> iommu_domain *domain)</td></tr>
+<tr><th id="646">646</th><td>{</td></tr>
+<tr><th id="647">647</th><td>}</td></tr>
+<tr><th id="648">648</th><td></td></tr>
+<tr><th id="649">649</th><td><em>static</em> <b>inline</b> <em>int</em> iommu_domain_window_enable(<b>struct</b> iommu_domain *domain,</td></tr>
+<tr><th id="650">650</th><td>					     u32 wnd_nr, phys_addr_t paddr,</td></tr>
+<tr><th id="651">651</th><td>					     u64 size, <em>int</em> prot)</td></tr>
+<tr><th id="652">652</th><td>{</td></tr>
+<tr><th id="653">653</th><td>	<b>return</b> -ENODEV;</td></tr>
+<tr><th id="654">654</th><td>}</td></tr>
+<tr><th id="655">655</th><td></td></tr>
+<tr><th id="656">656</th><td><em>static</em> <b>inline</b> <em>void</em> iommu_domain_window_disable(<b>struct</b> iommu_domain *domain,</td></tr>
+<tr><th id="657">657</th><td>					       u32 wnd_nr)</td></tr>
+<tr><th id="658">658</th><td>{</td></tr>
+<tr><th id="659">659</th><td>}</td></tr>
+<tr><th id="660">660</th><td></td></tr>
+<tr><th id="661">661</th><td><em>static</em> <b>inline</b> phys_addr_t iommu_iova_to_phys(<b>struct</b> iommu_domain *domain, dma_addr_t iova)</td></tr>
+<tr><th id="662">662</th><td>{</td></tr>
+<tr><th id="663">663</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="664">664</th><td>}</td></tr>
+<tr><th id="665">665</th><td></td></tr>
+<tr><th id="666">666</th><td><em>static</em> <b>inline</b> <em>void</em> iommu_set_fault_handler(<b>struct</b> iommu_domain *domain,</td></tr>
+<tr><th id="667">667</th><td>				iommu_fault_handler_t handler, <em>void</em> *token)</td></tr>
+<tr><th id="668">668</th><td>{</td></tr>
+<tr><th id="669">669</th><td>}</td></tr>
+<tr><th id="670">670</th><td></td></tr>
+<tr><th id="671">671</th><td><em>static</em> <b>inline</b> <em>void</em> iommu_get_resv_regions(<b>struct</b> device *dev,</td></tr>
+<tr><th id="672">672</th><td>					<b>struct</b> list_head *list)</td></tr>
+<tr><th id="673">673</th><td>{</td></tr>
+<tr><th id="674">674</th><td>}</td></tr>
+<tr><th id="675">675</th><td></td></tr>
+<tr><th id="676">676</th><td><em>static</em> <b>inline</b> <em>void</em> iommu_put_resv_regions(<b>struct</b> device *dev,</td></tr>
+<tr><th id="677">677</th><td>					<b>struct</b> list_head *list)</td></tr>
+<tr><th id="678">678</th><td>{</td></tr>
+<tr><th id="679">679</th><td>}</td></tr>
+<tr><th id="680">680</th><td></td></tr>
+<tr><th id="681">681</th><td><em>static</em> <b>inline</b> <em>int</em> iommu_get_group_resv_regions(<b>struct</b> iommu_group *group,</td></tr>
+<tr><th id="682">682</th><td>					       <b>struct</b> list_head *head)</td></tr>
+<tr><th id="683">683</th><td>{</td></tr>
+<tr><th id="684">684</th><td>	<b>return</b> -ENODEV;</td></tr>
+<tr><th id="685">685</th><td>}</td></tr>
+<tr><th id="686">686</th><td></td></tr>
+<tr><th id="687">687</th><td><em>static</em> <b>inline</b> <em>int</em> iommu_request_dm_for_dev(<b>struct</b> device *dev)</td></tr>
+<tr><th id="688">688</th><td>{</td></tr>
+<tr><th id="689">689</th><td>	<b>return</b> -ENODEV;</td></tr>
+<tr><th id="690">690</th><td>}</td></tr>
+<tr><th id="691">691</th><td></td></tr>
+<tr><th id="692">692</th><td><em>static</em> <b>inline</b> <em>int</em> iommu_request_dma_domain_for_dev(<b>struct</b> device *dev)</td></tr>
+<tr><th id="693">693</th><td>{</td></tr>
+<tr><th id="694">694</th><td>	<b>return</b> -ENODEV;</td></tr>
+<tr><th id="695">695</th><td>}</td></tr>
+<tr><th id="696">696</th><td></td></tr>
+<tr><th id="697">697</th><td><em>static</em> <b>inline</b> <em>int</em> iommu_attach_group(<b>struct</b> iommu_domain *domain,</td></tr>
+<tr><th id="698">698</th><td>				     <b>struct</b> iommu_group *group)</td></tr>
+<tr><th id="699">699</th><td>{</td></tr>
+<tr><th id="700">700</th><td>	<b>return</b> -ENODEV;</td></tr>
+<tr><th id="701">701</th><td>}</td></tr>
+<tr><th id="702">702</th><td></td></tr>
+<tr><th id="703">703</th><td><em>static</em> <b>inline</b> <em>void</em> iommu_detach_group(<b>struct</b> iommu_domain *domain,</td></tr>
+<tr><th id="704">704</th><td>				      <b>struct</b> iommu_group *group)</td></tr>
+<tr><th id="705">705</th><td>{</td></tr>
+<tr><th id="706">706</th><td>}</td></tr>
+<tr><th id="707">707</th><td></td></tr>
+<tr><th id="708">708</th><td><em>static</em> <b>inline</b> <b>struct</b> iommu_group *iommu_group_alloc(<em>void</em>)</td></tr>
+<tr><th id="709">709</th><td>{</td></tr>
+<tr><th id="710">710</th><td>	<b>return</b> ERR_PTR(-ENODEV);</td></tr>
+<tr><th id="711">711</th><td>}</td></tr>
+<tr><th id="712">712</th><td></td></tr>
+<tr><th id="713">713</th><td><em>static</em> <b>inline</b> <em>void</em> *iommu_group_get_iommudata(<b>struct</b> iommu_group *group)</td></tr>
+<tr><th id="714">714</th><td>{</td></tr>
+<tr><th id="715">715</th><td>	<b>return</b> NULL;</td></tr>
+<tr><th id="716">716</th><td>}</td></tr>
+<tr><th id="717">717</th><td></td></tr>
+<tr><th id="718">718</th><td><em>static</em> <b>inline</b> <em>void</em> iommu_group_set_iommudata(<b>struct</b> iommu_group *group,</td></tr>
+<tr><th id="719">719</th><td>					     <em>void</em> *iommu_data,</td></tr>
+<tr><th id="720">720</th><td>					     <em>void</em> (*release)(<em>void</em> *iommu_data))</td></tr>
+<tr><th id="721">721</th><td>{</td></tr>
+<tr><th id="722">722</th><td>}</td></tr>
+<tr><th id="723">723</th><td></td></tr>
+<tr><th id="724">724</th><td><em>static</em> <b>inline</b> <em>int</em> iommu_group_set_name(<b>struct</b> iommu_group *group,</td></tr>
+<tr><th id="725">725</th><td>				       <em>const</em> <em>char</em> *name)</td></tr>
+<tr><th id="726">726</th><td>{</td></tr>
+<tr><th id="727">727</th><td>	<b>return</b> -ENODEV;</td></tr>
+<tr><th id="728">728</th><td>}</td></tr>
+<tr><th id="729">729</th><td></td></tr>
+<tr><th id="730">730</th><td><em>static</em> <b>inline</b> <em>int</em> iommu_group_add_device(<b>struct</b> iommu_group *group,</td></tr>
+<tr><th id="731">731</th><td>					 <b>struct</b> device *dev)</td></tr>
+<tr><th id="732">732</th><td>{</td></tr>
+<tr><th id="733">733</th><td>	<b>return</b> -ENODEV;</td></tr>
+<tr><th id="734">734</th><td>}</td></tr>
+<tr><th id="735">735</th><td></td></tr>
+<tr><th id="736">736</th><td><em>static</em> <b>inline</b> <em>void</em> iommu_group_remove_device(<b>struct</b> device *dev)</td></tr>
+<tr><th id="737">737</th><td>{</td></tr>
+<tr><th id="738">738</th><td>}</td></tr>
+<tr><th id="739">739</th><td></td></tr>
+<tr><th id="740">740</th><td><em>static</em> <b>inline</b> <em>int</em> iommu_group_for_each_dev(<b>struct</b> iommu_group *group,</td></tr>
+<tr><th id="741">741</th><td>					   <em>void</em> *data,</td></tr>
+<tr><th id="742">742</th><td>					   <em>int</em> (*fn)(<b>struct</b> device *, <em>void</em> *))</td></tr>
+<tr><th id="743">743</th><td>{</td></tr>
+<tr><th id="744">744</th><td>	<b>return</b> -ENODEV;</td></tr>
+<tr><th id="745">745</th><td>}</td></tr>
+<tr><th id="746">746</th><td></td></tr>
+<tr><th id="747">747</th><td><em>static</em> <b>inline</b> <b>struct</b> iommu_group *iommu_group_get(<b>struct</b> device *dev)</td></tr>
+<tr><th id="748">748</th><td>{</td></tr>
+<tr><th id="749">749</th><td>	<b>return</b> NULL;</td></tr>
+<tr><th id="750">750</th><td>}</td></tr>
+<tr><th id="751">751</th><td></td></tr>
+<tr><th id="752">752</th><td><em>static</em> <b>inline</b> <em>void</em> iommu_group_put(<b>struct</b> iommu_group *group)</td></tr>
+<tr><th id="753">753</th><td>{</td></tr>
+<tr><th id="754">754</th><td>}</td></tr>
+<tr><th id="755">755</th><td></td></tr>
+<tr><th id="756">756</th><td><em>static</em> <b>inline</b> <em>int</em> iommu_group_register_notifier(<b>struct</b> iommu_group *group,</td></tr>
+<tr><th id="757">757</th><td>						<b>struct</b> notifier_block *nb)</td></tr>
+<tr><th id="758">758</th><td>{</td></tr>
+<tr><th id="759">759</th><td>	<b>return</b> -ENODEV;</td></tr>
+<tr><th id="760">760</th><td>}</td></tr>
+<tr><th id="761">761</th><td></td></tr>
+<tr><th id="762">762</th><td><em>static</em> <b>inline</b> <em>int</em> iommu_group_unregister_notifier(<b>struct</b> iommu_group *group,</td></tr>
+<tr><th id="763">763</th><td>						  <b>struct</b> notifier_block *nb)</td></tr>
+<tr><th id="764">764</th><td>{</td></tr>
+<tr><th id="765">765</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="766">766</th><td>}</td></tr>
+<tr><th id="767">767</th><td></td></tr>
+<tr><th id="768">768</th><td><em>static</em> <b>inline</b></td></tr>
+<tr><th id="769">769</th><td><em>int</em> iommu_register_device_fault_handler(<b>struct</b> device *dev,</td></tr>
+<tr><th id="770">770</th><td>					iommu_dev_fault_handler_t handler,</td></tr>
+<tr><th id="771">771</th><td>					<em>void</em> *data)</td></tr>
+<tr><th id="772">772</th><td>{</td></tr>
+<tr><th id="773">773</th><td>	<b>return</b> -ENODEV;</td></tr>
+<tr><th id="774">774</th><td>}</td></tr>
+<tr><th id="775">775</th><td></td></tr>
+<tr><th id="776">776</th><td><em>static</em> <b>inline</b> <em>int</em> iommu_unregister_device_fault_handler(<b>struct</b> device *dev)</td></tr>
+<tr><th id="777">777</th><td>{</td></tr>
+<tr><th id="778">778</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="779">779</th><td>}</td></tr>
+<tr><th id="780">780</th><td></td></tr>
+<tr><th id="781">781</th><td><em>static</em> <b>inline</b></td></tr>
+<tr><th id="782">782</th><td><em>int</em> iommu_report_device_fault(<b>struct</b> device *dev, <b>struct</b> iommu_fault_event *evt)</td></tr>
+<tr><th id="783">783</th><td>{</td></tr>
+<tr><th id="784">784</th><td>	<b>return</b> -ENODEV;</td></tr>
+<tr><th id="785">785</th><td>}</td></tr>
+<tr><th id="786">786</th><td></td></tr>
+<tr><th id="787">787</th><td><em>static</em> <b>inline</b> <em>int</em> iommu_page_response(<b>struct</b> device *dev,</td></tr>
+<tr><th id="788">788</th><td>				      <b>struct</b> iommu_page_response *msg)</td></tr>
+<tr><th id="789">789</th><td>{</td></tr>
+<tr><th id="790">790</th><td>	<b>return</b> -ENODEV;</td></tr>
+<tr><th id="791">791</th><td>}</td></tr>
+<tr><th id="792">792</th><td></td></tr>
+<tr><th id="793">793</th><td><em>static</em> <b>inline</b> <em>int</em> iommu_group_id(<b>struct</b> iommu_group *group)</td></tr>
+<tr><th id="794">794</th><td>{</td></tr>
+<tr><th id="795">795</th><td>	<b>return</b> -ENODEV;</td></tr>
+<tr><th id="796">796</th><td>}</td></tr>
+<tr><th id="797">797</th><td></td></tr>
+<tr><th id="798">798</th><td><em>static</em> <b>inline</b> <em>int</em> iommu_domain_get_attr(<b>struct</b> iommu_domain *domain,</td></tr>
+<tr><th id="799">799</th><td>					<b>enum</b> iommu_attr attr, <em>void</em> *data)</td></tr>
+<tr><th id="800">800</th><td>{</td></tr>
+<tr><th id="801">801</th><td>	<b>return</b> -EINVAL;</td></tr>
+<tr><th id="802">802</th><td>}</td></tr>
+<tr><th id="803">803</th><td></td></tr>
+<tr><th id="804">804</th><td><em>static</em> <b>inline</b> <em>int</em> iommu_domain_set_attr(<b>struct</b> iommu_domain *domain,</td></tr>
+<tr><th id="805">805</th><td>					<b>enum</b> iommu_attr attr, <em>void</em> *data)</td></tr>
+<tr><th id="806">806</th><td>{</td></tr>
+<tr><th id="807">807</th><td>	<b>return</b> -EINVAL;</td></tr>
+<tr><th id="808">808</th><td>}</td></tr>
+<tr><th id="809">809</th><td></td></tr>
+<tr><th id="810">810</th><td><em>static</em> <b>inline</b> <em>int</em>  iommu_device_register(<b>struct</b> iommu_device *iommu)</td></tr>
+<tr><th id="811">811</th><td>{</td></tr>
+<tr><th id="812">812</th><td>	<b>return</b> -ENODEV;</td></tr>
+<tr><th id="813">813</th><td>}</td></tr>
+<tr><th id="814">814</th><td></td></tr>
+<tr><th id="815">815</th><td><em>static</em> <b>inline</b> <em>void</em> iommu_device_set_ops(<b>struct</b> iommu_device *iommu,</td></tr>
+<tr><th id="816">816</th><td>					<em>const</em> <b>struct</b> iommu_ops *ops)</td></tr>
+<tr><th id="817">817</th><td>{</td></tr>
+<tr><th id="818">818</th><td>}</td></tr>
+<tr><th id="819">819</th><td></td></tr>
+<tr><th id="820">820</th><td><em>static</em> <b>inline</b> <em>void</em> iommu_device_set_fwnode(<b>struct</b> iommu_device *iommu,</td></tr>
+<tr><th id="821">821</th><td>					   <b>struct</b> fwnode_handle *fwnode)</td></tr>
+<tr><th id="822">822</th><td>{</td></tr>
+<tr><th id="823">823</th><td>}</td></tr>
+<tr><th id="824">824</th><td></td></tr>
+<tr><th id="825">825</th><td><em>static</em> <b>inline</b> <b>struct</b> iommu_device *dev_to_iommu_device(<b>struct</b> device *dev)</td></tr>
+<tr><th id="826">826</th><td>{</td></tr>
+<tr><th id="827">827</th><td>	<b>return</b> NULL;</td></tr>
+<tr><th id="828">828</th><td>}</td></tr>
+<tr><th id="829">829</th><td></td></tr>
+<tr><th id="830">830</th><td><em>static</em> <b>inline</b> <em>void</em> iommu_device_unregister(<b>struct</b> iommu_device *iommu)</td></tr>
+<tr><th id="831">831</th><td>{</td></tr>
+<tr><th id="832">832</th><td>}</td></tr>
+<tr><th id="833">833</th><td></td></tr>
+<tr><th id="834">834</th><td><em>static</em> <b>inline</b> <em>int</em>  iommu_device_sysfs_add(<b>struct</b> iommu_device *iommu,</td></tr>
+<tr><th id="835">835</th><td>					  <b>struct</b> device *parent,</td></tr>
+<tr><th id="836">836</th><td>					  <em>const</em> <b>struct</b> attribute_group **groups,</td></tr>
+<tr><th id="837">837</th><td>					  <em>const</em> <em>char</em> *fmt, ...)</td></tr>
+<tr><th id="838">838</th><td>{</td></tr>
+<tr><th id="839">839</th><td>	<b>return</b> -ENODEV;</td></tr>
+<tr><th id="840">840</th><td>}</td></tr>
+<tr><th id="841">841</th><td></td></tr>
+<tr><th id="842">842</th><td><em>static</em> <b>inline</b> <em>void</em> iommu_device_sysfs_remove(<b>struct</b> iommu_device *iommu)</td></tr>
+<tr><th id="843">843</th><td>{</td></tr>
+<tr><th id="844">844</th><td>}</td></tr>
+<tr><th id="845">845</th><td></td></tr>
+<tr><th id="846">846</th><td><em>static</em> <b>inline</b> <em>int</em> iommu_device_link(<b>struct</b> device *dev, <b>struct</b> device *link)</td></tr>
+<tr><th id="847">847</th><td>{</td></tr>
+<tr><th id="848">848</th><td>	<b>return</b> -EINVAL;</td></tr>
+<tr><th id="849">849</th><td>}</td></tr>
+<tr><th id="850">850</th><td></td></tr>
+<tr><th id="851">851</th><td><em>static</em> <b>inline</b> <em>void</em> iommu_device_unlink(<b>struct</b> device *dev, <b>struct</b> device *link)</td></tr>
+<tr><th id="852">852</th><td>{</td></tr>
+<tr><th id="853">853</th><td>}</td></tr>
+<tr><th id="854">854</th><td></td></tr>
+<tr><th id="855">855</th><td><em>static</em> <b>inline</b> <em>int</em> iommu_fwspec_init(<b>struct</b> device *dev,</td></tr>
+<tr><th id="856">856</th><td>				    <b>struct</b> fwnode_handle *iommu_fwnode,</td></tr>
+<tr><th id="857">857</th><td>				    <em>const</em> <b>struct</b> iommu_ops *ops)</td></tr>
+<tr><th id="858">858</th><td>{</td></tr>
+<tr><th id="859">859</th><td>	<b>return</b> -ENODEV;</td></tr>
+<tr><th id="860">860</th><td>}</td></tr>
+<tr><th id="861">861</th><td></td></tr>
+<tr><th id="862">862</th><td><em>static</em> <b>inline</b> <em>void</em> iommu_fwspec_free(<b>struct</b> device *dev)</td></tr>
+<tr><th id="863">863</th><td>{</td></tr>
+<tr><th id="864">864</th><td>}</td></tr>
+<tr><th id="865">865</th><td></td></tr>
+<tr><th id="866">866</th><td><em>static</em> <b>inline</b> <em>int</em> iommu_fwspec_add_ids(<b>struct</b> device *dev, u32 *ids,</td></tr>
+<tr><th id="867">867</th><td>				       <em>int</em> num_ids)</td></tr>
+<tr><th id="868">868</th><td>{</td></tr>
+<tr><th id="869">869</th><td>	<b>return</b> -ENODEV;</td></tr>
+<tr><th id="870">870</th><td>}</td></tr>
+<tr><th id="871">871</th><td></td></tr>
+<tr><th id="872">872</th><td><em>static</em> <b>inline</b></td></tr>
+<tr><th id="873">873</th><td><em>const</em> <b>struct</b> iommu_ops *iommu_ops_from_fwnode(<b>struct</b> fwnode_handle *fwnode)</td></tr>
+<tr><th id="874">874</th><td>{</td></tr>
+<tr><th id="875">875</th><td>	<b>return</b> NULL;</td></tr>
+<tr><th id="876">876</th><td>}</td></tr>
+<tr><th id="877">877</th><td></td></tr>
+<tr><th id="878">878</th><td><em>static</em> <b>inline</b> bool</td></tr>
+<tr><th id="879">879</th><td>iommu_dev_has_feature(<b>struct</b> device *dev, <b>enum</b> iommu_dev_features feat)</td></tr>
+<tr><th id="880">880</th><td>{</td></tr>
+<tr><th id="881">881</th><td>	<b>return</b> false;</td></tr>
+<tr><th id="882">882</th><td>}</td></tr>
+<tr><th id="883">883</th><td></td></tr>
+<tr><th id="884">884</th><td><em>static</em> <b>inline</b> bool</td></tr>
+<tr><th id="885">885</th><td>iommu_dev_feature_enabled(<b>struct</b> device *dev, <b>enum</b> iommu_dev_features feat)</td></tr>
+<tr><th id="886">886</th><td>{</td></tr>
+<tr><th id="887">887</th><td>	<b>return</b> false;</td></tr>
+<tr><th id="888">888</th><td>}</td></tr>
+<tr><th id="889">889</th><td></td></tr>
+<tr><th id="890">890</th><td><em>static</em> <b>inline</b> <em>int</em></td></tr>
+<tr><th id="891">891</th><td>iommu_dev_enable_feature(<b>struct</b> device *dev, <b>enum</b> iommu_dev_features feat)</td></tr>
+<tr><th id="892">892</th><td>{</td></tr>
+<tr><th id="893">893</th><td>	<b>return</b> -ENODEV;</td></tr>
+<tr><th id="894">894</th><td>}</td></tr>
+<tr><th id="895">895</th><td></td></tr>
+<tr><th id="896">896</th><td><em>static</em> <b>inline</b> <em>int</em></td></tr>
+<tr><th id="897">897</th><td>iommu_dev_disable_feature(<b>struct</b> device *dev, <b>enum</b> iommu_dev_features feat)</td></tr>
+<tr><th id="898">898</th><td>{</td></tr>
+<tr><th id="899">899</th><td>	<b>return</b> -ENODEV;</td></tr>
+<tr><th id="900">900</th><td>}</td></tr>
+<tr><th id="901">901</th><td></td></tr>
+<tr><th id="902">902</th><td><em>static</em> <b>inline</b> <em>int</em></td></tr>
+<tr><th id="903">903</th><td>iommu_aux_attach_device(<b>struct</b> iommu_domain *domain, <b>struct</b> device *dev)</td></tr>
+<tr><th id="904">904</th><td>{</td></tr>
+<tr><th id="905">905</th><td>	<b>return</b> -ENODEV;</td></tr>
+<tr><th id="906">906</th><td>}</td></tr>
+<tr><th id="907">907</th><td></td></tr>
+<tr><th id="908">908</th><td><em>static</em> <b>inline</b> <em>void</em></td></tr>
+<tr><th id="909">909</th><td>iommu_aux_detach_device(<b>struct</b> iommu_domain *domain, <b>struct</b> device *dev)</td></tr>
+<tr><th id="910">910</th><td>{</td></tr>
+<tr><th id="911">911</th><td>}</td></tr>
+<tr><th id="912">912</th><td></td></tr>
+<tr><th id="913">913</th><td><em>static</em> <b>inline</b> <em>int</em></td></tr>
+<tr><th id="914">914</th><td>iommu_aux_get_pasid(<b>struct</b> iommu_domain *domain, <b>struct</b> device *dev)</td></tr>
+<tr><th id="915">915</th><td>{</td></tr>
+<tr><th id="916">916</th><td>	<b>return</b> -ENODEV;</td></tr>
+<tr><th id="917">917</th><td>}</td></tr>
+<tr><th id="918">918</th><td></td></tr>
+<tr><th id="919">919</th><td><em>static</em> <b>inline</b> <b>struct</b> iommu_sva *</td></tr>
+<tr><th id="920">920</th><td>iommu_sva_bind_device(<b>struct</b> device *dev, <b>struct</b> mm_struct *mm, <em>void</em> *drvdata)</td></tr>
+<tr><th id="921">921</th><td>{</td></tr>
+<tr><th id="922">922</th><td>	<b>return</b> NULL;</td></tr>
+<tr><th id="923">923</th><td>}</td></tr>
+<tr><th id="924">924</th><td></td></tr>
+<tr><th id="925">925</th><td><em>static</em> <b>inline</b> <em>void</em> iommu_sva_unbind_device(<b>struct</b> iommu_sva *handle)</td></tr>
+<tr><th id="926">926</th><td>{</td></tr>
+<tr><th id="927">927</th><td>}</td></tr>
+<tr><th id="928">928</th><td></td></tr>
+<tr><th id="929">929</th><td><em>static</em> <b>inline</b> <em>int</em> iommu_sva_set_ops(<b>struct</b> iommu_sva *handle,</td></tr>
+<tr><th id="930">930</th><td>				    <em>const</em> <b>struct</b> iommu_sva_ops *ops)</td></tr>
+<tr><th id="931">931</th><td>{</td></tr>
+<tr><th id="932">932</th><td>	<b>return</b> -EINVAL;</td></tr>
+<tr><th id="933">933</th><td>}</td></tr>
+<tr><th id="934">934</th><td></td></tr>
+<tr><th id="935">935</th><td><em>static</em> <b>inline</b> <em>int</em> iommu_sva_get_pasid(<b>struct</b> iommu_sva *handle)</td></tr>
+<tr><th id="936">936</th><td>{</td></tr>
+<tr><th id="937">937</th><td>	<b>return</b> IOMMU_PASID_INVALID;</td></tr>
+<tr><th id="938">938</th><td>}</td></tr>
+<tr><th id="939">939</th><td></td></tr>
+<tr><th id="940">940</th><td><u>#<span data-ppcond="192">endif</span> /* CONFIG_IOMMU_API */</u></td></tr>
+<tr><th id="941">941</th><td></td></tr>
+<tr><th id="942">942</th><td><u>#<span data-ppcond="942">ifdef</span> <span class="macro" data-ref="_M/CONFIG_IOMMU_DEBUGFS">CONFIG_IOMMU_DEBUGFS</span></u></td></tr>
+<tr><th id="943">943</th><td><b>extern</b>	<b>struct</b> dentry *iommu_debugfs_dir;</td></tr>
+<tr><th id="944">944</th><td><em>void</em> iommu_debugfs_setup(<em>void</em>);</td></tr>
+<tr><th id="945">945</th><td><u>#<span data-ppcond="942">else</span></u></td></tr>
+<tr><th id="946">946</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="iommu_debugfs_setup" title='iommu_debugfs_setup' data-ref="iommu_debugfs_setup" data-ref-filename="iommu_debugfs_setup">iommu_debugfs_setup</dfn>(<em>void</em>) {}</td></tr>
+<tr><th id="947">947</th><td><u>#<span data-ppcond="942">endif</span></u></td></tr>
+<tr><th id="948">948</th><td></td></tr>
+<tr><th id="949">949</th><td><u>#<span data-ppcond="7">endif</span> /* __LINUX_IOMMU_H */</u></td></tr>
+<tr><th id="950">950</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../drivers/gpu/drm/i915/display/dvo_ch7017.c.html'>linux-5.3.1/drivers/gpu/drm/i915/display/dvo_ch7017.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

@@ -1,0 +1,169 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>blk-timeout.c source code [linux-5.3.1/block/blk-timeout.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/block/blk-timeout.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>linux-5.3.1</a>/<a href='./'>block</a>/<a href='blk-timeout.c.html'>blk-timeout.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * Functions related to generic timeout handling of requests.</i></td></tr>
+<tr><th id="4">4</th><td><i> */</i></td></tr>
+<tr><th id="5">5</th><td><u>#include <a href="../include/linux/kernel.h.html">&lt;linux/kernel.h&gt;</a></u></td></tr>
+<tr><th id="6">6</th><td><u>#include <a href="../include/linux/module.h.html">&lt;linux/module.h&gt;</a></u></td></tr>
+<tr><th id="7">7</th><td><u>#include <a href="../include/linux/blkdev.h.html">&lt;linux/blkdev.h&gt;</a></u></td></tr>
+<tr><th id="8">8</th><td><u>#include <a href="../include/linux/fault-inject.h.html">&lt;linux/fault-inject.h&gt;</a></u></td></tr>
+<tr><th id="9">9</th><td></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="blk.h.html">"blk.h"</a></u></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="blk-mq.h.html">"blk-mq.h"</a></u></td></tr>
+<tr><th id="12">12</th><td></td></tr>
+<tr><th id="13">13</th><td><u>#<span data-ppcond="13">ifdef</span> <span class="macro" data-ref="_M/CONFIG_FAIL_IO_TIMEOUT">CONFIG_FAIL_IO_TIMEOUT</span></u></td></tr>
+<tr><th id="14">14</th><td></td></tr>
+<tr><th id="15">15</th><td><em>static</em> DECLARE_FAULT_ATTR(fail_io_timeout);</td></tr>
+<tr><th id="16">16</th><td></td></tr>
+<tr><th id="17">17</th><td><em>static</em> <em>int</em> __init setup_fail_io_timeout(<em>char</em> *str)</td></tr>
+<tr><th id="18">18</th><td>{</td></tr>
+<tr><th id="19">19</th><td>	<b>return</b> setup_fault_attr(&amp;fail_io_timeout, str);</td></tr>
+<tr><th id="20">20</th><td>}</td></tr>
+<tr><th id="21">21</th><td>__setup(<q>"fail_io_timeout="</q>, setup_fail_io_timeout);</td></tr>
+<tr><th id="22">22</th><td></td></tr>
+<tr><th id="23">23</th><td><em>int</em> blk_should_fake_timeout(<b>struct</b> request_queue *q)</td></tr>
+<tr><th id="24">24</th><td>{</td></tr>
+<tr><th id="25">25</th><td>	<b>if</b> (!test_bit(QUEUE_FLAG_FAIL_IO, &amp;q-&gt;queue_flags))</td></tr>
+<tr><th id="26">26</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td>	<b>return</b> should_fail(&amp;fail_io_timeout, <var>1</var>);</td></tr>
+<tr><th id="29">29</th><td>}</td></tr>
+<tr><th id="30">30</th><td></td></tr>
+<tr><th id="31">31</th><td><em>static</em> <em>int</em> __init fail_io_timeout_debugfs(<em>void</em>)</td></tr>
+<tr><th id="32">32</th><td>{</td></tr>
+<tr><th id="33">33</th><td>	<b>struct</b> dentry *dir = fault_create_debugfs_attr(<q>"fail_io_timeout"</q>,</td></tr>
+<tr><th id="34">34</th><td>						NULL, &amp;fail_io_timeout);</td></tr>
+<tr><th id="35">35</th><td></td></tr>
+<tr><th id="36">36</th><td>	<b>return</b> PTR_ERR_OR_ZERO(dir);</td></tr>
+<tr><th id="37">37</th><td>}</td></tr>
+<tr><th id="38">38</th><td></td></tr>
+<tr><th id="39">39</th><td>late_initcall(fail_io_timeout_debugfs);</td></tr>
+<tr><th id="40">40</th><td></td></tr>
+<tr><th id="41">41</th><td>ssize_t part_timeout_show(<b>struct</b> device *dev, <b>struct</b> device_attribute *attr,</td></tr>
+<tr><th id="42">42</th><td>			  <em>char</em> *buf)</td></tr>
+<tr><th id="43">43</th><td>{</td></tr>
+<tr><th id="44">44</th><td>	<b>struct</b> gendisk *disk = dev_to_disk(dev);</td></tr>
+<tr><th id="45">45</th><td>	<em>int</em> set = test_bit(QUEUE_FLAG_FAIL_IO, &amp;disk-&gt;queue-&gt;queue_flags);</td></tr>
+<tr><th id="46">46</th><td></td></tr>
+<tr><th id="47">47</th><td>	<b>return</b> sprintf(buf, <q>"%d\n"</q>, set != <var>0</var>);</td></tr>
+<tr><th id="48">48</th><td>}</td></tr>
+<tr><th id="49">49</th><td></td></tr>
+<tr><th id="50">50</th><td>ssize_t part_timeout_store(<b>struct</b> device *dev, <b>struct</b> device_attribute *attr,</td></tr>
+<tr><th id="51">51</th><td>			   <em>const</em> <em>char</em> *buf, size_t count)</td></tr>
+<tr><th id="52">52</th><td>{</td></tr>
+<tr><th id="53">53</th><td>	<b>struct</b> gendisk *disk = dev_to_disk(dev);</td></tr>
+<tr><th id="54">54</th><td>	<em>int</em> val;</td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td>	<b>if</b> (count) {</td></tr>
+<tr><th id="57">57</th><td>		<b>struct</b> request_queue *q = disk-&gt;queue;</td></tr>
+<tr><th id="58">58</th><td>		<em>char</em> *p = (<em>char</em> *) buf;</td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td>		val = simple_strtoul(p, &amp;p, <var>10</var>);</td></tr>
+<tr><th id="61">61</th><td>		<b>if</b> (val)</td></tr>
+<tr><th id="62">62</th><td>			blk_queue_flag_set(QUEUE_FLAG_FAIL_IO, q);</td></tr>
+<tr><th id="63">63</th><td>		<b>else</b></td></tr>
+<tr><th id="64">64</th><td>			blk_queue_flag_clear(QUEUE_FLAG_FAIL_IO, q);</td></tr>
+<tr><th id="65">65</th><td>	}</td></tr>
+<tr><th id="66">66</th><td></td></tr>
+<tr><th id="67">67</th><td>	<b>return</b> count;</td></tr>
+<tr><th id="68">68</th><td>}</td></tr>
+<tr><th id="69">69</th><td></td></tr>
+<tr><th id="70">70</th><td><u>#<span data-ppcond="13">endif</span> /* CONFIG_FAIL_IO_TIMEOUT */</u></td></tr>
+<tr><th id="71">71</th><td></td></tr>
+<tr><th id="72">72</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="73">73</th><td><i class="doc"> * blk_abort_request -- Request request recovery for the specified command</i></td></tr>
+<tr><th id="74">74</th><td><i class="doc"> * <span class="command">@req</span>:<span class="verb">	pointer to the request of interest</span></i></td></tr>
+<tr><th id="75">75</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="76">76</th><td><i class="doc"> * This function requests that the block layer start recovery for the</i></td></tr>
+<tr><th id="77">77</th><td><i class="doc"> * request by deleting the timer and calling the q's timeout function.</i></td></tr>
+<tr><th id="78">78</th><td><i class="doc"> * LLDDs who implement their own error recovery MAY ignore the timeout</i></td></tr>
+<tr><th id="79">79</th><td><i class="doc"> * event if they generated blk_abort_request.</i></td></tr>
+<tr><th id="80">80</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="81">81</th><td><em>void</em> <dfn class="decl def fn" id="blk_abort_request" title='blk_abort_request' data-ref="blk_abort_request" data-ref-filename="blk_abort_request">blk_abort_request</dfn>(<b>struct</b> <a class="type" href="../include/linux/blkdev.h.html#request" title='request' data-ref="request" data-ref-filename="request">request</a> *<dfn class="local col1 decl" id="1req" title='req' data-type='struct request *' data-ref="1req" data-ref-filename="1req">req</dfn>)</td></tr>
+<tr><th id="82">82</th><td>{</td></tr>
+<tr><th id="83">83</th><td>	<i>/*</i></td></tr>
+<tr><th id="84">84</th><td><i>	 * All we need to ensure is that timeout scan takes place</i></td></tr>
+<tr><th id="85">85</th><td><i>	 * immediately and that scan sees the new timeout value.</i></td></tr>
+<tr><th id="86">86</th><td><i>	 * No need for fancy synchronizations.</i></td></tr>
+<tr><th id="87">87</th><td><i>	 */</i></td></tr>
+<tr><th id="88">88</th><td>	<a class="macro" href="../include/linux/compiler.h.html#284" title="({ union { typeof(req-&gt;deadline) __val; char __c[1]; } __u = { .__val = ( typeof(req-&gt;deadline)) (jiffies) }; __write_once_size(&amp;(req-&gt;deadline), __u.__c, sizeof(req-&gt;deadline)); __u.__val; })" data-ref="_M/WRITE_ONCE">WRITE_ONCE</a>(<a class="local col1 ref" href="#1req" title='req' data-ref="1req" data-ref-filename="1req">req</a>-&gt;<a class="ref field" href="../include/linux/blkdev.h.html#request::deadline" title='request::deadline' data-ref="request::deadline" data-ref-filename="request..deadline">deadline</a>, <a class="ref" href="../include/linux/jiffies.h.html#jiffies" title='jiffies' data-ref="jiffies" data-ref-filename="jiffies">jiffies</a>);</td></tr>
+<tr><th id="89">89</th><td>	<a class="ref fn" href="../include/linux/blkdev.h.html#kblockd_schedule_work" title='kblockd_schedule_work' data-ref="kblockd_schedule_work" data-ref-filename="kblockd_schedule_work">kblockd_schedule_work</a>(&amp;<a class="local col1 ref" href="#1req" title='req' data-ref="1req" data-ref-filename="1req">req</a>-&gt;<a class="ref field" href="../include/linux/blkdev.h.html#request::q" title='request::q' data-ref="request::q" data-ref-filename="request..q">q</a>-&gt;<a class="ref field" href="../include/linux/blkdev.h.html#request_queue::timeout_work" title='request_queue::timeout_work' data-ref="request_queue::timeout_work" data-ref-filename="request_queue..timeout_work">timeout_work</a>);</td></tr>
+<tr><th id="90">90</th><td>}</td></tr>
+<tr><th id="91">91</th><td><a class="macro" href="../include/linux/export.h.html#126" title="extern typeof(blk_abort_request) blk_abort_request; static const char __kstrtab_blk_abort_request[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;blk_abort_request&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_blk_abort_request91 = (void *)&amp;blk_abort_request; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;blk_abort_request&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;blk_abort_request&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;blk_abort_request&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;blk_abort_request&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#blk_abort_request" title='blk_abort_request' data-ref="blk_abort_request" data-ref-filename="blk_abort_request"><a class="ref fn" href="#blk_abort_request" title='blk_abort_request' data-ref="blk_abort_request" data-ref-filename="blk_abort_request"><a class="ref fn" href="#blk_abort_request" title='blk_abort_request' data-ref="blk_abort_request" data-ref-filename="blk_abort_request">blk_abort_request</a></a></a>);</td></tr>
+<tr><th id="92">92</th><td></td></tr>
+<tr><th id="93">93</th><td><em>unsigned</em> <em>long</em> <dfn class="decl def fn" id="blk_rq_timeout" title='blk_rq_timeout' data-ref="blk_rq_timeout" data-ref-filename="blk_rq_timeout">blk_rq_timeout</dfn>(<em>unsigned</em> <em>long</em> <dfn class="local col2 decl" id="2timeout" title='timeout' data-type='unsigned long' data-ref="2timeout" data-ref-filename="2timeout">timeout</dfn>)</td></tr>
+<tr><th id="94">94</th><td>{</td></tr>
+<tr><th id="95">95</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col3 decl" id="3maxt" title='maxt' data-type='unsigned long' data-ref="3maxt" data-ref-filename="3maxt">maxt</dfn>;</td></tr>
+<tr><th id="96">96</th><td></td></tr>
+<tr><th id="97">97</th><td>	<a class="local col3 ref" href="#3maxt" title='maxt' data-ref="3maxt" data-ref-filename="3maxt">maxt</a> = <a class="ref fn" href="../include/linux/timer.h.html#round_jiffies_up" title='round_jiffies_up' data-ref="round_jiffies_up" data-ref-filename="round_jiffies_up">round_jiffies_up</a>(<a class="ref" href="../include/linux/jiffies.h.html#jiffies" title='jiffies' data-ref="jiffies" data-ref-filename="jiffies">jiffies</a> + <a class="macro" href="blk.h.html#12" title="(5 * 1000)" data-ref="_M/BLK_MAX_TIMEOUT">BLK_MAX_TIMEOUT</a>);</td></tr>
+<tr><th id="98">98</th><td>	<b>if</b> (<a class="macro" href="../include/linux/jiffies.h.html#105" title="(({ unsigned long __dummy; typeof(timeout) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }) &amp;&amp; ({ unsigned long __dummy; typeof(maxt) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }) &amp;&amp; ((long)((maxt) - (timeout)) &lt; 0))" data-ref="_M/time_after">time_after</a>(<a class="local col2 ref" href="#2timeout" title='timeout' data-ref="2timeout" data-ref-filename="2timeout">timeout</a>, <a class="local col3 ref" href="#3maxt" title='maxt' data-ref="3maxt" data-ref-filename="3maxt">maxt</a>))</td></tr>
+<tr><th id="99">99</th><td>		<a class="local col2 ref" href="#2timeout" title='timeout' data-ref="2timeout" data-ref-filename="2timeout">timeout</a> = <a class="local col3 ref" href="#3maxt" title='maxt' data-ref="3maxt" data-ref-filename="3maxt">maxt</a>;</td></tr>
+<tr><th id="100">100</th><td></td></tr>
+<tr><th id="101">101</th><td>	<b>return</b> <a class="local col2 ref" href="#2timeout" title='timeout' data-ref="2timeout" data-ref-filename="2timeout">timeout</a>;</td></tr>
+<tr><th id="102">102</th><td>}</td></tr>
+<tr><th id="103">103</th><td></td></tr>
+<tr><th id="104">104</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="105">105</th><td><i class="doc"> * blk_add_timer - Start timeout timer for a single request</i></td></tr>
+<tr><th id="106">106</th><td><i class="doc"> * <span class="command">@req</span>:<span class="verb">	request that is about to start running.</span></i></td></tr>
+<tr><th id="107">107</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="108">108</th><td><i class="doc"> * Notes:</i></td></tr>
+<tr><th id="109">109</th><td><i class="doc"> *    Each request has its own timer, and as it is added to the queue, we</i></td></tr>
+<tr><th id="110">110</th><td><i class="doc"> *    set up the timer. When the request completes, we cancel the timer.</i></td></tr>
+<tr><th id="111">111</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="112">112</th><td><em>void</em> <dfn class="decl def fn" id="blk_add_timer" title='blk_add_timer' data-ref="blk_add_timer" data-ref-filename="blk_add_timer">blk_add_timer</dfn>(<b>struct</b> <a class="type" href="../include/linux/blkdev.h.html#request" title='request' data-ref="request" data-ref-filename="request">request</a> *<dfn class="local col4 decl" id="4req" title='req' data-type='struct request *' data-ref="4req" data-ref-filename="4req">req</dfn>)</td></tr>
+<tr><th id="113">113</th><td>{</td></tr>
+<tr><th id="114">114</th><td>	<b>struct</b> <a class="type" href="../include/linux/blkdev.h.html#request_queue" title='request_queue' data-ref="request_queue" data-ref-filename="request_queue">request_queue</a> *<dfn class="local col5 decl" id="5q" title='q' data-type='struct request_queue *' data-ref="5q" data-ref-filename="5q">q</dfn> = <a class="local col4 ref" href="#4req" title='req' data-ref="4req" data-ref-filename="4req">req</a>-&gt;<a class="ref field" href="../include/linux/blkdev.h.html#request::q" title='request::q' data-ref="request::q" data-ref-filename="request..q">q</a>;</td></tr>
+<tr><th id="115">115</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col6 decl" id="6expiry" title='expiry' data-type='unsigned long' data-ref="6expiry" data-ref-filename="6expiry">expiry</dfn>;</td></tr>
+<tr><th id="116">116</th><td></td></tr>
+<tr><th id="117">117</th><td>	<i>/*</i></td></tr>
+<tr><th id="118">118</th><td><i>	 * Some LLDs, like scsi, peek at the timeout to prevent a</i></td></tr>
+<tr><th id="119">119</th><td><i>	 * command from being retried forever.</i></td></tr>
+<tr><th id="120">120</th><td><i>	 */</i></td></tr>
+<tr><th id="121">121</th><td>	<b>if</b> (!<a class="local col4 ref" href="#4req" title='req' data-ref="4req" data-ref-filename="4req">req</a>-&gt;<a class="ref field" href="../include/linux/blkdev.h.html#request::timeout" title='request::timeout' data-ref="request::timeout" data-ref-filename="request..timeout">timeout</a>)</td></tr>
+<tr><th id="122">122</th><td>		<a class="local col4 ref" href="#4req" title='req' data-ref="4req" data-ref-filename="4req">req</a>-&gt;<a class="ref field" href="../include/linux/blkdev.h.html#request::timeout" title='request::timeout' data-ref="request::timeout" data-ref-filename="request..timeout">timeout</a> = <a class="local col5 ref" href="#5q" title='q' data-ref="5q" data-ref-filename="5q">q</a>-&gt;<a class="ref field" href="../include/linux/blkdev.h.html#request_queue::rq_timeout" title='request_queue::rq_timeout' data-ref="request_queue::rq_timeout" data-ref-filename="request_queue..rq_timeout">rq_timeout</a>;</td></tr>
+<tr><th id="123">123</th><td></td></tr>
+<tr><th id="124">124</th><td>	<a class="local col4 ref" href="#4req" title='req' data-ref="4req" data-ref-filename="4req">req</a>-&gt;<a class="ref field" href="../include/linux/blkdev.h.html#request::rq_flags" title='request::rq_flags' data-ref="request::rq_flags" data-ref-filename="request..rq_flags">rq_flags</a> &amp;= ~<a class="macro" href="../include/linux/blkdev.h.html#111" title="(( req_flags_t)(1 &lt;&lt; 21))" data-ref="_M/RQF_TIMED_OUT">RQF_TIMED_OUT</a>;</td></tr>
+<tr><th id="125">125</th><td></td></tr>
+<tr><th id="126">126</th><td>	<a class="local col6 ref" href="#6expiry" title='expiry' data-ref="6expiry" data-ref-filename="6expiry">expiry</a> = <a class="ref" href="../include/linux/jiffies.h.html#jiffies" title='jiffies' data-ref="jiffies" data-ref-filename="jiffies">jiffies</a> + <a class="local col4 ref" href="#4req" title='req' data-ref="4req" data-ref-filename="4req">req</a>-&gt;<a class="ref field" href="../include/linux/blkdev.h.html#request::timeout" title='request::timeout' data-ref="request::timeout" data-ref-filename="request..timeout">timeout</a>;</td></tr>
+<tr><th id="127">127</th><td>	<a class="macro" href="../include/linux/compiler.h.html#284" title="({ union { typeof(req-&gt;deadline) __val; char __c[1]; } __u = { .__val = ( typeof(req-&gt;deadline)) (expiry) }; __write_once_size(&amp;(req-&gt;deadline), __u.__c, sizeof(req-&gt;deadline)); __u.__val; })" data-ref="_M/WRITE_ONCE">WRITE_ONCE</a>(<a class="local col4 ref" href="#4req" title='req' data-ref="4req" data-ref-filename="4req">req</a>-&gt;<a class="ref field" href="../include/linux/blkdev.h.html#request::deadline" title='request::deadline' data-ref="request::deadline" data-ref-filename="request..deadline">deadline</a>, <a class="local col6 ref" href="#6expiry" title='expiry' data-ref="6expiry" data-ref-filename="6expiry">expiry</a>);</td></tr>
+<tr><th id="128">128</th><td></td></tr>
+<tr><th id="129">129</th><td>	<i>/*</i></td></tr>
+<tr><th id="130">130</th><td><i>	 * If the timer isn't already pending or this timeout is earlier</i></td></tr>
+<tr><th id="131">131</th><td><i>	 * than an existing one, modify the timer. Round up to next nearest</i></td></tr>
+<tr><th id="132">132</th><td><i>	 * second.</i></td></tr>
+<tr><th id="133">133</th><td><i>	 */</i></td></tr>
+<tr><th id="134">134</th><td>	<a class="local col6 ref" href="#6expiry" title='expiry' data-ref="6expiry" data-ref-filename="6expiry">expiry</a> = <a class="ref fn" href="#blk_rq_timeout" title='blk_rq_timeout' data-ref="blk_rq_timeout" data-ref-filename="blk_rq_timeout">blk_rq_timeout</a>(<a class="ref fn" href="../include/linux/timer.h.html#round_jiffies_up" title='round_jiffies_up' data-ref="round_jiffies_up" data-ref-filename="round_jiffies_up">round_jiffies_up</a>(<a class="local col6 ref" href="#6expiry" title='expiry' data-ref="6expiry" data-ref-filename="6expiry">expiry</a>));</td></tr>
+<tr><th id="135">135</th><td></td></tr>
+<tr><th id="136">136</th><td>	<b>if</b> (!<a class="ref fn" href="../include/linux/timer.h.html#timer_pending" title='timer_pending' data-ref="timer_pending" data-ref-filename="timer_pending">timer_pending</a>(&amp;<a class="local col5 ref" href="#5q" title='q' data-ref="5q" data-ref-filename="5q">q</a>-&gt;<a class="ref field" href="../include/linux/blkdev.h.html#request_queue::timeout" title='request_queue::timeout' data-ref="request_queue::timeout" data-ref-filename="request_queue..timeout">timeout</a>) ||</td></tr>
+<tr><th id="137">137</th><td>	    <a class="macro" href="../include/linux/jiffies.h.html#109" title="(({ unsigned long __dummy; typeof(q-&gt;timeout.expires) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }) &amp;&amp; ({ unsigned long __dummy; typeof(expiry) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }) &amp;&amp; ((long)((expiry) - (q-&gt;timeout.expires)) &lt; 0))" data-ref="_M/time_before">time_before</a>(<a class="local col6 ref" href="#6expiry" title='expiry' data-ref="6expiry" data-ref-filename="6expiry">expiry</a>, <a class="local col5 ref" href="#5q" title='q' data-ref="5q" data-ref-filename="5q">q</a>-&gt;<a class="ref field" href="../include/linux/blkdev.h.html#request_queue::timeout" title='request_queue::timeout' data-ref="request_queue::timeout" data-ref-filename="request_queue..timeout">timeout</a>.<a class="ref field" href="../include/linux/timer.h.html#timer_list::expires" title='timer_list::expires' data-ref="timer_list::expires" data-ref-filename="timer_list..expires">expires</a>)) {</td></tr>
+<tr><th id="138">138</th><td>		<em>unsigned</em> <em>long</em> <dfn class="local col7 decl" id="7diff" title='diff' data-type='unsigned long' data-ref="7diff" data-ref-filename="7diff">diff</dfn> = <a class="local col5 ref" href="#5q" title='q' data-ref="5q" data-ref-filename="5q">q</a>-&gt;<a class="ref field" href="../include/linux/blkdev.h.html#request_queue::timeout" title='request_queue::timeout' data-ref="request_queue::timeout" data-ref-filename="request_queue..timeout">timeout</a>.<a class="ref field" href="../include/linux/timer.h.html#timer_list::expires" title='timer_list::expires' data-ref="timer_list::expires" data-ref-filename="timer_list..expires">expires</a> - <a class="local col6 ref" href="#6expiry" title='expiry' data-ref="6expiry" data-ref-filename="6expiry">expiry</a>;</td></tr>
+<tr><th id="139">139</th><td></td></tr>
+<tr><th id="140">140</th><td>		<i>/*</i></td></tr>
+<tr><th id="141">141</th><td><i>		 * Due to added timer slack to group timers, the timer</i></td></tr>
+<tr><th id="142">142</th><td><i>		 * will often be a little in front of what we asked for.</i></td></tr>
+<tr><th id="143">143</th><td><i>		 * So apply some tolerance here too, otherwise we keep</i></td></tr>
+<tr><th id="144">144</th><td><i>		 * modifying the timer because expires for value X</i></td></tr>
+<tr><th id="145">145</th><td><i>		 * will be X + something.</i></td></tr>
+<tr><th id="146">146</th><td><i>		 */</i></td></tr>
+<tr><th id="147">147</th><td>		<b>if</b> (!<a class="ref fn" href="../include/linux/timer.h.html#timer_pending" title='timer_pending' data-ref="timer_pending" data-ref-filename="timer_pending">timer_pending</a>(&amp;<a class="local col5 ref" href="#5q" title='q' data-ref="5q" data-ref-filename="5q">q</a>-&gt;<a class="ref field" href="../include/linux/blkdev.h.html#request_queue::timeout" title='request_queue::timeout' data-ref="request_queue::timeout" data-ref-filename="request_queue..timeout">timeout</a>) || (<a class="local col7 ref" href="#7diff" title='diff' data-ref="7diff" data-ref-filename="7diff">diff</a> &gt;= <a class="macro" href="../include/asm-generic/param.h.html#8" title="1000" data-ref="_M/HZ">HZ</a> / <var>2</var>))</td></tr>
+<tr><th id="148">148</th><td>			<a class="ref fn" href="../include/linux/timer.h.html#mod_timer" title='mod_timer' data-ref="mod_timer" data-ref-filename="mod_timer">mod_timer</a>(&amp;<a class="local col5 ref" href="#5q" title='q' data-ref="5q" data-ref-filename="5q">q</a>-&gt;<a class="ref field" href="../include/linux/blkdev.h.html#request_queue::timeout" title='request_queue::timeout' data-ref="request_queue::timeout" data-ref-filename="request_queue..timeout">timeout</a>, <a class="local col6 ref" href="#6expiry" title='expiry' data-ref="6expiry" data-ref-filename="6expiry">expiry</a>);</td></tr>
+<tr><th id="149">149</th><td>	}</td></tr>
+<tr><th id="150">150</th><td></td></tr>
+<tr><th id="151">151</th><td>}</td></tr>
+<tr><th id="152">152</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

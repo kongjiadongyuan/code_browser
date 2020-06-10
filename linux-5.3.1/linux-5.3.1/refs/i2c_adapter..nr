@@ -1,0 +1,30 @@
+<dec f='linux-5.3.1/include/linux/i2c.h' l='703' type='int'/>
+<use f='linux-5.3.1/include/linux/i2c.h' l='890' u='r' c='i2c_adapter_id'/>
+<offset>6656</offset>
+<use f='linux-5.3.1/include/trace/events/i2c.h' l='37' u='r' c='trace_event_raw_event_i2c_write'/>
+<use f='linux-5.3.1/include/trace/events/i2c.h' l='70' u='r' c='trace_event_raw_event_i2c_read'/>
+<use f='linux-5.3.1/include/trace/events/i2c.h' l='101' u='r' c='trace_event_raw_event_i2c_reply'/>
+<use f='linux-5.3.1/include/trace/events/i2c.h' l='131' u='r' c='trace_event_raw_event_i2c_result'/>
+<use f='linux-5.3.1/include/trace/events/i2c.h' l='37' u='r' c='perf_trace_i2c_write'/>
+<use f='linux-5.3.1/include/trace/events/i2c.h' l='70' u='r' c='perf_trace_i2c_read'/>
+<use f='linux-5.3.1/include/trace/events/i2c.h' l='101' u='r' c='perf_trace_i2c_reply'/>
+<use f='linux-5.3.1/include/trace/events/i2c.h' l='131' u='r' c='perf_trace_i2c_result'/>
+<use f='linux-5.3.1/drivers/i2c/i2c-core-base.c' l='1199' u='r' c='i2c_scan_static_board_info'/>
+<use f='linux-5.3.1/drivers/i2c/i2c-core-base.c' l='1342' u='r' c='i2c_register_adapter'/>
+<use f='linux-5.3.1/drivers/i2c/i2c-core-base.c' l='1376' u='r' c='i2c_register_adapter'/>
+<use f='linux-5.3.1/drivers/i2c/i2c-core-base.c' l='1392' u='r' c='i2c_register_adapter'/>
+<use f='linux-5.3.1/drivers/i2c/i2c-core-base.c' l='1409' u='r' c='__i2c_add_numbered_adapter'/>
+<use f='linux-5.3.1/drivers/i2c/i2c-core-base.c' l='1409' u='r' c='__i2c_add_numbered_adapter'/>
+<use f='linux-5.3.1/drivers/i2c/i2c-core-base.c' l='1439' u='w' c='i2c_add_adapter'/>
+<use f='linux-5.3.1/drivers/i2c/i2c-core-base.c' l='1451' u='w' c='i2c_add_adapter'/>
+<use f='linux-5.3.1/drivers/i2c/i2c-core-base.c' l='1482' u='r' c='i2c_add_numbered_adapter'/>
+<use f='linux-5.3.1/drivers/i2c/i2c-core-base.c' l='1542' u='r' c='i2c_del_adapter'/>
+<use f='linux-5.3.1/drivers/i2c/i2c-core-base.c' l='1601' u='r' c='i2c_del_adapter'/>
+<use f='linux-5.3.1/include/trace/events/smbus.h' l='41' u='r' c='trace_event_raw_event_smbus_write'/>
+<use f='linux-5.3.1/include/trace/events/smbus.h' l='107' u='r' c='trace_event_raw_event_smbus_read'/>
+<use f='linux-5.3.1/include/trace/events/smbus.h' l='149' u='r' c='trace_event_raw_event_smbus_reply'/>
+<use f='linux-5.3.1/include/trace/events/smbus.h' l='215' u='r' c='trace_event_raw_event_smbus_result'/>
+<use f='linux-5.3.1/include/trace/events/smbus.h' l='41' u='r' c='perf_trace_smbus_write'/>
+<use f='linux-5.3.1/include/trace/events/smbus.h' l='107' u='r' c='perf_trace_smbus_read'/>
+<use f='linux-5.3.1/include/trace/events/smbus.h' l='149' u='r' c='perf_trace_smbus_reply'/>
+<use f='linux-5.3.1/include/trace/events/smbus.h' l='215' u='r' c='perf_trace_smbus_result'/>

@@ -1,0 +1,386 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>calling.h source code [linux-5.3.1/arch/x86/entry/calling.h] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/arch/x86/entry/calling.h'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>linux-5.3.1</a>/<a href='../..'>arch</a>/<a href='..'>x86</a>/<a href='./'>entry</a>/<a href='calling.h.html'>calling.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0 */</i></td></tr>
+<tr><th id="2">2</th><td><u>#include <a href="../../../include/linux/jump_label.h.html">&lt;linux/jump_label.h&gt;</a></u></td></tr>
+<tr><th id="3">3</th><td><u>#include <a href="../include/asm/unwind_hints.h.html">&lt;asm/unwind_hints.h&gt;</a></u></td></tr>
+<tr><th id="4">4</th><td><u>#include <a href="../include/asm/cpufeatures.h.html">&lt;asm/cpufeatures.h&gt;</a></u></td></tr>
+<tr><th id="5">5</th><td><u>#include <a href="../include/asm/page_types.h.html">&lt;asm/page_types.h&gt;</a></u></td></tr>
+<tr><th id="6">6</th><td><u>#include <a href="../include/asm/percpu.h.html">&lt;asm/percpu.h&gt;</a></u></td></tr>
+<tr><th id="7">7</th><td><u>#include <a href="../include/asm/asm-offsets.h.html">&lt;asm/asm-offsets.h&gt;</a></u></td></tr>
+<tr><th id="8">8</th><td><u>#include <a href="../include/asm/processor-flags.h.html">&lt;asm/processor-flags.h&gt;</a></u></td></tr>
+<tr><th id="9">9</th><td></td></tr>
+<tr><th id="10">10</th><td><i>/*</i></td></tr>
+<tr><th id="11">11</th><td><i></i></td></tr>
+<tr><th id="12">12</th><td><i> x86 function call convention, 64-bit:</i></td></tr>
+<tr><th id="13">13</th><td><i> -------------------------------------</i></td></tr>
+<tr><th id="14">14</th><td><i>  arguments           |  callee-saved      | extra caller-saved | return</i></td></tr>
+<tr><th id="15">15</th><td><i> [callee-clobbered]   |                    | [callee-clobbered] |</i></td></tr>
+<tr><th id="16">16</th><td><i> ---------------------------------------------------------------------------</i></td></tr>
+<tr><th id="17">17</th><td><i> rdi rsi rdx rcx r8-9 | rbx rbp [*] r12-15 | r10-11             | rax, rdx [**]</i></td></tr>
+<tr><th id="18">18</th><td><i></i></td></tr>
+<tr><th id="19">19</th><td><i> ( rsp is obviously invariant across normal function calls. (gcc can 'merge'</i></td></tr>
+<tr><th id="20">20</th><td><i>   functions when it sees tail-call optimization possibilities) rflags is</i></td></tr>
+<tr><th id="21">21</th><td><i>   clobbered. Leftover arguments are passed over the stack frame.)</i></td></tr>
+<tr><th id="22">22</th><td><i></i></td></tr>
+<tr><th id="23">23</th><td><i> [*]  In the frame-pointers case rbp is fixed to the stack frame.</i></td></tr>
+<tr><th id="24">24</th><td><i></i></td></tr>
+<tr><th id="25">25</th><td><i> [**] for struct return values wider than 64 bits the return convention is a</i></td></tr>
+<tr><th id="26">26</th><td><i>      bit more complex: up to 128 bits width we return small structures</i></td></tr>
+<tr><th id="27">27</th><td><i>      straight in rax, rdx. For structures larger than that (3 words or</i></td></tr>
+<tr><th id="28">28</th><td><i>      larger) the caller puts a pointer to an on-stack return struct</i></td></tr>
+<tr><th id="29">29</th><td><i>      [allocated in the caller's stack frame] into the first argument - i.e.</i></td></tr>
+<tr><th id="30">30</th><td><i>      into rdi. All other arguments shift up by one in this case.</i></td></tr>
+<tr><th id="31">31</th><td><i>      Fortunately this case is rare in the kernel.</i></td></tr>
+<tr><th id="32">32</th><td><i></i></td></tr>
+<tr><th id="33">33</th><td><i>For 32-bit we have the following conventions - kernel is built with</i></td></tr>
+<tr><th id="34">34</th><td><i>-mregparm=3 and -freg-struct-return:</i></td></tr>
+<tr><th id="35">35</th><td><i></i></td></tr>
+<tr><th id="36">36</th><td><i> x86 function calling convention, 32-bit:</i></td></tr>
+<tr><th id="37">37</th><td><i> ----------------------------------------</i></td></tr>
+<tr><th id="38">38</th><td><i>  arguments         | callee-saved        | extra caller-saved | return</i></td></tr>
+<tr><th id="39">39</th><td><i> [callee-clobbered] |                     | [callee-clobbered] |</i></td></tr>
+<tr><th id="40">40</th><td><i> -------------------------------------------------------------------------</i></td></tr>
+<tr><th id="41">41</th><td><i> eax edx ecx        | ebx edi esi ebp [*] | &lt;none&gt;             | eax, edx [**]</i></td></tr>
+<tr><th id="42">42</th><td><i></i></td></tr>
+<tr><th id="43">43</th><td><i> ( here too esp is obviously invariant across normal function calls. eflags</i></td></tr>
+<tr><th id="44">44</th><td><i>   is clobbered. Leftover arguments are passed over the stack frame. )</i></td></tr>
+<tr><th id="45">45</th><td><i></i></td></tr>
+<tr><th id="46">46</th><td><i> [*]  In the frame-pointers case ebp is fixed to the stack frame.</i></td></tr>
+<tr><th id="47">47</th><td><i></i></td></tr>
+<tr><th id="48">48</th><td><i> [**] We build with -freg-struct-return, which on 32-bit means similar</i></td></tr>
+<tr><th id="49">49</th><td><i>      semantics as on 64-bit: edx can be used for a second return value</i></td></tr>
+<tr><th id="50">50</th><td><i>      (i.e. covering integer and structure sizes up to 64 bits) - after that</i></td></tr>
+<tr><th id="51">51</th><td><i>      it gets more complex and more expensive: 3-word or larger struct returns</i></td></tr>
+<tr><th id="52">52</th><td><i>      get done in the caller's frame and the pointer to the return struct goes</i></td></tr>
+<tr><th id="53">53</th><td><i>      into regparm0, i.e. eax - the other arguments shift up and the</i></td></tr>
+<tr><th id="54">54</th><td><i>      function's register parameters degenerate to regparm=2 in essence.</i></td></tr>
+<tr><th id="55">55</th><td><i></i></td></tr>
+<tr><th id="56">56</th><td><i>*/</i></td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td><u>#<span data-ppcond="58">ifdef</span> <a class="macro" href="../../../include/generated/autoconf.h.html#961" data-ref="_M/CONFIG_X86_64">CONFIG_X86_64</a></u></td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td><i>/*</i></td></tr>
+<tr><th id="61">61</th><td><i> * 64-bit system call stack frame layout defines and helpers,</i></td></tr>
+<tr><th id="62">62</th><td><i> * for assembly code:</i></td></tr>
+<tr><th id="63">63</th><td><i> */</i></td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td><i>/* The layout forms the "struct pt_regs" on the stack: */</i></td></tr>
+<tr><th id="66">66</th><td><i>/*</i></td></tr>
+<tr><th id="67">67</th><td><i> * C ABI says these regs are callee-preserved. They aren't saved on kernel entry</i></td></tr>
+<tr><th id="68">68</th><td><i> * unless syscall needs a complete, fully filled "struct pt_regs".</i></td></tr>
+<tr><th id="69">69</th><td><i> */</i></td></tr>
+<tr><th id="70">70</th><td><u>#define <dfn class="macro" id="_M/R15" data-ref="_M/R15">R15</dfn>		0*8</u></td></tr>
+<tr><th id="71">71</th><td><u>#define <dfn class="macro" id="_M/R14" data-ref="_M/R14">R14</dfn>		1*8</u></td></tr>
+<tr><th id="72">72</th><td><u>#define <dfn class="macro" id="_M/R13" data-ref="_M/R13">R13</dfn>		2*8</u></td></tr>
+<tr><th id="73">73</th><td><u>#define <dfn class="macro" id="_M/R12" data-ref="_M/R12">R12</dfn>		3*8</u></td></tr>
+<tr><th id="74">74</th><td><u>#define <dfn class="macro" id="_M/RBP" data-ref="_M/RBP">RBP</dfn>		4*8</u></td></tr>
+<tr><th id="75">75</th><td><u>#define <dfn class="macro" id="_M/RBX" data-ref="_M/RBX">RBX</dfn>		5*8</u></td></tr>
+<tr><th id="76">76</th><td><i>/* These regs are callee-clobbered. Always saved on kernel entry. */</i></td></tr>
+<tr><th id="77">77</th><td><u>#define <dfn class="macro" id="_M/R11" data-ref="_M/R11">R11</dfn>		6*8</u></td></tr>
+<tr><th id="78">78</th><td><u>#define <dfn class="macro" id="_M/R10" data-ref="_M/R10">R10</dfn>		7*8</u></td></tr>
+<tr><th id="79">79</th><td><u>#define <dfn class="macro" id="_M/R9" data-ref="_M/R9">R9</dfn>		8*8</u></td></tr>
+<tr><th id="80">80</th><td><u>#define <dfn class="macro" id="_M/R8" data-ref="_M/R8">R8</dfn>		9*8</u></td></tr>
+<tr><th id="81">81</th><td><u>#define <dfn class="macro" id="_M/RAX" data-ref="_M/RAX">RAX</dfn>		10*8</u></td></tr>
+<tr><th id="82">82</th><td><u>#define <dfn class="macro" id="_M/RCX" data-ref="_M/RCX">RCX</dfn>		11*8</u></td></tr>
+<tr><th id="83">83</th><td><u>#define <dfn class="macro" id="_M/RDX" data-ref="_M/RDX">RDX</dfn>		12*8</u></td></tr>
+<tr><th id="84">84</th><td><u>#define <dfn class="macro" id="_M/RSI" data-ref="_M/RSI">RSI</dfn>		13*8</u></td></tr>
+<tr><th id="85">85</th><td><u>#define <dfn class="macro" id="_M/RDI" data-ref="_M/RDI">RDI</dfn>		14*8</u></td></tr>
+<tr><th id="86">86</th><td><i>/*</i></td></tr>
+<tr><th id="87">87</th><td><i> * On syscall entry, this is syscall#. On CPU exception, this is error code.</i></td></tr>
+<tr><th id="88">88</th><td><i> * On hw interrupt, it's IRQ number:</i></td></tr>
+<tr><th id="89">89</th><td><i> */</i></td></tr>
+<tr><th id="90">90</th><td><u>#define <dfn class="macro" id="_M/ORIG_RAX" data-ref="_M/ORIG_RAX">ORIG_RAX</dfn>	15*8</u></td></tr>
+<tr><th id="91">91</th><td><i>/* Return frame for iretq */</i></td></tr>
+<tr><th id="92">92</th><td><u>#define <dfn class="macro" id="_M/RIP" data-ref="_M/RIP">RIP</dfn>		16*8</u></td></tr>
+<tr><th id="93">93</th><td><u>#define <dfn class="macro" id="_M/CS" data-ref="_M/CS">CS</dfn>		17*8</u></td></tr>
+<tr><th id="94">94</th><td><u>#define <dfn class="macro" id="_M/EFLAGS" data-ref="_M/EFLAGS">EFLAGS</dfn>		18*8</u></td></tr>
+<tr><th id="95">95</th><td><u>#define <dfn class="macro" id="_M/RSP" data-ref="_M/RSP">RSP</dfn>		19*8</u></td></tr>
+<tr><th id="96">96</th><td><u>#define <dfn class="macro" id="_M/SS" data-ref="_M/SS">SS</dfn>		20*8</u></td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td><u>#define <dfn class="macro" id="_M/SIZEOF_PTREGS" data-ref="_M/SIZEOF_PTREGS">SIZEOF_PTREGS</dfn>	21*8</u></td></tr>
+<tr><th id="99">99</th><td></td></tr>
+<tr><th id="100">100</th><td>.macro PUSH_AND_CLEAR_REGS rdx=%rdx rax=%rax save_ret=<var>0</var></td></tr>
+<tr><th id="101">101</th><td>	<i>/*</i></td></tr>
+<tr><th id="102">102</th><td><i>	 * Push registers and sanitize registers of values that a</i></td></tr>
+<tr><th id="103">103</th><td><i>	 * speculation attack might otherwise want to exploit. The</i></td></tr>
+<tr><th id="104">104</th><td><i>	 * lower registers are likely clobbered well before they</i></td></tr>
+<tr><th id="105">105</th><td><i>	 * could be put to use in a speculative execution gadget.</i></td></tr>
+<tr><th id="106">106</th><td><i>	 * Interleave XOR with PUSH for better uop scheduling:</i></td></tr>
+<tr><th id="107">107</th><td><i>	 */</i></td></tr>
+<tr><th id="108">108</th><td>	.<b>if</b> \save_ret</td></tr>
+<tr><th id="109">109</th><td>	pushq	%rsi		<i>/* pt_regs-&gt;si */</i></td></tr>
+<tr><th id="110">110</th><td>	movq	<var>8</var>(%rsp), %rsi	<i>/* temporarily store the return address in %rsi */</i></td></tr>
+<tr><th id="111">111</th><td>	movq	%rdi, <var>8</var>(%rsp)	<i>/* pt_regs-&gt;di (overwriting original return address) */</i></td></tr>
+<tr><th id="112">112</th><td>	.<b>else</b></td></tr>
+<tr><th id="113">113</th><td>	pushq   %rdi		<i>/* pt_regs-&gt;di */</i></td></tr>
+<tr><th id="114">114</th><td>	pushq   %rsi		<i>/* pt_regs-&gt;si */</i></td></tr>
+<tr><th id="115">115</th><td>	.endif</td></tr>
+<tr><th id="116">116</th><td>	pushq	\rdx		<i>/* pt_regs-&gt;dx */</i></td></tr>
+<tr><th id="117">117</th><td>	xorl	%edx, %edx	<i>/* nospec   dx */</i></td></tr>
+<tr><th id="118">118</th><td>	pushq   %rcx		<i>/* pt_regs-&gt;cx */</i></td></tr>
+<tr><th id="119">119</th><td>	xorl	%ecx, %ecx	<i>/* nospec   cx */</i></td></tr>
+<tr><th id="120">120</th><td>	pushq   \rax		<i>/* pt_regs-&gt;ax */</i></td></tr>
+<tr><th id="121">121</th><td>	pushq   %r8		<i>/* pt_regs-&gt;r8 */</i></td></tr>
+<tr><th id="122">122</th><td>	xorl	%r8d, %r8d	<i>/* nospec   r8 */</i></td></tr>
+<tr><th id="123">123</th><td>	pushq   %r9		<i>/* pt_regs-&gt;r9 */</i></td></tr>
+<tr><th id="124">124</th><td>	xorl	%r9d, %r9d	<i>/* nospec   r9 */</i></td></tr>
+<tr><th id="125">125</th><td>	pushq   %r10		<i>/* pt_regs-&gt;r10 */</i></td></tr>
+<tr><th id="126">126</th><td>	xorl	%r10d, %r10d	<i>/* nospec   r10 */</i></td></tr>
+<tr><th id="127">127</th><td>	pushq   %r11		<i>/* pt_regs-&gt;r11 */</i></td></tr>
+<tr><th id="128">128</th><td>	xorl	%r11d, %r11d	<i>/* nospec   r11*/</i></td></tr>
+<tr><th id="129">129</th><td>	pushq	%rbx		<i>/* pt_regs-&gt;rbx */</i></td></tr>
+<tr><th id="130">130</th><td>	xorl    %ebx, %ebx	<i>/* nospec   rbx*/</i></td></tr>
+<tr><th id="131">131</th><td>	pushq	%rbp		<i>/* pt_regs-&gt;rbp */</i></td></tr>
+<tr><th id="132">132</th><td>	xorl    %ebp, %ebp	<i>/* nospec   rbp*/</i></td></tr>
+<tr><th id="133">133</th><td>	pushq	%r12		<i>/* pt_regs-&gt;r12 */</i></td></tr>
+<tr><th id="134">134</th><td>	xorl	%r12d, %r12d	<i>/* nospec   r12*/</i></td></tr>
+<tr><th id="135">135</th><td>	pushq	%r13		<i>/* pt_regs-&gt;r13 */</i></td></tr>
+<tr><th id="136">136</th><td>	xorl	%r13d, %r13d	<i>/* nospec   r13*/</i></td></tr>
+<tr><th id="137">137</th><td>	pushq	%r14		<i>/* pt_regs-&gt;r14 */</i></td></tr>
+<tr><th id="138">138</th><td>	xorl	%r14d, %r14d	<i>/* nospec   r14*/</i></td></tr>
+<tr><th id="139">139</th><td>	pushq	%r15		<i>/* pt_regs-&gt;r15 */</i></td></tr>
+<tr><th id="140">140</th><td>	xorl	%r15d, %r15d	<i>/* nospec   r15*/</i></td></tr>
+<tr><th id="141">141</th><td>	UNWIND_HINT_REGS</td></tr>
+<tr><th id="142">142</th><td>	.<b>if</b> \save_ret</td></tr>
+<tr><th id="143">143</th><td>	pushq	%rsi		<i>/* return address on top of stack */</i></td></tr>
+<tr><th id="144">144</th><td>	.endif</td></tr>
+<tr><th id="145">145</th><td>.endm</td></tr>
+<tr><th id="146">146</th><td></td></tr>
+<tr><th id="147">147</th><td>.macro POP_REGS pop_rdi=<var>1</var> skip_r11rcx=<var>0</var></td></tr>
+<tr><th id="148">148</th><td>	popq %r15</td></tr>
+<tr><th id="149">149</th><td>	popq %r14</td></tr>
+<tr><th id="150">150</th><td>	popq %r13</td></tr>
+<tr><th id="151">151</th><td>	popq %r12</td></tr>
+<tr><th id="152">152</th><td>	popq %rbp</td></tr>
+<tr><th id="153">153</th><td>	popq %rbx</td></tr>
+<tr><th id="154">154</th><td>	.<b>if</b> \skip_r11rcx</td></tr>
+<tr><th id="155">155</th><td>	popq %rsi</td></tr>
+<tr><th id="156">156</th><td>	.<b>else</b></td></tr>
+<tr><th id="157">157</th><td>	popq %r11</td></tr>
+<tr><th id="158">158</th><td>	.endif</td></tr>
+<tr><th id="159">159</th><td>	popq %r10</td></tr>
+<tr><th id="160">160</th><td>	popq %r9</td></tr>
+<tr><th id="161">161</th><td>	popq %r8</td></tr>
+<tr><th id="162">162</th><td>	popq %rax</td></tr>
+<tr><th id="163">163</th><td>	.<b>if</b> \skip_r11rcx</td></tr>
+<tr><th id="164">164</th><td>	popq %rsi</td></tr>
+<tr><th id="165">165</th><td>	.<b>else</b></td></tr>
+<tr><th id="166">166</th><td>	popq %rcx</td></tr>
+<tr><th id="167">167</th><td>	.endif</td></tr>
+<tr><th id="168">168</th><td>	popq %rdx</td></tr>
+<tr><th id="169">169</th><td>	popq %rsi</td></tr>
+<tr><th id="170">170</th><td>	.<b>if</b> \pop_rdi</td></tr>
+<tr><th id="171">171</th><td>	popq %rdi</td></tr>
+<tr><th id="172">172</th><td>	.endif</td></tr>
+<tr><th id="173">173</th><td>.endm</td></tr>
+<tr><th id="174">174</th><td></td></tr>
+<tr><th id="175">175</th><td><u>#<span data-ppcond="175">ifdef</span> <a class="macro" href="../../../include/generated/autoconf.h.html#320" data-ref="_M/CONFIG_PAGE_TABLE_ISOLATION">CONFIG_PAGE_TABLE_ISOLATION</a></u></td></tr>
+<tr><th id="176">176</th><td></td></tr>
+<tr><th id="177">177</th><td><i>/*</i></td></tr>
+<tr><th id="178">178</th><td><i> * PAGE_TABLE_ISOLATION PGDs are 8k.  Flip bit 12 to switch between the two</i></td></tr>
+<tr><th id="179">179</th><td><i> * halves:</i></td></tr>
+<tr><th id="180">180</th><td><i> */</i></td></tr>
+<tr><th id="181">181</th><td><u>#define <dfn class="macro" id="_M/PTI_USER_PGTABLE_BIT" data-ref="_M/PTI_USER_PGTABLE_BIT">PTI_USER_PGTABLE_BIT</dfn>		PAGE_SHIFT</u></td></tr>
+<tr><th id="182">182</th><td><u>#define <dfn class="macro" id="_M/PTI_USER_PGTABLE_MASK" data-ref="_M/PTI_USER_PGTABLE_MASK">PTI_USER_PGTABLE_MASK</dfn>		(1 &lt;&lt; PTI_USER_PGTABLE_BIT)</u></td></tr>
+<tr><th id="183">183</th><td><u>#define <dfn class="macro" id="_M/PTI_USER_PCID_BIT" data-ref="_M/PTI_USER_PCID_BIT">PTI_USER_PCID_BIT</dfn>		X86_CR3_PTI_PCID_USER_BIT</u></td></tr>
+<tr><th id="184">184</th><td><u>#define <dfn class="macro" id="_M/PTI_USER_PCID_MASK" data-ref="_M/PTI_USER_PCID_MASK">PTI_USER_PCID_MASK</dfn>		(1 &lt;&lt; PTI_USER_PCID_BIT)</u></td></tr>
+<tr><th id="185">185</th><td><u>#define <dfn class="macro" id="_M/PTI_USER_PGTABLE_AND_PCID_MASK" data-ref="_M/PTI_USER_PGTABLE_AND_PCID_MASK">PTI_USER_PGTABLE_AND_PCID_MASK</dfn>  (PTI_USER_PCID_MASK | PTI_USER_PGTABLE_MASK)</u></td></tr>
+<tr><th id="186">186</th><td></td></tr>
+<tr><th id="187">187</th><td>.macro SET_NOFLUSH_BIT	reg:req</td></tr>
+<tr><th id="188">188</th><td>	bts	$<a class="macro" href="../include/uapi/asm/processor-flags.h.html#85" title="63" data-ref="_M/X86_CR3_PCID_NOFLUSH_BIT">X86_CR3_PCID_NOFLUSH_BIT</a>, \reg</td></tr>
+<tr><th id="189">189</th><td>.endm</td></tr>
+<tr><th id="190">190</th><td></td></tr>
+<tr><th id="191">191</th><td>.macro ADJUST_KERNEL_CR3 reg:req</td></tr>
+<tr><th id="192">192</th><td>	ALTERNATIVE <q>""</q>, <q>"SET_NOFLUSH_BIT \reg"</q>, <a class="macro" href="../include/asm/cpufeatures.h.html#131" title="( 4*32+17)" data-ref="_M/X86_FEATURE_PCID">X86_FEATURE_PCID</a></td></tr>
+<tr><th id="193">193</th><td>	<i>/* Clear PCID and "PAGE_TABLE_ISOLATION bit", point CR3 at kernel pagetables: */</i></td></tr>
+<tr><th id="194">194</th><td>	andq    $(~<a class="macro" href="#185" title="((1 &lt;&lt; 11) | (1 &lt;&lt; 12))" data-ref="_M/PTI_USER_PGTABLE_AND_PCID_MASK">PTI_USER_PGTABLE_AND_PCID_MASK</a>), \reg</td></tr>
+<tr><th id="195">195</th><td>.endm</td></tr>
+<tr><th id="196">196</th><td></td></tr>
+<tr><th id="197">197</th><td>.macro SWITCH_TO_KERNEL_CR3 scratch_reg:req</td></tr>
+<tr><th id="198">198</th><td>	ALTERNATIVE <q>"jmp .Lend_\@"</q>, <q>""</q>, <a class="macro" href="../include/asm/cpufeatures.h.html#204" title="( 7*32+11)" data-ref="_M/X86_FEATURE_PTI">X86_FEATURE_PTI</a></td></tr>
+<tr><th id="199">199</th><td>	mov	%cr3, \scratch_reg</td></tr>
+<tr><th id="200">200</th><td>	ADJUST_KERNEL_CR3 \scratch_reg</td></tr>
+<tr><th id="201">201</th><td>	mov	\scratch_reg, %cr3</td></tr>
+<tr><th id="202">202</th><td>.Lend_\@:</td></tr>
+<tr><th id="203">203</th><td>.endm</td></tr>
+<tr><th id="204">204</th><td></td></tr>
+<tr><th id="205">205</th><td><u>#define <dfn class="macro" id="_M/THIS_CPU_user_pcid_flush_mask" data-ref="_M/THIS_CPU_user_pcid_flush_mask">THIS_CPU_user_pcid_flush_mask</dfn>   \</u></td></tr>
+<tr><th id="206">206</th><td><u>	PER_CPU_VAR(cpu_tlbstate) + TLB_STATE_user_pcid_flush_mask</u></td></tr>
+<tr><th id="207">207</th><td></td></tr>
+<tr><th id="208">208</th><td>.macro SWITCH_TO_USER_CR3_NOSTACK scratch_reg:req scratch_reg2:req</td></tr>
+<tr><th id="209">209</th><td>	ALTERNATIVE <q>"jmp .Lend_\@"</q>, <q>""</q>, <a class="macro" href="../include/asm/cpufeatures.h.html#204" title="( 7*32+11)" data-ref="_M/X86_FEATURE_PTI">X86_FEATURE_PTI</a></td></tr>
+<tr><th id="210">210</th><td>	mov	%cr3, \scratch_reg</td></tr>
+<tr><th id="211">211</th><td></td></tr>
+<tr><th id="212">212</th><td>	ALTERNATIVE <q>"jmp .Lwrcr3_\@"</q>, <q>""</q>, <a class="macro" href="../include/asm/cpufeatures.h.html#131" title="( 4*32+17)" data-ref="_M/X86_FEATURE_PCID">X86_FEATURE_PCID</a></td></tr>
+<tr><th id="213">213</th><td></td></tr>
+<tr><th id="214">214</th><td>	<i>/*</i></td></tr>
+<tr><th id="215">215</th><td><i>	 * Test if the ASID needs a flush.</i></td></tr>
+<tr><th id="216">216</th><td><i>	 */</i></td></tr>
+<tr><th id="217">217</th><td>	movq	\scratch_reg, \scratch_reg2</td></tr>
+<tr><th id="218">218</th><td>	andq	$(<var>0x7FF</var>), \scratch_reg		<i>/* mask ASID */</i></td></tr>
+<tr><th id="219">219</th><td>	bt	\scratch_reg, <a class="macro" href="#205" title="%gs:cpu_tlbstate + 22" data-ref="_M/THIS_CPU_user_pcid_flush_mask">THIS_CPU_user_pcid_flush_mask</a></td></tr>
+<tr><th id="220">220</th><td>	jnc	.Lnoflush_\@</td></tr>
+<tr><th id="221">221</th><td></td></tr>
+<tr><th id="222">222</th><td>	<i>/* Flush needed, clear the bit */</i></td></tr>
+<tr><th id="223">223</th><td>	btr	\scratch_reg, <a class="macro" href="#205" title="%gs:cpu_tlbstate + 22" data-ref="_M/THIS_CPU_user_pcid_flush_mask">THIS_CPU_user_pcid_flush_mask</a></td></tr>
+<tr><th id="224">224</th><td>	movq	\scratch_reg2, \scratch_reg</td></tr>
+<tr><th id="225">225</th><td>	jmp	.Lwrcr3_pcid_\@</td></tr>
+<tr><th id="226">226</th><td></td></tr>
+<tr><th id="227">227</th><td>.Lnoflush_\@:</td></tr>
+<tr><th id="228">228</th><td>	movq	\scratch_reg2, \scratch_reg</td></tr>
+<tr><th id="229">229</th><td>	SET_NOFLUSH_BIT \scratch_reg</td></tr>
+<tr><th id="230">230</th><td></td></tr>
+<tr><th id="231">231</th><td>.Lwrcr3_pcid_\@:</td></tr>
+<tr><th id="232">232</th><td>	<i>/* Flip the ASID to the user version */</i></td></tr>
+<tr><th id="233">233</th><td>	orq	$(<a class="macro" href="#184" title="(1 &lt;&lt; 11)" data-ref="_M/PTI_USER_PCID_MASK">PTI_USER_PCID_MASK</a>), \scratch_reg</td></tr>
+<tr><th id="234">234</th><td></td></tr>
+<tr><th id="235">235</th><td>.Lwrcr3_\@:</td></tr>
+<tr><th id="236">236</th><td>	<i>/* Flip the PGD to the user version */</i></td></tr>
+<tr><th id="237">237</th><td>	orq     $(<a class="macro" href="#182" title="(1 &lt;&lt; 12)" data-ref="_M/PTI_USER_PGTABLE_MASK">PTI_USER_PGTABLE_MASK</a>), \scratch_reg</td></tr>
+<tr><th id="238">238</th><td>	mov	\scratch_reg, %cr3</td></tr>
+<tr><th id="239">239</th><td>.Lend_\@:</td></tr>
+<tr><th id="240">240</th><td>.endm</td></tr>
+<tr><th id="241">241</th><td></td></tr>
+<tr><th id="242">242</th><td>.macro SWITCH_TO_USER_CR3_STACK	scratch_reg:req</td></tr>
+<tr><th id="243">243</th><td>	pushq	%rax</td></tr>
+<tr><th id="244">244</th><td>	SWITCH_TO_USER_CR3_NOSTACK scratch_reg=\scratch_reg scratch_reg2=%rax</td></tr>
+<tr><th id="245">245</th><td>	popq	%rax</td></tr>
+<tr><th id="246">246</th><td>.endm</td></tr>
+<tr><th id="247">247</th><td></td></tr>
+<tr><th id="248">248</th><td>.macro SAVE_AND_SWITCH_TO_KERNEL_CR3 scratch_reg:req save_reg:req</td></tr>
+<tr><th id="249">249</th><td>	ALTERNATIVE <q>"jmp .Ldone_\@"</q>, <q>""</q>, <a class="macro" href="../include/asm/cpufeatures.h.html#204" title="( 7*32+11)" data-ref="_M/X86_FEATURE_PTI">X86_FEATURE_PTI</a></td></tr>
+<tr><th id="250">250</th><td>	movq	%cr3, \scratch_reg</td></tr>
+<tr><th id="251">251</th><td>	movq	\scratch_reg, \save_reg</td></tr>
+<tr><th id="252">252</th><td>	<i>/*</i></td></tr>
+<tr><th id="253">253</th><td><i>	 * Test the user pagetable bit. If set, then the user page tables</i></td></tr>
+<tr><th id="254">254</th><td><i>	 * are active. If clear CR3 already has the kernel page table</i></td></tr>
+<tr><th id="255">255</th><td><i>	 * active.</i></td></tr>
+<tr><th id="256">256</th><td><i>	 */</i></td></tr>
+<tr><th id="257">257</th><td>	bt	$<a class="macro" href="#181" title="12" data-ref="_M/PTI_USER_PGTABLE_BIT">PTI_USER_PGTABLE_BIT</a>, \scratch_reg</td></tr>
+<tr><th id="258">258</th><td>	jnc	.Ldone_\@</td></tr>
+<tr><th id="259">259</th><td></td></tr>
+<tr><th id="260">260</th><td>	ADJUST_KERNEL_CR3 \scratch_reg</td></tr>
+<tr><th id="261">261</th><td>	movq	\scratch_reg, %cr3</td></tr>
+<tr><th id="262">262</th><td></td></tr>
+<tr><th id="263">263</th><td>.Ldone_\@:</td></tr>
+<tr><th id="264">264</th><td>.endm</td></tr>
+<tr><th id="265">265</th><td></td></tr>
+<tr><th id="266">266</th><td>.macro RESTORE_CR3 scratch_reg:req save_reg:req</td></tr>
+<tr><th id="267">267</th><td>	ALTERNATIVE <q>"jmp .Lend_\@"</q>, <q>""</q>, <a class="macro" href="../include/asm/cpufeatures.h.html#204" title="( 7*32+11)" data-ref="_M/X86_FEATURE_PTI">X86_FEATURE_PTI</a></td></tr>
+<tr><th id="268">268</th><td></td></tr>
+<tr><th id="269">269</th><td>	ALTERNATIVE <q>"jmp .Lwrcr3_\@"</q>, <q>""</q>, <a class="macro" href="../include/asm/cpufeatures.h.html#131" title="( 4*32+17)" data-ref="_M/X86_FEATURE_PCID">X86_FEATURE_PCID</a></td></tr>
+<tr><th id="270">270</th><td></td></tr>
+<tr><th id="271">271</th><td>	<i>/*</i></td></tr>
+<tr><th id="272">272</th><td><i>	 * KERNEL pages can always resume with NOFLUSH as we do</i></td></tr>
+<tr><th id="273">273</th><td><i>	 * explicit flushes.</i></td></tr>
+<tr><th id="274">274</th><td><i>	 */</i></td></tr>
+<tr><th id="275">275</th><td>	bt	$<a class="macro" href="#181" title="12" data-ref="_M/PTI_USER_PGTABLE_BIT">PTI_USER_PGTABLE_BIT</a>, \save_reg</td></tr>
+<tr><th id="276">276</th><td>	jnc	.Lnoflush_\@</td></tr>
+<tr><th id="277">277</th><td></td></tr>
+<tr><th id="278">278</th><td>	<i>/*</i></td></tr>
+<tr><th id="279">279</th><td><i>	 * Check if there's a pending flush for the user ASID we're</i></td></tr>
+<tr><th id="280">280</th><td><i>	 * about to set.</i></td></tr>
+<tr><th id="281">281</th><td><i>	 */</i></td></tr>
+<tr><th id="282">282</th><td>	movq	\save_reg, \scratch_reg</td></tr>
+<tr><th id="283">283</th><td>	andq	$(<var>0x7FF</var>), \scratch_reg</td></tr>
+<tr><th id="284">284</th><td>	bt	\scratch_reg, <a class="macro" href="#205" title="%gs:cpu_tlbstate + 22" data-ref="_M/THIS_CPU_user_pcid_flush_mask">THIS_CPU_user_pcid_flush_mask</a></td></tr>
+<tr><th id="285">285</th><td>	jnc	.Lnoflush_\@</td></tr>
+<tr><th id="286">286</th><td></td></tr>
+<tr><th id="287">287</th><td>	btr	\scratch_reg, <a class="macro" href="#205" title="%gs:cpu_tlbstate + 22" data-ref="_M/THIS_CPU_user_pcid_flush_mask">THIS_CPU_user_pcid_flush_mask</a></td></tr>
+<tr><th id="288">288</th><td>	jmp	.Lwrcr3_\@</td></tr>
+<tr><th id="289">289</th><td></td></tr>
+<tr><th id="290">290</th><td>.Lnoflush_\@:</td></tr>
+<tr><th id="291">291</th><td>	SET_NOFLUSH_BIT \save_reg</td></tr>
+<tr><th id="292">292</th><td></td></tr>
+<tr><th id="293">293</th><td>.Lwrcr3_\@:</td></tr>
+<tr><th id="294">294</th><td>	<i>/*</i></td></tr>
+<tr><th id="295">295</th><td><i>	 * The CR3 write could be avoided when not changing its value,</i></td></tr>
+<tr><th id="296">296</th><td><i>	 * but would require a CR3 read *and* a scratch register.</i></td></tr>
+<tr><th id="297">297</th><td><i>	 */</i></td></tr>
+<tr><th id="298">298</th><td>	movq	\save_reg, %cr3</td></tr>
+<tr><th id="299">299</th><td>.Lend_\@:</td></tr>
+<tr><th id="300">300</th><td>.endm</td></tr>
+<tr><th id="301">301</th><td></td></tr>
+<tr><th id="302">302</th><td><u>#<span data-ppcond="175">else</span> /* CONFIG_PAGE_TABLE_ISOLATION=n: */</u></td></tr>
+<tr><th id="303">303</th><td></td></tr>
+<tr><th id="304">304</th><td>.macro SWITCH_TO_KERNEL_CR3 scratch_reg:req</td></tr>
+<tr><th id="305">305</th><td>.endm</td></tr>
+<tr><th id="306">306</th><td>.macro SWITCH_TO_USER_CR3_NOSTACK scratch_reg:req scratch_reg2:req</td></tr>
+<tr><th id="307">307</th><td>.endm</td></tr>
+<tr><th id="308">308</th><td>.macro SWITCH_TO_USER_CR3_STACK scratch_reg:req</td></tr>
+<tr><th id="309">309</th><td>.endm</td></tr>
+<tr><th id="310">310</th><td>.macro SAVE_AND_SWITCH_TO_KERNEL_CR3 scratch_reg:req save_reg:req</td></tr>
+<tr><th id="311">311</th><td>.endm</td></tr>
+<tr><th id="312">312</th><td>.macro RESTORE_CR3 scratch_reg:req save_reg:req</td></tr>
+<tr><th id="313">313</th><td>.endm</td></tr>
+<tr><th id="314">314</th><td></td></tr>
+<tr><th id="315">315</th><td><u>#<span data-ppcond="175">endif</span></u></td></tr>
+<tr><th id="316">316</th><td></td></tr>
+<tr><th id="317">317</th><td><i>/*</i></td></tr>
+<tr><th id="318">318</th><td><i> * Mitigate Spectre v1 for conditional swapgs code paths.</i></td></tr>
+<tr><th id="319">319</th><td><i> *</i></td></tr>
+<tr><th id="320">320</th><td><i> * FENCE_SWAPGS_USER_ENTRY is used in the user entry swapgs code path, to</i></td></tr>
+<tr><th id="321">321</th><td><i> * prevent a speculative swapgs when coming from kernel space.</i></td></tr>
+<tr><th id="322">322</th><td><i> *</i></td></tr>
+<tr><th id="323">323</th><td><i> * FENCE_SWAPGS_KERNEL_ENTRY is used in the kernel entry non-swapgs code path,</i></td></tr>
+<tr><th id="324">324</th><td><i> * to prevent the swapgs from getting speculatively skipped when coming from</i></td></tr>
+<tr><th id="325">325</th><td><i> * user space.</i></td></tr>
+<tr><th id="326">326</th><td><i> */</i></td></tr>
+<tr><th id="327">327</th><td>.macro FENCE_SWAPGS_USER_ENTRY</td></tr>
+<tr><th id="328">328</th><td>	ALTERNATIVE <q>""</q>, <q>"lfence"</q>, <a class="macro" href="../include/asm/cpufeatures.h.html#284" title="(11*32+ 4)" data-ref="_M/X86_FEATURE_FENCE_SWAPGS_USER">X86_FEATURE_FENCE_SWAPGS_USER</a></td></tr>
+<tr><th id="329">329</th><td>.endm</td></tr>
+<tr><th id="330">330</th><td>.macro FENCE_SWAPGS_KERNEL_ENTRY</td></tr>
+<tr><th id="331">331</th><td>	ALTERNATIVE <q>""</q>, <q>"lfence"</q>, <a class="macro" href="../include/asm/cpufeatures.h.html#285" title="(11*32+ 5)" data-ref="_M/X86_FEATURE_FENCE_SWAPGS_KERNEL">X86_FEATURE_FENCE_SWAPGS_KERNEL</a></td></tr>
+<tr><th id="332">332</th><td>.endm</td></tr>
+<tr><th id="333">333</th><td></td></tr>
+<tr><th id="334">334</th><td>.macro STACKLEAK_ERASE_NOCLOBBER</td></tr>
+<tr><th id="335">335</th><td><u>#<span data-ppcond="335">ifdef</span> <span class="macro" data-ref="_M/CONFIG_GCC_PLUGIN_STACKLEAK">CONFIG_GCC_PLUGIN_STACKLEAK</span></u></td></tr>
+<tr><th id="336">336</th><td>	PUSH_AND_CLEAR_REGS</td></tr>
+<tr><th id="337">337</th><td>	call stackleak_erase</td></tr>
+<tr><th id="338">338</th><td>	POP_REGS</td></tr>
+<tr><th id="339">339</th><td><u>#<span data-ppcond="335">endif</span></u></td></tr>
+<tr><th id="340">340</th><td>.endm</td></tr>
+<tr><th id="341">341</th><td></td></tr>
+<tr><th id="342">342</th><td><u>#<span data-ppcond="58">endif</span> /* CONFIG_X86_64 */</u></td></tr>
+<tr><th id="343">343</th><td></td></tr>
+<tr><th id="344">344</th><td>.macro STACKLEAK_ERASE</td></tr>
+<tr><th id="345">345</th><td><u>#<span data-ppcond="345">ifdef</span> <span class="macro" data-ref="_M/CONFIG_GCC_PLUGIN_STACKLEAK">CONFIG_GCC_PLUGIN_STACKLEAK</span></u></td></tr>
+<tr><th id="346">346</th><td>	call stackleak_erase</td></tr>
+<tr><th id="347">347</th><td><u>#<span data-ppcond="345">endif</span></u></td></tr>
+<tr><th id="348">348</th><td>.endm</td></tr>
+<tr><th id="349">349</th><td></td></tr>
+<tr><th id="350">350</th><td><i>/*</i></td></tr>
+<tr><th id="351">351</th><td><i> * This does 'call enter_from_user_mode' unless we can avoid it based on</i></td></tr>
+<tr><th id="352">352</th><td><i> * kernel config or using the static jump infrastructure.</i></td></tr>
+<tr><th id="353">353</th><td><i> */</i></td></tr>
+<tr><th id="354">354</th><td>.macro CALL_enter_from_user_mode</td></tr>
+<tr><th id="355">355</th><td><u>#<span data-ppcond="355">ifdef</span> <span class="macro" data-ref="_M/CONFIG_CONTEXT_TRACKING">CONFIG_CONTEXT_TRACKING</span></u></td></tr>
+<tr><th id="356">356</th><td><u>#ifdef CONFIG_JUMP_LABEL</u></td></tr>
+<tr><th id="357">357</th><td>	STATIC_JUMP_IF_FALSE .Lafter_call_\@, context_tracking_enabled, def=<var>0</var></td></tr>
+<tr><th id="358">358</th><td><u>#endif</u></td></tr>
+<tr><th id="359">359</th><td>	call enter_from_user_mode</td></tr>
+<tr><th id="360">360</th><td>.Lafter_call_\@:</td></tr>
+<tr><th id="361">361</th><td><u>#<span data-ppcond="355">endif</span></u></td></tr>
+<tr><th id="362">362</th><td>.endm</td></tr>
+<tr><th id="363">363</th><td></td></tr>
+<tr><th id="364">364</th><td><u>#<span data-ppcond="364">ifdef</span> <span class="macro" data-ref="_M/CONFIG_PARAVIRT_XXL">CONFIG_PARAVIRT_XXL</span></u></td></tr>
+<tr><th id="365">365</th><td><u>#define GET_CR2_INTO(reg) GET_CR2_INTO_AX ; _ASM_MOV %_ASM_AX, reg</u></td></tr>
+<tr><th id="366">366</th><td><u>#<span data-ppcond="364">else</span></u></td></tr>
+<tr><th id="367">367</th><td><u>#define <dfn class="macro" id="_M/GET_CR2_INTO" data-ref="_M/GET_CR2_INTO">GET_CR2_INTO</dfn>(reg) _ASM_MOV %cr2, reg</u></td></tr>
+<tr><th id="368">368</th><td><u>#<span data-ppcond="364">endif</span></u></td></tr>
+<tr><th id="369">369</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='entry_64.S.html'>linux-5.3.1/arch/x86/entry/entry_64.S</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

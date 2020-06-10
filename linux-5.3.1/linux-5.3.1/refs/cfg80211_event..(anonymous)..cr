@@ -1,0 +1,25 @@
+<dec f='linux-5.3.1/net/wireless/core.h' l='254' type='struct cfg80211_connect_resp_params'/>
+<offset>0</offset>
+<use f='linux-5.3.1/net/wireless/sme.c' l='844' u='m' c='cfg80211_connect_done'/>
+<use f='linux-5.3.1/net/wireless/sme.c' l='845' u='m' c='cfg80211_connect_done'/>
+<use f='linux-5.3.1/net/wireless/sme.c' l='849' u='m' c='cfg80211_connect_done'/>
+<use f='linux-5.3.1/net/wireless/sme.c' l='850' u='m' c='cfg80211_connect_done'/>
+<use f='linux-5.3.1/net/wireless/sme.c' l='851' u='m' c='cfg80211_connect_done'/>
+<use f='linux-5.3.1/net/wireless/sme.c' l='856' u='m' c='cfg80211_connect_done'/>
+<use f='linux-5.3.1/net/wireless/sme.c' l='857' u='m' c='cfg80211_connect_done'/>
+<use f='linux-5.3.1/net/wireless/sme.c' l='858' u='m' c='cfg80211_connect_done'/>
+<use f='linux-5.3.1/net/wireless/sme.c' l='863' u='m' c='cfg80211_connect_done'/>
+<use f='linux-5.3.1/net/wireless/sme.c' l='864' u='m' c='cfg80211_connect_done'/>
+<use f='linux-5.3.1/net/wireless/sme.c' l='865' u='m' c='cfg80211_connect_done'/>
+<use f='linux-5.3.1/net/wireless/sme.c' l='870' u='m' c='cfg80211_connect_done'/>
+<use f='linux-5.3.1/net/wireless/sme.c' l='871' u='m' c='cfg80211_connect_done'/>
+<use f='linux-5.3.1/net/wireless/sme.c' l='872' u='m' c='cfg80211_connect_done'/>
+<use f='linux-5.3.1/net/wireless/sme.c' l='877' u='m' c='cfg80211_connect_done'/>
+<use f='linux-5.3.1/net/wireless/sme.c' l='878' u='m' c='cfg80211_connect_done'/>
+<use f='linux-5.3.1/net/wireless/sme.c' l='882' u='m' c='cfg80211_connect_done'/>
+<use f='linux-5.3.1/net/wireless/sme.c' l='884' u='m' c='cfg80211_connect_done'/>
+<use f='linux-5.3.1/net/wireless/sme.c' l='887' u='m' c='cfg80211_connect_done'/>
+<use f='linux-5.3.1/net/wireless/sme.c' l='888' u='m' c='cfg80211_connect_done'/>
+<use f='linux-5.3.1/net/wireless/sme.c' l='889' u='m' c='cfg80211_connect_done'/>
+<use f='linux-5.3.1/net/wireless/util.c' l='863' u='a' c='cfg80211_process_wdev_events'/>
+<use f='linux-5.3.1/net/wireless/util.c' l='864' u='m' c='cfg80211_process_wdev_events'/>

@@ -1,0 +1,611 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>sbitmap.h source code [linux-5.3.1/include/linux/sbitmap.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="sbitmap,sbitmap_queue,sbitmap_word,sbq_wait,sbq_wait_state "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/include/linux/sbitmap.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>include</a>/<a href='./'>linux</a>/<a href='sbitmap.h.html'>sbitmap.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0-only */</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * Fast and scalable bitmaps.</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * Copyright (C) 2016 Facebook</i></td></tr>
+<tr><th id="6">6</th><td><i> * Copyright (C) 2013-2014 Jens Axboe</i></td></tr>
+<tr><th id="7">7</th><td><i> */</i></td></tr>
+<tr><th id="8">8</th><td></td></tr>
+<tr><th id="9">9</th><td><u>#<span data-ppcond="9">ifndef</span> <span class="macro" data-ref="_M/__LINUX_SCALE_BITMAP_H">__LINUX_SCALE_BITMAP_H</span></u></td></tr>
+<tr><th id="10">10</th><td><u>#define <dfn class="macro" id="_M/__LINUX_SCALE_BITMAP_H" data-ref="_M/__LINUX_SCALE_BITMAP_H">__LINUX_SCALE_BITMAP_H</dfn></u></td></tr>
+<tr><th id="11">11</th><td></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="kernel.h.html">&lt;linux/kernel.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="slab.h.html">&lt;linux/slab.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td></td></tr>
+<tr><th id="15">15</th><td><b>struct</b> <a class="type" href="seq_file.h.html#seq_file" title='seq_file' data-ref="seq_file" data-ref-filename="seq_file" id="seq_file">seq_file</a>;</td></tr>
+<tr><th id="16">16</th><td></td></tr>
+<tr><th id="17">17</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="18">18</th><td><i class="doc"> * struct sbitmap_word - Word in a &amp;struct sbitmap.</i></td></tr>
+<tr><th id="19">19</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="20">20</th><td><b>struct</b> <dfn class="type def" id="sbitmap_word" title='sbitmap_word' data-ref="sbitmap_word" data-ref-filename="sbitmap_word">sbitmap_word</dfn> {</td></tr>
+<tr><th id="21">21</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="22">22</th><td><i class="doc">	 *<span class="command"> @depth</span>: Number of bits being used in<span class="command"> @word</span><span class="command">/@cleared</span></i></td></tr>
+<tr><th id="23">23</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="24">24</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="sbitmap_word::depth" title='sbitmap_word::depth' data-ref="sbitmap_word::depth" data-ref-filename="sbitmap_word..depth">depth</dfn>;</td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="27">27</th><td><i class="doc">	 *<span class="command"> @word</span>: word holding free bits</i></td></tr>
+<tr><th id="28">28</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="29">29</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="sbitmap_word::word" title='sbitmap_word::word' data-ref="sbitmap_word::word" data-ref-filename="sbitmap_word..word">word</dfn> <a class="macro" href="cache.h.html#40" title="__attribute__((__aligned__((1 &lt;&lt; (6)))))" data-ref="_M/____cacheline_aligned_in_smp">____cacheline_aligned_in_smp</a>;</td></tr>
+<tr><th id="30">30</th><td></td></tr>
+<tr><th id="31">31</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="32">32</th><td><i class="doc">	 *<span class="command"> @cleared</span>: word holding cleared bits</i></td></tr>
+<tr><th id="33">33</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="34">34</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="sbitmap_word::cleared" title='sbitmap_word::cleared' data-ref="sbitmap_word::cleared" data-ref-filename="sbitmap_word..cleared">cleared</dfn> <a class="macro" href="cache.h.html#40" title="__attribute__((__aligned__((1 &lt;&lt; (6)))))" data-ref="_M/____cacheline_aligned_in_smp">____cacheline_aligned_in_smp</a>;</td></tr>
+<tr><th id="35">35</th><td></td></tr>
+<tr><th id="36">36</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="37">37</th><td><i class="doc">	 *<span class="command"> @swap</span>_lock: Held while swapping word &lt;-&gt; cleared</i></td></tr>
+<tr><th id="38">38</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="39">39</th><td>	<a class="typedef" href="spinlock_types.h.html#spinlock_t" title='spinlock_t' data-type='struct spinlock' data-ref="spinlock_t" data-ref-filename="spinlock_t">spinlock_t</a> <dfn class="decl field" id="sbitmap_word::swap_lock" title='sbitmap_word::swap_lock' data-ref="sbitmap_word::swap_lock" data-ref-filename="sbitmap_word..swap_lock">swap_lock</dfn>;</td></tr>
+<tr><th id="40">40</th><td>} <a class="macro" href="cache.h.html#40" title="__attribute__((__aligned__((1 &lt;&lt; (6)))))" data-ref="_M/____cacheline_aligned_in_smp">____cacheline_aligned_in_smp</a>;</td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="43">43</th><td><i class="doc"> * struct sbitmap - Scalable bitmap.</i></td></tr>
+<tr><th id="44">44</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="45">45</th><td><i class="doc"> * A &amp;struct sbitmap is spread over multiple cachelines to avoid ping-pong. This</i></td></tr>
+<tr><th id="46">46</th><td><i class="doc"> * trades off higher memory usage for better scalability.</i></td></tr>
+<tr><th id="47">47</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="48">48</th><td><b>struct</b> <dfn class="type def" id="sbitmap" title='sbitmap' data-ref="sbitmap" data-ref-filename="sbitmap">sbitmap</dfn> {</td></tr>
+<tr><th id="49">49</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="50">50</th><td><i class="doc">	 *<span class="command"> @depth</span>: Number of bits used in the whole bitmap.</i></td></tr>
+<tr><th id="51">51</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="52">52</th><td>	<em>unsigned</em> <em>int</em> <dfn class="decl field" id="sbitmap::depth" title='sbitmap::depth' data-ref="sbitmap::depth" data-ref-filename="sbitmap..depth">depth</dfn>;</td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="55">55</th><td><i class="doc">	 *<span class="command"> @shift</span>: log2(number of bits used per word)</i></td></tr>
+<tr><th id="56">56</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="57">57</th><td>	<em>unsigned</em> <em>int</em> <dfn class="decl field" id="sbitmap::shift" title='sbitmap::shift' data-ref="sbitmap::shift" data-ref-filename="sbitmap..shift">shift</dfn>;</td></tr>
+<tr><th id="58">58</th><td></td></tr>
+<tr><th id="59">59</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="60">60</th><td><i class="doc">	 *<span class="command"> @map</span>_nr: Number of words (cachelines) being used for the bitmap.</i></td></tr>
+<tr><th id="61">61</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="62">62</th><td>	<em>unsigned</em> <em>int</em> <dfn class="decl field" id="sbitmap::map_nr" title='sbitmap::map_nr' data-ref="sbitmap::map_nr" data-ref-filename="sbitmap..map_nr">map_nr</dfn>;</td></tr>
+<tr><th id="63">63</th><td></td></tr>
+<tr><th id="64">64</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="65">65</th><td><i class="doc">	 *<span class="command"> @map</span>: Allocated bitmap.</i></td></tr>
+<tr><th id="66">66</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="67">67</th><td>	<b>struct</b> <a class="type" href="#sbitmap_word" title='sbitmap_word' data-ref="sbitmap_word" data-ref-filename="sbitmap_word">sbitmap_word</a> *<dfn class="decl field" id="sbitmap::map" title='sbitmap::map' data-ref="sbitmap::map" data-ref-filename="sbitmap..map">map</dfn>;</td></tr>
+<tr><th id="68">68</th><td>};</td></tr>
+<tr><th id="69">69</th><td></td></tr>
+<tr><th id="70">70</th><td><u>#define <dfn class="macro" id="_M/SBQ_WAIT_QUEUES" data-ref="_M/SBQ_WAIT_QUEUES">SBQ_WAIT_QUEUES</dfn> 8</u></td></tr>
+<tr><th id="71">71</th><td><u>#define <dfn class="macro" id="_M/SBQ_WAKE_BATCH" data-ref="_M/SBQ_WAKE_BATCH">SBQ_WAKE_BATCH</dfn> 8</u></td></tr>
+<tr><th id="72">72</th><td></td></tr>
+<tr><th id="73">73</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="74">74</th><td><i class="doc"> * struct sbq_wait_state - Wait queue in a &amp;struct sbitmap_queue.</i></td></tr>
+<tr><th id="75">75</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="76">76</th><td><b>struct</b> <dfn class="type def" id="sbq_wait_state" title='sbq_wait_state' data-ref="sbq_wait_state" data-ref-filename="sbq_wait_state">sbq_wait_state</dfn> {</td></tr>
+<tr><th id="77">77</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="78">78</th><td><i class="doc">	 *<span class="command"> @wait</span>_cnt: Number of frees remaining before we wake up.</i></td></tr>
+<tr><th id="79">79</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="80">80</th><td>	<a class="typedef" href="types.h.html#atomic_t" title='atomic_t' data-type='struct atomic_t' data-ref="atomic_t" data-ref-filename="atomic_t">atomic_t</a> <dfn class="decl field" id="sbq_wait_state::wait_cnt" title='sbq_wait_state::wait_cnt' data-ref="sbq_wait_state::wait_cnt" data-ref-filename="sbq_wait_state..wait_cnt">wait_cnt</dfn>;</td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="83">83</th><td><i class="doc">	 *<span class="command"> @wait</span>: Wait queue.</i></td></tr>
+<tr><th id="84">84</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="85">85</th><td>	<a class="typedef" href="wait.h.html#wait_queue_head_t" title='wait_queue_head_t' data-type='struct wait_queue_head' data-ref="wait_queue_head_t" data-ref-filename="wait_queue_head_t">wait_queue_head_t</a> <dfn class="decl field" id="sbq_wait_state::wait" title='sbq_wait_state::wait' data-ref="sbq_wait_state::wait" data-ref-filename="sbq_wait_state..wait">wait</dfn>;</td></tr>
+<tr><th id="86">86</th><td>} <a class="macro" href="cache.h.html#40" title="__attribute__((__aligned__((1 &lt;&lt; (6)))))" data-ref="_M/____cacheline_aligned_in_smp">____cacheline_aligned_in_smp</a>;</td></tr>
+<tr><th id="87">87</th><td></td></tr>
+<tr><th id="88">88</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="89">89</th><td><i class="doc"> * struct sbitmap_queue - Scalable bitmap with the added ability to wait on free</i></td></tr>
+<tr><th id="90">90</th><td><i class="doc"> * bits.</i></td></tr>
+<tr><th id="91">91</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="92">92</th><td><i class="doc"> * A &amp;struct sbitmap_queue uses multiple wait queues and rolling wakeups to</i></td></tr>
+<tr><th id="93">93</th><td><i class="doc"> * avoid contention on the wait queue spinlock. This ensures that we don't hit a</i></td></tr>
+<tr><th id="94">94</th><td><i class="doc"> * scalability wall when we run out of free bits and have to start putting tasks</i></td></tr>
+<tr><th id="95">95</th><td><i class="doc"> * to sleep.</i></td></tr>
+<tr><th id="96">96</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="97">97</th><td><b>struct</b> <dfn class="type def" id="sbitmap_queue" title='sbitmap_queue' data-ref="sbitmap_queue" data-ref-filename="sbitmap_queue">sbitmap_queue</dfn> {</td></tr>
+<tr><th id="98">98</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="99">99</th><td><i class="doc">	 *<span class="command"> @sb</span>: Scalable bitmap.</i></td></tr>
+<tr><th id="100">100</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="101">101</th><td>	<b>struct</b> <a class="type" href="#sbitmap" title='sbitmap' data-ref="sbitmap" data-ref-filename="sbitmap">sbitmap</a> <dfn class="decl field" id="sbitmap_queue::sb" title='sbitmap_queue::sb' data-ref="sbitmap_queue::sb" data-ref-filename="sbitmap_queue..sb">sb</dfn>;</td></tr>
+<tr><th id="102">102</th><td></td></tr>
+<tr><th id="103">103</th><td>	<i>/*</i></td></tr>
+<tr><th id="104">104</th><td><i>	 * @alloc_hint: Cache of last successfully allocated or freed bit.</i></td></tr>
+<tr><th id="105">105</th><td><i>	 *</i></td></tr>
+<tr><th id="106">106</th><td><i>	 * This is per-cpu, which allows multiple users to stick to different</i></td></tr>
+<tr><th id="107">107</th><td><i>	 * cachelines until the map is exhausted.</i></td></tr>
+<tr><th id="108">108</th><td><i>	 */</i></td></tr>
+<tr><th id="109">109</th><td>	<em>unsigned</em> <em>int</em> <a class="macro" href="compiler_types.h.html#46" title="" data-ref="_M/__percpu">__percpu</a> *<dfn class="decl field" id="sbitmap_queue::alloc_hint" title='sbitmap_queue::alloc_hint' data-ref="sbitmap_queue::alloc_hint" data-ref-filename="sbitmap_queue..alloc_hint">alloc_hint</dfn>;</td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="112">112</th><td><i class="doc">	 *<span class="command"> @wake</span>_batch: Number of bits which must be freed before we wake up any</i></td></tr>
+<tr><th id="113">113</th><td><i class="doc">	 * waiters.</i></td></tr>
+<tr><th id="114">114</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="115">115</th><td>	<em>unsigned</em> <em>int</em> <dfn class="decl field" id="sbitmap_queue::wake_batch" title='sbitmap_queue::wake_batch' data-ref="sbitmap_queue::wake_batch" data-ref-filename="sbitmap_queue..wake_batch">wake_batch</dfn>;</td></tr>
+<tr><th id="116">116</th><td></td></tr>
+<tr><th id="117">117</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="118">118</th><td><i class="doc">	 *<span class="command"> @wake</span>_index: Next wait queue in<span class="command"> @ws</span> to wake up.</i></td></tr>
+<tr><th id="119">119</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="120">120</th><td>	<a class="typedef" href="types.h.html#atomic_t" title='atomic_t' data-type='struct atomic_t' data-ref="atomic_t" data-ref-filename="atomic_t">atomic_t</a> <dfn class="decl field" id="sbitmap_queue::wake_index" title='sbitmap_queue::wake_index' data-ref="sbitmap_queue::wake_index" data-ref-filename="sbitmap_queue..wake_index">wake_index</dfn>;</td></tr>
+<tr><th id="121">121</th><td></td></tr>
+<tr><th id="122">122</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="123">123</th><td><i class="doc">	 *<span class="command"> @ws</span>: Wait queues.</i></td></tr>
+<tr><th id="124">124</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="125">125</th><td>	<b>struct</b> <a class="type" href="#sbq_wait_state" title='sbq_wait_state' data-ref="sbq_wait_state" data-ref-filename="sbq_wait_state">sbq_wait_state</a> *<dfn class="decl field" id="sbitmap_queue::ws" title='sbitmap_queue::ws' data-ref="sbitmap_queue::ws" data-ref-filename="sbitmap_queue..ws">ws</dfn>;</td></tr>
+<tr><th id="126">126</th><td></td></tr>
+<tr><th id="127">127</th><td>	<i>/*</i></td></tr>
+<tr><th id="128">128</th><td><i>	 * @ws_active: count of currently active ws waitqueues</i></td></tr>
+<tr><th id="129">129</th><td><i>	 */</i></td></tr>
+<tr><th id="130">130</th><td>	<a class="typedef" href="types.h.html#atomic_t" title='atomic_t' data-type='struct atomic_t' data-ref="atomic_t" data-ref-filename="atomic_t">atomic_t</a> <dfn class="decl field" id="sbitmap_queue::ws_active" title='sbitmap_queue::ws_active' data-ref="sbitmap_queue::ws_active" data-ref-filename="sbitmap_queue..ws_active">ws_active</dfn>;</td></tr>
+<tr><th id="131">131</th><td></td></tr>
+<tr><th id="132">132</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="133">133</th><td><i class="doc">	 *<span class="command"> @round</span>_robin: Allocate bits in strict round-robin order.</i></td></tr>
+<tr><th id="134">134</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="135">135</th><td>	<a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="sbitmap_queue::round_robin" title='sbitmap_queue::round_robin' data-ref="sbitmap_queue::round_robin" data-ref-filename="sbitmap_queue..round_robin">round_robin</dfn>;</td></tr>
+<tr><th id="136">136</th><td></td></tr>
+<tr><th id="137">137</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="138">138</th><td><i class="doc">	 *<span class="command"> @min</span>_shallow_depth: The minimum shallow depth which may be passed to</i></td></tr>
+<tr><th id="139">139</th><td><i class="doc">	 * sbitmap_queue_get_shallow() or __sbitmap_queue_get_shallow().</i></td></tr>
+<tr><th id="140">140</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="141">141</th><td>	<em>unsigned</em> <em>int</em> <dfn class="decl field" id="sbitmap_queue::min_shallow_depth" title='sbitmap_queue::min_shallow_depth' data-ref="sbitmap_queue::min_shallow_depth" data-ref-filename="sbitmap_queue..min_shallow_depth">min_shallow_depth</dfn>;</td></tr>
+<tr><th id="142">142</th><td>};</td></tr>
+<tr><th id="143">143</th><td></td></tr>
+<tr><th id="144">144</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="145">145</th><td><i class="doc"> * sbitmap_init_node() - Initialize a &amp;struct sbitmap on a specific memory node.</i></td></tr>
+<tr><th id="146">146</th><td><i class="doc"> *<span class="command"> @sb</span>: Bitmap to initialize.</i></td></tr>
+<tr><th id="147">147</th><td><i class="doc"> *<span class="command"> @depth</span>: Number of bits to allocate.</i></td></tr>
+<tr><th id="148">148</th><td><i class="doc"> *<span class="command"> @shift</span>: Use 2<span class="command">^@shift</span> bits per word in the bitmap; if a negative number if</i></td></tr>
+<tr><th id="149">149</th><td><i class="doc"> *         given, a good default is chosen.</i></td></tr>
+<tr><th id="150">150</th><td><i class="doc"> *<span class="command"> @flags</span>: Allocation flags.</i></td></tr>
+<tr><th id="151">151</th><td><i class="doc"> *<span class="command"> @node</span>: Memory node to allocate on.</i></td></tr>
+<tr><th id="152">152</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="153">153</th><td><i class="doc"> * Return: Zero on success or negative errno on failure.</i></td></tr>
+<tr><th id="154">154</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="155">155</th><td><em>int</em> <dfn class="decl fn" id="sbitmap_init_node" title='sbitmap_init_node' data-ref="sbitmap_init_node" data-ref-filename="sbitmap_init_node">sbitmap_init_node</dfn>(<b>struct</b> <a class="type" href="#sbitmap" title='sbitmap' data-ref="sbitmap" data-ref-filename="sbitmap">sbitmap</a> *<dfn class="local col5 decl" id="615sb" title='sb' data-type='struct sbitmap *' data-ref="615sb" data-ref-filename="615sb">sb</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col6 decl" id="616depth" title='depth' data-type='unsigned int' data-ref="616depth" data-ref-filename="616depth">depth</dfn>, <em>int</em> <dfn class="local col7 decl" id="617shift" title='shift' data-type='int' data-ref="617shift" data-ref-filename="617shift">shift</dfn>,</td></tr>
+<tr><th id="156">156</th><td>		      <a class="typedef" href="types.h.html#gfp_t" title='gfp_t' data-type='unsigned int' data-ref="gfp_t" data-ref-filename="gfp_t">gfp_t</a> <dfn class="local col8 decl" id="618flags" title='flags' data-type='gfp_t' data-ref="618flags" data-ref-filename="618flags">flags</dfn>, <em>int</em> <dfn class="local col9 decl" id="619node" title='node' data-type='int' data-ref="619node" data-ref-filename="619node">node</dfn>);</td></tr>
+<tr><th id="157">157</th><td></td></tr>
+<tr><th id="158">158</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="159">159</th><td><i class="doc"> * sbitmap_free() - Free memory used by a &amp;struct sbitmap.</i></td></tr>
+<tr><th id="160">160</th><td><i class="doc"> *<span class="command"> @sb</span>: Bitmap to free.</i></td></tr>
+<tr><th id="161">161</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="162">162</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="sbitmap_free" title='sbitmap_free' data-ref="sbitmap_free" data-ref-filename="sbitmap_free">sbitmap_free</dfn>(<b>struct</b> <a class="type" href="#sbitmap" title='sbitmap' data-ref="sbitmap" data-ref-filename="sbitmap">sbitmap</a> *<dfn class="local col0 decl" id="620sb" title='sb' data-type='struct sbitmap *' data-ref="620sb" data-ref-filename="620sb">sb</dfn>)</td></tr>
+<tr><th id="163">163</th><td>{</td></tr>
+<tr><th id="164">164</th><td>	<a class="ref fn" href="slab.h.html#kfree" title='kfree' data-ref="kfree" data-ref-filename="kfree">kfree</a>(<a class="local col0 ref" href="#620sb" title='sb' data-ref="620sb" data-ref-filename="620sb">sb</a>-&gt;<a class="ref field" href="#sbitmap::map" title='sbitmap::map' data-ref="sbitmap::map" data-ref-filename="sbitmap..map">map</a>);</td></tr>
+<tr><th id="165">165</th><td>	<a class="local col0 ref" href="#620sb" title='sb' data-ref="620sb" data-ref-filename="620sb">sb</a>-&gt;<a class="ref field" href="#sbitmap::map" title='sbitmap::map' data-ref="sbitmap::map" data-ref-filename="sbitmap..map">map</a> = <a class="macro" href="stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="166">166</th><td>}</td></tr>
+<tr><th id="167">167</th><td></td></tr>
+<tr><th id="168">168</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="169">169</th><td><i class="doc"> * sbitmap_resize() - Resize a &amp;struct sbitmap.</i></td></tr>
+<tr><th id="170">170</th><td><i class="doc"> *<span class="command"> @sb</span>: Bitmap to resize.</i></td></tr>
+<tr><th id="171">171</th><td><i class="doc"> *<span class="command"> @depth</span>: New number of bits to resize to.</i></td></tr>
+<tr><th id="172">172</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="173">173</th><td><i class="doc"> * Doesn't reallocate anything. It's up to the caller to ensure that the new</i></td></tr>
+<tr><th id="174">174</th><td><i class="doc"> * depth doesn't exceed the depth that the sb was initialized with.</i></td></tr>
+<tr><th id="175">175</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="176">176</th><td><em>void</em> <dfn class="decl fn" id="sbitmap_resize" title='sbitmap_resize' data-ref="sbitmap_resize" data-ref-filename="sbitmap_resize">sbitmap_resize</dfn>(<b>struct</b> <a class="type" href="#sbitmap" title='sbitmap' data-ref="sbitmap" data-ref-filename="sbitmap">sbitmap</a> *<dfn class="local col1 decl" id="621sb" title='sb' data-type='struct sbitmap *' data-ref="621sb" data-ref-filename="621sb">sb</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col2 decl" id="622depth" title='depth' data-type='unsigned int' data-ref="622depth" data-ref-filename="622depth">depth</dfn>);</td></tr>
+<tr><th id="177">177</th><td></td></tr>
+<tr><th id="178">178</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="179">179</th><td><i class="doc"> * sbitmap_get() - Try to allocate a free bit from a &amp;struct sbitmap.</i></td></tr>
+<tr><th id="180">180</th><td><i class="doc"> *<span class="command"> @sb</span>: Bitmap to allocate from.</i></td></tr>
+<tr><th id="181">181</th><td><i class="doc"> *<span class="command"> @alloc</span>_hint: Hint for where to start searching for a free bit.</i></td></tr>
+<tr><th id="182">182</th><td><i class="doc"> *<span class="command"> @round</span>_robin: If true, be stricter about allocation order; always allocate</i></td></tr>
+<tr><th id="183">183</th><td><i class="doc"> *               starting from the last allocated bit. This is less efficient</i></td></tr>
+<tr><th id="184">184</th><td><i class="doc"> *               than the default behavior (false).</i></td></tr>
+<tr><th id="185">185</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="186">186</th><td><i class="doc"> * This operation provides acquire barrier semantics if it succeeds.</i></td></tr>
+<tr><th id="187">187</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="188">188</th><td><i class="doc"> * Return: Non-negative allocated bit number if successful, -1 otherwise.</i></td></tr>
+<tr><th id="189">189</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="190">190</th><td><em>int</em> <dfn class="decl fn" id="sbitmap_get" title='sbitmap_get' data-ref="sbitmap_get" data-ref-filename="sbitmap_get">sbitmap_get</dfn>(<b>struct</b> <a class="type" href="#sbitmap" title='sbitmap' data-ref="sbitmap" data-ref-filename="sbitmap">sbitmap</a> *<dfn class="local col3 decl" id="623sb" title='sb' data-type='struct sbitmap *' data-ref="623sb" data-ref-filename="623sb">sb</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col4 decl" id="624alloc_hint" title='alloc_hint' data-type='unsigned int' data-ref="624alloc_hint" data-ref-filename="624alloc_hint">alloc_hint</dfn>, <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col5 decl" id="625round_robin" title='round_robin' data-type='bool' data-ref="625round_robin" data-ref-filename="625round_robin">round_robin</dfn>);</td></tr>
+<tr><th id="191">191</th><td></td></tr>
+<tr><th id="192">192</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="193">193</th><td><i class="doc"> * sbitmap_get_shallow() - Try to allocate a free bit from a &amp;struct sbitmap,</i></td></tr>
+<tr><th id="194">194</th><td><i class="doc"> * limiting the depth used from each word.</i></td></tr>
+<tr><th id="195">195</th><td><i class="doc"> *<span class="command"> @sb</span>: Bitmap to allocate from.</i></td></tr>
+<tr><th id="196">196</th><td><i class="doc"> *<span class="command"> @alloc</span>_hint: Hint for where to start searching for a free bit.</i></td></tr>
+<tr><th id="197">197</th><td><i class="doc"> *<span class="command"> @shallow</span>_depth: The maximum number of bits to allocate from a single word.</i></td></tr>
+<tr><th id="198">198</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="199">199</th><td><i class="doc"> * This rather specific operation allows for having multiple users with</i></td></tr>
+<tr><th id="200">200</th><td><i class="doc"> * different allocation limits. E.g., there can be a high-priority class that</i></td></tr>
+<tr><th id="201">201</th><td><i class="doc"> * uses sbitmap_get() and a low-priority class that uses sbitmap_get_shallow()</i></td></tr>
+<tr><th id="202">202</th><td><i class="doc"> * with a<span class="command"> @shallow</span>_depth of (1 &lt;&lt; <span class="command">(@sb</span>-&gt;shift - 1)). Then, the low-priority</i></td></tr>
+<tr><th id="203">203</th><td><i class="doc"> * class can only allocate half of the total bits in the bitmap, preventing it</i></td></tr>
+<tr><th id="204">204</th><td><i class="doc"> * from starving out the high-priority class.</i></td></tr>
+<tr><th id="205">205</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="206">206</th><td><i class="doc"> * Return: Non-negative allocated bit number if successful, -1 otherwise.</i></td></tr>
+<tr><th id="207">207</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="208">208</th><td><em>int</em> <dfn class="decl fn" id="sbitmap_get_shallow" title='sbitmap_get_shallow' data-ref="sbitmap_get_shallow" data-ref-filename="sbitmap_get_shallow">sbitmap_get_shallow</dfn>(<b>struct</b> <a class="type" href="#sbitmap" title='sbitmap' data-ref="sbitmap" data-ref-filename="sbitmap">sbitmap</a> *<dfn class="local col6 decl" id="626sb" title='sb' data-type='struct sbitmap *' data-ref="626sb" data-ref-filename="626sb">sb</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col7 decl" id="627alloc_hint" title='alloc_hint' data-type='unsigned int' data-ref="627alloc_hint" data-ref-filename="627alloc_hint">alloc_hint</dfn>,</td></tr>
+<tr><th id="209">209</th><td>			<em>unsigned</em> <em>long</em> <dfn class="local col8 decl" id="628shallow_depth" title='shallow_depth' data-type='unsigned long' data-ref="628shallow_depth" data-ref-filename="628shallow_depth">shallow_depth</dfn>);</td></tr>
+<tr><th id="210">210</th><td></td></tr>
+<tr><th id="211">211</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="212">212</th><td><i class="doc"> * sbitmap_any_bit_set() - Check for a set bit in a &amp;struct sbitmap.</i></td></tr>
+<tr><th id="213">213</th><td><i class="doc"> *<span class="command"> @sb</span>: Bitmap to check.</i></td></tr>
+<tr><th id="214">214</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="215">215</th><td><i class="doc"> * Return: true if any bit in the bitmap is set, false otherwise.</i></td></tr>
+<tr><th id="216">216</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="217">217</th><td><a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl fn" id="sbitmap_any_bit_set" title='sbitmap_any_bit_set' data-ref="sbitmap_any_bit_set" data-ref-filename="sbitmap_any_bit_set">sbitmap_any_bit_set</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#sbitmap" title='sbitmap' data-ref="sbitmap" data-ref-filename="sbitmap">sbitmap</a> *<dfn class="local col9 decl" id="629sb" title='sb' data-type='const struct sbitmap *' data-ref="629sb" data-ref-filename="629sb">sb</dfn>);</td></tr>
+<tr><th id="218">218</th><td></td></tr>
+<tr><th id="219">219</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="220">220</th><td><i class="doc"> * sbitmap_any_bit_clear() - Check for an unset bit in a &amp;struct</i></td></tr>
+<tr><th id="221">221</th><td><i class="doc"> * sbitmap.</i></td></tr>
+<tr><th id="222">222</th><td><i class="doc"> *<span class="command"> @sb</span>: Bitmap to check.</i></td></tr>
+<tr><th id="223">223</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="224">224</th><td><i class="doc"> * Return: true if any bit in the bitmap is clear, false otherwise.</i></td></tr>
+<tr><th id="225">225</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="226">226</th><td><a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl fn" id="sbitmap_any_bit_clear" title='sbitmap_any_bit_clear' data-ref="sbitmap_any_bit_clear" data-ref-filename="sbitmap_any_bit_clear">sbitmap_any_bit_clear</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#sbitmap" title='sbitmap' data-ref="sbitmap" data-ref-filename="sbitmap">sbitmap</a> *<dfn class="local col0 decl" id="630sb" title='sb' data-type='const struct sbitmap *' data-ref="630sb" data-ref-filename="630sb">sb</dfn>);</td></tr>
+<tr><th id="227">227</th><td></td></tr>
+<tr><th id="228">228</th><td><u>#define <dfn class="macro" id="_M/SB_NR_TO_INDEX" data-ref="_M/SB_NR_TO_INDEX">SB_NR_TO_INDEX</dfn>(sb, bitnr) ((bitnr) &gt;&gt; (sb)-&gt;<a class="ref field" href="#sbitmap::shift" title='sbitmap::shift' data-ref="sbitmap::shift" data-ref-filename="sbitmap..shift">shift</a>)</u></td></tr>
+<tr><th id="229">229</th><td><u>#define <dfn class="macro" id="_M/SB_NR_TO_BIT" data-ref="_M/SB_NR_TO_BIT">SB_NR_TO_BIT</dfn>(sb, bitnr) ((bitnr) &amp; ((1U &lt;&lt; (sb)-&gt;<a class="ref field" href="#sbitmap::shift" title='sbitmap::shift' data-ref="sbitmap::shift" data-ref-filename="sbitmap..shift">shift</a>) - 1U))</u></td></tr>
+<tr><th id="230">230</th><td></td></tr>
+<tr><th id="231">231</th><td><b>typedef</b> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> (*<dfn class="typedef" id="sb_for_each_fn" title='sb_for_each_fn' data-type='bool (*)(struct sbitmap *, unsigned int, void *)' data-ref="sb_for_each_fn" data-ref-filename="sb_for_each_fn">sb_for_each_fn</dfn>)(<b>struct</b> <a class="type" href="#sbitmap" title='sbitmap' data-ref="sbitmap" data-ref-filename="sbitmap">sbitmap</a> *, <em>unsigned</em> <em>int</em>, <em>void</em> *);</td></tr>
+<tr><th id="232">232</th><td></td></tr>
+<tr><th id="233">233</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="234">234</th><td><i class="doc"> * __sbitmap_for_each_set() - Iterate over each set bit in a &amp;struct sbitmap.</i></td></tr>
+<tr><th id="235">235</th><td><i class="doc"> *<span class="command"> @start</span>: Where to start the iteration.</i></td></tr>
+<tr><th id="236">236</th><td><i class="doc"> *<span class="command"> @sb</span>: Bitmap to iterate over.</i></td></tr>
+<tr><th id="237">237</th><td><i class="doc"> * <span class="command">@fn</span>:<span class="verb"> Callback. Should return true to continue or false to break early.</span></i></td></tr>
+<tr><th id="238">238</th><td><i class="doc"> * <span class="command">@data</span>: Pointer to pass to callback.</i></td></tr>
+<tr><th id="239">239</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="240">240</th><td><i class="doc"> * This is inline even though it's non-trivial so that the function calls to the</i></td></tr>
+<tr><th id="241">241</th><td><i class="doc"> * callback will hopefully get optimized away.</i></td></tr>
+<tr><th id="242">242</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="243">243</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="__sbitmap_for_each_set" title='__sbitmap_for_each_set' data-ref="__sbitmap_for_each_set" data-ref-filename="__sbitmap_for_each_set">__sbitmap_for_each_set</dfn>(<b>struct</b> <a class="type" href="#sbitmap" title='sbitmap' data-ref="sbitmap" data-ref-filename="sbitmap">sbitmap</a> *<dfn class="local col1 decl" id="631sb" title='sb' data-type='struct sbitmap *' data-ref="631sb" data-ref-filename="631sb">sb</dfn>,</td></tr>
+<tr><th id="244">244</th><td>					  <em>unsigned</em> <em>int</em> <dfn class="local col2 decl" id="632start" title='start' data-type='unsigned int' data-ref="632start" data-ref-filename="632start">start</dfn>,</td></tr>
+<tr><th id="245">245</th><td>					  <a class="typedef" href="#sb_for_each_fn" title='sb_for_each_fn' data-type='bool (*)(struct sbitmap *, unsigned int, void *)' data-ref="sb_for_each_fn" data-ref-filename="sb_for_each_fn">sb_for_each_fn</a> <dfn class="local col3 decl" id="633fn" title='fn' data-type='sb_for_each_fn' data-ref="633fn" data-ref-filename="633fn">fn</dfn>, <em>void</em> *<dfn class="local col4 decl" id="634data" title='data' data-type='void *' data-ref="634data" data-ref-filename="634data">data</dfn>)</td></tr>
+<tr><th id="246">246</th><td>{</td></tr>
+<tr><th id="247">247</th><td>	<em>unsigned</em> <em>int</em> <dfn class="local col5 decl" id="635index" title='index' data-type='unsigned int' data-ref="635index" data-ref-filename="635index">index</dfn>;</td></tr>
+<tr><th id="248">248</th><td>	<em>unsigned</em> <em>int</em> <dfn class="local col6 decl" id="636nr" title='nr' data-type='unsigned int' data-ref="636nr" data-ref-filename="636nr">nr</dfn>;</td></tr>
+<tr><th id="249">249</th><td>	<em>unsigned</em> <em>int</em> <dfn class="local col7 decl" id="637scanned" title='scanned' data-type='unsigned int' data-ref="637scanned" data-ref-filename="637scanned">scanned</dfn> = <var>0</var>;</td></tr>
+<tr><th id="250">250</th><td></td></tr>
+<tr><th id="251">251</th><td>	<b>if</b> (<a class="local col2 ref" href="#632start" title='start' data-ref="632start" data-ref-filename="632start">start</a> &gt;= <a class="local col1 ref" href="#631sb" title='sb' data-ref="631sb" data-ref-filename="631sb">sb</a>-&gt;<a class="ref field" href="#sbitmap::depth" title='sbitmap::depth' data-ref="sbitmap::depth" data-ref-filename="sbitmap..depth">depth</a>)</td></tr>
+<tr><th id="252">252</th><td>		<a class="local col2 ref" href="#632start" title='start' data-ref="632start" data-ref-filename="632start">start</a> = <var>0</var>;</td></tr>
+<tr><th id="253">253</th><td>	<a class="local col5 ref" href="#635index" title='index' data-ref="635index" data-ref-filename="635index">index</a> = <a class="macro" href="#228" title="((start) &gt;&gt; (sb)-&gt;shift)" data-ref="_M/SB_NR_TO_INDEX">SB_NR_TO_INDEX</a>(<a class="local col1 ref" href="#631sb" title='sb' data-ref="631sb" data-ref-filename="631sb">sb</a>, <a class="local col2 ref" href="#632start" title='start' data-ref="632start" data-ref-filename="632start">start</a>);</td></tr>
+<tr><th id="254">254</th><td>	<a class="local col6 ref" href="#636nr" title='nr' data-ref="636nr" data-ref-filename="636nr">nr</a> = <a class="macro" href="#229" title="((start) &amp; ((1U &lt;&lt; (sb)-&gt;shift) - 1U))" data-ref="_M/SB_NR_TO_BIT">SB_NR_TO_BIT</a>(<a class="local col1 ref" href="#631sb" title='sb' data-ref="631sb" data-ref-filename="631sb">sb</a>, <a class="local col2 ref" href="#632start" title='start' data-ref="632start" data-ref-filename="632start">start</a>);</td></tr>
+<tr><th id="255">255</th><td></td></tr>
+<tr><th id="256">256</th><td>	<b>while</b> (<a class="local col7 ref" href="#637scanned" title='scanned' data-ref="637scanned" data-ref-filename="637scanned">scanned</a> &lt; <a class="local col1 ref" href="#631sb" title='sb' data-ref="631sb" data-ref-filename="631sb">sb</a>-&gt;<a class="ref field" href="#sbitmap::depth" title='sbitmap::depth' data-ref="sbitmap::depth" data-ref-filename="sbitmap..depth">depth</a>) {</td></tr>
+<tr><th id="257">257</th><td>		<em>unsigned</em> <em>long</em> <dfn class="local col8 decl" id="638word" title='word' data-type='unsigned long' data-ref="638word" data-ref-filename="638word">word</dfn>;</td></tr>
+<tr><th id="258">258</th><td>		<em>unsigned</em> <em>int</em> <dfn class="local col9 decl" id="639depth" title='depth' data-type='unsigned int' data-ref="639depth" data-ref-filename="639depth">depth</dfn> = <a class="macro" href="kernel.h.html#913" title="__builtin_choose_expr(((!!(sizeof((typeof((unsigned int)(sb-&gt;map[index].depth - nr)) *)1 == (typeof((unsigned int)(sb-&gt;depth - scanned)) *)1))) &amp;&amp; ((sizeof(int) == sizeof(*(8 ? ((void *)((long)((unsigned int)(sb-&gt;map[index].depth - nr)) * 0l)) : (int *)8))) &amp;&amp; (sizeof(int) == sizeof(*(8 ? ((void *)((long)((unsigned int)(sb-&gt;depth - scanned)) * 0l)) : (int *)8))))), (((unsigned int)(sb-&gt;map[index].depth - nr)) &lt; ((unsigned int)(sb-&gt;depth - scanned)) ? ((unsigned int)(sb-&gt;map[index].depth - nr)) : ((unsigned int)(sb-&gt;depth - scanned))), ({ typeof((unsigned int)(sb-&gt;map[index].depth - nr)) __UNIQUE_ID___x160 = ((unsigned int)(sb-&gt;map[index].depth - nr)); typeof((unsigned int)(sb-&gt;depth - scanned)) __UNIQUE_ID___y161 = ((unsigned int)(sb-&gt;depth - scanned)); ((__UNIQUE_ID___x160) &lt; (__UNIQUE_ID___y161) ? (__UNIQUE_ID___x160) : (__UNIQUE_ID___y161)); }))" data-ref="_M/min_t">min_t</a>(<em>unsigned</em> <em>int</em>,</td></tr>
+<tr><th id="259">259</th><td>					   <a class="local col1 ref" href="#631sb" title='sb' data-ref="631sb" data-ref-filename="631sb">sb</a>-&gt;<a class="ref field" href="#sbitmap::map" title='sbitmap::map' data-ref="sbitmap::map" data-ref-filename="sbitmap..map">map</a>[<a class="local col5 ref" href="#635index" title='index' data-ref="635index" data-ref-filename="635index">index</a>].<a class="ref field" href="#sbitmap_word::depth" title='sbitmap_word::depth' data-ref="sbitmap_word::depth" data-ref-filename="sbitmap_word..depth">depth</a> - <a class="local col6 ref" href="#636nr" title='nr' data-ref="636nr" data-ref-filename="636nr">nr</a>,</td></tr>
+<tr><th id="260">260</th><td>					   <a class="local col1 ref" href="#631sb" title='sb' data-ref="631sb" data-ref-filename="631sb">sb</a>-&gt;<a class="ref field" href="#sbitmap::depth" title='sbitmap::depth' data-ref="sbitmap::depth" data-ref-filename="sbitmap..depth">depth</a> - <a class="local col7 ref" href="#637scanned" title='scanned' data-ref="637scanned" data-ref-filename="637scanned">scanned</a>);</td></tr>
+<tr><th id="261">261</th><td></td></tr>
+<tr><th id="262">262</th><td>		<a class="local col7 ref" href="#637scanned" title='scanned' data-ref="637scanned" data-ref-filename="637scanned">scanned</a> += <a class="local col9 ref" href="#639depth" title='depth' data-ref="639depth" data-ref-filename="639depth">depth</a>;</td></tr>
+<tr><th id="263">263</th><td>		<a class="local col8 ref" href="#638word" title='word' data-ref="638word" data-ref-filename="638word">word</a> = <a class="local col1 ref" href="#631sb" title='sb' data-ref="631sb" data-ref-filename="631sb">sb</a>-&gt;<a class="ref field" href="#sbitmap::map" title='sbitmap::map' data-ref="sbitmap::map" data-ref-filename="sbitmap..map">map</a>[<a class="local col5 ref" href="#635index" title='index' data-ref="635index" data-ref-filename="635index">index</a>].<a class="ref field" href="#sbitmap_word::word" title='sbitmap_word::word' data-ref="sbitmap_word::word" data-ref-filename="sbitmap_word..word">word</a> &amp; ~<a class="local col1 ref" href="#631sb" title='sb' data-ref="631sb" data-ref-filename="631sb">sb</a>-&gt;<a class="ref field" href="#sbitmap::map" title='sbitmap::map' data-ref="sbitmap::map" data-ref-filename="sbitmap..map">map</a>[<a class="local col5 ref" href="#635index" title='index' data-ref="635index" data-ref-filename="635index">index</a>].<a class="ref field" href="#sbitmap_word::cleared" title='sbitmap_word::cleared' data-ref="sbitmap_word::cleared" data-ref-filename="sbitmap_word..cleared">cleared</a>;</td></tr>
+<tr><th id="264">264</th><td>		<b>if</b> (!<a class="local col8 ref" href="#638word" title='word' data-ref="638word" data-ref-filename="638word">word</a>)</td></tr>
+<tr><th id="265">265</th><td>			<b>goto</b> <a class="lbl" href="#640next" data-ref="640next" data-ref-filename="640next">next</a>;</td></tr>
+<tr><th id="266">266</th><td></td></tr>
+<tr><th id="267">267</th><td>		<i>/*</i></td></tr>
+<tr><th id="268">268</th><td><i>		 * On the first iteration of the outer loop, we need to add the</i></td></tr>
+<tr><th id="269">269</th><td><i>		 * bit offset back to the size of the word for find_next_bit().</i></td></tr>
+<tr><th id="270">270</th><td><i>		 * On all other iterations, nr is zero, so this is a noop.</i></td></tr>
+<tr><th id="271">271</th><td><i>		 */</i></td></tr>
+<tr><th id="272">272</th><td>		<a class="local col9 ref" href="#639depth" title='depth' data-ref="639depth" data-ref-filename="639depth">depth</a> += <a class="local col6 ref" href="#636nr" title='nr' data-ref="636nr" data-ref-filename="636nr">nr</a>;</td></tr>
+<tr><th id="273">273</th><td>		<b>while</b> (<var>1</var>) {</td></tr>
+<tr><th id="274">274</th><td>			<a class="local col6 ref" href="#636nr" title='nr' data-ref="636nr" data-ref-filename="636nr">nr</a> = <a class="ref fn" href="../asm-generic/bitops/find.h.html#find_next_bit" title='find_next_bit' data-ref="find_next_bit" data-ref-filename="find_next_bit">find_next_bit</a>(&amp;<a class="local col8 ref" href="#638word" title='word' data-ref="638word" data-ref-filename="638word">word</a>, <a class="local col9 ref" href="#639depth" title='depth' data-ref="639depth" data-ref-filename="639depth">depth</a>, <a class="local col6 ref" href="#636nr" title='nr' data-ref="636nr" data-ref-filename="636nr">nr</a>);</td></tr>
+<tr><th id="275">275</th><td>			<b>if</b> (<a class="local col6 ref" href="#636nr" title='nr' data-ref="636nr" data-ref-filename="636nr">nr</a> &gt;= <a class="local col9 ref" href="#639depth" title='depth' data-ref="639depth" data-ref-filename="639depth">depth</a>)</td></tr>
+<tr><th id="276">276</th><td>				<b>break</b>;</td></tr>
+<tr><th id="277">277</th><td>			<b>if</b> (!<a class="local col3 ref" href="#633fn" title='fn' data-ref="633fn" data-ref-filename="633fn">fn</a>(<a class="local col1 ref" href="#631sb" title='sb' data-ref="631sb" data-ref-filename="631sb">sb</a>, (<a class="local col5 ref" href="#635index" title='index' data-ref="635index" data-ref-filename="635index">index</a> &lt;&lt; <a class="local col1 ref" href="#631sb" title='sb' data-ref="631sb" data-ref-filename="631sb">sb</a>-&gt;<a class="ref field" href="#sbitmap::shift" title='sbitmap::shift' data-ref="sbitmap::shift" data-ref-filename="sbitmap..shift">shift</a>) + <a class="local col6 ref" href="#636nr" title='nr' data-ref="636nr" data-ref-filename="636nr">nr</a>, <a class="local col4 ref" href="#634data" title='data' data-ref="634data" data-ref-filename="634data">data</a>))</td></tr>
+<tr><th id="278">278</th><td>				<b>return</b>;</td></tr>
+<tr><th id="279">279</th><td></td></tr>
+<tr><th id="280">280</th><td>			<a class="local col6 ref" href="#636nr" title='nr' data-ref="636nr" data-ref-filename="636nr">nr</a>++;</td></tr>
+<tr><th id="281">281</th><td>		}</td></tr>
+<tr><th id="282">282</th><td><dfn class="lbl" id="640next" data-ref="640next" data-ref-filename="640next">next</dfn>:</td></tr>
+<tr><th id="283">283</th><td>		<a class="local col6 ref" href="#636nr" title='nr' data-ref="636nr" data-ref-filename="636nr">nr</a> = <var>0</var>;</td></tr>
+<tr><th id="284">284</th><td>		<b>if</b> (++<a class="local col5 ref" href="#635index" title='index' data-ref="635index" data-ref-filename="635index">index</a> &gt;= <a class="local col1 ref" href="#631sb" title='sb' data-ref="631sb" data-ref-filename="631sb">sb</a>-&gt;<a class="ref field" href="#sbitmap::map_nr" title='sbitmap::map_nr' data-ref="sbitmap::map_nr" data-ref-filename="sbitmap..map_nr">map_nr</a>)</td></tr>
+<tr><th id="285">285</th><td>			<a class="local col5 ref" href="#635index" title='index' data-ref="635index" data-ref-filename="635index">index</a> = <var>0</var>;</td></tr>
+<tr><th id="286">286</th><td>	}</td></tr>
+<tr><th id="287">287</th><td>}</td></tr>
+<tr><th id="288">288</th><td></td></tr>
+<tr><th id="289">289</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="290">290</th><td><i class="doc"> * sbitmap_for_each_set() - Iterate over each set bit in a &amp;struct sbitmap.</i></td></tr>
+<tr><th id="291">291</th><td><i class="doc"> *<span class="command"> @sb</span>: Bitmap to iterate over.</i></td></tr>
+<tr><th id="292">292</th><td><i class="doc"> * <span class="command">@fn</span>:<span class="verb"> Callback. Should return true to continue or false to break early.</span></i></td></tr>
+<tr><th id="293">293</th><td><i class="doc"> * <span class="command">@data</span>: Pointer to pass to callback.</i></td></tr>
+<tr><th id="294">294</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="295">295</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="sbitmap_for_each_set" title='sbitmap_for_each_set' data-ref="sbitmap_for_each_set" data-ref-filename="sbitmap_for_each_set">sbitmap_for_each_set</dfn>(<b>struct</b> <a class="type" href="#sbitmap" title='sbitmap' data-ref="sbitmap" data-ref-filename="sbitmap">sbitmap</a> *<dfn class="local col1 decl" id="641sb" title='sb' data-type='struct sbitmap *' data-ref="641sb" data-ref-filename="641sb">sb</dfn>, <a class="typedef" href="#sb_for_each_fn" title='sb_for_each_fn' data-type='bool (*)(struct sbitmap *, unsigned int, void *)' data-ref="sb_for_each_fn" data-ref-filename="sb_for_each_fn">sb_for_each_fn</a> <dfn class="local col2 decl" id="642fn" title='fn' data-type='sb_for_each_fn' data-ref="642fn" data-ref-filename="642fn">fn</dfn>,</td></tr>
+<tr><th id="296">296</th><td>					<em>void</em> *<dfn class="local col3 decl" id="643data" title='data' data-type='void *' data-ref="643data" data-ref-filename="643data">data</dfn>)</td></tr>
+<tr><th id="297">297</th><td>{</td></tr>
+<tr><th id="298">298</th><td>	<a class="ref fn" href="#__sbitmap_for_each_set" title='__sbitmap_for_each_set' data-ref="__sbitmap_for_each_set" data-ref-filename="__sbitmap_for_each_set">__sbitmap_for_each_set</a>(<a class="local col1 ref" href="#641sb" title='sb' data-ref="641sb" data-ref-filename="641sb">sb</a>, <var>0</var>, <a class="local col2 ref" href="#642fn" title='fn' data-ref="642fn" data-ref-filename="642fn">fn</a>, <a class="local col3 ref" href="#643data" title='data' data-ref="643data" data-ref-filename="643data">data</a>);</td></tr>
+<tr><th id="299">299</th><td>}</td></tr>
+<tr><th id="300">300</th><td></td></tr>
+<tr><th id="301">301</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>long</em> *<dfn class="decl def fn" id="__sbitmap_word" title='__sbitmap_word' data-ref="__sbitmap_word" data-ref-filename="__sbitmap_word">__sbitmap_word</dfn>(<b>struct</b> <a class="type" href="#sbitmap" title='sbitmap' data-ref="sbitmap" data-ref-filename="sbitmap">sbitmap</a> *<dfn class="local col4 decl" id="644sb" title='sb' data-type='struct sbitmap *' data-ref="644sb" data-ref-filename="644sb">sb</dfn>,</td></tr>
+<tr><th id="302">302</th><td>					    <em>unsigned</em> <em>int</em> <dfn class="local col5 decl" id="645bitnr" title='bitnr' data-type='unsigned int' data-ref="645bitnr" data-ref-filename="645bitnr">bitnr</dfn>)</td></tr>
+<tr><th id="303">303</th><td>{</td></tr>
+<tr><th id="304">304</th><td>	<b>return</b> &amp;<a class="local col4 ref" href="#644sb" title='sb' data-ref="644sb" data-ref-filename="644sb">sb</a>-&gt;<a class="ref field" href="#sbitmap::map" title='sbitmap::map' data-ref="sbitmap::map" data-ref-filename="sbitmap..map">map</a>[<a class="macro" href="#228" title="((bitnr) &gt;&gt; (sb)-&gt;shift)" data-ref="_M/SB_NR_TO_INDEX">SB_NR_TO_INDEX</a>(<a class="local col4 ref" href="#644sb" title='sb' data-ref="644sb" data-ref-filename="644sb">sb</a>, <a class="local col5 ref" href="#645bitnr" title='bitnr' data-ref="645bitnr" data-ref-filename="645bitnr">bitnr</a>)].<a class="ref field" href="#sbitmap_word::word" title='sbitmap_word::word' data-ref="sbitmap_word::word" data-ref-filename="sbitmap_word..word">word</a>;</td></tr>
+<tr><th id="305">305</th><td>}</td></tr>
+<tr><th id="306">306</th><td></td></tr>
+<tr><th id="307">307</th><td><i>/* Helpers equivalent to the operations in asm/bitops.h and linux/bitmap.h */</i></td></tr>
+<tr><th id="308">308</th><td></td></tr>
+<tr><th id="309">309</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="sbitmap_set_bit" title='sbitmap_set_bit' data-ref="sbitmap_set_bit" data-ref-filename="sbitmap_set_bit">sbitmap_set_bit</dfn>(<b>struct</b> <a class="type" href="#sbitmap" title='sbitmap' data-ref="sbitmap" data-ref-filename="sbitmap">sbitmap</a> *<dfn class="local col6 decl" id="646sb" title='sb' data-type='struct sbitmap *' data-ref="646sb" data-ref-filename="646sb">sb</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col7 decl" id="647bitnr" title='bitnr' data-type='unsigned int' data-ref="647bitnr" data-ref-filename="647bitnr">bitnr</dfn>)</td></tr>
+<tr><th id="310">310</th><td>{</td></tr>
+<tr><th id="311">311</th><td>	<a class="ref fn" href="../asm-generic/bitops-instrumented.h.html#set_bit" title='set_bit' data-ref="set_bit" data-ref-filename="set_bit">set_bit</a>(<a class="macro" href="#229" title="((bitnr) &amp; ((1U &lt;&lt; (sb)-&gt;shift) - 1U))" data-ref="_M/SB_NR_TO_BIT">SB_NR_TO_BIT</a>(<a class="local col6 ref" href="#646sb" title='sb' data-ref="646sb" data-ref-filename="646sb">sb</a>, <a class="local col7 ref" href="#647bitnr" title='bitnr' data-ref="647bitnr" data-ref-filename="647bitnr">bitnr</a>), <a class="ref fn" href="#__sbitmap_word" title='__sbitmap_word' data-ref="__sbitmap_word" data-ref-filename="__sbitmap_word">__sbitmap_word</a>(<a class="local col6 ref" href="#646sb" title='sb' data-ref="646sb" data-ref-filename="646sb">sb</a>, <a class="local col7 ref" href="#647bitnr" title='bitnr' data-ref="647bitnr" data-ref-filename="647bitnr">bitnr</a>));</td></tr>
+<tr><th id="312">312</th><td>}</td></tr>
+<tr><th id="313">313</th><td></td></tr>
+<tr><th id="314">314</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="sbitmap_clear_bit" title='sbitmap_clear_bit' data-ref="sbitmap_clear_bit" data-ref-filename="sbitmap_clear_bit">sbitmap_clear_bit</dfn>(<b>struct</b> <a class="type" href="#sbitmap" title='sbitmap' data-ref="sbitmap" data-ref-filename="sbitmap">sbitmap</a> *<dfn class="local col8 decl" id="648sb" title='sb' data-type='struct sbitmap *' data-ref="648sb" data-ref-filename="648sb">sb</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col9 decl" id="649bitnr" title='bitnr' data-type='unsigned int' data-ref="649bitnr" data-ref-filename="649bitnr">bitnr</dfn>)</td></tr>
+<tr><th id="315">315</th><td>{</td></tr>
+<tr><th id="316">316</th><td>	<a class="ref fn" href="../asm-generic/bitops-instrumented.h.html#clear_bit" title='clear_bit' data-ref="clear_bit" data-ref-filename="clear_bit">clear_bit</a>(<a class="macro" href="#229" title="((bitnr) &amp; ((1U &lt;&lt; (sb)-&gt;shift) - 1U))" data-ref="_M/SB_NR_TO_BIT">SB_NR_TO_BIT</a>(<a class="local col8 ref" href="#648sb" title='sb' data-ref="648sb" data-ref-filename="648sb">sb</a>, <a class="local col9 ref" href="#649bitnr" title='bitnr' data-ref="649bitnr" data-ref-filename="649bitnr">bitnr</a>), <a class="ref fn" href="#__sbitmap_word" title='__sbitmap_word' data-ref="__sbitmap_word" data-ref-filename="__sbitmap_word">__sbitmap_word</a>(<a class="local col8 ref" href="#648sb" title='sb' data-ref="648sb" data-ref-filename="648sb">sb</a>, <a class="local col9 ref" href="#649bitnr" title='bitnr' data-ref="649bitnr" data-ref-filename="649bitnr">bitnr</a>));</td></tr>
+<tr><th id="317">317</th><td>}</td></tr>
+<tr><th id="318">318</th><td></td></tr>
+<tr><th id="319">319</th><td><i>/*</i></td></tr>
+<tr><th id="320">320</th><td><i> * This one is special, since it doesn't actually clear the bit, rather it</i></td></tr>
+<tr><th id="321">321</th><td><i> * sets the corresponding bit in the -&gt;cleared mask instead. Paired with</i></td></tr>
+<tr><th id="322">322</th><td><i> * the caller doing sbitmap_deferred_clear() if a given index is full, which</i></td></tr>
+<tr><th id="323">323</th><td><i> * will clear the previously freed entries in the corresponding -&gt;word.</i></td></tr>
+<tr><th id="324">324</th><td><i> */</i></td></tr>
+<tr><th id="325">325</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="sbitmap_deferred_clear_bit" title='sbitmap_deferred_clear_bit' data-ref="sbitmap_deferred_clear_bit" data-ref-filename="sbitmap_deferred_clear_bit">sbitmap_deferred_clear_bit</dfn>(<b>struct</b> <a class="type" href="#sbitmap" title='sbitmap' data-ref="sbitmap" data-ref-filename="sbitmap">sbitmap</a> *<dfn class="local col0 decl" id="650sb" title='sb' data-type='struct sbitmap *' data-ref="650sb" data-ref-filename="650sb">sb</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col1 decl" id="651bitnr" title='bitnr' data-type='unsigned int' data-ref="651bitnr" data-ref-filename="651bitnr">bitnr</dfn>)</td></tr>
+<tr><th id="326">326</th><td>{</td></tr>
+<tr><th id="327">327</th><td>	<em>unsigned</em> <em>long</em> *<dfn class="local col2 decl" id="652addr" title='addr' data-type='unsigned long *' data-ref="652addr" data-ref-filename="652addr">addr</dfn> = &amp;<a class="local col0 ref" href="#650sb" title='sb' data-ref="650sb" data-ref-filename="650sb">sb</a>-&gt;<a class="ref field" href="#sbitmap::map" title='sbitmap::map' data-ref="sbitmap::map" data-ref-filename="sbitmap..map">map</a>[<a class="macro" href="#228" title="((bitnr) &gt;&gt; (sb)-&gt;shift)" data-ref="_M/SB_NR_TO_INDEX">SB_NR_TO_INDEX</a>(<a class="local col0 ref" href="#650sb" title='sb' data-ref="650sb" data-ref-filename="650sb">sb</a>, <a class="local col1 ref" href="#651bitnr" title='bitnr' data-ref="651bitnr" data-ref-filename="651bitnr">bitnr</a>)].<a class="ref field" href="#sbitmap_word::cleared" title='sbitmap_word::cleared' data-ref="sbitmap_word::cleared" data-ref-filename="sbitmap_word..cleared">cleared</a>;</td></tr>
+<tr><th id="328">328</th><td></td></tr>
+<tr><th id="329">329</th><td>	<a class="ref fn" href="../asm-generic/bitops-instrumented.h.html#set_bit" title='set_bit' data-ref="set_bit" data-ref-filename="set_bit">set_bit</a>(<a class="macro" href="#229" title="((bitnr) &amp; ((1U &lt;&lt; (sb)-&gt;shift) - 1U))" data-ref="_M/SB_NR_TO_BIT">SB_NR_TO_BIT</a>(<a class="local col0 ref" href="#650sb" title='sb' data-ref="650sb" data-ref-filename="650sb">sb</a>, <a class="local col1 ref" href="#651bitnr" title='bitnr' data-ref="651bitnr" data-ref-filename="651bitnr">bitnr</a>), <a class="local col2 ref" href="#652addr" title='addr' data-ref="652addr" data-ref-filename="652addr">addr</a>);</td></tr>
+<tr><th id="330">330</th><td>}</td></tr>
+<tr><th id="331">331</th><td></td></tr>
+<tr><th id="332">332</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="sbitmap_clear_bit_unlock" title='sbitmap_clear_bit_unlock' data-ref="sbitmap_clear_bit_unlock" data-ref-filename="sbitmap_clear_bit_unlock">sbitmap_clear_bit_unlock</dfn>(<b>struct</b> <a class="type" href="#sbitmap" title='sbitmap' data-ref="sbitmap" data-ref-filename="sbitmap">sbitmap</a> *<dfn class="local col3 decl" id="653sb" title='sb' data-type='struct sbitmap *' data-ref="653sb" data-ref-filename="653sb">sb</dfn>,</td></tr>
+<tr><th id="333">333</th><td>					    <em>unsigned</em> <em>int</em> <dfn class="local col4 decl" id="654bitnr" title='bitnr' data-type='unsigned int' data-ref="654bitnr" data-ref-filename="654bitnr">bitnr</dfn>)</td></tr>
+<tr><th id="334">334</th><td>{</td></tr>
+<tr><th id="335">335</th><td>	<a class="ref fn" href="../asm-generic/bitops-instrumented.h.html#clear_bit_unlock" title='clear_bit_unlock' data-ref="clear_bit_unlock" data-ref-filename="clear_bit_unlock">clear_bit_unlock</a>(<a class="macro" href="#229" title="((bitnr) &amp; ((1U &lt;&lt; (sb)-&gt;shift) - 1U))" data-ref="_M/SB_NR_TO_BIT">SB_NR_TO_BIT</a>(<a class="local col3 ref" href="#653sb" title='sb' data-ref="653sb" data-ref-filename="653sb">sb</a>, <a class="local col4 ref" href="#654bitnr" title='bitnr' data-ref="654bitnr" data-ref-filename="654bitnr">bitnr</a>), <a class="ref fn" href="#__sbitmap_word" title='__sbitmap_word' data-ref="__sbitmap_word" data-ref-filename="__sbitmap_word">__sbitmap_word</a>(<a class="local col3 ref" href="#653sb" title='sb' data-ref="653sb" data-ref-filename="653sb">sb</a>, <a class="local col4 ref" href="#654bitnr" title='bitnr' data-ref="654bitnr" data-ref-filename="654bitnr">bitnr</a>));</td></tr>
+<tr><th id="336">336</th><td>}</td></tr>
+<tr><th id="337">337</th><td></td></tr>
+<tr><th id="338">338</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="sbitmap_test_bit" title='sbitmap_test_bit' data-ref="sbitmap_test_bit" data-ref-filename="sbitmap_test_bit">sbitmap_test_bit</dfn>(<b>struct</b> <a class="type" href="#sbitmap" title='sbitmap' data-ref="sbitmap" data-ref-filename="sbitmap">sbitmap</a> *<dfn class="local col5 decl" id="655sb" title='sb' data-type='struct sbitmap *' data-ref="655sb" data-ref-filename="655sb">sb</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col6 decl" id="656bitnr" title='bitnr' data-type='unsigned int' data-ref="656bitnr" data-ref-filename="656bitnr">bitnr</dfn>)</td></tr>
+<tr><th id="339">339</th><td>{</td></tr>
+<tr><th id="340">340</th><td>	<b>return</b> <a class="ref fn" href="../asm-generic/bitops-instrumented.h.html#test_bit" title='test_bit' data-ref="test_bit" data-ref-filename="test_bit">test_bit</a>(<a class="macro" href="#229" title="((bitnr) &amp; ((1U &lt;&lt; (sb)-&gt;shift) - 1U))" data-ref="_M/SB_NR_TO_BIT">SB_NR_TO_BIT</a>(<a class="local col5 ref" href="#655sb" title='sb' data-ref="655sb" data-ref-filename="655sb">sb</a>, <a class="local col6 ref" href="#656bitnr" title='bitnr' data-ref="656bitnr" data-ref-filename="656bitnr">bitnr</a>), <a class="ref fn" href="#__sbitmap_word" title='__sbitmap_word' data-ref="__sbitmap_word" data-ref-filename="__sbitmap_word">__sbitmap_word</a>(<a class="local col5 ref" href="#655sb" title='sb' data-ref="655sb" data-ref-filename="655sb">sb</a>, <a class="local col6 ref" href="#656bitnr" title='bitnr' data-ref="656bitnr" data-ref-filename="656bitnr">bitnr</a>));</td></tr>
+<tr><th id="341">341</th><td>}</td></tr>
+<tr><th id="342">342</th><td></td></tr>
+<tr><th id="343">343</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="344">344</th><td><i class="doc"> * sbitmap_show() - Dump &amp;struct sbitmap information to a &amp;struct seq_file.</i></td></tr>
+<tr><th id="345">345</th><td><i class="doc"> *<span class="command"> @sb</span>: Bitmap to show.</i></td></tr>
+<tr><th id="346">346</th><td><i class="doc"> *<span class="command"> @m</span>: struct seq_file to write to.</i></td></tr>
+<tr><th id="347">347</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="348">348</th><td><i class="doc"> * This is intended for debugging. The format may change at any time.</i></td></tr>
+<tr><th id="349">349</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="350">350</th><td><em>void</em> <dfn class="decl fn" id="sbitmap_show" title='sbitmap_show' data-ref="sbitmap_show" data-ref-filename="sbitmap_show">sbitmap_show</dfn>(<b>struct</b> <a class="type" href="#sbitmap" title='sbitmap' data-ref="sbitmap" data-ref-filename="sbitmap">sbitmap</a> *<dfn class="local col7 decl" id="657sb" title='sb' data-type='struct sbitmap *' data-ref="657sb" data-ref-filename="657sb">sb</dfn>, <b>struct</b> <a class="type" href="seq_file.h.html#seq_file" title='seq_file' data-ref="seq_file" data-ref-filename="seq_file">seq_file</a> *<dfn class="local col8 decl" id="658m" title='m' data-type='struct seq_file *' data-ref="658m" data-ref-filename="658m">m</dfn>);</td></tr>
+<tr><th id="351">351</th><td></td></tr>
+<tr><th id="352">352</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="353">353</th><td><i class="doc"> * sbitmap_bitmap_show() - Write a hex dump of a &amp;struct sbitmap to a &amp;struct</i></td></tr>
+<tr><th id="354">354</th><td><i class="doc"> * seq_file.</i></td></tr>
+<tr><th id="355">355</th><td><i class="doc"> *<span class="command"> @sb</span>: Bitmap to show.</i></td></tr>
+<tr><th id="356">356</th><td><i class="doc"> *<span class="command"> @m</span>: struct seq_file to write to.</i></td></tr>
+<tr><th id="357">357</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="358">358</th><td><i class="doc"> * This is intended for debugging. The output isn't guaranteed to be internally</i></td></tr>
+<tr><th id="359">359</th><td><i class="doc"> * consistent.</i></td></tr>
+<tr><th id="360">360</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="361">361</th><td><em>void</em> <dfn class="decl fn" id="sbitmap_bitmap_show" title='sbitmap_bitmap_show' data-ref="sbitmap_bitmap_show" data-ref-filename="sbitmap_bitmap_show">sbitmap_bitmap_show</dfn>(<b>struct</b> <a class="type" href="#sbitmap" title='sbitmap' data-ref="sbitmap" data-ref-filename="sbitmap">sbitmap</a> *<dfn class="local col9 decl" id="659sb" title='sb' data-type='struct sbitmap *' data-ref="659sb" data-ref-filename="659sb">sb</dfn>, <b>struct</b> <a class="type" href="seq_file.h.html#seq_file" title='seq_file' data-ref="seq_file" data-ref-filename="seq_file">seq_file</a> *<dfn class="local col0 decl" id="660m" title='m' data-type='struct seq_file *' data-ref="660m" data-ref-filename="660m">m</dfn>);</td></tr>
+<tr><th id="362">362</th><td></td></tr>
+<tr><th id="363">363</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="364">364</th><td><i class="doc"> * sbitmap_queue_init_node() - Initialize a &amp;struct sbitmap_queue on a specific</i></td></tr>
+<tr><th id="365">365</th><td><i class="doc"> * memory node.</i></td></tr>
+<tr><th id="366">366</th><td><i class="doc"> *<span class="command"> @sbq</span>: Bitmap queue to initialize.</i></td></tr>
+<tr><th id="367">367</th><td><i class="doc"> *<span class="command"> @depth</span>: See sbitmap_init_node().</i></td></tr>
+<tr><th id="368">368</th><td><i class="doc"> *<span class="command"> @shift</span>: See sbitmap_init_node().</i></td></tr>
+<tr><th id="369">369</th><td><i class="doc"> *<span class="command"> @round</span>_robin: See sbitmap_get().</i></td></tr>
+<tr><th id="370">370</th><td><i class="doc"> *<span class="command"> @flags</span>: Allocation flags.</i></td></tr>
+<tr><th id="371">371</th><td><i class="doc"> *<span class="command"> @node</span>: Memory node to allocate on.</i></td></tr>
+<tr><th id="372">372</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="373">373</th><td><i class="doc"> * Return: Zero on success or negative errno on failure.</i></td></tr>
+<tr><th id="374">374</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="375">375</th><td><em>int</em> <dfn class="decl fn" id="sbitmap_queue_init_node" title='sbitmap_queue_init_node' data-ref="sbitmap_queue_init_node" data-ref-filename="sbitmap_queue_init_node">sbitmap_queue_init_node</dfn>(<b>struct</b> <a class="type" href="#sbitmap_queue" title='sbitmap_queue' data-ref="sbitmap_queue" data-ref-filename="sbitmap_queue">sbitmap_queue</a> *<dfn class="local col1 decl" id="661sbq" title='sbq' data-type='struct sbitmap_queue *' data-ref="661sbq" data-ref-filename="661sbq">sbq</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col2 decl" id="662depth" title='depth' data-type='unsigned int' data-ref="662depth" data-ref-filename="662depth">depth</dfn>,</td></tr>
+<tr><th id="376">376</th><td>			    <em>int</em> <dfn class="local col3 decl" id="663shift" title='shift' data-type='int' data-ref="663shift" data-ref-filename="663shift">shift</dfn>, <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col4 decl" id="664round_robin" title='round_robin' data-type='bool' data-ref="664round_robin" data-ref-filename="664round_robin">round_robin</dfn>, <a class="typedef" href="types.h.html#gfp_t" title='gfp_t' data-type='unsigned int' data-ref="gfp_t" data-ref-filename="gfp_t">gfp_t</a> <dfn class="local col5 decl" id="665flags" title='flags' data-type='gfp_t' data-ref="665flags" data-ref-filename="665flags">flags</dfn>, <em>int</em> <dfn class="local col6 decl" id="666node" title='node' data-type='int' data-ref="666node" data-ref-filename="666node">node</dfn>);</td></tr>
+<tr><th id="377">377</th><td></td></tr>
+<tr><th id="378">378</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="379">379</th><td><i class="doc"> * sbitmap_queue_free() - Free memory used by a &amp;struct sbitmap_queue.</i></td></tr>
+<tr><th id="380">380</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="381">381</th><td><i class="doc"> *<span class="command"> @sbq</span>: Bitmap queue to free.</i></td></tr>
+<tr><th id="382">382</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="383">383</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="sbitmap_queue_free" title='sbitmap_queue_free' data-ref="sbitmap_queue_free" data-ref-filename="sbitmap_queue_free">sbitmap_queue_free</dfn>(<b>struct</b> <a class="type" href="#sbitmap_queue" title='sbitmap_queue' data-ref="sbitmap_queue" data-ref-filename="sbitmap_queue">sbitmap_queue</a> *<dfn class="local col7 decl" id="667sbq" title='sbq' data-type='struct sbitmap_queue *' data-ref="667sbq" data-ref-filename="667sbq">sbq</dfn>)</td></tr>
+<tr><th id="384">384</th><td>{</td></tr>
+<tr><th id="385">385</th><td>	<a class="ref fn" href="slab.h.html#kfree" title='kfree' data-ref="kfree" data-ref-filename="kfree">kfree</a>(<a class="local col7 ref" href="#667sbq" title='sbq' data-ref="667sbq" data-ref-filename="667sbq">sbq</a>-&gt;<a class="ref field" href="#sbitmap_queue::ws" title='sbitmap_queue::ws' data-ref="sbitmap_queue::ws" data-ref-filename="sbitmap_queue..ws">ws</a>);</td></tr>
+<tr><th id="386">386</th><td>	<a class="ref fn" href="percpu.h.html#free_percpu" title='free_percpu' data-ref="free_percpu" data-ref-filename="free_percpu">free_percpu</a>(<a class="local col7 ref" href="#667sbq" title='sbq' data-ref="667sbq" data-ref-filename="667sbq">sbq</a>-&gt;<a class="ref field" href="#sbitmap_queue::alloc_hint" title='sbitmap_queue::alloc_hint' data-ref="sbitmap_queue::alloc_hint" data-ref-filename="sbitmap_queue..alloc_hint">alloc_hint</a>);</td></tr>
+<tr><th id="387">387</th><td>	<a class="ref fn" href="#sbitmap_free" title='sbitmap_free' data-ref="sbitmap_free" data-ref-filename="sbitmap_free">sbitmap_free</a>(&amp;<a class="local col7 ref" href="#667sbq" title='sbq' data-ref="667sbq" data-ref-filename="667sbq">sbq</a>-&gt;<a class="ref field" href="#sbitmap_queue::sb" title='sbitmap_queue::sb' data-ref="sbitmap_queue::sb" data-ref-filename="sbitmap_queue..sb">sb</a>);</td></tr>
+<tr><th id="388">388</th><td>}</td></tr>
+<tr><th id="389">389</th><td></td></tr>
+<tr><th id="390">390</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="391">391</th><td><i class="doc"> * sbitmap_queue_resize() - Resize a &amp;struct sbitmap_queue.</i></td></tr>
+<tr><th id="392">392</th><td><i class="doc"> *<span class="command"> @sbq</span>: Bitmap queue to resize.</i></td></tr>
+<tr><th id="393">393</th><td><i class="doc"> *<span class="command"> @depth</span>: New number of bits to resize to.</i></td></tr>
+<tr><th id="394">394</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="395">395</th><td><i class="doc"> * Like sbitmap_resize(), this doesn't reallocate anything. It has to do</i></td></tr>
+<tr><th id="396">396</th><td><i class="doc"> * some extra work on the &amp;struct sbitmap_queue, so it's not safe to just</i></td></tr>
+<tr><th id="397">397</th><td><i class="doc"> * resize the underlying &amp;struct sbitmap.</i></td></tr>
+<tr><th id="398">398</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="399">399</th><td><em>void</em> <dfn class="decl fn" id="sbitmap_queue_resize" title='sbitmap_queue_resize' data-ref="sbitmap_queue_resize" data-ref-filename="sbitmap_queue_resize">sbitmap_queue_resize</dfn>(<b>struct</b> <a class="type" href="#sbitmap_queue" title='sbitmap_queue' data-ref="sbitmap_queue" data-ref-filename="sbitmap_queue">sbitmap_queue</a> *<dfn class="local col8 decl" id="668sbq" title='sbq' data-type='struct sbitmap_queue *' data-ref="668sbq" data-ref-filename="668sbq">sbq</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col9 decl" id="669depth" title='depth' data-type='unsigned int' data-ref="669depth" data-ref-filename="669depth">depth</dfn>);</td></tr>
+<tr><th id="400">400</th><td></td></tr>
+<tr><th id="401">401</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="402">402</th><td><i class="doc"> * __sbitmap_queue_get() - Try to allocate a free bit from a &amp;struct</i></td></tr>
+<tr><th id="403">403</th><td><i class="doc"> * sbitmap_queue with preemption already disabled.</i></td></tr>
+<tr><th id="404">404</th><td><i class="doc"> *<span class="command"> @sbq</span>: Bitmap queue to allocate from.</i></td></tr>
+<tr><th id="405">405</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="406">406</th><td><i class="doc"> * Return: Non-negative allocated bit number if successful, -1 otherwise.</i></td></tr>
+<tr><th id="407">407</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="408">408</th><td><em>int</em> <dfn class="decl fn" id="__sbitmap_queue_get" title='__sbitmap_queue_get' data-ref="__sbitmap_queue_get" data-ref-filename="__sbitmap_queue_get">__sbitmap_queue_get</dfn>(<b>struct</b> <a class="type" href="#sbitmap_queue" title='sbitmap_queue' data-ref="sbitmap_queue" data-ref-filename="sbitmap_queue">sbitmap_queue</a> *<dfn class="local col0 decl" id="670sbq" title='sbq' data-type='struct sbitmap_queue *' data-ref="670sbq" data-ref-filename="670sbq">sbq</dfn>);</td></tr>
+<tr><th id="409">409</th><td></td></tr>
+<tr><th id="410">410</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="411">411</th><td><i class="doc"> * __sbitmap_queue_get_shallow() - Try to allocate a free bit from a &amp;struct</i></td></tr>
+<tr><th id="412">412</th><td><i class="doc"> * sbitmap_queue, limiting the depth used from each word, with preemption</i></td></tr>
+<tr><th id="413">413</th><td><i class="doc"> * already disabled.</i></td></tr>
+<tr><th id="414">414</th><td><i class="doc"> *<span class="command"> @sbq</span>: Bitmap queue to allocate from.</i></td></tr>
+<tr><th id="415">415</th><td><i class="doc"> *<span class="command"> @shallow</span>_depth: The maximum number of bits to allocate from a single word.</i></td></tr>
+<tr><th id="416">416</th><td><i class="doc"> * See sbitmap_get_shallow().</i></td></tr>
+<tr><th id="417">417</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="418">418</th><td><i class="doc"> * If you call this, make sure to call sbitmap_queue_min_shallow_depth() after</i></td></tr>
+<tr><th id="419">419</th><td><i class="doc"> * initializing<span class="command"> @sbq</span>.</i></td></tr>
+<tr><th id="420">420</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="421">421</th><td><i class="doc"> * Return: Non-negative allocated bit number if successful, -1 otherwise.</i></td></tr>
+<tr><th id="422">422</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="423">423</th><td><em>int</em> <dfn class="decl fn" id="__sbitmap_queue_get_shallow" title='__sbitmap_queue_get_shallow' data-ref="__sbitmap_queue_get_shallow" data-ref-filename="__sbitmap_queue_get_shallow">__sbitmap_queue_get_shallow</dfn>(<b>struct</b> <a class="type" href="#sbitmap_queue" title='sbitmap_queue' data-ref="sbitmap_queue" data-ref-filename="sbitmap_queue">sbitmap_queue</a> *<dfn class="local col1 decl" id="671sbq" title='sbq' data-type='struct sbitmap_queue *' data-ref="671sbq" data-ref-filename="671sbq">sbq</dfn>,</td></tr>
+<tr><th id="424">424</th><td>				<em>unsigned</em> <em>int</em> <dfn class="local col2 decl" id="672shallow_depth" title='shallow_depth' data-type='unsigned int' data-ref="672shallow_depth" data-ref-filename="672shallow_depth">shallow_depth</dfn>);</td></tr>
+<tr><th id="425">425</th><td></td></tr>
+<tr><th id="426">426</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="427">427</th><td><i class="doc"> * sbitmap_queue_get() - Try to allocate a free bit from a &amp;struct</i></td></tr>
+<tr><th id="428">428</th><td><i class="doc"> * sbitmap_queue.</i></td></tr>
+<tr><th id="429">429</th><td><i class="doc"> *<span class="command"> @sbq</span>: Bitmap queue to allocate from.</i></td></tr>
+<tr><th id="430">430</th><td><i class="doc"> *<span class="command"> @cpu</span>: Output parameter; will contain the CPU we ran on (e.g., to be passed to</i></td></tr>
+<tr><th id="431">431</th><td><i class="doc"> *       sbitmap_queue_clear()).</i></td></tr>
+<tr><th id="432">432</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="433">433</th><td><i class="doc"> * Return: Non-negative allocated bit number if successful, -1 otherwise.</i></td></tr>
+<tr><th id="434">434</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="435">435</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="sbitmap_queue_get" title='sbitmap_queue_get' data-ref="sbitmap_queue_get" data-ref-filename="sbitmap_queue_get">sbitmap_queue_get</dfn>(<b>struct</b> <a class="type" href="#sbitmap_queue" title='sbitmap_queue' data-ref="sbitmap_queue" data-ref-filename="sbitmap_queue">sbitmap_queue</a> *<dfn class="local col3 decl" id="673sbq" title='sbq' data-type='struct sbitmap_queue *' data-ref="673sbq" data-ref-filename="673sbq">sbq</dfn>,</td></tr>
+<tr><th id="436">436</th><td>				    <em>unsigned</em> <em>int</em> *<dfn class="local col4 decl" id="674cpu" title='cpu' data-type='unsigned int *' data-ref="674cpu" data-ref-filename="674cpu">cpu</dfn>)</td></tr>
+<tr><th id="437">437</th><td>{</td></tr>
+<tr><th id="438">438</th><td>	<em>int</em> <dfn class="local col5 decl" id="675nr" title='nr' data-type='int' data-ref="675nr" data-ref-filename="675nr">nr</dfn>;</td></tr>
+<tr><th id="439">439</th><td></td></tr>
+<tr><th id="440">440</th><td>	*<a class="local col4 ref" href="#674cpu" title='cpu' data-ref="674cpu" data-ref-filename="674cpu">cpu</a> = <a class="macro" href="smp.h.html#222" title="({ __asm__ __volatile__(&quot;&quot; : : : &quot;memory&quot;); ({ __this_cpu_preempt_check(&quot;read&quot;); ({ typeof(cpu_number) pscr_ret__; do { const void *__vpp_verify = (typeof((&amp;(cpu_number)) + 0))((void *)0); (void)__vpp_verify; } while (0); switch(sizeof(cpu_number)) { case 1: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; case 2: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; case 4: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; case 8: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; default: __bad_size_call_parameter(); break; } pscr_ret__; }); }); })" data-ref="_M/get_cpu">get_cpu</a>();</td></tr>
+<tr><th id="441">441</th><td>	<a class="local col5 ref" href="#675nr" title='nr' data-ref="675nr" data-ref-filename="675nr">nr</a> = <a class="ref fn" href="#__sbitmap_queue_get" title='__sbitmap_queue_get' data-ref="__sbitmap_queue_get" data-ref-filename="__sbitmap_queue_get">__sbitmap_queue_get</a>(<a class="local col3 ref" href="#673sbq" title='sbq' data-ref="673sbq" data-ref-filename="673sbq">sbq</a>);</td></tr>
+<tr><th id="442">442</th><td>	<a class="macro" href="smp.h.html#223" title="__asm__ __volatile__(&quot;&quot; : : : &quot;memory&quot;)" data-ref="_M/put_cpu">put_cpu</a>();</td></tr>
+<tr><th id="443">443</th><td>	<b>return</b> <a class="local col5 ref" href="#675nr" title='nr' data-ref="675nr" data-ref-filename="675nr">nr</a>;</td></tr>
+<tr><th id="444">444</th><td>}</td></tr>
+<tr><th id="445">445</th><td></td></tr>
+<tr><th id="446">446</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="447">447</th><td><i class="doc"> * sbitmap_queue_get_shallow() - Try to allocate a free bit from a &amp;struct</i></td></tr>
+<tr><th id="448">448</th><td><i class="doc"> * sbitmap_queue, limiting the depth used from each word.</i></td></tr>
+<tr><th id="449">449</th><td><i class="doc"> *<span class="command"> @sbq</span>: Bitmap queue to allocate from.</i></td></tr>
+<tr><th id="450">450</th><td><i class="doc"> *<span class="command"> @cpu</span>: Output parameter; will contain the CPU we ran on (e.g., to be passed to</i></td></tr>
+<tr><th id="451">451</th><td><i class="doc"> *       sbitmap_queue_clear()).</i></td></tr>
+<tr><th id="452">452</th><td><i class="doc"> *<span class="command"> @shallow</span>_depth: The maximum number of bits to allocate from a single word.</i></td></tr>
+<tr><th id="453">453</th><td><i class="doc"> * See sbitmap_get_shallow().</i></td></tr>
+<tr><th id="454">454</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="455">455</th><td><i class="doc"> * If you call this, make sure to call sbitmap_queue_min_shallow_depth() after</i></td></tr>
+<tr><th id="456">456</th><td><i class="doc"> * initializing<span class="command"> @sbq</span>.</i></td></tr>
+<tr><th id="457">457</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="458">458</th><td><i class="doc"> * Return: Non-negative allocated bit number if successful, -1 otherwise.</i></td></tr>
+<tr><th id="459">459</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="460">460</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="sbitmap_queue_get_shallow" title='sbitmap_queue_get_shallow' data-ref="sbitmap_queue_get_shallow" data-ref-filename="sbitmap_queue_get_shallow">sbitmap_queue_get_shallow</dfn>(<b>struct</b> <a class="type" href="#sbitmap_queue" title='sbitmap_queue' data-ref="sbitmap_queue" data-ref-filename="sbitmap_queue">sbitmap_queue</a> *<dfn class="local col6 decl" id="676sbq" title='sbq' data-type='struct sbitmap_queue *' data-ref="676sbq" data-ref-filename="676sbq">sbq</dfn>,</td></tr>
+<tr><th id="461">461</th><td>					    <em>unsigned</em> <em>int</em> *<dfn class="local col7 decl" id="677cpu" title='cpu' data-type='unsigned int *' data-ref="677cpu" data-ref-filename="677cpu">cpu</dfn>,</td></tr>
+<tr><th id="462">462</th><td>					    <em>unsigned</em> <em>int</em> <dfn class="local col8 decl" id="678shallow_depth" title='shallow_depth' data-type='unsigned int' data-ref="678shallow_depth" data-ref-filename="678shallow_depth">shallow_depth</dfn>)</td></tr>
+<tr><th id="463">463</th><td>{</td></tr>
+<tr><th id="464">464</th><td>	<em>int</em> <dfn class="local col9 decl" id="679nr" title='nr' data-type='int' data-ref="679nr" data-ref-filename="679nr">nr</dfn>;</td></tr>
+<tr><th id="465">465</th><td></td></tr>
+<tr><th id="466">466</th><td>	*<a class="local col7 ref" href="#677cpu" title='cpu' data-ref="677cpu" data-ref-filename="677cpu">cpu</a> = <a class="macro" href="smp.h.html#222" title="({ __asm__ __volatile__(&quot;&quot; : : : &quot;memory&quot;); ({ __this_cpu_preempt_check(&quot;read&quot;); ({ typeof(cpu_number) pscr_ret__; do { const void *__vpp_verify = (typeof((&amp;(cpu_number)) + 0))((void *)0); (void)__vpp_verify; } while (0); switch(sizeof(cpu_number)) { case 1: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; case 2: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; case 4: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; case 8: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; default: __bad_size_call_parameter(); break; } pscr_ret__; }); }); })" data-ref="_M/get_cpu">get_cpu</a>();</td></tr>
+<tr><th id="467">467</th><td>	<a class="local col9 ref" href="#679nr" title='nr' data-ref="679nr" data-ref-filename="679nr">nr</a> = <a class="ref fn" href="#__sbitmap_queue_get_shallow" title='__sbitmap_queue_get_shallow' data-ref="__sbitmap_queue_get_shallow" data-ref-filename="__sbitmap_queue_get_shallow">__sbitmap_queue_get_shallow</a>(<a class="local col6 ref" href="#676sbq" title='sbq' data-ref="676sbq" data-ref-filename="676sbq">sbq</a>, <a class="local col8 ref" href="#678shallow_depth" title='shallow_depth' data-ref="678shallow_depth" data-ref-filename="678shallow_depth">shallow_depth</a>);</td></tr>
+<tr><th id="468">468</th><td>	<a class="macro" href="smp.h.html#223" title="__asm__ __volatile__(&quot;&quot; : : : &quot;memory&quot;)" data-ref="_M/put_cpu">put_cpu</a>();</td></tr>
+<tr><th id="469">469</th><td>	<b>return</b> <a class="local col9 ref" href="#679nr" title='nr' data-ref="679nr" data-ref-filename="679nr">nr</a>;</td></tr>
+<tr><th id="470">470</th><td>}</td></tr>
+<tr><th id="471">471</th><td></td></tr>
+<tr><th id="472">472</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="473">473</th><td><i class="doc"> * sbitmap_queue_min_shallow_depth() - Inform a &amp;struct sbitmap_queue of the</i></td></tr>
+<tr><th id="474">474</th><td><i class="doc"> * minimum shallow depth that will be used.</i></td></tr>
+<tr><th id="475">475</th><td><i class="doc"> *<span class="command"> @sbq</span>: Bitmap queue in question.</i></td></tr>
+<tr><th id="476">476</th><td><i class="doc"> *<span class="command"> @min</span>_shallow_depth: The minimum shallow depth that will be passed to</i></td></tr>
+<tr><th id="477">477</th><td><i class="doc"> * sbitmap_queue_get_shallow() or __sbitmap_queue_get_shallow().</i></td></tr>
+<tr><th id="478">478</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="479">479</th><td><i class="doc"> * sbitmap_queue_clear() batches wakeups as an optimization. The batch size</i></td></tr>
+<tr><th id="480">480</th><td><i class="doc"> * depends on the depth of the bitmap. Since the shallow allocation functions</i></td></tr>
+<tr><th id="481">481</th><td><i class="doc"> * effectively operate with a different depth, the shallow depth must be taken</i></td></tr>
+<tr><th id="482">482</th><td><i class="doc"> * into account when calculating the batch size. This function must be called</i></td></tr>
+<tr><th id="483">483</th><td><i class="doc"> * with the minimum shallow depth that will be used. Failure to do so can result</i></td></tr>
+<tr><th id="484">484</th><td><i class="doc"> * in missed wakeups.</i></td></tr>
+<tr><th id="485">485</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="486">486</th><td><em>void</em> <dfn class="decl fn" id="sbitmap_queue_min_shallow_depth" title='sbitmap_queue_min_shallow_depth' data-ref="sbitmap_queue_min_shallow_depth" data-ref-filename="sbitmap_queue_min_shallow_depth">sbitmap_queue_min_shallow_depth</dfn>(<b>struct</b> <a class="type" href="#sbitmap_queue" title='sbitmap_queue' data-ref="sbitmap_queue" data-ref-filename="sbitmap_queue">sbitmap_queue</a> *<dfn class="local col0 decl" id="680sbq" title='sbq' data-type='struct sbitmap_queue *' data-ref="680sbq" data-ref-filename="680sbq">sbq</dfn>,</td></tr>
+<tr><th id="487">487</th><td>				     <em>unsigned</em> <em>int</em> <dfn class="local col1 decl" id="681min_shallow_depth" title='min_shallow_depth' data-type='unsigned int' data-ref="681min_shallow_depth" data-ref-filename="681min_shallow_depth">min_shallow_depth</dfn>);</td></tr>
+<tr><th id="488">488</th><td></td></tr>
+<tr><th id="489">489</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="490">490</th><td><i class="doc"> * sbitmap_queue_clear() - Free an allocated bit and wake up waiters on a</i></td></tr>
+<tr><th id="491">491</th><td><i class="doc"> * &amp;struct sbitmap_queue.</i></td></tr>
+<tr><th id="492">492</th><td><i class="doc"> *<span class="command"> @sbq</span>: Bitmap to free from.</i></td></tr>
+<tr><th id="493">493</th><td><i class="doc"> *<span class="command"> @nr</span>: Bit number to free.</i></td></tr>
+<tr><th id="494">494</th><td><i class="doc"> *<span class="command"> @cpu</span>: CPU the bit was allocated on.</i></td></tr>
+<tr><th id="495">495</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="496">496</th><td><em>void</em> <dfn class="decl fn" id="sbitmap_queue_clear" title='sbitmap_queue_clear' data-ref="sbitmap_queue_clear" data-ref-filename="sbitmap_queue_clear">sbitmap_queue_clear</dfn>(<b>struct</b> <a class="type" href="#sbitmap_queue" title='sbitmap_queue' data-ref="sbitmap_queue" data-ref-filename="sbitmap_queue">sbitmap_queue</a> *<dfn class="local col2 decl" id="682sbq" title='sbq' data-type='struct sbitmap_queue *' data-ref="682sbq" data-ref-filename="682sbq">sbq</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col3 decl" id="683nr" title='nr' data-type='unsigned int' data-ref="683nr" data-ref-filename="683nr">nr</dfn>,</td></tr>
+<tr><th id="497">497</th><td>			 <em>unsigned</em> <em>int</em> <dfn class="local col4 decl" id="684cpu" title='cpu' data-type='unsigned int' data-ref="684cpu" data-ref-filename="684cpu">cpu</dfn>);</td></tr>
+<tr><th id="498">498</th><td></td></tr>
+<tr><th id="499">499</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="sbq_index_inc" title='sbq_index_inc' data-ref="sbq_index_inc" data-ref-filename="sbq_index_inc">sbq_index_inc</dfn>(<em>int</em> <dfn class="local col5 decl" id="685index" title='index' data-type='int' data-ref="685index" data-ref-filename="685index">index</dfn>)</td></tr>
+<tr><th id="500">500</th><td>{</td></tr>
+<tr><th id="501">501</th><td>	<b>return</b> (<a class="local col5 ref" href="#685index" title='index' data-ref="685index" data-ref-filename="685index">index</a> + <var>1</var>) &amp; (<a class="macro" href="#70" title="8" data-ref="_M/SBQ_WAIT_QUEUES">SBQ_WAIT_QUEUES</a> - <var>1</var>);</td></tr>
+<tr><th id="502">502</th><td>}</td></tr>
+<tr><th id="503">503</th><td></td></tr>
+<tr><th id="504">504</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="sbq_index_atomic_inc" title='sbq_index_atomic_inc' data-ref="sbq_index_atomic_inc" data-ref-filename="sbq_index_atomic_inc">sbq_index_atomic_inc</dfn>(<a class="typedef" href="types.h.html#atomic_t" title='atomic_t' data-type='struct atomic_t' data-ref="atomic_t" data-ref-filename="atomic_t">atomic_t</a> *<dfn class="local col6 decl" id="686index" title='index' data-type='atomic_t *' data-ref="686index" data-ref-filename="686index">index</dfn>)</td></tr>
+<tr><th id="505">505</th><td>{</td></tr>
+<tr><th id="506">506</th><td>	<em>int</em> <dfn class="local col7 decl" id="687old" title='old' data-type='int' data-ref="687old" data-ref-filename="687old">old</dfn> = <a class="macro" href="../asm-generic/atomic-instrumented.h.html#29" title="atomic_read" data-ref="_M/atomic_read">atomic_read</a>(<a class="local col6 ref" href="#686index" title='index' data-ref="686index" data-ref-filename="686index">index</a>);</td></tr>
+<tr><th id="507">507</th><td>	<em>int</em> <dfn class="local col8 decl" id="688new" title='new' data-type='int' data-ref="688new" data-ref-filename="688new">new</dfn> = <a class="ref fn" href="#sbq_index_inc" title='sbq_index_inc' data-ref="sbq_index_inc" data-ref-filename="sbq_index_inc">sbq_index_inc</a>(<a class="local col7 ref" href="#687old" title='old' data-ref="687old" data-ref-filename="687old">old</a>);</td></tr>
+<tr><th id="508">508</th><td>	<a class="macro" href="../asm-generic/atomic-instrumented.h.html#656" title="atomic_cmpxchg" data-ref="_M/atomic_cmpxchg">atomic_cmpxchg</a>(<a class="local col6 ref" href="#686index" title='index' data-ref="686index" data-ref-filename="686index">index</a>, <a class="local col7 ref" href="#687old" title='old' data-ref="687old" data-ref-filename="687old">old</a>, <a class="local col8 ref" href="#688new" title='new' data-ref="688new" data-ref-filename="688new">new</a>);</td></tr>
+<tr><th id="509">509</th><td>}</td></tr>
+<tr><th id="510">510</th><td></td></tr>
+<tr><th id="511">511</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="512">512</th><td><i class="doc"> * sbq_wait_ptr() - Get the next wait queue to use for a &amp;struct</i></td></tr>
+<tr><th id="513">513</th><td><i class="doc"> * sbitmap_queue.</i></td></tr>
+<tr><th id="514">514</th><td><i class="doc"> *<span class="command"> @sbq</span>: Bitmap queue to wait on.</i></td></tr>
+<tr><th id="515">515</th><td><i class="doc"> *<span class="command"> @wait</span>_index: A counter per "user" of<span class="command"> @sbq</span>.</i></td></tr>
+<tr><th id="516">516</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="517">517</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="#sbq_wait_state" title='sbq_wait_state' data-ref="sbq_wait_state" data-ref-filename="sbq_wait_state">sbq_wait_state</a> *<dfn class="decl def fn" id="sbq_wait_ptr" title='sbq_wait_ptr' data-ref="sbq_wait_ptr" data-ref-filename="sbq_wait_ptr">sbq_wait_ptr</dfn>(<b>struct</b> <a class="type" href="#sbitmap_queue" title='sbitmap_queue' data-ref="sbitmap_queue" data-ref-filename="sbitmap_queue">sbitmap_queue</a> *<dfn class="local col9 decl" id="689sbq" title='sbq' data-type='struct sbitmap_queue *' data-ref="689sbq" data-ref-filename="689sbq">sbq</dfn>,</td></tr>
+<tr><th id="518">518</th><td>						  <a class="typedef" href="types.h.html#atomic_t" title='atomic_t' data-type='struct atomic_t' data-ref="atomic_t" data-ref-filename="atomic_t">atomic_t</a> *<dfn class="local col0 decl" id="690wait_index" title='wait_index' data-type='atomic_t *' data-ref="690wait_index" data-ref-filename="690wait_index">wait_index</dfn>)</td></tr>
+<tr><th id="519">519</th><td>{</td></tr>
+<tr><th id="520">520</th><td>	<b>struct</b> <a class="type" href="#sbq_wait_state" title='sbq_wait_state' data-ref="sbq_wait_state" data-ref-filename="sbq_wait_state">sbq_wait_state</a> *<dfn class="local col1 decl" id="691ws" title='ws' data-type='struct sbq_wait_state *' data-ref="691ws" data-ref-filename="691ws">ws</dfn>;</td></tr>
+<tr><th id="521">521</th><td></td></tr>
+<tr><th id="522">522</th><td>	<a class="local col1 ref" href="#691ws" title='ws' data-ref="691ws" data-ref-filename="691ws">ws</a> = &amp;<a class="local col9 ref" href="#689sbq" title='sbq' data-ref="689sbq" data-ref-filename="689sbq">sbq</a>-&gt;<a class="ref field" href="#sbitmap_queue::ws" title='sbitmap_queue::ws' data-ref="sbitmap_queue::ws" data-ref-filename="sbitmap_queue..ws">ws</a>[<a class="macro" href="../asm-generic/atomic-instrumented.h.html#29" title="atomic_read" data-ref="_M/atomic_read">atomic_read</a>(<a class="local col0 ref" href="#690wait_index" title='wait_index' data-ref="690wait_index" data-ref-filename="690wait_index">wait_index</a>)];</td></tr>
+<tr><th id="523">523</th><td>	<a class="ref fn" href="#sbq_index_atomic_inc" title='sbq_index_atomic_inc' data-ref="sbq_index_atomic_inc" data-ref-filename="sbq_index_atomic_inc">sbq_index_atomic_inc</a>(<a class="local col0 ref" href="#690wait_index" title='wait_index' data-ref="690wait_index" data-ref-filename="690wait_index">wait_index</a>);</td></tr>
+<tr><th id="524">524</th><td>	<b>return</b> <a class="local col1 ref" href="#691ws" title='ws' data-ref="691ws" data-ref-filename="691ws">ws</a>;</td></tr>
+<tr><th id="525">525</th><td>}</td></tr>
+<tr><th id="526">526</th><td></td></tr>
+<tr><th id="527">527</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="528">528</th><td><i class="doc"> * sbitmap_queue_wake_all() - Wake up everything waiting on a &amp;struct</i></td></tr>
+<tr><th id="529">529</th><td><i class="doc"> * sbitmap_queue.</i></td></tr>
+<tr><th id="530">530</th><td><i class="doc"> *<span class="command"> @sbq</span>: Bitmap queue to wake up.</i></td></tr>
+<tr><th id="531">531</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="532">532</th><td><em>void</em> <dfn class="decl fn" id="sbitmap_queue_wake_all" title='sbitmap_queue_wake_all' data-ref="sbitmap_queue_wake_all" data-ref-filename="sbitmap_queue_wake_all">sbitmap_queue_wake_all</dfn>(<b>struct</b> <a class="type" href="#sbitmap_queue" title='sbitmap_queue' data-ref="sbitmap_queue" data-ref-filename="sbitmap_queue">sbitmap_queue</a> *<dfn class="local col2 decl" id="692sbq" title='sbq' data-type='struct sbitmap_queue *' data-ref="692sbq" data-ref-filename="692sbq">sbq</dfn>);</td></tr>
+<tr><th id="533">533</th><td></td></tr>
+<tr><th id="534">534</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="535">535</th><td><i class="doc"> * sbitmap_queue_wake_up() - Wake up some of waiters in one waitqueue</i></td></tr>
+<tr><th id="536">536</th><td><i class="doc"> * on a &amp;struct sbitmap_queue.</i></td></tr>
+<tr><th id="537">537</th><td><i class="doc"> *<span class="command"> @sbq</span>: Bitmap queue to wake up.</i></td></tr>
+<tr><th id="538">538</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="539">539</th><td><em>void</em> <dfn class="decl fn" id="sbitmap_queue_wake_up" title='sbitmap_queue_wake_up' data-ref="sbitmap_queue_wake_up" data-ref-filename="sbitmap_queue_wake_up">sbitmap_queue_wake_up</dfn>(<b>struct</b> <a class="type" href="#sbitmap_queue" title='sbitmap_queue' data-ref="sbitmap_queue" data-ref-filename="sbitmap_queue">sbitmap_queue</a> *<dfn class="local col3 decl" id="693sbq" title='sbq' data-type='struct sbitmap_queue *' data-ref="693sbq" data-ref-filename="693sbq">sbq</dfn>);</td></tr>
+<tr><th id="540">540</th><td></td></tr>
+<tr><th id="541">541</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="542">542</th><td><i class="doc"> * sbitmap_queue_show() - Dump &amp;struct sbitmap_queue information to a &amp;struct</i></td></tr>
+<tr><th id="543">543</th><td><i class="doc"> * seq_file.</i></td></tr>
+<tr><th id="544">544</th><td><i class="doc"> *<span class="command"> @sbq</span>: Bitmap queue to show.</i></td></tr>
+<tr><th id="545">545</th><td><i class="doc"> *<span class="command"> @m</span>: struct seq_file to write to.</i></td></tr>
+<tr><th id="546">546</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="547">547</th><td><i class="doc"> * This is intended for debugging. The format may change at any time.</i></td></tr>
+<tr><th id="548">548</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="549">549</th><td><em>void</em> <dfn class="decl fn" id="sbitmap_queue_show" title='sbitmap_queue_show' data-ref="sbitmap_queue_show" data-ref-filename="sbitmap_queue_show">sbitmap_queue_show</dfn>(<b>struct</b> <a class="type" href="#sbitmap_queue" title='sbitmap_queue' data-ref="sbitmap_queue" data-ref-filename="sbitmap_queue">sbitmap_queue</a> *<dfn class="local col4 decl" id="694sbq" title='sbq' data-type='struct sbitmap_queue *' data-ref="694sbq" data-ref-filename="694sbq">sbq</dfn>, <b>struct</b> <a class="type" href="seq_file.h.html#seq_file" title='seq_file' data-ref="seq_file" data-ref-filename="seq_file">seq_file</a> *<dfn class="local col5 decl" id="695m" title='m' data-type='struct seq_file *' data-ref="695m" data-ref-filename="695m">m</dfn>);</td></tr>
+<tr><th id="550">550</th><td></td></tr>
+<tr><th id="551">551</th><td><b>struct</b> <dfn class="type def" id="sbq_wait" title='sbq_wait' data-ref="sbq_wait" data-ref-filename="sbq_wait">sbq_wait</dfn> {</td></tr>
+<tr><th id="552">552</th><td>	<b>struct</b> <a class="type" href="#sbitmap_queue" title='sbitmap_queue' data-ref="sbitmap_queue" data-ref-filename="sbitmap_queue">sbitmap_queue</a> *<dfn class="decl field" id="sbq_wait::sbq" title='sbq_wait::sbq' data-ref="sbq_wait::sbq" data-ref-filename="sbq_wait..sbq">sbq</dfn>;	<i>/* if set, sbq_wait is accounted */</i></td></tr>
+<tr><th id="553">553</th><td>	<b>struct</b> <a class="type" href="wait.h.html#wait_queue_entry" title='wait_queue_entry' data-ref="wait_queue_entry" data-ref-filename="wait_queue_entry">wait_queue_entry</a> <dfn class="decl field" id="sbq_wait::wait" title='sbq_wait::wait' data-ref="sbq_wait::wait" data-ref-filename="sbq_wait..wait">wait</dfn>;</td></tr>
+<tr><th id="554">554</th><td>};</td></tr>
+<tr><th id="555">555</th><td></td></tr>
+<tr><th id="556">556</th><td><u>#define <dfn class="macro" id="_M/DEFINE_SBQ_WAIT" data-ref="_M/DEFINE_SBQ_WAIT">DEFINE_SBQ_WAIT</dfn>(name)							\</u></td></tr>
+<tr><th id="557">557</th><td><u>	struct sbq_wait name = {						\</u></td></tr>
+<tr><th id="558">558</th><td><u>		.sbq = NULL,							\</u></td></tr>
+<tr><th id="559">559</th><td><u>		.wait = {							\</u></td></tr>
+<tr><th id="560">560</th><td><u>			.private	= current,				\</u></td></tr>
+<tr><th id="561">561</th><td><u>			.func		= autoremove_wake_function,		\</u></td></tr>
+<tr><th id="562">562</th><td><u>			.entry		= LIST_HEAD_INIT((name).wait.entry),	\</u></td></tr>
+<tr><th id="563">563</th><td><u>		}								\</u></td></tr>
+<tr><th id="564">564</th><td><u>	}</u></td></tr>
+<tr><th id="565">565</th><td></td></tr>
+<tr><th id="566">566</th><td><i>/*</i></td></tr>
+<tr><th id="567">567</th><td><i> * Wrapper around prepare_to_wait_exclusive(), which maintains some extra</i></td></tr>
+<tr><th id="568">568</th><td><i> * internal state.</i></td></tr>
+<tr><th id="569">569</th><td><i> */</i></td></tr>
+<tr><th id="570">570</th><td><em>void</em> <dfn class="decl fn" id="sbitmap_prepare_to_wait" title='sbitmap_prepare_to_wait' data-ref="sbitmap_prepare_to_wait" data-ref-filename="sbitmap_prepare_to_wait">sbitmap_prepare_to_wait</dfn>(<b>struct</b> <a class="type" href="#sbitmap_queue" title='sbitmap_queue' data-ref="sbitmap_queue" data-ref-filename="sbitmap_queue">sbitmap_queue</a> *<dfn class="local col6 decl" id="696sbq" title='sbq' data-type='struct sbitmap_queue *' data-ref="696sbq" data-ref-filename="696sbq">sbq</dfn>,</td></tr>
+<tr><th id="571">571</th><td>				<b>struct</b> <a class="type" href="#sbq_wait_state" title='sbq_wait_state' data-ref="sbq_wait_state" data-ref-filename="sbq_wait_state">sbq_wait_state</a> *<dfn class="local col7 decl" id="697ws" title='ws' data-type='struct sbq_wait_state *' data-ref="697ws" data-ref-filename="697ws">ws</dfn>,</td></tr>
+<tr><th id="572">572</th><td>				<b>struct</b> <a class="type" href="#sbq_wait" title='sbq_wait' data-ref="sbq_wait" data-ref-filename="sbq_wait">sbq_wait</a> *<dfn class="local col8 decl" id="698sbq_wait" title='sbq_wait' data-type='struct sbq_wait *' data-ref="698sbq_wait" data-ref-filename="698sbq_wait">sbq_wait</dfn>, <em>int</em> <dfn class="local col9 decl" id="699state" title='state' data-type='int' data-ref="699state" data-ref-filename="699state">state</dfn>);</td></tr>
+<tr><th id="573">573</th><td></td></tr>
+<tr><th id="574">574</th><td><i>/*</i></td></tr>
+<tr><th id="575">575</th><td><i> * Must be paired with sbitmap_prepare_to_wait().</i></td></tr>
+<tr><th id="576">576</th><td><i> */</i></td></tr>
+<tr><th id="577">577</th><td><em>void</em> <dfn class="decl fn" id="sbitmap_finish_wait" title='sbitmap_finish_wait' data-ref="sbitmap_finish_wait" data-ref-filename="sbitmap_finish_wait">sbitmap_finish_wait</dfn>(<b>struct</b> <a class="type" href="#sbitmap_queue" title='sbitmap_queue' data-ref="sbitmap_queue" data-ref-filename="sbitmap_queue">sbitmap_queue</a> *<dfn class="local col0 decl" id="700sbq" title='sbq' data-type='struct sbitmap_queue *' data-ref="700sbq" data-ref-filename="700sbq">sbq</dfn>, <b>struct</b> <a class="type" href="#sbq_wait_state" title='sbq_wait_state' data-ref="sbq_wait_state" data-ref-filename="sbq_wait_state">sbq_wait_state</a> *<dfn class="local col1 decl" id="701ws" title='ws' data-type='struct sbq_wait_state *' data-ref="701ws" data-ref-filename="701ws">ws</dfn>,</td></tr>
+<tr><th id="578">578</th><td>				<b>struct</b> <a class="type" href="#sbq_wait" title='sbq_wait' data-ref="sbq_wait" data-ref-filename="sbq_wait">sbq_wait</a> *<dfn class="local col2 decl" id="702sbq_wait" title='sbq_wait' data-type='struct sbq_wait *' data-ref="702sbq_wait" data-ref-filename="702sbq_wait">sbq_wait</dfn>);</td></tr>
+<tr><th id="579">579</th><td></td></tr>
+<tr><th id="580">580</th><td><i>/*</i></td></tr>
+<tr><th id="581">581</th><td><i> * Wrapper around add_wait_queue(), which maintains some extra internal state</i></td></tr>
+<tr><th id="582">582</th><td><i> */</i></td></tr>
+<tr><th id="583">583</th><td><em>void</em> <dfn class="decl fn" id="sbitmap_add_wait_queue" title='sbitmap_add_wait_queue' data-ref="sbitmap_add_wait_queue" data-ref-filename="sbitmap_add_wait_queue">sbitmap_add_wait_queue</dfn>(<b>struct</b> <a class="type" href="#sbitmap_queue" title='sbitmap_queue' data-ref="sbitmap_queue" data-ref-filename="sbitmap_queue">sbitmap_queue</a> *<dfn class="local col3 decl" id="703sbq" title='sbq' data-type='struct sbitmap_queue *' data-ref="703sbq" data-ref-filename="703sbq">sbq</dfn>,</td></tr>
+<tr><th id="584">584</th><td>			    <b>struct</b> <a class="type" href="#sbq_wait_state" title='sbq_wait_state' data-ref="sbq_wait_state" data-ref-filename="sbq_wait_state">sbq_wait_state</a> *<dfn class="local col4 decl" id="704ws" title='ws' data-type='struct sbq_wait_state *' data-ref="704ws" data-ref-filename="704ws">ws</dfn>,</td></tr>
+<tr><th id="585">585</th><td>			    <b>struct</b> <a class="type" href="#sbq_wait" title='sbq_wait' data-ref="sbq_wait" data-ref-filename="sbq_wait">sbq_wait</a> *<dfn class="local col5 decl" id="705sbq_wait" title='sbq_wait' data-type='struct sbq_wait *' data-ref="705sbq_wait" data-ref-filename="705sbq_wait">sbq_wait</dfn>);</td></tr>
+<tr><th id="586">586</th><td></td></tr>
+<tr><th id="587">587</th><td><i>/*</i></td></tr>
+<tr><th id="588">588</th><td><i> * Must be paired with sbitmap_add_wait_queue()</i></td></tr>
+<tr><th id="589">589</th><td><i> */</i></td></tr>
+<tr><th id="590">590</th><td><em>void</em> <dfn class="decl fn" id="sbitmap_del_wait_queue" title='sbitmap_del_wait_queue' data-ref="sbitmap_del_wait_queue" data-ref-filename="sbitmap_del_wait_queue">sbitmap_del_wait_queue</dfn>(<b>struct</b> <a class="type" href="#sbq_wait" title='sbq_wait' data-ref="sbq_wait" data-ref-filename="sbq_wait">sbq_wait</a> *<dfn class="local col6 decl" id="706sbq_wait" title='sbq_wait' data-type='struct sbq_wait *' data-ref="706sbq_wait" data-ref-filename="706sbq_wait">sbq_wait</dfn>);</td></tr>
+<tr><th id="591">591</th><td></td></tr>
+<tr><th id="592">592</th><td><u>#<span data-ppcond="9">endif</span> /* __LINUX_SCALE_BITMAP_H */</u></td></tr>
+<tr><th id="593">593</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../block/bio.c.html'>linux-5.3.1/block/bio.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

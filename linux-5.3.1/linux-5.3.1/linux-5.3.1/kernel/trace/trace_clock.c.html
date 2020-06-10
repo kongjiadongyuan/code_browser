@@ -1,0 +1,160 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>trace_clock.c source code [linux-5.3.1/kernel/trace/trace_clock.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/kernel/trace/trace_clock.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>kernel</a>/<a href='./'>trace</a>/<a href='trace_clock.c.html'>trace_clock.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * tracing clocks</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> *  Copyright (C) 2009 Red Hat, Inc., Ingo Molnar &lt;mingo@redhat.com&gt;</i></td></tr>
+<tr><th id="6">6</th><td><i> *</i></td></tr>
+<tr><th id="7">7</th><td><i> * Implements 3 trace clock variants, with differing scalability/precision</i></td></tr>
+<tr><th id="8">8</th><td><i> * tradeoffs:</i></td></tr>
+<tr><th id="9">9</th><td><i> *</i></td></tr>
+<tr><th id="10">10</th><td><i> *  -   local: CPU-local trace clock</i></td></tr>
+<tr><th id="11">11</th><td><i> *  -  medium: scalable global clock with some jitter</i></td></tr>
+<tr><th id="12">12</th><td><i> *  -  global: globally monotonic, serialized clock</i></td></tr>
+<tr><th id="13">13</th><td><i> *</i></td></tr>
+<tr><th id="14">14</th><td><i> * Tracer plugins will chose a default from these clocks.</i></td></tr>
+<tr><th id="15">15</th><td><i> */</i></td></tr>
+<tr><th id="16">16</th><td><u>#include <a href="../../include/linux/spinlock.h.html">&lt;linux/spinlock.h&gt;</a></u></td></tr>
+<tr><th id="17">17</th><td><u>#include <a href="../../include/linux/irqflags.h.html">&lt;linux/irqflags.h&gt;</a></u></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../../include/linux/hardirq.h.html">&lt;linux/hardirq.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../include/linux/module.h.html">&lt;linux/module.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../include/linux/percpu.h.html">&lt;linux/percpu.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../include/linux/sched.h.html">&lt;linux/sched.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../../include/linux/sched/clock.h.html">&lt;linux/sched/clock.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../../include/linux/ktime.h.html">&lt;linux/ktime.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../../include/linux/trace_clock.h.html">&lt;linux/trace_clock.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td><i>/*</i></td></tr>
+<tr><th id="27">27</th><td><i> * trace_clock_local(): the simplest and least coherent tracing clock.</i></td></tr>
+<tr><th id="28">28</th><td><i> *</i></td></tr>
+<tr><th id="29">29</th><td><i> * Useful for tracing that does not cross to other CPUs nor</i></td></tr>
+<tr><th id="30">30</th><td><i> * does it go through idle events.</i></td></tr>
+<tr><th id="31">31</th><td><i> */</i></td></tr>
+<tr><th id="32">32</th><td><a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <a class="macro" href="../../arch/x86/include/asm/linkage.h.html#8" title="__attribute__((no_instrument_function))" data-ref="_M/notrace">notrace</a> <dfn class="decl def fn" id="trace_clock_local" title='trace_clock_local' data-ref="trace_clock_local" data-ref-filename="trace_clock_local">trace_clock_local</dfn>(<em>void</em>)</td></tr>
+<tr><th id="33">33</th><td>{</td></tr>
+<tr><th id="34">34</th><td>	<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col1 decl" id="1clock" title='clock' data-type='u64' data-ref="1clock" data-ref-filename="1clock">clock</dfn>;</td></tr>
+<tr><th id="35">35</th><td></td></tr>
+<tr><th id="36">36</th><td>	<i>/*</i></td></tr>
+<tr><th id="37">37</th><td><i>	 * sched_clock() is an architecture implemented, fast, scalable,</i></td></tr>
+<tr><th id="38">38</th><td><i>	 * lockless clock. It is not guaranteed to be coherent across</i></td></tr>
+<tr><th id="39">39</th><td><i>	 * CPUs, nor across CPU idle events.</i></td></tr>
+<tr><th id="40">40</th><td><i>	 */</i></td></tr>
+<tr><th id="41">41</th><td>	<a class="macro" href="../../include/linux/preempt.h.html#248" title="__asm__ __volatile__(&quot;&quot; : : : &quot;memory&quot;)" data-ref="_M/preempt_disable_notrace">preempt_disable_notrace</a>();</td></tr>
+<tr><th id="42">42</th><td>	<a class="local col1 ref" href="#1clock" title='clock' data-ref="1clock" data-ref-filename="1clock">clock</a> = <a class="ref fn" href="../../include/linux/sched/clock.h.html#sched_clock" title='sched_clock' data-ref="sched_clock" data-ref-filename="sched_clock">sched_clock</a>();</td></tr>
+<tr><th id="43">43</th><td>	<a class="macro" href="../../include/linux/preempt.h.html#250" title="__asm__ __volatile__(&quot;&quot; : : : &quot;memory&quot;)" data-ref="_M/preempt_enable_notrace">preempt_enable_notrace</a>();</td></tr>
+<tr><th id="44">44</th><td></td></tr>
+<tr><th id="45">45</th><td>	<b>return</b> <a class="local col1 ref" href="#1clock" title='clock' data-ref="1clock" data-ref-filename="1clock">clock</a>;</td></tr>
+<tr><th id="46">46</th><td>}</td></tr>
+<tr><th id="47">47</th><td><a class="macro" href="../../include/linux/export.h.html#126" title="extern typeof(trace_clock_local) trace_clock_local; static const char __kstrtab_trace_clock_local[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;trace_clock_local&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_trace_clock_local47 = (void *)&amp;trace_clock_local; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;trace_clock_local&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;trace_clock_local&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;trace_clock_local&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;trace_clock_local&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#trace_clock_local" title='trace_clock_local' data-ref="trace_clock_local" data-ref-filename="trace_clock_local"><a class="ref fn" href="#trace_clock_local" title='trace_clock_local' data-ref="trace_clock_local" data-ref-filename="trace_clock_local"><a class="ref fn" href="#trace_clock_local" title='trace_clock_local' data-ref="trace_clock_local" data-ref-filename="trace_clock_local">trace_clock_local</a></a></a>);</td></tr>
+<tr><th id="48">48</th><td></td></tr>
+<tr><th id="49">49</th><td><i>/*</i></td></tr>
+<tr><th id="50">50</th><td><i> * trace_clock(): 'between' trace clock. Not completely serialized,</i></td></tr>
+<tr><th id="51">51</th><td><i> * but not completely incorrect when crossing CPUs either.</i></td></tr>
+<tr><th id="52">52</th><td><i> *</i></td></tr>
+<tr><th id="53">53</th><td><i> * This is based on cpu_clock(), which will allow at most ~1 jiffy of</i></td></tr>
+<tr><th id="54">54</th><td><i> * jitter between CPUs. So it's a pretty scalable clock, but there</i></td></tr>
+<tr><th id="55">55</th><td><i> * can be offsets in the trace data.</i></td></tr>
+<tr><th id="56">56</th><td><i> */</i></td></tr>
+<tr><th id="57">57</th><td><a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <a class="macro" href="../../arch/x86/include/asm/linkage.h.html#8" title="__attribute__((no_instrument_function))" data-ref="_M/notrace">notrace</a> <dfn class="decl def fn" id="trace_clock" title='trace_clock' data-ref="trace_clock" data-ref-filename="trace_clock">trace_clock</dfn>(<em>void</em>)</td></tr>
+<tr><th id="58">58</th><td>{</td></tr>
+<tr><th id="59">59</th><td>	<b>return</b> <a class="ref fn" href="../../include/linux/sched/clock.h.html#local_clock" title='local_clock' data-ref="local_clock" data-ref-filename="local_clock">local_clock</a>();</td></tr>
+<tr><th id="60">60</th><td>}</td></tr>
+<tr><th id="61">61</th><td><a class="macro" href="../../include/linux/export.h.html#126" title="extern typeof(trace_clock) trace_clock; static const char __kstrtab_trace_clock[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;trace_clock&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_trace_clock61 = (void *)&amp;trace_clock; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;trace_clock&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;trace_clock&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;trace_clock&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;trace_clock&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#trace_clock" title='trace_clock' data-ref="trace_clock" data-ref-filename="trace_clock"><a class="ref fn" href="#trace_clock" title='trace_clock' data-ref="trace_clock" data-ref-filename="trace_clock"><a class="ref fn" href="#trace_clock" title='trace_clock' data-ref="trace_clock" data-ref-filename="trace_clock">trace_clock</a></a></a>);</td></tr>
+<tr><th id="62">62</th><td></td></tr>
+<tr><th id="63">63</th><td><i>/*</i></td></tr>
+<tr><th id="64">64</th><td><i> * trace_jiffy_clock(): Simply use jiffies as a clock counter.</i></td></tr>
+<tr><th id="65">65</th><td><i> * Note that this use of jiffies_64 is not completely safe on</i></td></tr>
+<tr><th id="66">66</th><td><i> * 32-bit systems. But the window is tiny, and the effect if</i></td></tr>
+<tr><th id="67">67</th><td><i> * we are affected is that we will have an obviously bogus</i></td></tr>
+<tr><th id="68">68</th><td><i> * timestamp on a trace event - i.e. not life threatening.</i></td></tr>
+<tr><th id="69">69</th><td><i> */</i></td></tr>
+<tr><th id="70">70</th><td><a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <a class="macro" href="../../arch/x86/include/asm/linkage.h.html#8" title="__attribute__((no_instrument_function))" data-ref="_M/notrace">notrace</a> <dfn class="decl def fn" id="trace_clock_jiffies" title='trace_clock_jiffies' data-ref="trace_clock_jiffies" data-ref-filename="trace_clock_jiffies">trace_clock_jiffies</dfn>(<em>void</em>)</td></tr>
+<tr><th id="71">71</th><td>{</td></tr>
+<tr><th id="72">72</th><td>	<b>return</b> <a class="ref fn" href="../../include/linux/jiffies.h.html#jiffies_64_to_clock_t" title='jiffies_64_to_clock_t' data-ref="jiffies_64_to_clock_t" data-ref-filename="jiffies_64_to_clock_t">jiffies_64_to_clock_t</a>(<a class="ref" href="../../include/linux/jiffies.h.html#jiffies_64" title='jiffies_64' data-ref="jiffies_64" data-ref-filename="jiffies_64">jiffies_64</a> - <a class="macro" href="../../include/linux/jiffies.h.html#174" title="((unsigned long)(unsigned int) (-300*1000))" data-ref="_M/INITIAL_JIFFIES">INITIAL_JIFFIES</a>);</td></tr>
+<tr><th id="73">73</th><td>}</td></tr>
+<tr><th id="74">74</th><td><a class="macro" href="../../include/linux/export.h.html#126" title="extern typeof(trace_clock_jiffies) trace_clock_jiffies; static const char __kstrtab_trace_clock_jiffies[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;trace_clock_jiffies&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_trace_clock_jiffies74 = (void *)&amp;trace_clock_jiffies; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;trace_clock_jiffies&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;trace_clock_jiffies&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;trace_clock_jiffies&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;trace_clock_jiffies&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#trace_clock_jiffies" title='trace_clock_jiffies' data-ref="trace_clock_jiffies" data-ref-filename="trace_clock_jiffies"><a class="ref fn" href="#trace_clock_jiffies" title='trace_clock_jiffies' data-ref="trace_clock_jiffies" data-ref-filename="trace_clock_jiffies"><a class="ref fn" href="#trace_clock_jiffies" title='trace_clock_jiffies' data-ref="trace_clock_jiffies" data-ref-filename="trace_clock_jiffies">trace_clock_jiffies</a></a></a>);</td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td><i>/*</i></td></tr>
+<tr><th id="77">77</th><td><i> * trace_clock_global(): special globally coherent trace clock</i></td></tr>
+<tr><th id="78">78</th><td><i> *</i></td></tr>
+<tr><th id="79">79</th><td><i> * It has higher overhead than the other trace clocks but is still</i></td></tr>
+<tr><th id="80">80</th><td><i> * an order of magnitude faster than GTOD derived hardware clocks.</i></td></tr>
+<tr><th id="81">81</th><td><i> *</i></td></tr>
+<tr><th id="82">82</th><td><i> * Used by plugins that need globally coherent timestamps.</i></td></tr>
+<tr><th id="83">83</th><td><i> */</i></td></tr>
+<tr><th id="84">84</th><td></td></tr>
+<tr><th id="85">85</th><td><i  data-doc="trace_clock_struct">/* keep prev_time and lock in the same cacheline. */</i></td></tr>
+<tr><th id="86">86</th><td><em>static</em> <b>struct</b> {</td></tr>
+<tr><th id="87">87</th><td>	<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col2 decl field" id="2prev_time" title='prev_time' data-type='u64' data-ref="2prev_time" data-ref-filename="2prev_time">prev_time</dfn>;</td></tr>
+<tr><th id="88">88</th><td>	<a class="typedef" href="../../include/asm-generic/qspinlock_types.h.html#arch_spinlock_t" title='arch_spinlock_t' data-type='struct qspinlock' data-ref="arch_spinlock_t" data-ref-filename="arch_spinlock_t">arch_spinlock_t</a> <dfn class="local col3 decl field" id="3lock" title='lock' data-type='arch_spinlock_t' data-ref="3lock" data-ref-filename="3lock">lock</dfn>;</td></tr>
+<tr><th id="89">89</th><td>} <dfn class="tu decl def" id="trace_clock_struct" title='trace_clock_struct' data-type='struct (anonymous struct at /home/woboq/linux-5.3.1/kernel/trace/trace_clock.c:86:8)' data-ref="trace_clock_struct" data-ref-filename="trace_clock_struct">trace_clock_struct</dfn> <a class="macro" href="../../include/linux/cache.h.html#40" title="__attribute__((__aligned__((1 &lt;&lt; (6)))))" data-ref="_M/____cacheline_aligned_in_smp">____cacheline_aligned_in_smp</a> =</td></tr>
+<tr><th id="90">90</th><td>	{</td></tr>
+<tr><th id="91">91</th><td>		.<a class="local col3 ref field" href="#3lock" title='lock' data-ref="3lock" data-ref-filename="3lock">lock</a> = (<a class="typedef" href="../../include/asm-generic/qspinlock_types.h.html#arch_spinlock_t" title='arch_spinlock_t' data-type='struct qspinlock' data-ref="arch_spinlock_t" data-ref-filename="arch_spinlock_t">arch_spinlock_t</a>)<a class="macro" href="../../include/asm-generic/qspinlock_types.h.html#57" title="{ { .val = { (0) } } }" data-ref="_M/__ARCH_SPIN_LOCK_UNLOCKED">__ARCH_SPIN_LOCK_UNLOCKED</a>,</td></tr>
+<tr><th id="92">92</th><td>	};</td></tr>
+<tr><th id="93">93</th><td></td></tr>
+<tr><th id="94">94</th><td><a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <a class="macro" href="../../arch/x86/include/asm/linkage.h.html#8" title="__attribute__((no_instrument_function))" data-ref="_M/notrace">notrace</a> <dfn class="decl def fn" id="trace_clock_global" title='trace_clock_global' data-ref="trace_clock_global" data-ref-filename="trace_clock_global">trace_clock_global</dfn>(<em>void</em>)</td></tr>
+<tr><th id="95">95</th><td>{</td></tr>
+<tr><th id="96">96</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col4 decl" id="4flags" title='flags' data-type='unsigned long' data-ref="4flags" data-ref-filename="4flags">flags</dfn>;</td></tr>
+<tr><th id="97">97</th><td>	<em>int</em> <dfn class="local col5 decl" id="5this_cpu" title='this_cpu' data-type='int' data-ref="5this_cpu" data-ref-filename="5this_cpu">this_cpu</dfn>;</td></tr>
+<tr><th id="98">98</th><td>	<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col6 decl" id="6now" title='now' data-type='u64' data-ref="6now" data-ref-filename="6now">now</dfn>;</td></tr>
+<tr><th id="99">99</th><td></td></tr>
+<tr><th id="100">100</th><td>	<a class="macro" href="../../include/linux/irqflags.h.html#81" title="do { ({ unsigned long __dummy; typeof(flags) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }); flags = arch_local_irq_save(); } while (0)" data-ref="_M/raw_local_irq_save">raw_local_irq_save</a>(<a class="local col4 ref" href="#4flags" title='flags' data-ref="4flags" data-ref-filename="4flags">flags</a>);</td></tr>
+<tr><th id="101">101</th><td></td></tr>
+<tr><th id="102">102</th><td>	<a class="local col5 ref" href="#5this_cpu" title='this_cpu' data-ref="5this_cpu" data-ref-filename="5this_cpu">this_cpu</a> = <a class="macro" href="../../arch/x86/include/asm/smp.h.html#166" title="({ typeof(cpu_number) pscr_ret__; do { const void *__vpp_verify = (typeof((&amp;(cpu_number)) + 0))((void *)0); (void)__vpp_verify; } while (0); switch(sizeof(cpu_number)) { case 1: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm volatile (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm volatile (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm volatile (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm volatile (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; case 2: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm volatile (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm volatile (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm volatile (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm volatile (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; case 4: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm volatile (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm volatile (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm volatile (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm volatile (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; case 8: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm volatile (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm volatile (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm volatile (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm volatile (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; default: __bad_size_call_parameter(); break; } pscr_ret__; })" data-ref="_M/raw_smp_processor_id">raw_smp_processor_id</a>();</td></tr>
+<tr><th id="103">103</th><td>	<a class="local col6 ref" href="#6now" title='now' data-ref="6now" data-ref-filename="6now">now</a> = <a class="ref fn" href="../../include/linux/sched/clock.h.html#sched_clock_cpu" title='sched_clock_cpu' data-ref="sched_clock_cpu" data-ref-filename="sched_clock_cpu">sched_clock_cpu</a>(<a class="local col5 ref" href="#5this_cpu" title='this_cpu' data-ref="5this_cpu" data-ref-filename="5this_cpu">this_cpu</a>);</td></tr>
+<tr><th id="104">104</th><td>	<i>/*</i></td></tr>
+<tr><th id="105">105</th><td><i>	 * If in an NMI context then dont risk lockups and return the</i></td></tr>
+<tr><th id="106">106</th><td><i>	 * cpu_clock() time:</i></td></tr>
+<tr><th id="107">107</th><td><i>	 */</i></td></tr>
+<tr><th id="108">108</th><td>	<b>if</b> (<a class="macro" href="../../include/linux/compiler.h.html#78" title="__builtin_expect(!!((preempt_count() &amp; (((1UL &lt;&lt; (1))-1) &lt;&lt; (((0 + 8) + 8) + 4)))), 0)" data-ref="_M/unlikely">unlikely</a>(<a class="macro" href="../../include/linux/preempt.h.html#102" title="(preempt_count() &amp; (((1UL &lt;&lt; (1))-1) &lt;&lt; (((0 + 8) + 8) + 4)))" data-ref="_M/in_nmi">in_nmi</a>()))</td></tr>
+<tr><th id="109">109</th><td>		<b>goto</b> <a class="lbl" href="#7out" data-ref="7out" data-ref-filename="7out">out</a>;</td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td>	<a class="macro" href="../../include/asm-generic/qspinlock.h.html#112" title="queued_spin_lock(&amp;trace_clock_struct.lock)" data-ref="_M/arch_spin_lock">arch_spin_lock</a>(&amp;<a class="tu ref" href="#trace_clock_struct" title='trace_clock_struct' data-use='m' data-ref="trace_clock_struct" data-ref-filename="trace_clock_struct">trace_clock_struct</a>.<a class="local col3 ref field" href="#3lock" title='lock' data-ref="3lock" data-ref-filename="3lock">lock</a>);</td></tr>
+<tr><th id="112">112</th><td></td></tr>
+<tr><th id="113">113</th><td>	<i>/*</i></td></tr>
+<tr><th id="114">114</th><td><i>	 * TODO: if this happens often then maybe we should reset</i></td></tr>
+<tr><th id="115">115</th><td><i>	 * my_scd-&gt;clock to prev_time+1, to make sure</i></td></tr>
+<tr><th id="116">116</th><td><i>	 * we start ticking with the local clock from now on?</i></td></tr>
+<tr><th id="117">117</th><td><i>	 */</i></td></tr>
+<tr><th id="118">118</th><td>	<b>if</b> ((<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#s64" title='s64' data-type='__s64' data-ref="s64" data-ref-filename="s64">s64</a>)(<a class="local col6 ref" href="#6now" title='now' data-ref="6now" data-ref-filename="6now">now</a> - <a class="tu ref" href="#trace_clock_struct" title='trace_clock_struct' data-use='m' data-ref="trace_clock_struct" data-ref-filename="trace_clock_struct">trace_clock_struct</a>.<a class="local col2 ref field" href="#2prev_time" title='prev_time' data-ref="2prev_time" data-ref-filename="2prev_time">prev_time</a>) &lt; <var>0</var>)</td></tr>
+<tr><th id="119">119</th><td>		<a class="local col6 ref" href="#6now" title='now' data-ref="6now" data-ref-filename="6now">now</a> = <a class="tu ref" href="#trace_clock_struct" title='trace_clock_struct' data-use='m' data-ref="trace_clock_struct" data-ref-filename="trace_clock_struct">trace_clock_struct</a>.<a class="local col2 ref field" href="#2prev_time" title='prev_time' data-ref="2prev_time" data-ref-filename="2prev_time">prev_time</a> + <var>1</var>;</td></tr>
+<tr><th id="120">120</th><td></td></tr>
+<tr><th id="121">121</th><td>	<a class="tu ref" href="#trace_clock_struct" title='trace_clock_struct' data-use='m' data-ref="trace_clock_struct" data-ref-filename="trace_clock_struct">trace_clock_struct</a>.<a class="local col2 ref field" href="#2prev_time" title='prev_time' data-ref="2prev_time" data-ref-filename="2prev_time">prev_time</a> = <a class="local col6 ref" href="#6now" title='now' data-ref="6now" data-ref-filename="6now">now</a>;</td></tr>
+<tr><th id="122">122</th><td></td></tr>
+<tr><th id="123">123</th><td>	<a class="macro" href="../../include/asm-generic/qspinlock.h.html#114" title="queued_spin_unlock(&amp;trace_clock_struct.lock)" data-ref="_M/arch_spin_unlock">arch_spin_unlock</a>(&amp;<a class="tu ref" href="#trace_clock_struct" title='trace_clock_struct' data-use='m' data-ref="trace_clock_struct" data-ref-filename="trace_clock_struct">trace_clock_struct</a>.<a class="local col3 ref field" href="#3lock" title='lock' data-ref="3lock" data-ref-filename="3lock">lock</a>);</td></tr>
+<tr><th id="124">124</th><td></td></tr>
+<tr><th id="125">125</th><td> <dfn class="lbl" id="7out" data-ref="7out" data-ref-filename="7out">out</dfn>:</td></tr>
+<tr><th id="126">126</th><td>	<a class="macro" href="../../include/linux/irqflags.h.html#86" title="do { ({ unsigned long __dummy; typeof(flags) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }); arch_local_irq_restore(flags); } while (0)" data-ref="_M/raw_local_irq_restore">raw_local_irq_restore</a>(<a class="local col4 ref" href="#4flags" title='flags' data-ref="4flags" data-ref-filename="4flags">flags</a>);</td></tr>
+<tr><th id="127">127</th><td></td></tr>
+<tr><th id="128">128</th><td>	<b>return</b> <a class="local col6 ref" href="#6now" title='now' data-ref="6now" data-ref-filename="6now">now</a>;</td></tr>
+<tr><th id="129">129</th><td>}</td></tr>
+<tr><th id="130">130</th><td><a class="macro" href="../../include/linux/export.h.html#126" title="extern typeof(trace_clock_global) trace_clock_global; static const char __kstrtab_trace_clock_global[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;trace_clock_global&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_trace_clock_global130 = (void *)&amp;trace_clock_global; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;trace_clock_global&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;trace_clock_global&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;trace_clock_global&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;trace_clock_global&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#trace_clock_global" title='trace_clock_global' data-ref="trace_clock_global" data-ref-filename="trace_clock_global"><a class="ref fn" href="#trace_clock_global" title='trace_clock_global' data-ref="trace_clock_global" data-ref-filename="trace_clock_global"><a class="ref fn" href="#trace_clock_global" title='trace_clock_global' data-ref="trace_clock_global" data-ref-filename="trace_clock_global">trace_clock_global</a></a></a>);</td></tr>
+<tr><th id="131">131</th><td></td></tr>
+<tr><th id="132">132</th><td><em>static</em> <a class="typedef" href="../../include/linux/types.h.html#atomic64_t" title='atomic64_t' data-type='struct atomic64_t' data-ref="atomic64_t" data-ref-filename="atomic64_t">atomic64_t</a> <dfn class="tu decl def" id="trace_counter" title='trace_counter' data-type='atomic64_t' data-ref="trace_counter" data-ref-filename="trace_counter">trace_counter</dfn>;</td></tr>
+<tr><th id="133">133</th><td></td></tr>
+<tr><th id="134">134</th><td><i>/*</i></td></tr>
+<tr><th id="135">135</th><td><i> * trace_clock_counter(): simply an atomic counter.</i></td></tr>
+<tr><th id="136">136</th><td><i> * Use the trace_counter "counter" for cases where you do not care</i></td></tr>
+<tr><th id="137">137</th><td><i> * about timings, but are interested in strict ordering.</i></td></tr>
+<tr><th id="138">138</th><td><i> */</i></td></tr>
+<tr><th id="139">139</th><td><a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <a class="macro" href="../../arch/x86/include/asm/linkage.h.html#8" title="__attribute__((no_instrument_function))" data-ref="_M/notrace">notrace</a> <dfn class="decl def fn" id="trace_clock_counter" title='trace_clock_counter' data-ref="trace_clock_counter" data-ref-filename="trace_clock_counter">trace_clock_counter</dfn>(<em>void</em>)</td></tr>
+<tr><th id="140">140</th><td>{</td></tr>
+<tr><th id="141">141</th><td>	<b>return</b> <a class="macro" href="../../include/asm-generic/atomic-instrumented.h.html#884" title="atomic64_add_return" data-ref="_M/atomic64_add_return">atomic64_add_return</a>(<var>1</var>, &amp;<a class="tu ref" href="#trace_counter" title='trace_counter' data-use='a' data-ref="trace_counter" data-ref-filename="trace_counter">trace_counter</a>);</td></tr>
+<tr><th id="142">142</th><td>}</td></tr>
+<tr><th id="143">143</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

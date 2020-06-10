@@ -1,0 +1,269 @@
+<def f='linux-5.3.1/include/net/netlink.h' l='291' ll='321'/>
+<use f='linux-5.3.1/include/net/netlink.h' l='435' c='__nla_validate'/>
+<use f='linux-5.3.1/include/net/netlink.h' l='438' c='__nla_parse'/>
+<use f='linux-5.3.1/include/net/netlink.h' l='440' c='nla_policy_len'/>
+<use f='linux-5.3.1/include/net/netlink.h' l='585' c='nla_parse'/>
+<use f='linux-5.3.1/include/net/netlink.h' l='610' c='nla_parse_deprecated'/>
+<use f='linux-5.3.1/include/net/netlink.h' l='636' c='nla_parse_deprecated_strict'/>
+<use f='linux-5.3.1/include/net/netlink.h' l='657' c='__nlmsg_parse'/>
+<use f='linux-5.3.1/include/net/netlink.h' l='684' c='nlmsg_parse'/>
+<use f='linux-5.3.1/include/net/netlink.h' l='703' c='nlmsg_parse_deprecated'/>
+<use f='linux-5.3.1/include/net/netlink.h' l='723' c='nlmsg_parse_deprecated_strict'/>
+<use f='linux-5.3.1/include/net/netlink.h' l='762' c='nla_validate_deprecated'/>
+<use f='linux-5.3.1/include/net/netlink.h' l='785' c='nla_validate'/>
+<use f='linux-5.3.1/include/net/netlink.h' l='802' c='nlmsg_validate_deprecated'/>
+<use f='linux-5.3.1/include/net/netlink.h' l='1139' c='nla_parse_nested'/>
+<use f='linux-5.3.1/include/net/netlink.h' l='1163' c='nla_parse_nested_deprecated'/>
+<use f='linux-5.3.1/include/net/netlink.h' l='1752' c='__nla_validate_nested'/>
+<use f='linux-5.3.1/include/net/netlink.h' l='1762' c='nl80211_validate_nested'/>
+<use f='linux-5.3.1/include/net/netlink.h' l='1771' c='nla_validate_nested_deprecated'/>
+<size>16</size>
+<doc f='linux-5.3.1/include/net/netlink.h' l='200'>/**
+ * struct nla_policy - attribute validation policy
+ * @type: Type of attribute or NLA_UNSPEC
+ * @validation_type: type of attribute validation done in addition to
+ *	type-specific validation (e.g. range, function call), see
+ *	&amp;enum nla_policy_validation
+ * @len: Type specific length of payload
+ *
+ * Policies are defined as arrays of this struct, the array must be
+ * accessible by attribute type up to the highest identifier to be expected.
+ *
+ * Meaning of `len&apos; field:
+ *    NLA_STRING           Maximum length of string
+ *    NLA_NUL_STRING       Maximum length of string (excluding NUL)
+ *    NLA_FLAG             Unused
+ *    NLA_BINARY           Maximum length of attribute payload
+ *    NLA_MIN_LEN          Minimum length of attribute payload
+ *    NLA_NESTED,
+ *    NLA_NESTED_ARRAY     Length verification is done by checking len of
+ *                         nested header (or empty); len field is used if
+ *                         validation_data is also used, for the max attr
+ *                         number in the nested policy.
+ *    NLA_U8, NLA_U16,
+ *    NLA_U32, NLA_U64,
+ *    NLA_S8, NLA_S16,
+ *    NLA_S32, NLA_S64,
+ *    NLA_MSECS            Leaving the length field zero will verify the
+ *                         given type fits, using it verifies minimum length
+ *                         just like &quot;All other&quot;
+ *    NLA_BITFIELD32       Unused
+ *    NLA_REJECT           Unused
+ *    NLA_EXACT_LEN        Attribute must have exactly this length, otherwise
+ *                         it is rejected.
+ *    NLA_EXACT_LEN_WARN   Attribute should have exactly this length, a warning
+ *                         is logged if it is longer, shorter is rejected.
+ *    NLA_MIN_LEN          Minimum length of attribute payload
+ *    All other            Minimum length of attribute payload
+ *
+ * Meaning of `validation_data&apos; field:
+ *    NLA_BITFIELD32       This is a 32-bit bitmap/bitselector attribute and
+ *                         validation data must point to a u32 value of valid
+ *                         flags
+ *    NLA_REJECT           This attribute is always rejected and validation data
+ *                         may point to a string to report as the error instead
+ *                         of the generic one in extended ACK.
+ *    NLA_NESTED           Points to a nested policy to validate, must also set
+ *                         `len&apos; to the max attribute number.
+ *                         Note that nla_parse() will validate, but of course not
+ *                         parse, the nested sub-policies.
+ *    NLA_NESTED_ARRAY     Points to a nested policy to validate, must also set
+ *                         `len&apos; to the max attribute number. The difference to
+ *                         NLA_NESTED is the structure - NLA_NESTED has the
+ *                         nested attributes directly inside, while an array has
+ *                         the nested attributes at another level down and the
+ *                         attributes directly in the nesting don&apos;t matter.
+ *    All other            Unused - but note that it&apos;s a union
+ *
+ * Meaning of `min&apos; and `max&apos; fields, use via NLA_POLICY_MIN, NLA_POLICY_MAX
+ * and NLA_POLICY_RANGE:
+ *    NLA_U8,
+ *    NLA_U16,
+ *    NLA_U32,
+ *    NLA_U64,
+ *    NLA_S8,
+ *    NLA_S16,
+ *    NLA_S32,
+ *    NLA_S64              These are used depending on the validation_type
+ *                         field, if that is min/max/range then the minimum,
+ *                         maximum and both are used (respectively) to check
+ *                         the value of the integer attribute.
+ *                         Note that in the interest of code simplicity and
+ *                         struct size both limits are s16, so you cannot
+ *                         enforce a range that doesn&apos;t fall within the range
+ *                         of s16 - do that as usual in the code instead.
+ *    All other            Unused - but note that it&apos;s a union
+ *
+ * Meaning of `validate&apos; field, use via NLA_POLICY_VALIDATE_FN:
+ *    NLA_BINARY           Validation function called for the attribute,
+ *                         not compatible with use of the validation_data
+ *                         as in NLA_BITFIELD32, NLA_REJECT, NLA_NESTED and
+ *                         NLA_NESTED_ARRAY.
+ *    All other            Unused - but note that it&apos;s a union
+ *
+ * Example:
+ * static const struct nla_policy my_policy[ATTR_MAX+1] = {
+ * 	[ATTR_FOO] = { .type = NLA_U16 },
+ *	[ATTR_BAR] = { .type = NLA_STRING, .len = BARSIZ },
+ *	[ATTR_BAZ] = { .type = NLA_EXACT_LEN, .len = sizeof(struct mystruct) },
+ *	[ATTR_GOO] = { .type = NLA_BITFIELD32, .validation_data = &amp;myvalidflags },
+ * };
+ */</doc>
+<mbr r='nla_policy::type' o='0' t='u8'/>
+<mbr r='nla_policy::validation_type' o='8' t='u8'/>
+<mbr r='nla_policy::len' o='16' t='u16'/>
+<use f='linux-5.3.1/include/net/genetlink.h' l='60'/>
+<use f='linux-5.3.1/include/net/genetlink.h' l='186' c='genlmsg_parse_deprecated'/>
+<use f='linux-5.3.1/include/net/genetlink.h' l='205' c='genlmsg_parse'/>
+<size>16</size>
+<use f='linux-5.3.1/include/net/rtnetlink.h' l='68'/>
+<use f='linux-5.3.1/include/net/rtnetlink.h' l='96'/>
+<use f='linux-5.3.1/include/net/neighbour.h' l='260'/>
+<use f='linux-5.3.1/include/net/fib_rules.h' l='93'/>
+<size>16</size>
+<use f='linux-5.3.1/include/net/ip_fib.h' l='404'/>
+<size>16</size>
+<use f='linux-5.3.1/kernel/taskstats.c' l='37'/>
+<use f='linux-5.3.1/kernel/taskstats.c' l='47'/>
+<use f='linux-5.3.1/kernel/taskstats.c' l='659' c='taskstats_pre_doit'/>
+<size>16</size>
+<use f='linux-5.3.1/lib/nlattr.c' l='71' c='nla_validate_array'/>
+<use f='linux-5.3.1/lib/nlattr.c' l='99' c='nla_validate_int_range'/>
+<use f='linux-5.3.1/lib/nlattr.c' l='158' c='validate_nla'/>
+<use f='linux-5.3.1/lib/nlattr.c' l='162' c='validate_nla'/>
+<use f='linux-5.3.1/lib/nlattr.c' l='358' c='__nla_validate_parse'/>
+<use f='linux-5.3.1/lib/nlattr.c' l='420' c='__nla_validate'/>
+<use f='linux-5.3.1/lib/nlattr.c' l='440' c='nla_policy_len'/>
+<use f='linux-5.3.1/lib/nlattr.c' l='475' c='__nla_parse'/>
+<size>16</size>
+<use f='linux-5.3.1/include/net/netfilter/nf_conntrack_l4proto.h' l='46'/>
+<use f='linux-5.3.1/include/net/netfilter/nf_conntrack_l4proto.h' l='55'/>
+<use f='linux-5.3.1/include/net/netfilter/nf_conntrack_l4proto.h' l='157'/>
+<size>16</size>
+<use f='linux-5.3.1/net/core/neighbour.c' l='1774'/>
+<use f='linux-5.3.1/net/core/neighbour.c' l='2152'/>
+<use f='linux-5.3.1/net/core/neighbour.c' l='2161'/>
+<size>16</size>
+<use f='linux-5.3.1/net/core/net_namespace.c' l='711'/>
+<size>16</size>
+<use f='linux-5.3.1/net/core/rtnetlink.c' l='1710'/>
+<use f='linux-5.3.1/net/core/rtnetlink.c' l='1755'/>
+<use f='linux-5.3.1/net/core/rtnetlink.c' l='1762'/>
+<use f='linux-5.3.1/net/core/rtnetlink.c' l='1778'/>
+<use f='linux-5.3.1/net/core/rtnetlink.c' l='1797'/>
+<size>16</size>
+<use f='linux-5.3.1/net/ipv4/devinet.c' l='96'/>
+<use f='linux-5.3.1/net/ipv4/devinet.c' l='1948'/>
+<use f='linux-5.3.1/net/ipv4/devinet.c' l='2111'/>
+<size>16</size>
+<use f='linux-5.3.1/net/ipv4/fib_frontend.c' l='659'/>
+<size>16</size>
+<use f='linux-5.3.1/net/ipv4/fib_rules.c' l='213'/>
+<size>16</size>
+<use f='linux-5.3.1/net/ipv4/ip_tunnel_core.c' l='213'/>
+<use f='linux-5.3.1/net/ipv4/ip_tunnel_core.c' l='330'/>
+<size>16</size>
+<use f='linux-5.3.1/net/ipv4/ipmr.c' l='2626'/>
+<size>16</size>
+<use f='linux-5.3.1/net/ipv4/nexthop.c' l='25'/>
+<size>16</size>
+<use f='linux-5.3.1/net/ipv4/tcp_metrics.c' l='595'/>
+<size>16</size>
+<use f='linux-5.3.1/net/ipv6/addrconf.c' l='590'/>
+<use f='linux-5.3.1/net/ipv6/addrconf.c' l='4549'/>
+<use f='linux-5.3.1/net/ipv6/addrconf.c' l='5658'/>
+<size>16</size>
+<use f='linux-5.3.1/net/ipv6/addrlabel.c' l='359'/>
+<size>16</size>
+<use f='linux-5.3.1/net/ipv6/route.c' l='4804'/>
+<size>16</size>
+<use f='linux-5.3.1/net/ipv6/seg6.c' l='70'/>
+<size>16</size>
+<use f='linux-5.3.1/net/ipv6/sit.c' l='1744'/>
+<size>16</size>
+<use f='linux-5.3.1/include/net/cfg80211.h' l='4201'/>
+<size>16</size>
+<use f='linux-5.3.1/include/linux/netfilter/nfnetlink.h' l='23'/>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_core.c' l='1834'/>
+<size>16</size>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_netlink.c' l='583'/>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_netlink.c' l='1047'/>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_netlink.c' l='1120'/>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_netlink.c' l='1176'/>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_netlink.c' l='1203'/>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_netlink.c' l='1716'/>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_netlink.c' l='1742'/>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_netlink.c' l='1816'/>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_netlink.c' l='2348'/>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_netlink.c' l='3206'/>
+<size>16</size>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_proto_icmp.c' l='271'/>
+<size>16</size>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_proto_icmpv6.c' l='190'/>
+<size>16</size>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_proto_tcp.c' l='1225'/>
+<size>16</size>
+<use f='linux-5.3.1/net/netfilter/nf_nat_core.c' l='863'/>
+<use f='linux-5.3.1/net/netfilter/nf_nat_core.c' l='898'/>
+<size>16</size>
+<use f='linux-5.3.1/net/netfilter/nfnetlink.c' l='504'/>
+<size>16</size>
+<use f='linux-5.3.1/net/netfilter/nfnetlink_log.c' l='806'/>
+<size>16</size>
+<use f='linux-5.3.1/net/netlabel/netlabel_calipso.c' l='52'/>
+<size>16</size>
+<use f='linux-5.3.1/net/netlabel/netlabel_cipso_v4.c' l='50'/>
+<size>16</size>
+<use f='linux-5.3.1/net/netlabel/netlabel_mgmt.c' l='52'/>
+<size>16</size>
+<use f='linux-5.3.1/net/netlabel/netlabel_unlabeled.c' l='115'/>
+<size>16</size>
+<use f='linux-5.3.1/net/netlink/genetlink.c' l='871'/>
+<size>16</size>
+<use f='linux-5.3.1/net/sched/act_api.c' l='1368'/>
+<size>16</size>
+<use f='linux-5.3.1/net/sched/cls_api.c' l='40'/>
+<size>16</size>
+<use f='linux-5.3.1/net/sched/ematch.c' l='279'/>
+<size>16</size>
+<use f='linux-5.3.1/net/sched/sch_api.c' l='463'/>
+<use f='linux-5.3.1/net/sched/sch_api.c' l='1392'/>
+<size>16</size>
+<use f='linux-5.3.1/net/wireless/nl80211.h' l='14'/>
+<size>16</size>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='223'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='232'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='248'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='254'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='261'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='274'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='284'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='580'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='593'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='601'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='615'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='639'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='650'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='666'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='673'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='686'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='692'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='702'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='728'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='738'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='2500'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='3258'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='4102'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='4707'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='5401'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='6481'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='6529'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='6980'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='10592'/>
+<use f='linux-5.3.1/net/wireless/nl80211.c' l='12695' macro='1' c='nl80211_vendor_check_policy'/>
+<size>16</size>
+<use f='linux-5.3.1/net/xfrm/xfrm_user.c' l='1008'/>
+<use f='linux-5.3.1/net/xfrm/xfrm_user.c' l='2554'/>
+<use f='linux-5.3.1/net/xfrm/xfrm_user.c' l='2587'/>
+<use f='linux-5.3.1/net/xfrm/xfrm_user.c' l='2597'/>
+<size>16</size>

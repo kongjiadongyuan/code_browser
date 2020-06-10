@@ -1,0 +1,980 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>hash.h source code [linux-5.3.1/include/crypto/hash.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="ahash_alg,ahash_request,crypto_ahash,crypto_shash,hash_alg_common,shash_alg,shash_desc "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/include/crypto/hash.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>include</a>/<a href='./'>crypto</a>/<a href='hash.h.html'>hash.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0-or-later */</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * Hash: Hash algorithms under the crypto API</i></td></tr>
+<tr><th id="4">4</th><td><i> * </i></td></tr>
+<tr><th id="5">5</th><td><i> * Copyright (c) 2008 Herbert Xu &lt;herbert@gondor.apana.org.au&gt;</i></td></tr>
+<tr><th id="6">6</th><td><i> */</i></td></tr>
+<tr><th id="7">7</th><td></td></tr>
+<tr><th id="8">8</th><td><u>#<span data-ppcond="8">ifndef</span> <span class="macro" data-ref="_M/_CRYPTO_HASH_H">_CRYPTO_HASH_H</span></u></td></tr>
+<tr><th id="9">9</th><td><u>#define <dfn class="macro" id="_M/_CRYPTO_HASH_H" data-ref="_M/_CRYPTO_HASH_H">_CRYPTO_HASH_H</dfn></u></td></tr>
+<tr><th id="10">10</th><td></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../linux/crypto.h.html">&lt;linux/crypto.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="../linux/string.h.html">&lt;linux/string.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td></td></tr>
+<tr><th id="14">14</th><td><b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a>;</td></tr>
+<tr><th id="15">15</th><td></td></tr>
+<tr><th id="16">16</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="17">17</th><td><i class="doc"> * DOC: Message Digest Algorithm Definitions</i></td></tr>
+<tr><th id="18">18</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="19">19</th><td><i class="doc"> * These data structures define modular message digest algorithm</i></td></tr>
+<tr><th id="20">20</th><td><i class="doc"> * implementations, managed via crypto_register_ahash(),</i></td></tr>
+<tr><th id="21">21</th><td><i class="doc"> * crypto_register_shash(), crypto_unregister_ahash() and</i></td></tr>
+<tr><th id="22">22</th><td><i class="doc"> * crypto_unregister_shash().</i></td></tr>
+<tr><th id="23">23</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="26">26</th><td><i class="doc"> * struct hash_alg_common - define properties of message digest</i></td></tr>
+<tr><th id="27">27</th><td><i class="doc"> *<span class="command"> @digestsize</span>: Size of the result of the transformation. A buffer of this size</i></td></tr>
+<tr><th id="28">28</th><td><i class="doc"> *	        must be available to the<span class="command"> @final</span> and<span class="command"> @finup</span> calls, so they can</i></td></tr>
+<tr><th id="29">29</th><td><i class="doc"> *	        store the resulting hash into it. For various predefined sizes,</i></td></tr>
+<tr><th id="30">30</th><td><i class="doc"> *	        search include/crypto/ using</i></td></tr>
+<tr><th id="31">31</th><td><i class="doc"> *	        git grep _DIGEST_SIZE include/crypto.</i></td></tr>
+<tr><th id="32">32</th><td><i class="doc"> *<span class="command"> @statesize</span>: Size of the block for partial state of the transformation. A</i></td></tr>
+<tr><th id="33">33</th><td><i class="doc"> *	       buffer of this size must be passed to the<span class="command"> @export</span> function as it</i></td></tr>
+<tr><th id="34">34</th><td><i class="doc"> *	       will save the partial state of the transformation into it. On the</i></td></tr>
+<tr><th id="35">35</th><td><i class="doc"> *	       other side, the<span class="command"> @import</span> function will load the state from a</i></td></tr>
+<tr><th id="36">36</th><td><i class="doc"> *	       buffer of this size as well.</i></td></tr>
+<tr><th id="37">37</th><td><i class="doc"> *<span class="command"> @base</span>: Start of data structure of cipher algorithm. The common data</i></td></tr>
+<tr><th id="38">38</th><td><i class="doc"> *	  structure of crypto_alg contains information common to all ciphers.</i></td></tr>
+<tr><th id="39">39</th><td><i class="doc"> *	  The hash_alg_common data structure now adds the hash-specific</i></td></tr>
+<tr><th id="40">40</th><td><i class="doc"> *	  information.</i></td></tr>
+<tr><th id="41">41</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="42">42</th><td><b>struct</b> <dfn class="type def" id="hash_alg_common" title='hash_alg_common' data-ref="hash_alg_common" data-ref-filename="hash_alg_common">hash_alg_common</dfn> {</td></tr>
+<tr><th id="43">43</th><td>	<em>unsigned</em> <em>int</em> <dfn class="decl field" id="hash_alg_common::digestsize" title='hash_alg_common::digestsize' data-ref="hash_alg_common::digestsize" data-ref-filename="hash_alg_common..digestsize">digestsize</dfn>;</td></tr>
+<tr><th id="44">44</th><td>	<em>unsigned</em> <em>int</em> <dfn class="decl field" id="hash_alg_common::statesize" title='hash_alg_common::statesize' data-ref="hash_alg_common::statesize" data-ref-filename="hash_alg_common..statesize">statesize</dfn>;</td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td>	<b>struct</b> <a class="type" href="../linux/crypto.h.html#crypto_alg" title='crypto_alg' data-ref="crypto_alg" data-ref-filename="crypto_alg">crypto_alg</a> <dfn class="decl field" id="hash_alg_common::base" title='hash_alg_common::base' data-ref="hash_alg_common::base" data-ref-filename="hash_alg_common..base">base</dfn>;</td></tr>
+<tr><th id="47">47</th><td>};</td></tr>
+<tr><th id="48">48</th><td></td></tr>
+<tr><th id="49">49</th><td><b>struct</b> <dfn class="type def" id="ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</dfn> {</td></tr>
+<tr><th id="50">50</th><td>	<b>struct</b> <a class="type" href="../linux/crypto.h.html#crypto_async_request" title='crypto_async_request' data-ref="crypto_async_request" data-ref-filename="crypto_async_request">crypto_async_request</a> <dfn class="decl field" id="ahash_request::base" title='ahash_request::base' data-ref="ahash_request::base" data-ref-filename="ahash_request..base">base</dfn>;</td></tr>
+<tr><th id="51">51</th><td></td></tr>
+<tr><th id="52">52</th><td>	<em>unsigned</em> <em>int</em> <dfn class="decl field" id="ahash_request::nbytes" title='ahash_request::nbytes' data-ref="ahash_request::nbytes" data-ref-filename="ahash_request..nbytes">nbytes</dfn>;</td></tr>
+<tr><th id="53">53</th><td>	<b>struct</b> <a class="type" href="../linux/crypto.h.html#scatterlist" title='scatterlist' data-ref="scatterlist" data-ref-filename="scatterlist">scatterlist</a> *<dfn class="decl field" id="ahash_request::src" title='ahash_request::src' data-ref="ahash_request::src" data-ref-filename="ahash_request..src">src</dfn>;</td></tr>
+<tr><th id="54">54</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="decl field" id="ahash_request::result" title='ahash_request::result' data-ref="ahash_request::result" data-ref-filename="ahash_request..result">result</dfn>;</td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td>	<i>/* This field may only be used by the ahash API code. */</i></td></tr>
+<tr><th id="57">57</th><td>	<em>void</em> *<dfn class="decl field" id="ahash_request::priv" title='ahash_request::priv' data-ref="ahash_request::priv" data-ref-filename="ahash_request..priv">priv</dfn>;</td></tr>
+<tr><th id="58">58</th><td></td></tr>
+<tr><th id="59">59</th><td>	<em>void</em> *<dfn class="decl field" id="ahash_request::__ctx" title='ahash_request::__ctx' data-ref="ahash_request::__ctx" data-ref-filename="ahash_request..__ctx">__ctx</dfn>[] <a class="macro" href="../linux/crypto.h.html#139" title="__attribute__ ((__aligned__(__alignof__(unsigned long long))))" data-ref="_M/CRYPTO_MINALIGN_ATTR">CRYPTO_MINALIGN_ATTR</a>;</td></tr>
+<tr><th id="60">60</th><td>};</td></tr>
+<tr><th id="61">61</th><td></td></tr>
+<tr><th id="62">62</th><td><u>#define <dfn class="macro" id="_M/AHASH_REQUEST_ON_STACK" data-ref="_M/AHASH_REQUEST_ON_STACK">AHASH_REQUEST_ON_STACK</dfn>(name, ahash) \</u></td></tr>
+<tr><th id="63">63</th><td><u>	char __##name##_desc[sizeof(struct ahash_request) + \</u></td></tr>
+<tr><th id="64">64</th><td><u>		crypto_ahash_reqsize(ahash)] CRYPTO_MINALIGN_ATTR; \</u></td></tr>
+<tr><th id="65">65</th><td><u>	struct ahash_request *name = (void *)__##name##_desc</u></td></tr>
+<tr><th id="66">66</th><td></td></tr>
+<tr><th id="67">67</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="68">68</th><td><i class="doc"> * struct ahash_alg - asynchronous message digest definition</i></td></tr>
+<tr><th id="69">69</th><td><i class="doc"> *<span class="command"> @init</span>: **[mandatory]** Initialize the transformation context. Intended only to initialize the</i></td></tr>
+<tr><th id="70">70</th><td><i class="doc"> *	  state of the HASH transformation at the beginning. This shall fill in</i></td></tr>
+<tr><th id="71">71</th><td><i class="doc"> *	  the internal structures used during the entire duration of the whole</i></td></tr>
+<tr><th id="72">72</th><td><i class="doc"> *	  transformation. No data processing happens at this point. Driver code</i></td></tr>
+<tr><th id="73">73</th><td><i class="doc"> *	  implementation must not use req-&gt;result.</i></td></tr>
+<tr><th id="74">74</th><td><i class="doc"> *<span class="command"> @update</span>: **[mandatory]** Push a chunk of data into the driver for transformation. This</i></td></tr>
+<tr><th id="75">75</th><td><i class="doc"> *	   function actually pushes blocks of data from upper layers into the</i></td></tr>
+<tr><th id="76">76</th><td><i class="doc"> *	   driver, which then passes those to the hardware as seen fit. This</i></td></tr>
+<tr><th id="77">77</th><td><i class="doc"> *	   function must not finalize the HASH transformation by calculating the</i></td></tr>
+<tr><th id="78">78</th><td><i class="doc"> *	   final message digest as this only adds more data into the</i></td></tr>
+<tr><th id="79">79</th><td><i class="doc"> *	   transformation. This function shall not modify the transformation</i></td></tr>
+<tr><th id="80">80</th><td><i class="doc"> *	   context, as this function may be called in parallel with the same</i></td></tr>
+<tr><th id="81">81</th><td><i class="doc"> *	   transformation object. Data processing can happen synchronously</i></td></tr>
+<tr><th id="82">82</th><td><i class="doc"> *	   [SHASH] or asynchronously [AHASH] at this point. Driver must not use</i></td></tr>
+<tr><th id="83">83</th><td><i class="doc"> *	   req-&gt;result.</i></td></tr>
+<tr><th id="84">84</th><td><i class="doc"> *<span class="command"> @final</span>: **[mandatory]** Retrieve result from the driver. This function finalizes the</i></td></tr>
+<tr><th id="85">85</th><td><i class="doc"> *	   transformation and retrieves the resulting hash from the driver and</i></td></tr>
+<tr><th id="86">86</th><td><i class="doc"> *	   pushes it back to upper layers. No data processing happens at this</i></td></tr>
+<tr><th id="87">87</th><td><i class="doc"> *	   point unless hardware requires it to finish the transformation</i></td></tr>
+<tr><th id="88">88</th><td><i class="doc"> *	   (then the data buffered by the device driver is processed).</i></td></tr>
+<tr><th id="89">89</th><td><i class="doc"> *<span class="command"> @finup</span>: **[optional]** Combination of<span class="command"> @update</span> and<span class="command"> @final</span>. This function is effectively a</i></td></tr>
+<tr><th id="90">90</th><td><i class="doc"> *	   combination of<span class="command"> @update</span> and<span class="command"> @final</span> calls issued in sequence. As some</i></td></tr>
+<tr><th id="91">91</th><td><i class="doc"> *	   hardware cannot do<span class="command"> @update</span> and<span class="command"> @final</span> separately, this callback was</i></td></tr>
+<tr><th id="92">92</th><td><i class="doc"> *	   added to allow such hardware to be used at least by IPsec. Data</i></td></tr>
+<tr><th id="93">93</th><td><i class="doc"> *	   processing can happen synchronously [SHASH] or asynchronously [AHASH]</i></td></tr>
+<tr><th id="94">94</th><td><i class="doc"> *	   at this point.</i></td></tr>
+<tr><th id="95">95</th><td><i class="doc"> *<span class="command"> @digest</span>: Combination of<span class="command"> @init</span> and<span class="command"> @update</span> and<span class="command"> @final</span>. This function</i></td></tr>
+<tr><th id="96">96</th><td><i class="doc"> *	    effectively behaves as the entire chain of operations,<span class="command"> @init</span>,</i></td></tr>
+<tr><th id="97">97</th><td><i class="doc"> *	   <span class="command"> @update</span> and<span class="command"> @final</span> issued in sequence. Just like<span class="command"> @finup</span>, this was</i></td></tr>
+<tr><th id="98">98</th><td><i class="doc"> *	    added for hardware which cannot do even the<span class="command"> @finup</span>, but can only do</i></td></tr>
+<tr><th id="99">99</th><td><i class="doc"> *	    the whole transformation in one run. Data processing can happen</i></td></tr>
+<tr><th id="100">100</th><td><i class="doc"> *	    synchronously [SHASH] or asynchronously [AHASH] at this point.</i></td></tr>
+<tr><th id="101">101</th><td><i class="doc"> *<span class="command"> @setkey</span>: Set optional key used by the hashing algorithm. Intended to push</i></td></tr>
+<tr><th id="102">102</th><td><i class="doc"> *	    optional key used by the hashing algorithm from upper layers into</i></td></tr>
+<tr><th id="103">103</th><td><i class="doc"> *	    the driver. This function can store the key in the transformation</i></td></tr>
+<tr><th id="104">104</th><td><i class="doc"> *	    context or can outright program it into the hardware. In the former</i></td></tr>
+<tr><th id="105">105</th><td><i class="doc"> *	    case, one must be careful to program the key into the hardware at</i></td></tr>
+<tr><th id="106">106</th><td><i class="doc"> *	    appropriate time and one must be careful that .setkey() can be</i></td></tr>
+<tr><th id="107">107</th><td><i class="doc"> *	    called multiple times during the existence of the transformation</i></td></tr>
+<tr><th id="108">108</th><td><i class="doc"> *	    object. Not  all hashing algorithms do implement this function as it</i></td></tr>
+<tr><th id="109">109</th><td><i class="doc"> *	    is only needed for keyed message digests. SHAx/MDx/CRCx do NOT</i></td></tr>
+<tr><th id="110">110</th><td><i class="doc"> *	    implement this function. HMAC(MDx)/HMAC(SHAx)/CMAC(AES) do implement</i></td></tr>
+<tr><th id="111">111</th><td><i class="doc"> *	    this function. This function must be called before any other of the</i></td></tr>
+<tr><th id="112">112</th><td><i class="doc"> *	   <span class="command"> @init</span>,<span class="command"> @update</span>,<span class="command"> @final</span>,<span class="command"> @finup</span>,<span class="command"> @digest</span> is called. No data</i></td></tr>
+<tr><th id="113">113</th><td><i class="doc"> *	    processing happens at this point.</i></td></tr>
+<tr><th id="114">114</th><td><i class="doc"> *<span class="command"> @export</span>: Export partial state of the transformation. This function dumps the</i></td></tr>
+<tr><th id="115">115</th><td><i class="doc"> *	    entire state of the ongoing transformation into a provided block of</i></td></tr>
+<tr><th id="116">116</th><td><i class="doc"> *	    data so it can be<span class="command"> @import</span> 'ed back later on. This is useful in case</i></td></tr>
+<tr><th id="117">117</th><td><i class="doc"> *	    you want to save partial result of the transformation after</i></td></tr>
+<tr><th id="118">118</th><td><i class="doc"> *	    processing certain amount of data and reload this partial result</i></td></tr>
+<tr><th id="119">119</th><td><i class="doc"> *	    multiple times later on for multiple re-use. No data processing</i></td></tr>
+<tr><th id="120">120</th><td><i class="doc"> *	    happens at this point. Driver must not use req-&gt;result.</i></td></tr>
+<tr><th id="121">121</th><td><i class="doc"> *<span class="command"> @import</span>: Import partial state of the transformation. This function loads the</i></td></tr>
+<tr><th id="122">122</th><td><i class="doc"> *	    entire state of the ongoing transformation from a provided block of</i></td></tr>
+<tr><th id="123">123</th><td><i class="doc"> *	    data so the transformation can continue from this point onward. No</i></td></tr>
+<tr><th id="124">124</th><td><i class="doc"> *	    data processing happens at this point. Driver must not use</i></td></tr>
+<tr><th id="125">125</th><td><i class="doc"> *	    req-&gt;result.</i></td></tr>
+<tr><th id="126">126</th><td><i class="doc"> *<span class="command"> @halg</span>: see struct hash_alg_common</i></td></tr>
+<tr><th id="127">127</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="128">128</th><td><b>struct</b> <dfn class="type def" id="ahash_alg" title='ahash_alg' data-ref="ahash_alg" data-ref-filename="ahash_alg">ahash_alg</dfn> {</td></tr>
+<tr><th id="129">129</th><td>	<em>int</em> (*<dfn class="decl field" id="ahash_alg::init" title='ahash_alg::init' data-ref="ahash_alg::init" data-ref-filename="ahash_alg..init">init</dfn>)(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col7 decl" id="647req" title='req' data-type='struct ahash_request *' data-ref="647req" data-ref-filename="647req">req</dfn>);</td></tr>
+<tr><th id="130">130</th><td>	<em>int</em> (*<dfn class="decl field" id="ahash_alg::update" title='ahash_alg::update' data-ref="ahash_alg::update" data-ref-filename="ahash_alg..update">update</dfn>)(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col8 decl" id="648req" title='req' data-type='struct ahash_request *' data-ref="648req" data-ref-filename="648req">req</dfn>);</td></tr>
+<tr><th id="131">131</th><td>	<em>int</em> (*<dfn class="decl field" id="ahash_alg::final" title='ahash_alg::final' data-ref="ahash_alg::final" data-ref-filename="ahash_alg..final">final</dfn>)(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col9 decl" id="649req" title='req' data-type='struct ahash_request *' data-ref="649req" data-ref-filename="649req">req</dfn>);</td></tr>
+<tr><th id="132">132</th><td>	<em>int</em> (*<dfn class="decl field" id="ahash_alg::finup" title='ahash_alg::finup' data-ref="ahash_alg::finup" data-ref-filename="ahash_alg..finup">finup</dfn>)(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col0 decl" id="650req" title='req' data-type='struct ahash_request *' data-ref="650req" data-ref-filename="650req">req</dfn>);</td></tr>
+<tr><th id="133">133</th><td>	<em>int</em> (*<dfn class="decl field" id="ahash_alg::digest" title='ahash_alg::digest' data-ref="ahash_alg::digest" data-ref-filename="ahash_alg..digest">digest</dfn>)(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col1 decl" id="651req" title='req' data-type='struct ahash_request *' data-ref="651req" data-ref-filename="651req">req</dfn>);</td></tr>
+<tr><th id="134">134</th><td>	<em>int</em> (*<dfn class="decl field" id="ahash_alg::export" title='ahash_alg::export' data-ref="ahash_alg::export" data-ref-filename="ahash_alg..export">export</dfn>)(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col2 decl" id="652req" title='req' data-type='struct ahash_request *' data-ref="652req" data-ref-filename="652req">req</dfn>, <em>void</em> *<dfn class="local col3 decl" id="653out" title='out' data-type='void *' data-ref="653out" data-ref-filename="653out">out</dfn>);</td></tr>
+<tr><th id="135">135</th><td>	<em>int</em> (*<dfn class="decl field" id="ahash_alg::import" title='ahash_alg::import' data-ref="ahash_alg::import" data-ref-filename="ahash_alg..import">import</dfn>)(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col4 decl" id="654req" title='req' data-type='struct ahash_request *' data-ref="654req" data-ref-filename="654req">req</dfn>, <em>const</em> <em>void</em> *<dfn class="local col5 decl" id="655in" title='in' data-type='const void *' data-ref="655in" data-ref-filename="655in">in</dfn>);</td></tr>
+<tr><th id="136">136</th><td>	<em>int</em> (*<dfn class="decl field" id="ahash_alg::setkey" title='ahash_alg::setkey' data-ref="ahash_alg::setkey" data-ref-filename="ahash_alg..setkey">setkey</dfn>)(<b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a> *<dfn class="local col6 decl" id="656tfm" title='tfm' data-type='struct crypto_ahash *' data-ref="656tfm" data-ref-filename="656tfm">tfm</dfn>, <em>const</em> <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col7 decl" id="657key" title='key' data-type='const u8 *' data-ref="657key" data-ref-filename="657key">key</dfn>,</td></tr>
+<tr><th id="137">137</th><td>		      <em>unsigned</em> <em>int</em> <dfn class="local col8 decl" id="658keylen" title='keylen' data-type='unsigned int' data-ref="658keylen" data-ref-filename="658keylen">keylen</dfn>);</td></tr>
+<tr><th id="138">138</th><td></td></tr>
+<tr><th id="139">139</th><td>	<b>struct</b> <a class="type" href="#hash_alg_common" title='hash_alg_common' data-ref="hash_alg_common" data-ref-filename="hash_alg_common">hash_alg_common</a> <dfn class="decl field" id="ahash_alg::halg" title='ahash_alg::halg' data-ref="ahash_alg::halg" data-ref-filename="ahash_alg..halg">halg</dfn>;</td></tr>
+<tr><th id="140">140</th><td>};</td></tr>
+<tr><th id="141">141</th><td></td></tr>
+<tr><th id="142">142</th><td><b>struct</b> <dfn class="type def" id="shash_desc" title='shash_desc' data-ref="shash_desc" data-ref-filename="shash_desc">shash_desc</dfn> {</td></tr>
+<tr><th id="143">143</th><td>	<b>struct</b> <a class="type" href="#crypto_shash" title='crypto_shash' data-ref="crypto_shash" data-ref-filename="crypto_shash">crypto_shash</a> *<dfn class="decl field" id="shash_desc::tfm" title='shash_desc::tfm' data-ref="shash_desc::tfm" data-ref-filename="shash_desc..tfm">tfm</dfn>;</td></tr>
+<tr><th id="144">144</th><td>	<em>void</em> *<dfn class="decl field" id="shash_desc::__ctx" title='shash_desc::__ctx' data-ref="shash_desc::__ctx" data-ref-filename="shash_desc..__ctx">__ctx</dfn>[] <a class="macro" href="../linux/crypto.h.html#139" title="__attribute__ ((__aligned__(__alignof__(unsigned long long))))" data-ref="_M/CRYPTO_MINALIGN_ATTR">CRYPTO_MINALIGN_ATTR</a>;</td></tr>
+<tr><th id="145">145</th><td>};</td></tr>
+<tr><th id="146">146</th><td></td></tr>
+<tr><th id="147">147</th><td><u>#define <dfn class="macro" id="_M/HASH_MAX_DIGESTSIZE" data-ref="_M/HASH_MAX_DIGESTSIZE">HASH_MAX_DIGESTSIZE</dfn>	 64</u></td></tr>
+<tr><th id="148">148</th><td></td></tr>
+<tr><th id="149">149</th><td><i>/*</i></td></tr>
+<tr><th id="150">150</th><td><i> * Worst case is hmac(sha3-224-generic).  Its context is a nested 'shash_desc'</i></td></tr>
+<tr><th id="151">151</th><td><i> * containing a 'struct sha3_state'.</i></td></tr>
+<tr><th id="152">152</th><td><i> */</i></td></tr>
+<tr><th id="153">153</th><td><u>#define <dfn class="macro" id="_M/HASH_MAX_DESCSIZE" data-ref="_M/HASH_MAX_DESCSIZE">HASH_MAX_DESCSIZE</dfn>	(sizeof(struct shash_desc) + 360)</u></td></tr>
+<tr><th id="154">154</th><td></td></tr>
+<tr><th id="155">155</th><td><u>#define <dfn class="macro" id="_M/HASH_MAX_STATESIZE" data-ref="_M/HASH_MAX_STATESIZE">HASH_MAX_STATESIZE</dfn>	512</u></td></tr>
+<tr><th id="156">156</th><td></td></tr>
+<tr><th id="157">157</th><td><u>#define <dfn class="macro" id="_M/SHASH_DESC_ON_STACK" data-ref="_M/SHASH_DESC_ON_STACK">SHASH_DESC_ON_STACK</dfn>(shash, ctx)				  \</u></td></tr>
+<tr><th id="158">158</th><td><u>	char __##shash##_desc[sizeof(struct shash_desc) +	  \</u></td></tr>
+<tr><th id="159">159</th><td><u>		HASH_MAX_DESCSIZE] CRYPTO_MINALIGN_ATTR; \</u></td></tr>
+<tr><th id="160">160</th><td><u>	struct shash_desc *shash = (struct shash_desc *)__##shash##_desc</u></td></tr>
+<tr><th id="161">161</th><td></td></tr>
+<tr><th id="162">162</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="163">163</th><td><i class="doc"> * struct shash_alg - synchronous message digest definition</i></td></tr>
+<tr><th id="164">164</th><td><i class="doc"> *<span class="command"> @init</span>: see struct ahash_alg</i></td></tr>
+<tr><th id="165">165</th><td><i class="doc"> *<span class="command"> @update</span>: see struct ahash_alg</i></td></tr>
+<tr><th id="166">166</th><td><i class="doc"> *<span class="command"> @final</span>: see struct ahash_alg</i></td></tr>
+<tr><th id="167">167</th><td><i class="doc"> *<span class="command"> @finup</span>: see struct ahash_alg</i></td></tr>
+<tr><th id="168">168</th><td><i class="doc"> *<span class="command"> @digest</span>: see struct ahash_alg</i></td></tr>
+<tr><th id="169">169</th><td><i class="doc"> *<span class="command"> @export</span>: see struct ahash_alg</i></td></tr>
+<tr><th id="170">170</th><td><i class="doc"> *<span class="command"> @import</span>: see struct ahash_alg</i></td></tr>
+<tr><th id="171">171</th><td><i class="doc"> *<span class="command"> @setkey</span>: see struct ahash_alg</i></td></tr>
+<tr><th id="172">172</th><td><i class="doc"> *<span class="command"> @digestsize</span>: see struct ahash_alg</i></td></tr>
+<tr><th id="173">173</th><td><i class="doc"> *<span class="command"> @statesize</span>: see struct ahash_alg</i></td></tr>
+<tr><th id="174">174</th><td><i class="doc"> *<span class="command"> @descsize</span>: Size of the operational state for the message digest. This state</i></td></tr>
+<tr><th id="175">175</th><td><i class="doc"> * 	      size is the memory size that needs to be allocated for</i></td></tr>
+<tr><th id="176">176</th><td><i class="doc"> *	      shash_desc.__ctx</i></td></tr>
+<tr><th id="177">177</th><td><i class="doc"> *<span class="command"> @base</span>: internally used</i></td></tr>
+<tr><th id="178">178</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="179">179</th><td><b>struct</b> <dfn class="type def" id="shash_alg" title='shash_alg' data-ref="shash_alg" data-ref-filename="shash_alg">shash_alg</dfn> {</td></tr>
+<tr><th id="180">180</th><td>	<em>int</em> (*<dfn class="decl field" id="shash_alg::init" title='shash_alg::init' data-ref="shash_alg::init" data-ref-filename="shash_alg..init">init</dfn>)(<b>struct</b> <a class="type" href="#shash_desc" title='shash_desc' data-ref="shash_desc" data-ref-filename="shash_desc">shash_desc</a> *<dfn class="local col9 decl" id="659desc" title='desc' data-type='struct shash_desc *' data-ref="659desc" data-ref-filename="659desc">desc</dfn>);</td></tr>
+<tr><th id="181">181</th><td>	<em>int</em> (*<dfn class="decl field" id="shash_alg::update" title='shash_alg::update' data-ref="shash_alg::update" data-ref-filename="shash_alg..update">update</dfn>)(<b>struct</b> <a class="type" href="#shash_desc" title='shash_desc' data-ref="shash_desc" data-ref-filename="shash_desc">shash_desc</a> *<dfn class="local col0 decl" id="660desc" title='desc' data-type='struct shash_desc *' data-ref="660desc" data-ref-filename="660desc">desc</dfn>, <em>const</em> <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col1 decl" id="661data" title='data' data-type='const u8 *' data-ref="661data" data-ref-filename="661data">data</dfn>,</td></tr>
+<tr><th id="182">182</th><td>		      <em>unsigned</em> <em>int</em> <dfn class="local col2 decl" id="662len" title='len' data-type='unsigned int' data-ref="662len" data-ref-filename="662len">len</dfn>);</td></tr>
+<tr><th id="183">183</th><td>	<em>int</em> (*<dfn class="decl field" id="shash_alg::final" title='shash_alg::final' data-ref="shash_alg::final" data-ref-filename="shash_alg..final">final</dfn>)(<b>struct</b> <a class="type" href="#shash_desc" title='shash_desc' data-ref="shash_desc" data-ref-filename="shash_desc">shash_desc</a> *<dfn class="local col3 decl" id="663desc" title='desc' data-type='struct shash_desc *' data-ref="663desc" data-ref-filename="663desc">desc</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col4 decl" id="664out" title='out' data-type='u8 *' data-ref="664out" data-ref-filename="664out">out</dfn>);</td></tr>
+<tr><th id="184">184</th><td>	<em>int</em> (*<dfn class="decl field" id="shash_alg::finup" title='shash_alg::finup' data-ref="shash_alg::finup" data-ref-filename="shash_alg..finup">finup</dfn>)(<b>struct</b> <a class="type" href="#shash_desc" title='shash_desc' data-ref="shash_desc" data-ref-filename="shash_desc">shash_desc</a> *<dfn class="local col5 decl" id="665desc" title='desc' data-type='struct shash_desc *' data-ref="665desc" data-ref-filename="665desc">desc</dfn>, <em>const</em> <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col6 decl" id="666data" title='data' data-type='const u8 *' data-ref="666data" data-ref-filename="666data">data</dfn>,</td></tr>
+<tr><th id="185">185</th><td>		     <em>unsigned</em> <em>int</em> <dfn class="local col7 decl" id="667len" title='len' data-type='unsigned int' data-ref="667len" data-ref-filename="667len">len</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col8 decl" id="668out" title='out' data-type='u8 *' data-ref="668out" data-ref-filename="668out">out</dfn>);</td></tr>
+<tr><th id="186">186</th><td>	<em>int</em> (*<dfn class="decl field" id="shash_alg::digest" title='shash_alg::digest' data-ref="shash_alg::digest" data-ref-filename="shash_alg..digest">digest</dfn>)(<b>struct</b> <a class="type" href="#shash_desc" title='shash_desc' data-ref="shash_desc" data-ref-filename="shash_desc">shash_desc</a> *<dfn class="local col9 decl" id="669desc" title='desc' data-type='struct shash_desc *' data-ref="669desc" data-ref-filename="669desc">desc</dfn>, <em>const</em> <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col0 decl" id="670data" title='data' data-type='const u8 *' data-ref="670data" data-ref-filename="670data">data</dfn>,</td></tr>
+<tr><th id="187">187</th><td>		      <em>unsigned</em> <em>int</em> <dfn class="local col1 decl" id="671len" title='len' data-type='unsigned int' data-ref="671len" data-ref-filename="671len">len</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col2 decl" id="672out" title='out' data-type='u8 *' data-ref="672out" data-ref-filename="672out">out</dfn>);</td></tr>
+<tr><th id="188">188</th><td>	<em>int</em> (*<dfn class="decl field" id="shash_alg::export" title='shash_alg::export' data-ref="shash_alg::export" data-ref-filename="shash_alg..export">export</dfn>)(<b>struct</b> <a class="type" href="#shash_desc" title='shash_desc' data-ref="shash_desc" data-ref-filename="shash_desc">shash_desc</a> *<dfn class="local col3 decl" id="673desc" title='desc' data-type='struct shash_desc *' data-ref="673desc" data-ref-filename="673desc">desc</dfn>, <em>void</em> *<dfn class="local col4 decl" id="674out" title='out' data-type='void *' data-ref="674out" data-ref-filename="674out">out</dfn>);</td></tr>
+<tr><th id="189">189</th><td>	<em>int</em> (*<dfn class="decl field" id="shash_alg::import" title='shash_alg::import' data-ref="shash_alg::import" data-ref-filename="shash_alg..import">import</dfn>)(<b>struct</b> <a class="type" href="#shash_desc" title='shash_desc' data-ref="shash_desc" data-ref-filename="shash_desc">shash_desc</a> *<dfn class="local col5 decl" id="675desc" title='desc' data-type='struct shash_desc *' data-ref="675desc" data-ref-filename="675desc">desc</dfn>, <em>const</em> <em>void</em> *<dfn class="local col6 decl" id="676in" title='in' data-type='const void *' data-ref="676in" data-ref-filename="676in">in</dfn>);</td></tr>
+<tr><th id="190">190</th><td>	<em>int</em> (*<dfn class="decl field" id="shash_alg::setkey" title='shash_alg::setkey' data-ref="shash_alg::setkey" data-ref-filename="shash_alg..setkey">setkey</dfn>)(<b>struct</b> <a class="type" href="#crypto_shash" title='crypto_shash' data-ref="crypto_shash" data-ref-filename="crypto_shash">crypto_shash</a> *<dfn class="local col7 decl" id="677tfm" title='tfm' data-type='struct crypto_shash *' data-ref="677tfm" data-ref-filename="677tfm">tfm</dfn>, <em>const</em> <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col8 decl" id="678key" title='key' data-type='const u8 *' data-ref="678key" data-ref-filename="678key">key</dfn>,</td></tr>
+<tr><th id="191">191</th><td>		      <em>unsigned</em> <em>int</em> <dfn class="local col9 decl" id="679keylen" title='keylen' data-type='unsigned int' data-ref="679keylen" data-ref-filename="679keylen">keylen</dfn>);</td></tr>
+<tr><th id="192">192</th><td></td></tr>
+<tr><th id="193">193</th><td>	<em>unsigned</em> <em>int</em> <dfn class="decl field" id="shash_alg::descsize" title='shash_alg::descsize' data-ref="shash_alg::descsize" data-ref-filename="shash_alg..descsize">descsize</dfn>;</td></tr>
+<tr><th id="194">194</th><td></td></tr>
+<tr><th id="195">195</th><td>	<i>/* These fields must match hash_alg_common. */</i></td></tr>
+<tr><th id="196">196</th><td>	<em>unsigned</em> <em>int</em> <dfn class="decl field" id="shash_alg::digestsize" title='shash_alg::digestsize' data-ref="shash_alg::digestsize" data-ref-filename="shash_alg..digestsize">digestsize</dfn></td></tr>
+<tr><th id="197">197</th><td>		<b>__attribute__</b> ((aligned(<b>__alignof__</b>(<b>struct</b> <a class="type" href="#hash_alg_common" title='hash_alg_common' data-ref="hash_alg_common" data-ref-filename="hash_alg_common">hash_alg_common</a>))));</td></tr>
+<tr><th id="198">198</th><td>	<em>unsigned</em> <em>int</em> <dfn class="decl field" id="shash_alg::statesize" title='shash_alg::statesize' data-ref="shash_alg::statesize" data-ref-filename="shash_alg..statesize">statesize</dfn>;</td></tr>
+<tr><th id="199">199</th><td></td></tr>
+<tr><th id="200">200</th><td>	<b>struct</b> <a class="type" href="../linux/crypto.h.html#crypto_alg" title='crypto_alg' data-ref="crypto_alg" data-ref-filename="crypto_alg">crypto_alg</a> <dfn class="decl field" id="shash_alg::base" title='shash_alg::base' data-ref="shash_alg::base" data-ref-filename="shash_alg..base">base</dfn>;</td></tr>
+<tr><th id="201">201</th><td>};</td></tr>
+<tr><th id="202">202</th><td></td></tr>
+<tr><th id="203">203</th><td><b>struct</b> <dfn class="type def" id="crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</dfn> {</td></tr>
+<tr><th id="204">204</th><td>	<em>int</em> (*<dfn class="decl field" id="crypto_ahash::init" title='crypto_ahash::init' data-ref="crypto_ahash::init" data-ref-filename="crypto_ahash..init">init</dfn>)(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col0 decl" id="680req" title='req' data-type='struct ahash_request *' data-ref="680req" data-ref-filename="680req">req</dfn>);</td></tr>
+<tr><th id="205">205</th><td>	<em>int</em> (*<dfn class="decl field" id="crypto_ahash::update" title='crypto_ahash::update' data-ref="crypto_ahash::update" data-ref-filename="crypto_ahash..update">update</dfn>)(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col1 decl" id="681req" title='req' data-type='struct ahash_request *' data-ref="681req" data-ref-filename="681req">req</dfn>);</td></tr>
+<tr><th id="206">206</th><td>	<em>int</em> (*<dfn class="decl field" id="crypto_ahash::final" title='crypto_ahash::final' data-ref="crypto_ahash::final" data-ref-filename="crypto_ahash..final">final</dfn>)(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col2 decl" id="682req" title='req' data-type='struct ahash_request *' data-ref="682req" data-ref-filename="682req">req</dfn>);</td></tr>
+<tr><th id="207">207</th><td>	<em>int</em> (*<dfn class="decl field" id="crypto_ahash::finup" title='crypto_ahash::finup' data-ref="crypto_ahash::finup" data-ref-filename="crypto_ahash..finup">finup</dfn>)(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col3 decl" id="683req" title='req' data-type='struct ahash_request *' data-ref="683req" data-ref-filename="683req">req</dfn>);</td></tr>
+<tr><th id="208">208</th><td>	<em>int</em> (*<dfn class="decl field" id="crypto_ahash::digest" title='crypto_ahash::digest' data-ref="crypto_ahash::digest" data-ref-filename="crypto_ahash..digest">digest</dfn>)(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col4 decl" id="684req" title='req' data-type='struct ahash_request *' data-ref="684req" data-ref-filename="684req">req</dfn>);</td></tr>
+<tr><th id="209">209</th><td>	<em>int</em> (*<dfn class="decl field" id="crypto_ahash::export" title='crypto_ahash::export' data-ref="crypto_ahash::export" data-ref-filename="crypto_ahash..export">export</dfn>)(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col5 decl" id="685req" title='req' data-type='struct ahash_request *' data-ref="685req" data-ref-filename="685req">req</dfn>, <em>void</em> *<dfn class="local col6 decl" id="686out" title='out' data-type='void *' data-ref="686out" data-ref-filename="686out">out</dfn>);</td></tr>
+<tr><th id="210">210</th><td>	<em>int</em> (*<dfn class="decl field" id="crypto_ahash::import" title='crypto_ahash::import' data-ref="crypto_ahash::import" data-ref-filename="crypto_ahash..import">import</dfn>)(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col7 decl" id="687req" title='req' data-type='struct ahash_request *' data-ref="687req" data-ref-filename="687req">req</dfn>, <em>const</em> <em>void</em> *<dfn class="local col8 decl" id="688in" title='in' data-type='const void *' data-ref="688in" data-ref-filename="688in">in</dfn>);</td></tr>
+<tr><th id="211">211</th><td>	<em>int</em> (*<dfn class="decl field" id="crypto_ahash::setkey" title='crypto_ahash::setkey' data-ref="crypto_ahash::setkey" data-ref-filename="crypto_ahash..setkey">setkey</dfn>)(<b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a> *<dfn class="local col9 decl" id="689tfm" title='tfm' data-type='struct crypto_ahash *' data-ref="689tfm" data-ref-filename="689tfm">tfm</dfn>, <em>const</em> <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col0 decl" id="690key" title='key' data-type='const u8 *' data-ref="690key" data-ref-filename="690key">key</dfn>,</td></tr>
+<tr><th id="212">212</th><td>		      <em>unsigned</em> <em>int</em> <dfn class="local col1 decl" id="691keylen" title='keylen' data-type='unsigned int' data-ref="691keylen" data-ref-filename="691keylen">keylen</dfn>);</td></tr>
+<tr><th id="213">213</th><td></td></tr>
+<tr><th id="214">214</th><td>	<em>unsigned</em> <em>int</em> <dfn class="decl field" id="crypto_ahash::reqsize" title='crypto_ahash::reqsize' data-ref="crypto_ahash::reqsize" data-ref-filename="crypto_ahash..reqsize">reqsize</dfn>;</td></tr>
+<tr><th id="215">215</th><td>	<b>struct</b> <a class="type" href="../linux/crypto.h.html#crypto_tfm" title='crypto_tfm' data-ref="crypto_tfm" data-ref-filename="crypto_tfm">crypto_tfm</a> <dfn class="decl field" id="crypto_ahash::base" title='crypto_ahash::base' data-ref="crypto_ahash::base" data-ref-filename="crypto_ahash..base">base</dfn>;</td></tr>
+<tr><th id="216">216</th><td>};</td></tr>
+<tr><th id="217">217</th><td></td></tr>
+<tr><th id="218">218</th><td><b>struct</b> <dfn class="type def" id="crypto_shash" title='crypto_shash' data-ref="crypto_shash" data-ref-filename="crypto_shash">crypto_shash</dfn> {</td></tr>
+<tr><th id="219">219</th><td>	<em>unsigned</em> <em>int</em> <dfn class="decl field" id="crypto_shash::descsize" title='crypto_shash::descsize' data-ref="crypto_shash::descsize" data-ref-filename="crypto_shash..descsize">descsize</dfn>;</td></tr>
+<tr><th id="220">220</th><td>	<b>struct</b> <a class="type" href="../linux/crypto.h.html#crypto_tfm" title='crypto_tfm' data-ref="crypto_tfm" data-ref-filename="crypto_tfm">crypto_tfm</a> <dfn class="decl field" id="crypto_shash::base" title='crypto_shash::base' data-ref="crypto_shash::base" data-ref-filename="crypto_shash..base">base</dfn>;</td></tr>
+<tr><th id="221">221</th><td>};</td></tr>
+<tr><th id="222">222</th><td></td></tr>
+<tr><th id="223">223</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="224">224</th><td><i class="doc"> * DOC: Asynchronous Message Digest API</i></td></tr>
+<tr><th id="225">225</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="226">226</th><td><i class="doc"> * The asynchronous message digest API is used with the ciphers of type</i></td></tr>
+<tr><th id="227">227</th><td><i class="doc"> * CRYPTO_ALG_TYPE_AHASH (listed as type "ahash" in /proc/crypto)</i></td></tr>
+<tr><th id="228">228</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="229">229</th><td><i class="doc"> * The asynchronous cipher operation discussion provided for the</i></td></tr>
+<tr><th id="230">230</th><td><i class="doc"> * CRYPTO_ALG_TYPE_ABLKCIPHER API applies here as well.</i></td></tr>
+<tr><th id="231">231</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="232">232</th><td></td></tr>
+<tr><th id="233">233</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a> *<dfn class="decl def fn" id="__crypto_ahash_cast" title='__crypto_ahash_cast' data-ref="__crypto_ahash_cast" data-ref-filename="__crypto_ahash_cast">__crypto_ahash_cast</dfn>(<b>struct</b> <a class="type" href="../linux/crypto.h.html#crypto_tfm" title='crypto_tfm' data-ref="crypto_tfm" data-ref-filename="crypto_tfm">crypto_tfm</a> *<dfn class="local col2 decl" id="692tfm" title='tfm' data-type='struct crypto_tfm *' data-ref="692tfm" data-ref-filename="692tfm">tfm</dfn>)</td></tr>
+<tr><th id="234">234</th><td>{</td></tr>
+<tr><th id="235">235</th><td>	<b>return</b> <a class="macro" href="../linux/kernel.h.html#971" title="({ void *__mptr = (void *)(tfm); do { extern void __compiletime_assert_235(void) ; if (!(!(!__builtin_types_compatible_p(typeof(*(tfm)), typeof(((struct crypto_ahash *)0)-&gt;base)) &amp;&amp; !__builtin_types_compatible_p(typeof(*(tfm)), typeof(void))))) __compiletime_assert_235(); } while (0); ((struct crypto_ahash *)(__mptr - __builtin_offsetof(struct crypto_ahash, base))); })" data-ref="_M/container_of">container_of</a>(<a class="local col2 ref" href="#692tfm" title='tfm' data-ref="692tfm" data-ref-filename="692tfm">tfm</a>, <b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a>, <a class="ref field" href="#crypto_ahash::base" title='crypto_ahash::base' data-ref="crypto_ahash::base" data-ref-filename="crypto_ahash..base">base</a>);</td></tr>
+<tr><th id="236">236</th><td>}</td></tr>
+<tr><th id="237">237</th><td></td></tr>
+<tr><th id="238">238</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="239">239</th><td><i class="doc"> * crypto_alloc_ahash() - allocate ahash cipher handle</i></td></tr>
+<tr><th id="240">240</th><td><i class="doc"> * <span class="command">@alg</span>_name: is the cra_name / name or cra_driver_name / driver name of the</i></td></tr>
+<tr><th id="241">241</th><td><i class="doc"> *	      ahash cipher</i></td></tr>
+<tr><th id="242">242</th><td><i class="doc"> *<span class="command"> @type</span>: specifies the type of the cipher</i></td></tr>
+<tr><th id="243">243</th><td><i class="doc"> *<span class="command"> @mask</span>: specifies the mask for the cipher</i></td></tr>
+<tr><th id="244">244</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="245">245</th><td><i class="doc"> * Allocate a cipher handle for an ahash. The returned struct</i></td></tr>
+<tr><th id="246">246</th><td><i class="doc"> * crypto_ahash is the cipher handle that is required for any subsequent</i></td></tr>
+<tr><th id="247">247</th><td><i class="doc"> * API invocation for that ahash.</i></td></tr>
+<tr><th id="248">248</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="249">249</th><td><i class="doc"> * Return: allocated cipher handle in case of success; IS_ERR() is true in case</i></td></tr>
+<tr><th id="250">250</th><td><i class="doc"> *	   of an error, PTR_ERR() returns the error code.</i></td></tr>
+<tr><th id="251">251</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="252">252</th><td><b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a> *<dfn class="decl fn" id="crypto_alloc_ahash" title='crypto_alloc_ahash' data-ref="crypto_alloc_ahash" data-ref-filename="crypto_alloc_ahash">crypto_alloc_ahash</dfn>(<em>const</em> <em>char</em> *<dfn class="local col3 decl" id="693alg_name" title='alg_name' data-type='const char *' data-ref="693alg_name" data-ref-filename="693alg_name">alg_name</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col4 decl" id="694type" title='type' data-type='u32' data-ref="694type" data-ref-filename="694type">type</dfn>,</td></tr>
+<tr><th id="253">253</th><td>					<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col5 decl" id="695mask" title='mask' data-type='u32' data-ref="695mask" data-ref-filename="695mask">mask</dfn>);</td></tr>
+<tr><th id="254">254</th><td></td></tr>
+<tr><th id="255">255</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="../linux/crypto.h.html#crypto_tfm" title='crypto_tfm' data-ref="crypto_tfm" data-ref-filename="crypto_tfm">crypto_tfm</a> *<dfn class="decl def fn" id="crypto_ahash_tfm" title='crypto_ahash_tfm' data-ref="crypto_ahash_tfm" data-ref-filename="crypto_ahash_tfm">crypto_ahash_tfm</dfn>(<b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a> *<dfn class="local col6 decl" id="696tfm" title='tfm' data-type='struct crypto_ahash *' data-ref="696tfm" data-ref-filename="696tfm">tfm</dfn>)</td></tr>
+<tr><th id="256">256</th><td>{</td></tr>
+<tr><th id="257">257</th><td>	<b>return</b> &amp;<a class="local col6 ref" href="#696tfm" title='tfm' data-ref="696tfm" data-ref-filename="696tfm">tfm</a>-&gt;<a class="ref field" href="#crypto_ahash::base" title='crypto_ahash::base' data-ref="crypto_ahash::base" data-ref-filename="crypto_ahash..base">base</a>;</td></tr>
+<tr><th id="258">258</th><td>}</td></tr>
+<tr><th id="259">259</th><td></td></tr>
+<tr><th id="260">260</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="261">261</th><td><i class="doc"> * crypto_free_ahash() - zeroize and free the ahash handle</i></td></tr>
+<tr><th id="262">262</th><td><i class="doc"> *<span class="command"> @tfm</span>: cipher handle to be freed</i></td></tr>
+<tr><th id="263">263</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="264">264</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="crypto_free_ahash" title='crypto_free_ahash' data-ref="crypto_free_ahash" data-ref-filename="crypto_free_ahash">crypto_free_ahash</dfn>(<b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a> *<dfn class="local col7 decl" id="697tfm" title='tfm' data-type='struct crypto_ahash *' data-ref="697tfm" data-ref-filename="697tfm">tfm</dfn>)</td></tr>
+<tr><th id="265">265</th><td>{</td></tr>
+<tr><th id="266">266</th><td>	<a class="ref fn" href="../linux/crypto.h.html#crypto_destroy_tfm" title='crypto_destroy_tfm' data-ref="crypto_destroy_tfm" data-ref-filename="crypto_destroy_tfm">crypto_destroy_tfm</a>(<a class="local col7 ref" href="#697tfm" title='tfm' data-ref="697tfm" data-ref-filename="697tfm">tfm</a>, <a class="ref fn" href="#crypto_ahash_tfm" title='crypto_ahash_tfm' data-ref="crypto_ahash_tfm" data-ref-filename="crypto_ahash_tfm">crypto_ahash_tfm</a>(<a class="local col7 ref" href="#697tfm" title='tfm' data-ref="697tfm" data-ref-filename="697tfm">tfm</a>));</td></tr>
+<tr><th id="267">267</th><td>}</td></tr>
+<tr><th id="268">268</th><td></td></tr>
+<tr><th id="269">269</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="270">270</th><td><i class="doc"> * crypto_has_ahash() - Search for the availability of an ahash.</i></td></tr>
+<tr><th id="271">271</th><td><i class="doc"> * <span class="command">@alg</span>_name: is the cra_name / name or cra_driver_name / driver name of the</i></td></tr>
+<tr><th id="272">272</th><td><i class="doc"> *	      ahash</i></td></tr>
+<tr><th id="273">273</th><td><i class="doc"> *<span class="command"> @type</span>: specifies the type of the ahash</i></td></tr>
+<tr><th id="274">274</th><td><i class="doc"> *<span class="command"> @mask</span>: specifies the mask for the ahash</i></td></tr>
+<tr><th id="275">275</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="276">276</th><td><i class="doc"> * Return: true when the ahash is known to the kernel crypto API; false</i></td></tr>
+<tr><th id="277">277</th><td><i class="doc"> *	   otherwise</i></td></tr>
+<tr><th id="278">278</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="279">279</th><td><em>int</em> <dfn class="decl fn" id="crypto_has_ahash" title='crypto_has_ahash' data-ref="crypto_has_ahash" data-ref-filename="crypto_has_ahash">crypto_has_ahash</dfn>(<em>const</em> <em>char</em> *<dfn class="local col8 decl" id="698alg_name" title='alg_name' data-type='const char *' data-ref="698alg_name" data-ref-filename="698alg_name">alg_name</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col9 decl" id="699type" title='type' data-type='u32' data-ref="699type" data-ref-filename="699type">type</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col0 decl" id="700mask" title='mask' data-type='u32' data-ref="700mask" data-ref-filename="700mask">mask</dfn>);</td></tr>
+<tr><th id="280">280</th><td></td></tr>
+<tr><th id="281">281</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>const</em> <em>char</em> *<dfn class="decl def fn" id="crypto_ahash_alg_name" title='crypto_ahash_alg_name' data-ref="crypto_ahash_alg_name" data-ref-filename="crypto_ahash_alg_name">crypto_ahash_alg_name</dfn>(<b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a> *<dfn class="local col1 decl" id="701tfm" title='tfm' data-type='struct crypto_ahash *' data-ref="701tfm" data-ref-filename="701tfm">tfm</dfn>)</td></tr>
+<tr><th id="282">282</th><td>{</td></tr>
+<tr><th id="283">283</th><td>	<b>return</b> <a class="ref fn" href="../linux/crypto.h.html#crypto_tfm_alg_name" title='crypto_tfm_alg_name' data-ref="crypto_tfm_alg_name" data-ref-filename="crypto_tfm_alg_name">crypto_tfm_alg_name</a>(<a class="ref fn" href="#crypto_ahash_tfm" title='crypto_ahash_tfm' data-ref="crypto_ahash_tfm" data-ref-filename="crypto_ahash_tfm">crypto_ahash_tfm</a>(<a class="local col1 ref" href="#701tfm" title='tfm' data-ref="701tfm" data-ref-filename="701tfm">tfm</a>));</td></tr>
+<tr><th id="284">284</th><td>}</td></tr>
+<tr><th id="285">285</th><td></td></tr>
+<tr><th id="286">286</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>const</em> <em>char</em> *<dfn class="decl def fn" id="crypto_ahash_driver_name" title='crypto_ahash_driver_name' data-ref="crypto_ahash_driver_name" data-ref-filename="crypto_ahash_driver_name">crypto_ahash_driver_name</dfn>(<b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a> *<dfn class="local col2 decl" id="702tfm" title='tfm' data-type='struct crypto_ahash *' data-ref="702tfm" data-ref-filename="702tfm">tfm</dfn>)</td></tr>
+<tr><th id="287">287</th><td>{</td></tr>
+<tr><th id="288">288</th><td>	<b>return</b> <a class="ref fn" href="../linux/crypto.h.html#crypto_tfm_alg_driver_name" title='crypto_tfm_alg_driver_name' data-ref="crypto_tfm_alg_driver_name" data-ref-filename="crypto_tfm_alg_driver_name">crypto_tfm_alg_driver_name</a>(<a class="ref fn" href="#crypto_ahash_tfm" title='crypto_ahash_tfm' data-ref="crypto_ahash_tfm" data-ref-filename="crypto_ahash_tfm">crypto_ahash_tfm</a>(<a class="local col2 ref" href="#702tfm" title='tfm' data-ref="702tfm" data-ref-filename="702tfm">tfm</a>));</td></tr>
+<tr><th id="289">289</th><td>}</td></tr>
+<tr><th id="290">290</th><td></td></tr>
+<tr><th id="291">291</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>int</em> <dfn class="decl def fn" id="crypto_ahash_alignmask" title='crypto_ahash_alignmask' data-ref="crypto_ahash_alignmask" data-ref-filename="crypto_ahash_alignmask">crypto_ahash_alignmask</dfn>(</td></tr>
+<tr><th id="292">292</th><td>	<b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a> *<dfn class="local col3 decl" id="703tfm" title='tfm' data-type='struct crypto_ahash *' data-ref="703tfm" data-ref-filename="703tfm">tfm</dfn>)</td></tr>
+<tr><th id="293">293</th><td>{</td></tr>
+<tr><th id="294">294</th><td>	<b>return</b> <a class="ref fn" href="../linux/crypto.h.html#crypto_tfm_alg_alignmask" title='crypto_tfm_alg_alignmask' data-ref="crypto_tfm_alg_alignmask" data-ref-filename="crypto_tfm_alg_alignmask">crypto_tfm_alg_alignmask</a>(<a class="ref fn" href="#crypto_ahash_tfm" title='crypto_ahash_tfm' data-ref="crypto_ahash_tfm" data-ref-filename="crypto_ahash_tfm">crypto_ahash_tfm</a>(<a class="local col3 ref" href="#703tfm" title='tfm' data-ref="703tfm" data-ref-filename="703tfm">tfm</a>));</td></tr>
+<tr><th id="295">295</th><td>}</td></tr>
+<tr><th id="296">296</th><td></td></tr>
+<tr><th id="297">297</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="298">298</th><td><i class="doc"> * crypto_ahash_blocksize() - obtain block size for cipher</i></td></tr>
+<tr><th id="299">299</th><td><i class="doc"> *<span class="command"> @tfm</span>: cipher handle</i></td></tr>
+<tr><th id="300">300</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="301">301</th><td><i class="doc"> * The block size for the message digest cipher referenced with the cipher</i></td></tr>
+<tr><th id="302">302</th><td><i class="doc"> * handle is returned.</i></td></tr>
+<tr><th id="303">303</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="304">304</th><td><i class="doc"> * Return: block size of cipher</i></td></tr>
+<tr><th id="305">305</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="306">306</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>int</em> <dfn class="decl def fn" id="crypto_ahash_blocksize" title='crypto_ahash_blocksize' data-ref="crypto_ahash_blocksize" data-ref-filename="crypto_ahash_blocksize">crypto_ahash_blocksize</dfn>(<b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a> *<dfn class="local col4 decl" id="704tfm" title='tfm' data-type='struct crypto_ahash *' data-ref="704tfm" data-ref-filename="704tfm">tfm</dfn>)</td></tr>
+<tr><th id="307">307</th><td>{</td></tr>
+<tr><th id="308">308</th><td>	<b>return</b> <a class="ref fn" href="../linux/crypto.h.html#crypto_tfm_alg_blocksize" title='crypto_tfm_alg_blocksize' data-ref="crypto_tfm_alg_blocksize" data-ref-filename="crypto_tfm_alg_blocksize">crypto_tfm_alg_blocksize</a>(<a class="ref fn" href="#crypto_ahash_tfm" title='crypto_ahash_tfm' data-ref="crypto_ahash_tfm" data-ref-filename="crypto_ahash_tfm">crypto_ahash_tfm</a>(<a class="local col4 ref" href="#704tfm" title='tfm' data-ref="704tfm" data-ref-filename="704tfm">tfm</a>));</td></tr>
+<tr><th id="309">309</th><td>}</td></tr>
+<tr><th id="310">310</th><td></td></tr>
+<tr><th id="311">311</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="#hash_alg_common" title='hash_alg_common' data-ref="hash_alg_common" data-ref-filename="hash_alg_common">hash_alg_common</a> *<dfn class="decl def fn" id="__crypto_hash_alg_common" title='__crypto_hash_alg_common' data-ref="__crypto_hash_alg_common" data-ref-filename="__crypto_hash_alg_common">__crypto_hash_alg_common</dfn>(</td></tr>
+<tr><th id="312">312</th><td>	<b>struct</b> <a class="type" href="../linux/crypto.h.html#crypto_alg" title='crypto_alg' data-ref="crypto_alg" data-ref-filename="crypto_alg">crypto_alg</a> *<dfn class="local col5 decl" id="705alg" title='alg' data-type='struct crypto_alg *' data-ref="705alg" data-ref-filename="705alg">alg</dfn>)</td></tr>
+<tr><th id="313">313</th><td>{</td></tr>
+<tr><th id="314">314</th><td>	<b>return</b> <a class="macro" href="../linux/kernel.h.html#971" title="({ void *__mptr = (void *)(alg); do { extern void __compiletime_assert_314(void) ; if (!(!(!__builtin_types_compatible_p(typeof(*(alg)), typeof(((struct hash_alg_common *)0)-&gt;base)) &amp;&amp; !__builtin_types_compatible_p(typeof(*(alg)), typeof(void))))) __compiletime_assert_314(); } while (0); ((struct hash_alg_common *)(__mptr - __builtin_offsetof(struct hash_alg_common, base))); })" data-ref="_M/container_of">container_of</a>(<a class="local col5 ref" href="#705alg" title='alg' data-ref="705alg" data-ref-filename="705alg">alg</a>, <b>struct</b> <a class="type" href="#hash_alg_common" title='hash_alg_common' data-ref="hash_alg_common" data-ref-filename="hash_alg_common">hash_alg_common</a>, <a class="ref field" href="#hash_alg_common::base" title='hash_alg_common::base' data-ref="hash_alg_common::base" data-ref-filename="hash_alg_common..base">base</a>);</td></tr>
+<tr><th id="315">315</th><td>}</td></tr>
+<tr><th id="316">316</th><td></td></tr>
+<tr><th id="317">317</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="#hash_alg_common" title='hash_alg_common' data-ref="hash_alg_common" data-ref-filename="hash_alg_common">hash_alg_common</a> *<dfn class="decl def fn" id="crypto_hash_alg_common" title='crypto_hash_alg_common' data-ref="crypto_hash_alg_common" data-ref-filename="crypto_hash_alg_common">crypto_hash_alg_common</dfn>(</td></tr>
+<tr><th id="318">318</th><td>	<b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a> *<dfn class="local col6 decl" id="706tfm" title='tfm' data-type='struct crypto_ahash *' data-ref="706tfm" data-ref-filename="706tfm">tfm</dfn>)</td></tr>
+<tr><th id="319">319</th><td>{</td></tr>
+<tr><th id="320">320</th><td>	<b>return</b> <a class="ref fn" href="#__crypto_hash_alg_common" title='__crypto_hash_alg_common' data-ref="__crypto_hash_alg_common" data-ref-filename="__crypto_hash_alg_common">__crypto_hash_alg_common</a>(<a class="ref fn" href="#crypto_ahash_tfm" title='crypto_ahash_tfm' data-ref="crypto_ahash_tfm" data-ref-filename="crypto_ahash_tfm">crypto_ahash_tfm</a>(<a class="local col6 ref" href="#706tfm" title='tfm' data-ref="706tfm" data-ref-filename="706tfm">tfm</a>)-&gt;<a class="ref field" href="../linux/crypto.h.html#crypto_tfm::__crt_alg" title='crypto_tfm::__crt_alg' data-ref="crypto_tfm::__crt_alg" data-ref-filename="crypto_tfm..__crt_alg">__crt_alg</a>);</td></tr>
+<tr><th id="321">321</th><td>}</td></tr>
+<tr><th id="322">322</th><td></td></tr>
+<tr><th id="323">323</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="324">324</th><td><i class="doc"> * crypto_ahash_digestsize() - obtain message digest size</i></td></tr>
+<tr><th id="325">325</th><td><i class="doc"> *<span class="command"> @tfm</span>: cipher handle</i></td></tr>
+<tr><th id="326">326</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="327">327</th><td><i class="doc"> * The size for the message digest created by the message digest cipher</i></td></tr>
+<tr><th id="328">328</th><td><i class="doc"> * referenced with the cipher handle is returned.</i></td></tr>
+<tr><th id="329">329</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="330">330</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="331">331</th><td><i class="doc"> * Return: message digest size of cipher</i></td></tr>
+<tr><th id="332">332</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="333">333</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>int</em> <dfn class="decl def fn" id="crypto_ahash_digestsize" title='crypto_ahash_digestsize' data-ref="crypto_ahash_digestsize" data-ref-filename="crypto_ahash_digestsize">crypto_ahash_digestsize</dfn>(<b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a> *<dfn class="local col7 decl" id="707tfm" title='tfm' data-type='struct crypto_ahash *' data-ref="707tfm" data-ref-filename="707tfm">tfm</dfn>)</td></tr>
+<tr><th id="334">334</th><td>{</td></tr>
+<tr><th id="335">335</th><td>	<b>return</b> <a class="ref fn" href="#crypto_hash_alg_common" title='crypto_hash_alg_common' data-ref="crypto_hash_alg_common" data-ref-filename="crypto_hash_alg_common">crypto_hash_alg_common</a>(<a class="local col7 ref" href="#707tfm" title='tfm' data-ref="707tfm" data-ref-filename="707tfm">tfm</a>)-&gt;<a class="ref field" href="#hash_alg_common::digestsize" title='hash_alg_common::digestsize' data-ref="hash_alg_common::digestsize" data-ref-filename="hash_alg_common..digestsize">digestsize</a>;</td></tr>
+<tr><th id="336">336</th><td>}</td></tr>
+<tr><th id="337">337</th><td></td></tr>
+<tr><th id="338">338</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="339">339</th><td><i class="doc"> * crypto_ahash_statesize() - obtain size of the ahash state</i></td></tr>
+<tr><th id="340">340</th><td><i class="doc"> *<span class="command"> @tfm</span>: cipher handle</i></td></tr>
+<tr><th id="341">341</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="342">342</th><td><i class="doc"> * Return the size of the ahash state. With the crypto_ahash_export()</i></td></tr>
+<tr><th id="343">343</th><td><i class="doc"> * function, the caller can export the state into a buffer whose size is</i></td></tr>
+<tr><th id="344">344</th><td><i class="doc"> * defined with this function.</i></td></tr>
+<tr><th id="345">345</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="346">346</th><td><i class="doc"> * Return: size of the ahash state</i></td></tr>
+<tr><th id="347">347</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="348">348</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>int</em> <dfn class="decl def fn" id="crypto_ahash_statesize" title='crypto_ahash_statesize' data-ref="crypto_ahash_statesize" data-ref-filename="crypto_ahash_statesize">crypto_ahash_statesize</dfn>(<b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a> *<dfn class="local col8 decl" id="708tfm" title='tfm' data-type='struct crypto_ahash *' data-ref="708tfm" data-ref-filename="708tfm">tfm</dfn>)</td></tr>
+<tr><th id="349">349</th><td>{</td></tr>
+<tr><th id="350">350</th><td>	<b>return</b> <a class="ref fn" href="#crypto_hash_alg_common" title='crypto_hash_alg_common' data-ref="crypto_hash_alg_common" data-ref-filename="crypto_hash_alg_common">crypto_hash_alg_common</a>(<a class="local col8 ref" href="#708tfm" title='tfm' data-ref="708tfm" data-ref-filename="708tfm">tfm</a>)-&gt;<a class="ref field" href="#hash_alg_common::statesize" title='hash_alg_common::statesize' data-ref="hash_alg_common::statesize" data-ref-filename="hash_alg_common..statesize">statesize</a>;</td></tr>
+<tr><th id="351">351</th><td>}</td></tr>
+<tr><th id="352">352</th><td></td></tr>
+<tr><th id="353">353</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl def fn" id="crypto_ahash_get_flags" title='crypto_ahash_get_flags' data-ref="crypto_ahash_get_flags" data-ref-filename="crypto_ahash_get_flags">crypto_ahash_get_flags</dfn>(<b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a> *<dfn class="local col9 decl" id="709tfm" title='tfm' data-type='struct crypto_ahash *' data-ref="709tfm" data-ref-filename="709tfm">tfm</dfn>)</td></tr>
+<tr><th id="354">354</th><td>{</td></tr>
+<tr><th id="355">355</th><td>	<b>return</b> <a class="ref fn" href="../linux/crypto.h.html#crypto_tfm_get_flags" title='crypto_tfm_get_flags' data-ref="crypto_tfm_get_flags" data-ref-filename="crypto_tfm_get_flags">crypto_tfm_get_flags</a>(<a class="ref fn" href="#crypto_ahash_tfm" title='crypto_ahash_tfm' data-ref="crypto_ahash_tfm" data-ref-filename="crypto_ahash_tfm">crypto_ahash_tfm</a>(<a class="local col9 ref" href="#709tfm" title='tfm' data-ref="709tfm" data-ref-filename="709tfm">tfm</a>));</td></tr>
+<tr><th id="356">356</th><td>}</td></tr>
+<tr><th id="357">357</th><td></td></tr>
+<tr><th id="358">358</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="crypto_ahash_set_flags" title='crypto_ahash_set_flags' data-ref="crypto_ahash_set_flags" data-ref-filename="crypto_ahash_set_flags">crypto_ahash_set_flags</dfn>(<b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a> *<dfn class="local col0 decl" id="710tfm" title='tfm' data-type='struct crypto_ahash *' data-ref="710tfm" data-ref-filename="710tfm">tfm</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col1 decl" id="711flags" title='flags' data-type='u32' data-ref="711flags" data-ref-filename="711flags">flags</dfn>)</td></tr>
+<tr><th id="359">359</th><td>{</td></tr>
+<tr><th id="360">360</th><td>	<a class="ref fn" href="../linux/crypto.h.html#crypto_tfm_set_flags" title='crypto_tfm_set_flags' data-ref="crypto_tfm_set_flags" data-ref-filename="crypto_tfm_set_flags">crypto_tfm_set_flags</a>(<a class="ref fn" href="#crypto_ahash_tfm" title='crypto_ahash_tfm' data-ref="crypto_ahash_tfm" data-ref-filename="crypto_ahash_tfm">crypto_ahash_tfm</a>(<a class="local col0 ref" href="#710tfm" title='tfm' data-ref="710tfm" data-ref-filename="710tfm">tfm</a>), <a class="local col1 ref" href="#711flags" title='flags' data-ref="711flags" data-ref-filename="711flags">flags</a>);</td></tr>
+<tr><th id="361">361</th><td>}</td></tr>
+<tr><th id="362">362</th><td></td></tr>
+<tr><th id="363">363</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="crypto_ahash_clear_flags" title='crypto_ahash_clear_flags' data-ref="crypto_ahash_clear_flags" data-ref-filename="crypto_ahash_clear_flags">crypto_ahash_clear_flags</dfn>(<b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a> *<dfn class="local col2 decl" id="712tfm" title='tfm' data-type='struct crypto_ahash *' data-ref="712tfm" data-ref-filename="712tfm">tfm</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col3 decl" id="713flags" title='flags' data-type='u32' data-ref="713flags" data-ref-filename="713flags">flags</dfn>)</td></tr>
+<tr><th id="364">364</th><td>{</td></tr>
+<tr><th id="365">365</th><td>	<a class="ref fn" href="../linux/crypto.h.html#crypto_tfm_clear_flags" title='crypto_tfm_clear_flags' data-ref="crypto_tfm_clear_flags" data-ref-filename="crypto_tfm_clear_flags">crypto_tfm_clear_flags</a>(<a class="ref fn" href="#crypto_ahash_tfm" title='crypto_ahash_tfm' data-ref="crypto_ahash_tfm" data-ref-filename="crypto_ahash_tfm">crypto_ahash_tfm</a>(<a class="local col2 ref" href="#712tfm" title='tfm' data-ref="712tfm" data-ref-filename="712tfm">tfm</a>), <a class="local col3 ref" href="#713flags" title='flags' data-ref="713flags" data-ref-filename="713flags">flags</a>);</td></tr>
+<tr><th id="366">366</th><td>}</td></tr>
+<tr><th id="367">367</th><td></td></tr>
+<tr><th id="368">368</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="369">369</th><td><i class="doc"> * crypto_ahash_reqtfm() - obtain cipher handle from request</i></td></tr>
+<tr><th id="370">370</th><td><i class="doc"> * <span class="command">@req</span>:<span class="verb"> asynchronous request handle that contains the reference to the ahash</span></i></td></tr>
+<tr><th id="371">371</th><td><i class="doc"> *	 cipher handle</i></td></tr>
+<tr><th id="372">372</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="373">373</th><td><i class="doc"> * Return the ahash cipher handle that is registered with the asynchronous</i></td></tr>
+<tr><th id="374">374</th><td><i class="doc"> * request handle ahash_request.</i></td></tr>
+<tr><th id="375">375</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="376">376</th><td><i class="doc"> * Return: ahash cipher handle</i></td></tr>
+<tr><th id="377">377</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="378">378</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a> *<dfn class="decl def fn" id="crypto_ahash_reqtfm" title='crypto_ahash_reqtfm' data-ref="crypto_ahash_reqtfm" data-ref-filename="crypto_ahash_reqtfm">crypto_ahash_reqtfm</dfn>(</td></tr>
+<tr><th id="379">379</th><td>	<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col4 decl" id="714req" title='req' data-type='struct ahash_request *' data-ref="714req" data-ref-filename="714req">req</dfn>)</td></tr>
+<tr><th id="380">380</th><td>{</td></tr>
+<tr><th id="381">381</th><td>	<b>return</b> <a class="ref fn" href="#__crypto_ahash_cast" title='__crypto_ahash_cast' data-ref="__crypto_ahash_cast" data-ref-filename="__crypto_ahash_cast">__crypto_ahash_cast</a>(<a class="local col4 ref" href="#714req" title='req' data-ref="714req" data-ref-filename="714req">req</a>-&gt;<a class="ref field" href="#ahash_request::base" title='ahash_request::base' data-ref="ahash_request::base" data-ref-filename="ahash_request..base">base</a>.<a class="ref field" href="../linux/crypto.h.html#crypto_async_request::tfm" title='crypto_async_request::tfm' data-ref="crypto_async_request::tfm" data-ref-filename="crypto_async_request..tfm">tfm</a>);</td></tr>
+<tr><th id="382">382</th><td>}</td></tr>
+<tr><th id="383">383</th><td></td></tr>
+<tr><th id="384">384</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="385">385</th><td><i class="doc"> * crypto_ahash_reqsize() - obtain size of the request data structure</i></td></tr>
+<tr><th id="386">386</th><td><i class="doc"> *<span class="command"> @tfm</span>: cipher handle</i></td></tr>
+<tr><th id="387">387</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="388">388</th><td><i class="doc"> * Return: size of the request data</i></td></tr>
+<tr><th id="389">389</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="390">390</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>int</em> <dfn class="decl def fn" id="crypto_ahash_reqsize" title='crypto_ahash_reqsize' data-ref="crypto_ahash_reqsize" data-ref-filename="crypto_ahash_reqsize">crypto_ahash_reqsize</dfn>(<b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a> *<dfn class="local col5 decl" id="715tfm" title='tfm' data-type='struct crypto_ahash *' data-ref="715tfm" data-ref-filename="715tfm">tfm</dfn>)</td></tr>
+<tr><th id="391">391</th><td>{</td></tr>
+<tr><th id="392">392</th><td>	<b>return</b> <a class="local col5 ref" href="#715tfm" title='tfm' data-ref="715tfm" data-ref-filename="715tfm">tfm</a>-&gt;<a class="ref field" href="#crypto_ahash::reqsize" title='crypto_ahash::reqsize' data-ref="crypto_ahash::reqsize" data-ref-filename="crypto_ahash..reqsize">reqsize</a>;</td></tr>
+<tr><th id="393">393</th><td>}</td></tr>
+<tr><th id="394">394</th><td></td></tr>
+<tr><th id="395">395</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> *<dfn class="decl def fn" id="ahash_request_ctx" title='ahash_request_ctx' data-ref="ahash_request_ctx" data-ref-filename="ahash_request_ctx">ahash_request_ctx</dfn>(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col6 decl" id="716req" title='req' data-type='struct ahash_request *' data-ref="716req" data-ref-filename="716req">req</dfn>)</td></tr>
+<tr><th id="396">396</th><td>{</td></tr>
+<tr><th id="397">397</th><td>	<b>return</b> <a class="local col6 ref" href="#716req" title='req' data-ref="716req" data-ref-filename="716req">req</a>-&gt;<a class="ref field" href="#ahash_request::__ctx" title='ahash_request::__ctx' data-ref="ahash_request::__ctx" data-ref-filename="ahash_request..__ctx">__ctx</a>;</td></tr>
+<tr><th id="398">398</th><td>}</td></tr>
+<tr><th id="399">399</th><td></td></tr>
+<tr><th id="400">400</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="401">401</th><td><i class="doc"> * crypto_ahash_setkey - set key for cipher handle</i></td></tr>
+<tr><th id="402">402</th><td><i class="doc"> *<span class="command"> @tfm</span>: cipher handle</i></td></tr>
+<tr><th id="403">403</th><td><i class="doc"> *<span class="command"> @key</span>: buffer holding the key</i></td></tr>
+<tr><th id="404">404</th><td><i class="doc"> *<span class="command"> @keylen</span>: length of the key in bytes</i></td></tr>
+<tr><th id="405">405</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="406">406</th><td><i class="doc"> * The caller provided key is set for the ahash cipher. The cipher</i></td></tr>
+<tr><th id="407">407</th><td><i class="doc"> * handle must point to a keyed hash in order for this function to succeed.</i></td></tr>
+<tr><th id="408">408</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="409">409</th><td><i class="doc"> * Return: 0 if the setting of the key was successful; &lt; 0 if an error occurred</i></td></tr>
+<tr><th id="410">410</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="411">411</th><td><em>int</em> <dfn class="decl fn" id="crypto_ahash_setkey" title='crypto_ahash_setkey' data-ref="crypto_ahash_setkey" data-ref-filename="crypto_ahash_setkey">crypto_ahash_setkey</dfn>(<b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a> *<dfn class="local col7 decl" id="717tfm" title='tfm' data-type='struct crypto_ahash *' data-ref="717tfm" data-ref-filename="717tfm">tfm</dfn>, <em>const</em> <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col8 decl" id="718key" title='key' data-type='const u8 *' data-ref="718key" data-ref-filename="718key">key</dfn>,</td></tr>
+<tr><th id="412">412</th><td>			<em>unsigned</em> <em>int</em> <dfn class="local col9 decl" id="719keylen" title='keylen' data-type='unsigned int' data-ref="719keylen" data-ref-filename="719keylen">keylen</dfn>);</td></tr>
+<tr><th id="413">413</th><td></td></tr>
+<tr><th id="414">414</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="415">415</th><td><i class="doc"> * crypto_ahash_finup() - update and finalize message digest</i></td></tr>
+<tr><th id="416">416</th><td><i class="doc"> * <span class="command">@req</span>:<span class="verb"> reference to the ahash_request handle that holds all information</span></i></td></tr>
+<tr><th id="417">417</th><td><i class="doc"> *	 needed to perform the cipher operation</i></td></tr>
+<tr><th id="418">418</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="419">419</th><td><i class="doc"> * This function is a "short-hand" for the function calls of</i></td></tr>
+<tr><th id="420">420</th><td><i class="doc"> * crypto_ahash_update and crypto_ahash_final. The parameters have the same</i></td></tr>
+<tr><th id="421">421</th><td><i class="doc"> * meaning as discussed for those separate functions.</i></td></tr>
+<tr><th id="422">422</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="423">423</th><td><i class="doc"> * Return: see crypto_ahash_final()</i></td></tr>
+<tr><th id="424">424</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="425">425</th><td><em>int</em> <dfn class="decl fn" id="crypto_ahash_finup" title='crypto_ahash_finup' data-ref="crypto_ahash_finup" data-ref-filename="crypto_ahash_finup">crypto_ahash_finup</dfn>(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col0 decl" id="720req" title='req' data-type='struct ahash_request *' data-ref="720req" data-ref-filename="720req">req</dfn>);</td></tr>
+<tr><th id="426">426</th><td></td></tr>
+<tr><th id="427">427</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="428">428</th><td><i class="doc"> * crypto_ahash_final() - calculate message digest</i></td></tr>
+<tr><th id="429">429</th><td><i class="doc"> * <span class="command">@req</span>:<span class="verb"> reference to the ahash_request handle that holds all information</span></i></td></tr>
+<tr><th id="430">430</th><td><i class="doc"> *	 needed to perform the cipher operation</i></td></tr>
+<tr><th id="431">431</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="432">432</th><td><i class="doc"> * Finalize the message digest operation and create the message digest</i></td></tr>
+<tr><th id="433">433</th><td><i class="doc"> * based on all data added to the cipher handle. The message digest is placed</i></td></tr>
+<tr><th id="434">434</th><td><i class="doc"> * into the output buffer registered with the ahash_request handle.</i></td></tr>
+<tr><th id="435">435</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="436">436</th><td><i class="doc"> * Return:</i></td></tr>
+<tr><th id="437">437</th><td><i class="doc"> * 0		if the message digest was successfully calculated;</i></td></tr>
+<tr><th id="438">438</th><td><i class="doc"> * -EINPROGRESS	if data is feeded into hardware (DMA) or queued for later;</i></td></tr>
+<tr><th id="439">439</th><td><i class="doc"> * -EBUSY	if queue is full and request should be resubmitted later;</i></td></tr>
+<tr><th id="440">440</th><td><i class="doc"> * other &lt; 0	if an error occurred</i></td></tr>
+<tr><th id="441">441</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="442">442</th><td><em>int</em> <dfn class="decl fn" id="crypto_ahash_final" title='crypto_ahash_final' data-ref="crypto_ahash_final" data-ref-filename="crypto_ahash_final">crypto_ahash_final</dfn>(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col1 decl" id="721req" title='req' data-type='struct ahash_request *' data-ref="721req" data-ref-filename="721req">req</dfn>);</td></tr>
+<tr><th id="443">443</th><td></td></tr>
+<tr><th id="444">444</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="445">445</th><td><i class="doc"> * crypto_ahash_digest() - calculate message digest for a buffer</i></td></tr>
+<tr><th id="446">446</th><td><i class="doc"> * <span class="command">@req</span>:<span class="verb"> reference to the ahash_request handle that holds all information</span></i></td></tr>
+<tr><th id="447">447</th><td><i class="doc"> *	 needed to perform the cipher operation</i></td></tr>
+<tr><th id="448">448</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="449">449</th><td><i class="doc"> * This function is a "short-hand" for the function calls of crypto_ahash_init,</i></td></tr>
+<tr><th id="450">450</th><td><i class="doc"> * crypto_ahash_update and crypto_ahash_final. The parameters have the same</i></td></tr>
+<tr><th id="451">451</th><td><i class="doc"> * meaning as discussed for those separate three functions.</i></td></tr>
+<tr><th id="452">452</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="453">453</th><td><i class="doc"> * Return: see crypto_ahash_final()</i></td></tr>
+<tr><th id="454">454</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="455">455</th><td><em>int</em> <dfn class="decl fn" id="crypto_ahash_digest" title='crypto_ahash_digest' data-ref="crypto_ahash_digest" data-ref-filename="crypto_ahash_digest">crypto_ahash_digest</dfn>(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col2 decl" id="722req" title='req' data-type='struct ahash_request *' data-ref="722req" data-ref-filename="722req">req</dfn>);</td></tr>
+<tr><th id="456">456</th><td></td></tr>
+<tr><th id="457">457</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="458">458</th><td><i class="doc"> * crypto_ahash_export() - extract current message digest state</i></td></tr>
+<tr><th id="459">459</th><td><i class="doc"> * <span class="command">@req</span>:<span class="verb"> reference to the ahash_request handle whose state is exported</span></i></td></tr>
+<tr><th id="460">460</th><td><i class="doc"> *<span class="command"> @out</span>: output buffer of sufficient size that can hold the hash state</i></td></tr>
+<tr><th id="461">461</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="462">462</th><td><i class="doc"> * This function exports the hash state of the ahash_request handle into the</i></td></tr>
+<tr><th id="463">463</th><td><i class="doc"> * caller-allocated output buffer out which must have sufficient size (e.g. by</i></td></tr>
+<tr><th id="464">464</th><td><i class="doc"> * calling crypto_ahash_statesize()).</i></td></tr>
+<tr><th id="465">465</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="466">466</th><td><i class="doc"> * Return: 0 if the export was successful; &lt; 0 if an error occurred</i></td></tr>
+<tr><th id="467">467</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="468">468</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="crypto_ahash_export" title='crypto_ahash_export' data-ref="crypto_ahash_export" data-ref-filename="crypto_ahash_export">crypto_ahash_export</dfn>(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col3 decl" id="723req" title='req' data-type='struct ahash_request *' data-ref="723req" data-ref-filename="723req">req</dfn>, <em>void</em> *<dfn class="local col4 decl" id="724out" title='out' data-type='void *' data-ref="724out" data-ref-filename="724out">out</dfn>)</td></tr>
+<tr><th id="469">469</th><td>{</td></tr>
+<tr><th id="470">470</th><td>	<b>return</b> <a class="ref fn" href="#crypto_ahash_reqtfm" title='crypto_ahash_reqtfm' data-ref="crypto_ahash_reqtfm" data-ref-filename="crypto_ahash_reqtfm">crypto_ahash_reqtfm</a>(<a class="local col3 ref" href="#723req" title='req' data-ref="723req" data-ref-filename="723req">req</a>)-&gt;<a class="ref field" href="#crypto_ahash::export" title='crypto_ahash::export' data-ref="crypto_ahash::export" data-ref-filename="crypto_ahash..export">export</a>(<a class="local col3 ref" href="#723req" title='req' data-ref="723req" data-ref-filename="723req">req</a>, <a class="local col4 ref" href="#724out" title='out' data-ref="724out" data-ref-filename="724out">out</a>);</td></tr>
+<tr><th id="471">471</th><td>}</td></tr>
+<tr><th id="472">472</th><td></td></tr>
+<tr><th id="473">473</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="474">474</th><td><i class="doc"> * crypto_ahash_import() - import message digest state</i></td></tr>
+<tr><th id="475">475</th><td><i class="doc"> * <span class="command">@req</span>:<span class="verb"> reference to ahash_request handle the state is imported into</span></i></td></tr>
+<tr><th id="476">476</th><td><i class="doc"> * <span class="command">@in</span>:<span class="verb"> buffer holding the state</span></i></td></tr>
+<tr><th id="477">477</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="478">478</th><td><i class="doc"> * This function imports the hash state into the ahash_request handle from the</i></td></tr>
+<tr><th id="479">479</th><td><i class="doc"> * input buffer. That buffer should have been generated with the</i></td></tr>
+<tr><th id="480">480</th><td><i class="doc"> * crypto_ahash_export function.</i></td></tr>
+<tr><th id="481">481</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="482">482</th><td><i class="doc"> * Return: 0 if the import was successful; &lt; 0 if an error occurred</i></td></tr>
+<tr><th id="483">483</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="484">484</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="crypto_ahash_import" title='crypto_ahash_import' data-ref="crypto_ahash_import" data-ref-filename="crypto_ahash_import">crypto_ahash_import</dfn>(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col5 decl" id="725req" title='req' data-type='struct ahash_request *' data-ref="725req" data-ref-filename="725req">req</dfn>, <em>const</em> <em>void</em> *<dfn class="local col6 decl" id="726in" title='in' data-type='const void *' data-ref="726in" data-ref-filename="726in">in</dfn>)</td></tr>
+<tr><th id="485">485</th><td>{</td></tr>
+<tr><th id="486">486</th><td>	<b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a> *<dfn class="local col7 decl" id="727tfm" title='tfm' data-type='struct crypto_ahash *' data-ref="727tfm" data-ref-filename="727tfm">tfm</dfn> = <a class="ref fn" href="#crypto_ahash_reqtfm" title='crypto_ahash_reqtfm' data-ref="crypto_ahash_reqtfm" data-ref-filename="crypto_ahash_reqtfm">crypto_ahash_reqtfm</a>(<a class="local col5 ref" href="#725req" title='req' data-ref="725req" data-ref-filename="725req">req</a>);</td></tr>
+<tr><th id="487">487</th><td></td></tr>
+<tr><th id="488">488</th><td>	<b>if</b> (<a class="ref fn" href="#crypto_ahash_get_flags" title='crypto_ahash_get_flags' data-ref="crypto_ahash_get_flags" data-ref-filename="crypto_ahash_get_flags">crypto_ahash_get_flags</a>(<a class="local col7 ref" href="#727tfm" title='tfm' data-ref="727tfm" data-ref-filename="727tfm">tfm</a>) &amp; <a class="macro" href="../linux/crypto.h.html#110" title="0x00000001" data-ref="_M/CRYPTO_TFM_NEED_KEY">CRYPTO_TFM_NEED_KEY</a>)</td></tr>
+<tr><th id="489">489</th><td>		<b>return</b> -<a class="macro" href="../uapi/asm-generic/errno.h.html#110" title="126" data-ref="_M/ENOKEY">ENOKEY</a>;</td></tr>
+<tr><th id="490">490</th><td></td></tr>
+<tr><th id="491">491</th><td>	<b>return</b> <a class="local col7 ref" href="#727tfm" title='tfm' data-ref="727tfm" data-ref-filename="727tfm">tfm</a>-&gt;<a class="ref field" href="#crypto_ahash::import" title='crypto_ahash::import' data-ref="crypto_ahash::import" data-ref-filename="crypto_ahash..import">import</a>(<a class="local col5 ref" href="#725req" title='req' data-ref="725req" data-ref-filename="725req">req</a>, <a class="local col6 ref" href="#726in" title='in' data-ref="726in" data-ref-filename="726in">in</a>);</td></tr>
+<tr><th id="492">492</th><td>}</td></tr>
+<tr><th id="493">493</th><td></td></tr>
+<tr><th id="494">494</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="495">495</th><td><i class="doc"> * crypto_ahash_init() - (re)initialize message digest handle</i></td></tr>
+<tr><th id="496">496</th><td><i class="doc"> * <span class="command">@req</span>:<span class="verb"> ahash_request handle that already is initialized with all necessary</span></i></td></tr>
+<tr><th id="497">497</th><td><i class="doc"> *	 data using the ahash_request_* API functions</i></td></tr>
+<tr><th id="498">498</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="499">499</th><td><i class="doc"> * The call (re-)initializes the message digest referenced by the ahash_request</i></td></tr>
+<tr><th id="500">500</th><td><i class="doc"> * handle. Any potentially existing state created by previous operations is</i></td></tr>
+<tr><th id="501">501</th><td><i class="doc"> * discarded.</i></td></tr>
+<tr><th id="502">502</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="503">503</th><td><i class="doc"> * Return: see crypto_ahash_final()</i></td></tr>
+<tr><th id="504">504</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="505">505</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="crypto_ahash_init" title='crypto_ahash_init' data-ref="crypto_ahash_init" data-ref-filename="crypto_ahash_init">crypto_ahash_init</dfn>(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col8 decl" id="728req" title='req' data-type='struct ahash_request *' data-ref="728req" data-ref-filename="728req">req</dfn>)</td></tr>
+<tr><th id="506">506</th><td>{</td></tr>
+<tr><th id="507">507</th><td>	<b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a> *<dfn class="local col9 decl" id="729tfm" title='tfm' data-type='struct crypto_ahash *' data-ref="729tfm" data-ref-filename="729tfm">tfm</dfn> = <a class="ref fn" href="#crypto_ahash_reqtfm" title='crypto_ahash_reqtfm' data-ref="crypto_ahash_reqtfm" data-ref-filename="crypto_ahash_reqtfm">crypto_ahash_reqtfm</a>(<a class="local col8 ref" href="#728req" title='req' data-ref="728req" data-ref-filename="728req">req</a>);</td></tr>
+<tr><th id="508">508</th><td></td></tr>
+<tr><th id="509">509</th><td>	<b>if</b> (<a class="ref fn" href="#crypto_ahash_get_flags" title='crypto_ahash_get_flags' data-ref="crypto_ahash_get_flags" data-ref-filename="crypto_ahash_get_flags">crypto_ahash_get_flags</a>(<a class="local col9 ref" href="#729tfm" title='tfm' data-ref="729tfm" data-ref-filename="729tfm">tfm</a>) &amp; <a class="macro" href="../linux/crypto.h.html#110" title="0x00000001" data-ref="_M/CRYPTO_TFM_NEED_KEY">CRYPTO_TFM_NEED_KEY</a>)</td></tr>
+<tr><th id="510">510</th><td>		<b>return</b> -<a class="macro" href="../uapi/asm-generic/errno.h.html#110" title="126" data-ref="_M/ENOKEY">ENOKEY</a>;</td></tr>
+<tr><th id="511">511</th><td></td></tr>
+<tr><th id="512">512</th><td>	<b>return</b> <a class="local col9 ref" href="#729tfm" title='tfm' data-ref="729tfm" data-ref-filename="729tfm">tfm</a>-&gt;<a class="ref field" href="#crypto_ahash::init" title='crypto_ahash::init' data-ref="crypto_ahash::init" data-ref-filename="crypto_ahash..init">init</a>(<a class="local col8 ref" href="#728req" title='req' data-ref="728req" data-ref-filename="728req">req</a>);</td></tr>
+<tr><th id="513">513</th><td>}</td></tr>
+<tr><th id="514">514</th><td></td></tr>
+<tr><th id="515">515</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="516">516</th><td><i class="doc"> * crypto_ahash_update() - add data to message digest for processing</i></td></tr>
+<tr><th id="517">517</th><td><i class="doc"> * <span class="command">@req</span>:<span class="verb"> ahash_request handle that was previously initialized with the</span></i></td></tr>
+<tr><th id="518">518</th><td><i class="doc"> *	 crypto_ahash_init call.</i></td></tr>
+<tr><th id="519">519</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="520">520</th><td><i class="doc"> * Updates the message digest state of the &amp;ahash_request handle. The input data</i></td></tr>
+<tr><th id="521">521</th><td><i class="doc"> * is pointed to by the scatter/gather list registered in the &amp;ahash_request</i></td></tr>
+<tr><th id="522">522</th><td><i class="doc"> * handle</i></td></tr>
+<tr><th id="523">523</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="524">524</th><td><i class="doc"> * Return: see crypto_ahash_final()</i></td></tr>
+<tr><th id="525">525</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="526">526</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="crypto_ahash_update" title='crypto_ahash_update' data-ref="crypto_ahash_update" data-ref-filename="crypto_ahash_update">crypto_ahash_update</dfn>(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col0 decl" id="730req" title='req' data-type='struct ahash_request *' data-ref="730req" data-ref-filename="730req">req</dfn>)</td></tr>
+<tr><th id="527">527</th><td>{</td></tr>
+<tr><th id="528">528</th><td>	<b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a> *<dfn class="local col1 decl" id="731tfm" title='tfm' data-type='struct crypto_ahash *' data-ref="731tfm" data-ref-filename="731tfm">tfm</dfn> = <a class="ref fn" href="#crypto_ahash_reqtfm" title='crypto_ahash_reqtfm' data-ref="crypto_ahash_reqtfm" data-ref-filename="crypto_ahash_reqtfm">crypto_ahash_reqtfm</a>(<a class="local col0 ref" href="#730req" title='req' data-ref="730req" data-ref-filename="730req">req</a>);</td></tr>
+<tr><th id="529">529</th><td>	<b>struct</b> <a class="type" href="../linux/crypto.h.html#crypto_alg" title='crypto_alg' data-ref="crypto_alg" data-ref-filename="crypto_alg">crypto_alg</a> *<dfn class="local col2 decl" id="732alg" title='alg' data-type='struct crypto_alg *' data-ref="732alg" data-ref-filename="732alg">alg</dfn> = <a class="local col1 ref" href="#731tfm" title='tfm' data-ref="731tfm" data-ref-filename="731tfm">tfm</a>-&gt;<a class="ref field" href="#crypto_ahash::base" title='crypto_ahash::base' data-ref="crypto_ahash::base" data-ref-filename="crypto_ahash..base">base</a>.<a class="ref field" href="../linux/crypto.h.html#crypto_tfm::__crt_alg" title='crypto_tfm::__crt_alg' data-ref="crypto_tfm::__crt_alg" data-ref-filename="crypto_tfm..__crt_alg">__crt_alg</a>;</td></tr>
+<tr><th id="530">530</th><td>	<em>unsigned</em> <em>int</em> <dfn class="local col3 decl" id="733nbytes" title='nbytes' data-type='unsigned int' data-ref="733nbytes" data-ref-filename="733nbytes">nbytes</dfn> = <a class="local col0 ref" href="#730req" title='req' data-ref="730req" data-ref-filename="730req">req</a>-&gt;<a class="ref field" href="#ahash_request::nbytes" title='ahash_request::nbytes' data-ref="ahash_request::nbytes" data-ref-filename="ahash_request..nbytes">nbytes</a>;</td></tr>
+<tr><th id="531">531</th><td>	<em>int</em> <dfn class="local col4 decl" id="734ret" title='ret' data-type='int' data-ref="734ret" data-ref-filename="734ret">ret</dfn>;</td></tr>
+<tr><th id="532">532</th><td></td></tr>
+<tr><th id="533">533</th><td>	<a class="ref fn" href="../linux/crypto.h.html#crypto_stats_get" title='crypto_stats_get' data-ref="crypto_stats_get" data-ref-filename="crypto_stats_get">crypto_stats_get</a>(<a class="local col2 ref" href="#732alg" title='alg' data-ref="732alg" data-ref-filename="732alg">alg</a>);</td></tr>
+<tr><th id="534">534</th><td>	<a class="local col4 ref" href="#734ret" title='ret' data-ref="734ret" data-ref-filename="734ret">ret</a> = <a class="ref fn" href="#crypto_ahash_reqtfm" title='crypto_ahash_reqtfm' data-ref="crypto_ahash_reqtfm" data-ref-filename="crypto_ahash_reqtfm">crypto_ahash_reqtfm</a>(<a class="local col0 ref" href="#730req" title='req' data-ref="730req" data-ref-filename="730req">req</a>)-&gt;<a class="ref field" href="#crypto_ahash::update" title='crypto_ahash::update' data-ref="crypto_ahash::update" data-ref-filename="crypto_ahash..update">update</a>(<a class="local col0 ref" href="#730req" title='req' data-ref="730req" data-ref-filename="730req">req</a>);</td></tr>
+<tr><th id="535">535</th><td>	<a class="ref fn" href="../linux/crypto.h.html#crypto_stats_ahash_update" title='crypto_stats_ahash_update' data-ref="crypto_stats_ahash_update" data-ref-filename="crypto_stats_ahash_update">crypto_stats_ahash_update</a>(<a class="local col3 ref" href="#733nbytes" title='nbytes' data-ref="733nbytes" data-ref-filename="733nbytes">nbytes</a>, <a class="local col4 ref" href="#734ret" title='ret' data-ref="734ret" data-ref-filename="734ret">ret</a>, <a class="local col2 ref" href="#732alg" title='alg' data-ref="732alg" data-ref-filename="732alg">alg</a>);</td></tr>
+<tr><th id="536">536</th><td>	<b>return</b> <a class="local col4 ref" href="#734ret" title='ret' data-ref="734ret" data-ref-filename="734ret">ret</a>;</td></tr>
+<tr><th id="537">537</th><td>}</td></tr>
+<tr><th id="538">538</th><td></td></tr>
+<tr><th id="539">539</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="540">540</th><td><i class="doc"> * DOC: Asynchronous Hash Request Handle</i></td></tr>
+<tr><th id="541">541</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="542">542</th><td><i class="doc"> * The &amp;ahash_request data structure contains all pointers to data</i></td></tr>
+<tr><th id="543">543</th><td><i class="doc"> * required for the asynchronous cipher operation. This includes the cipher</i></td></tr>
+<tr><th id="544">544</th><td><i class="doc"> * handle (which can be used by multiple &amp;ahash_request instances), pointer</i></td></tr>
+<tr><th id="545">545</th><td><i class="doc"> * to plaintext and the message digest output buffer, asynchronous callback</i></td></tr>
+<tr><th id="546">546</th><td><i class="doc"> * function, etc. It acts as a handle to the ahash_request_* API calls in a</i></td></tr>
+<tr><th id="547">547</th><td><i class="doc"> * similar way as ahash handle to the crypto_ahash_* API calls.</i></td></tr>
+<tr><th id="548">548</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="549">549</th><td></td></tr>
+<tr><th id="550">550</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="551">551</th><td><i class="doc"> * ahash_request_set_tfm() - update cipher handle reference in request</i></td></tr>
+<tr><th id="552">552</th><td><i class="doc"> * <span class="command">@req</span>:<span class="verb"> request handle to be modified</span></i></td></tr>
+<tr><th id="553">553</th><td><i class="doc"> *<span class="command"> @tfm</span>: cipher handle that shall be added to the request handle</i></td></tr>
+<tr><th id="554">554</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="555">555</th><td><i class="doc"> * Allow the caller to replace the existing ahash handle in the request</i></td></tr>
+<tr><th id="556">556</th><td><i class="doc"> * data structure with a different one.</i></td></tr>
+<tr><th id="557">557</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="558">558</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="ahash_request_set_tfm" title='ahash_request_set_tfm' data-ref="ahash_request_set_tfm" data-ref-filename="ahash_request_set_tfm">ahash_request_set_tfm</dfn>(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col5 decl" id="735req" title='req' data-type='struct ahash_request *' data-ref="735req" data-ref-filename="735req">req</dfn>,</td></tr>
+<tr><th id="559">559</th><td>					 <b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a> *<dfn class="local col6 decl" id="736tfm" title='tfm' data-type='struct crypto_ahash *' data-ref="736tfm" data-ref-filename="736tfm">tfm</dfn>)</td></tr>
+<tr><th id="560">560</th><td>{</td></tr>
+<tr><th id="561">561</th><td>	<a class="local col5 ref" href="#735req" title='req' data-ref="735req" data-ref-filename="735req">req</a>-&gt;<a class="ref field" href="#ahash_request::base" title='ahash_request::base' data-ref="ahash_request::base" data-ref-filename="ahash_request..base">base</a>.<a class="ref field" href="../linux/crypto.h.html#crypto_async_request::tfm" title='crypto_async_request::tfm' data-ref="crypto_async_request::tfm" data-ref-filename="crypto_async_request..tfm">tfm</a> = <a class="ref fn" href="#crypto_ahash_tfm" title='crypto_ahash_tfm' data-ref="crypto_ahash_tfm" data-ref-filename="crypto_ahash_tfm">crypto_ahash_tfm</a>(<a class="local col6 ref" href="#736tfm" title='tfm' data-ref="736tfm" data-ref-filename="736tfm">tfm</a>);</td></tr>
+<tr><th id="562">562</th><td>}</td></tr>
+<tr><th id="563">563</th><td></td></tr>
+<tr><th id="564">564</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="565">565</th><td><i class="doc"> * ahash_request_alloc() - allocate request data structure</i></td></tr>
+<tr><th id="566">566</th><td><i class="doc"> *<span class="command"> @tfm</span>: cipher handle to be registered with the request</i></td></tr>
+<tr><th id="567">567</th><td><i class="doc"> *<span class="command"> @gfp</span>: memory allocation flag that is handed to kmalloc by the API call.</i></td></tr>
+<tr><th id="568">568</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="569">569</th><td><i class="doc"> * Allocate the request data structure that must be used with the ahash</i></td></tr>
+<tr><th id="570">570</th><td><i class="doc"> * message digest API calls. During</i></td></tr>
+<tr><th id="571">571</th><td><i class="doc"> * the allocation, the provided ahash handle</i></td></tr>
+<tr><th id="572">572</th><td><i class="doc"> * is registered in the request data structure.</i></td></tr>
+<tr><th id="573">573</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="574">574</th><td><i class="doc"> * Return: allocated request handle in case of success, or NULL if out of memory</i></td></tr>
+<tr><th id="575">575</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="576">576</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="decl def fn" id="ahash_request_alloc" title='ahash_request_alloc' data-ref="ahash_request_alloc" data-ref-filename="ahash_request_alloc">ahash_request_alloc</dfn>(</td></tr>
+<tr><th id="577">577</th><td>	<b>struct</b> <a class="type" href="#crypto_ahash" title='crypto_ahash' data-ref="crypto_ahash" data-ref-filename="crypto_ahash">crypto_ahash</a> *<dfn class="local col7 decl" id="737tfm" title='tfm' data-type='struct crypto_ahash *' data-ref="737tfm" data-ref-filename="737tfm">tfm</dfn>, <a class="typedef" href="../linux/types.h.html#gfp_t" title='gfp_t' data-type='unsigned int' data-ref="gfp_t" data-ref-filename="gfp_t">gfp_t</a> <dfn class="local col8 decl" id="738gfp" title='gfp' data-type='gfp_t' data-ref="738gfp" data-ref-filename="738gfp">gfp</dfn>)</td></tr>
+<tr><th id="578">578</th><td>{</td></tr>
+<tr><th id="579">579</th><td>	<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col9 decl" id="739req" title='req' data-type='struct ahash_request *' data-ref="739req" data-ref-filename="739req">req</dfn>;</td></tr>
+<tr><th id="580">580</th><td></td></tr>
+<tr><th id="581">581</th><td>	<a class="local col9 ref" href="#739req" title='req' data-ref="739req" data-ref-filename="739req">req</a> = <a class="ref fn" href="../linux/slab.h.html#kmalloc" title='kmalloc' data-ref="kmalloc" data-ref-filename="kmalloc">kmalloc</a>(<b>sizeof</b>(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a>) +</td></tr>
+<tr><th id="582">582</th><td>		      <a class="ref fn" href="#crypto_ahash_reqsize" title='crypto_ahash_reqsize' data-ref="crypto_ahash_reqsize" data-ref-filename="crypto_ahash_reqsize">crypto_ahash_reqsize</a>(<a class="local col7 ref" href="#737tfm" title='tfm' data-ref="737tfm" data-ref-filename="737tfm">tfm</a>), <a class="local col8 ref" href="#738gfp" title='gfp' data-ref="738gfp" data-ref-filename="738gfp">gfp</a>);</td></tr>
+<tr><th id="583">583</th><td></td></tr>
+<tr><th id="584">584</th><td>	<b>if</b> (<a class="macro" href="../linux/compiler.h.html#77" title="__builtin_expect(!!(req), 1)" data-ref="_M/likely">likely</a>(<a class="local col9 ref" href="#739req" title='req' data-ref="739req" data-ref-filename="739req">req</a>))</td></tr>
+<tr><th id="585">585</th><td>		<a class="ref fn" href="#ahash_request_set_tfm" title='ahash_request_set_tfm' data-ref="ahash_request_set_tfm" data-ref-filename="ahash_request_set_tfm">ahash_request_set_tfm</a>(<a class="local col9 ref" href="#739req" title='req' data-ref="739req" data-ref-filename="739req">req</a>, <a class="local col7 ref" href="#737tfm" title='tfm' data-ref="737tfm" data-ref-filename="737tfm">tfm</a>);</td></tr>
+<tr><th id="586">586</th><td></td></tr>
+<tr><th id="587">587</th><td>	<b>return</b> <a class="local col9 ref" href="#739req" title='req' data-ref="739req" data-ref-filename="739req">req</a>;</td></tr>
+<tr><th id="588">588</th><td>}</td></tr>
+<tr><th id="589">589</th><td></td></tr>
+<tr><th id="590">590</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="591">591</th><td><i class="doc"> * ahash_request_free() - zeroize and free the request data structure</i></td></tr>
+<tr><th id="592">592</th><td><i class="doc"> * <span class="command">@req</span>:<span class="verb"> request data structure cipher handle to be freed</span></i></td></tr>
+<tr><th id="593">593</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="594">594</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="ahash_request_free" title='ahash_request_free' data-ref="ahash_request_free" data-ref-filename="ahash_request_free">ahash_request_free</dfn>(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col0 decl" id="740req" title='req' data-type='struct ahash_request *' data-ref="740req" data-ref-filename="740req">req</dfn>)</td></tr>
+<tr><th id="595">595</th><td>{</td></tr>
+<tr><th id="596">596</th><td>	<a class="ref fn" href="../linux/slab.h.html#kzfree" title='kzfree' data-ref="kzfree" data-ref-filename="kzfree">kzfree</a>(<a class="local col0 ref" href="#740req" title='req' data-ref="740req" data-ref-filename="740req">req</a>);</td></tr>
+<tr><th id="597">597</th><td>}</td></tr>
+<tr><th id="598">598</th><td></td></tr>
+<tr><th id="599">599</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="ahash_request_zero" title='ahash_request_zero' data-ref="ahash_request_zero" data-ref-filename="ahash_request_zero">ahash_request_zero</dfn>(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col1 decl" id="741req" title='req' data-type='struct ahash_request *' data-ref="741req" data-ref-filename="741req">req</dfn>)</td></tr>
+<tr><th id="600">600</th><td>{</td></tr>
+<tr><th id="601">601</th><td>	<a class="ref fn" href="../linux/string.h.html#memzero_explicit" title='memzero_explicit' data-ref="memzero_explicit" data-ref-filename="memzero_explicit">memzero_explicit</a>(<a class="local col1 ref" href="#741req" title='req' data-ref="741req" data-ref-filename="741req">req</a>, <b>sizeof</b>(*<a class="local col1 ref" href="#741req" title='req' data-ref="741req" data-ref-filename="741req">req</a>) +</td></tr>
+<tr><th id="602">602</th><td>			      <a class="ref fn" href="#crypto_ahash_reqsize" title='crypto_ahash_reqsize' data-ref="crypto_ahash_reqsize" data-ref-filename="crypto_ahash_reqsize">crypto_ahash_reqsize</a>(<a class="ref fn" href="#crypto_ahash_reqtfm" title='crypto_ahash_reqtfm' data-ref="crypto_ahash_reqtfm" data-ref-filename="crypto_ahash_reqtfm">crypto_ahash_reqtfm</a>(<a class="local col1 ref" href="#741req" title='req' data-ref="741req" data-ref-filename="741req">req</a>)));</td></tr>
+<tr><th id="603">603</th><td>}</td></tr>
+<tr><th id="604">604</th><td></td></tr>
+<tr><th id="605">605</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="decl def fn" id="ahash_request_cast" title='ahash_request_cast' data-ref="ahash_request_cast" data-ref-filename="ahash_request_cast">ahash_request_cast</dfn>(</td></tr>
+<tr><th id="606">606</th><td>	<b>struct</b> <a class="type" href="../linux/crypto.h.html#crypto_async_request" title='crypto_async_request' data-ref="crypto_async_request" data-ref-filename="crypto_async_request">crypto_async_request</a> *<dfn class="local col2 decl" id="742req" title='req' data-type='struct crypto_async_request *' data-ref="742req" data-ref-filename="742req">req</dfn>)</td></tr>
+<tr><th id="607">607</th><td>{</td></tr>
+<tr><th id="608">608</th><td>	<b>return</b> <a class="macro" href="../linux/kernel.h.html#971" title="({ void *__mptr = (void *)(req); do { extern void __compiletime_assert_608(void) ; if (!(!(!__builtin_types_compatible_p(typeof(*(req)), typeof(((struct ahash_request *)0)-&gt;base)) &amp;&amp; !__builtin_types_compatible_p(typeof(*(req)), typeof(void))))) __compiletime_assert_608(); } while (0); ((struct ahash_request *)(__mptr - __builtin_offsetof(struct ahash_request, base))); })" data-ref="_M/container_of">container_of</a>(<a class="local col2 ref" href="#742req" title='req' data-ref="742req" data-ref-filename="742req">req</a>, <b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a>, <a class="ref field" href="#ahash_request::base" title='ahash_request::base' data-ref="ahash_request::base" data-ref-filename="ahash_request..base">base</a>);</td></tr>
+<tr><th id="609">609</th><td>}</td></tr>
+<tr><th id="610">610</th><td></td></tr>
+<tr><th id="611">611</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="612">612</th><td><i class="doc"> * ahash_request_set_callback() - set asynchronous callback function</i></td></tr>
+<tr><th id="613">613</th><td><i class="doc"> * <span class="command">@req</span>:<span class="verb"> request handle</span></i></td></tr>
+<tr><th id="614">614</th><td><i class="doc"> *<span class="command"> @flags</span>: specify zero or an ORing of the flags</i></td></tr>
+<tr><th id="615">615</th><td><i class="doc"> *	   CRYPTO_TFM_REQ_MAY_BACKLOG the request queue may back log and</i></td></tr>
+<tr><th id="616">616</th><td><i class="doc"> *	   increase the wait queue beyond the initial maximum size;</i></td></tr>
+<tr><th id="617">617</th><td><i class="doc"> *	   CRYPTO_TFM_REQ_MAY_SLEEP the request processing may sleep</i></td></tr>
+<tr><th id="618">618</th><td><i class="doc"> *<span class="command"> @compl</span>: callback function pointer to be registered with the request handle</i></td></tr>
+<tr><th id="619">619</th><td><i class="doc"> * <span class="command">@data</span>: The data pointer refers to memory that is not used by the kernel</i></td></tr>
+<tr><th id="620">620</th><td><i class="doc"> *	  crypto API, but provided to the callback function for it to use. Here,</i></td></tr>
+<tr><th id="621">621</th><td><i class="doc"> *	  the caller can provide a reference to memory the callback function can</i></td></tr>
+<tr><th id="622">622</th><td><i class="doc"> *	  operate on. As the callback function is invoked asynchronously to the</i></td></tr>
+<tr><th id="623">623</th><td><i class="doc"> *	  related functionality, it may need to access data structures of the</i></td></tr>
+<tr><th id="624">624</th><td><i class="doc"> *	  related functionality which can be referenced using this pointer. The</i></td></tr>
+<tr><th id="625">625</th><td><i class="doc"> *	  callback function can access the memory via the "data" field in the</i></td></tr>
+<tr><th id="626">626</th><td><i class="doc"> *	  &amp;crypto_async_request data structure provided to the callback function.</i></td></tr>
+<tr><th id="627">627</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="628">628</th><td><i class="doc"> * This function allows setting the callback function that is triggered once</i></td></tr>
+<tr><th id="629">629</th><td><i class="doc"> * the cipher operation completes.</i></td></tr>
+<tr><th id="630">630</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="631">631</th><td><i class="doc"> * The callback function is registered with the &amp;ahash_request handle and</i></td></tr>
+<tr><th id="632">632</th><td><i class="doc"> * must comply with the following template::</i></td></tr>
+<tr><th id="633">633</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="634">634</th><td><i class="doc"> *	void callback_function(struct crypto_async_request *req, int error)</i></td></tr>
+<tr><th id="635">635</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="636">636</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="ahash_request_set_callback" title='ahash_request_set_callback' data-ref="ahash_request_set_callback" data-ref-filename="ahash_request_set_callback">ahash_request_set_callback</dfn>(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col3 decl" id="743req" title='req' data-type='struct ahash_request *' data-ref="743req" data-ref-filename="743req">req</dfn>,</td></tr>
+<tr><th id="637">637</th><td>					      <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col4 decl" id="744flags" title='flags' data-type='u32' data-ref="744flags" data-ref-filename="744flags">flags</dfn>,</td></tr>
+<tr><th id="638">638</th><td>					      <a class="typedef" href="../linux/crypto.h.html#crypto_completion_t" title='crypto_completion_t' data-type='void (*)(struct crypto_async_request *, int)' data-ref="crypto_completion_t" data-ref-filename="crypto_completion_t">crypto_completion_t</a> <dfn class="local col5 decl" id="745compl" title='compl' data-type='crypto_completion_t' data-ref="745compl" data-ref-filename="745compl">compl</dfn>,</td></tr>
+<tr><th id="639">639</th><td>					      <em>void</em> *<dfn class="local col6 decl" id="746data" title='data' data-type='void *' data-ref="746data" data-ref-filename="746data">data</dfn>)</td></tr>
+<tr><th id="640">640</th><td>{</td></tr>
+<tr><th id="641">641</th><td>	<a class="local col3 ref" href="#743req" title='req' data-ref="743req" data-ref-filename="743req">req</a>-&gt;<a class="ref field" href="#ahash_request::base" title='ahash_request::base' data-ref="ahash_request::base" data-ref-filename="ahash_request..base">base</a>.<a class="ref field" href="../linux/crypto.h.html#crypto_async_request::complete" title='crypto_async_request::complete' data-ref="crypto_async_request::complete" data-ref-filename="crypto_async_request..complete">complete</a> = <a class="local col5 ref" href="#745compl" title='compl' data-ref="745compl" data-ref-filename="745compl">compl</a>;</td></tr>
+<tr><th id="642">642</th><td>	<a class="local col3 ref" href="#743req" title='req' data-ref="743req" data-ref-filename="743req">req</a>-&gt;<a class="ref field" href="#ahash_request::base" title='ahash_request::base' data-ref="ahash_request::base" data-ref-filename="ahash_request..base">base</a>.<a class="ref field" href="../linux/crypto.h.html#crypto_async_request::data" title='crypto_async_request::data' data-ref="crypto_async_request::data" data-ref-filename="crypto_async_request..data">data</a> = <a class="local col6 ref" href="#746data" title='data' data-ref="746data" data-ref-filename="746data">data</a>;</td></tr>
+<tr><th id="643">643</th><td>	<a class="local col3 ref" href="#743req" title='req' data-ref="743req" data-ref-filename="743req">req</a>-&gt;<a class="ref field" href="#ahash_request::base" title='ahash_request::base' data-ref="ahash_request::base" data-ref-filename="ahash_request..base">base</a>.<a class="ref field" href="../linux/crypto.h.html#crypto_async_request::flags" title='crypto_async_request::flags' data-ref="crypto_async_request::flags" data-ref-filename="crypto_async_request..flags">flags</a> = <a class="local col4 ref" href="#744flags" title='flags' data-ref="744flags" data-ref-filename="744flags">flags</a>;</td></tr>
+<tr><th id="644">644</th><td>}</td></tr>
+<tr><th id="645">645</th><td></td></tr>
+<tr><th id="646">646</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="647">647</th><td><i class="doc"> * ahash_request_set_crypt() - set data buffers</i></td></tr>
+<tr><th id="648">648</th><td><i class="doc"> * <span class="command">@req</span>:<span class="verb"> ahash_request handle to be updated</span></i></td></tr>
+<tr><th id="649">649</th><td><i class="doc"> *<span class="command"> @src</span>: source scatter/gather list</i></td></tr>
+<tr><th id="650">650</th><td><i class="doc"> * <span class="command">@result</span>: buffer that is filled with the message digest -- the caller must</i></td></tr>
+<tr><th id="651">651</th><td><i class="doc"> *	    ensure that the buffer has sufficient space by, for example, calling</i></td></tr>
+<tr><th id="652">652</th><td><i class="doc"> *	    crypto_ahash_digestsize()</i></td></tr>
+<tr><th id="653">653</th><td><i class="doc"> *<span class="command"> @nbytes</span>: number of bytes to process from the source scatter/gather list</i></td></tr>
+<tr><th id="654">654</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="655">655</th><td><i class="doc"> * By using this call, the caller references the source scatter/gather list.</i></td></tr>
+<tr><th id="656">656</th><td><i class="doc"> * The source scatter/gather list points to the data the message digest is to</i></td></tr>
+<tr><th id="657">657</th><td><i class="doc"> * be calculated for.</i></td></tr>
+<tr><th id="658">658</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="659">659</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="ahash_request_set_crypt" title='ahash_request_set_crypt' data-ref="ahash_request_set_crypt" data-ref-filename="ahash_request_set_crypt">ahash_request_set_crypt</dfn>(<b>struct</b> <a class="type" href="#ahash_request" title='ahash_request' data-ref="ahash_request" data-ref-filename="ahash_request">ahash_request</a> *<dfn class="local col7 decl" id="747req" title='req' data-type='struct ahash_request *' data-ref="747req" data-ref-filename="747req">req</dfn>,</td></tr>
+<tr><th id="660">660</th><td>					   <b>struct</b> <a class="type" href="../linux/crypto.h.html#scatterlist" title='scatterlist' data-ref="scatterlist" data-ref-filename="scatterlist">scatterlist</a> *<dfn class="local col8 decl" id="748src" title='src' data-type='struct scatterlist *' data-ref="748src" data-ref-filename="748src">src</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col9 decl" id="749result" title='result' data-type='u8 *' data-ref="749result" data-ref-filename="749result">result</dfn>,</td></tr>
+<tr><th id="661">661</th><td>					   <em>unsigned</em> <em>int</em> <dfn class="local col0 decl" id="750nbytes" title='nbytes' data-type='unsigned int' data-ref="750nbytes" data-ref-filename="750nbytes">nbytes</dfn>)</td></tr>
+<tr><th id="662">662</th><td>{</td></tr>
+<tr><th id="663">663</th><td>	<a class="local col7 ref" href="#747req" title='req' data-ref="747req" data-ref-filename="747req">req</a>-&gt;<a class="ref field" href="#ahash_request::src" title='ahash_request::src' data-ref="ahash_request::src" data-ref-filename="ahash_request..src">src</a> = <a class="local col8 ref" href="#748src" title='src' data-ref="748src" data-ref-filename="748src">src</a>;</td></tr>
+<tr><th id="664">664</th><td>	<a class="local col7 ref" href="#747req" title='req' data-ref="747req" data-ref-filename="747req">req</a>-&gt;<a class="ref field" href="#ahash_request::nbytes" title='ahash_request::nbytes' data-ref="ahash_request::nbytes" data-ref-filename="ahash_request..nbytes">nbytes</a> = <a class="local col0 ref" href="#750nbytes" title='nbytes' data-ref="750nbytes" data-ref-filename="750nbytes">nbytes</a>;</td></tr>
+<tr><th id="665">665</th><td>	<a class="local col7 ref" href="#747req" title='req' data-ref="747req" data-ref-filename="747req">req</a>-&gt;<a class="ref field" href="#ahash_request::result" title='ahash_request::result' data-ref="ahash_request::result" data-ref-filename="ahash_request..result">result</a> = <a class="local col9 ref" href="#749result" title='result' data-ref="749result" data-ref-filename="749result">result</a>;</td></tr>
+<tr><th id="666">666</th><td>}</td></tr>
+<tr><th id="667">667</th><td></td></tr>
+<tr><th id="668">668</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="669">669</th><td><i class="doc"> * DOC: Synchronous Message Digest API</i></td></tr>
+<tr><th id="670">670</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="671">671</th><td><i class="doc"> * The synchronous message digest API is used with the ciphers of type</i></td></tr>
+<tr><th id="672">672</th><td><i class="doc"> * CRYPTO_ALG_TYPE_SHASH (listed as type "shash" in /proc/crypto)</i></td></tr>
+<tr><th id="673">673</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="674">674</th><td><i class="doc"> * The message digest API is able to maintain state information for the</i></td></tr>
+<tr><th id="675">675</th><td><i class="doc"> * caller.</i></td></tr>
+<tr><th id="676">676</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="677">677</th><td><i class="doc"> * The synchronous message digest API can store user-related context in in its</i></td></tr>
+<tr><th id="678">678</th><td><i class="doc"> * shash_desc request data structure.</i></td></tr>
+<tr><th id="679">679</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="680">680</th><td></td></tr>
+<tr><th id="681">681</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="682">682</th><td><i class="doc"> * crypto_alloc_shash() - allocate message digest handle</i></td></tr>
+<tr><th id="683">683</th><td><i class="doc"> * <span class="command">@alg</span>_name: is the cra_name / name or cra_driver_name / driver name of the</i></td></tr>
+<tr><th id="684">684</th><td><i class="doc"> *	      message digest cipher</i></td></tr>
+<tr><th id="685">685</th><td><i class="doc"> *<span class="command"> @type</span>: specifies the type of the cipher</i></td></tr>
+<tr><th id="686">686</th><td><i class="doc"> *<span class="command"> @mask</span>: specifies the mask for the cipher</i></td></tr>
+<tr><th id="687">687</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="688">688</th><td><i class="doc"> * Allocate a cipher handle for a message digest. The returned &amp;struct</i></td></tr>
+<tr><th id="689">689</th><td><i class="doc"> * crypto_shash is the cipher handle that is required for any subsequent</i></td></tr>
+<tr><th id="690">690</th><td><i class="doc"> * API invocation for that message digest.</i></td></tr>
+<tr><th id="691">691</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="692">692</th><td><i class="doc"> * Return: allocated cipher handle in case of success; IS_ERR() is true in case</i></td></tr>
+<tr><th id="693">693</th><td><i class="doc"> *	   of an error, PTR_ERR() returns the error code.</i></td></tr>
+<tr><th id="694">694</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="695">695</th><td><b>struct</b> <a class="type" href="#crypto_shash" title='crypto_shash' data-ref="crypto_shash" data-ref-filename="crypto_shash">crypto_shash</a> *<dfn class="decl fn" id="crypto_alloc_shash" title='crypto_alloc_shash' data-ref="crypto_alloc_shash" data-ref-filename="crypto_alloc_shash">crypto_alloc_shash</dfn>(<em>const</em> <em>char</em> *<dfn class="local col1 decl" id="751alg_name" title='alg_name' data-type='const char *' data-ref="751alg_name" data-ref-filename="751alg_name">alg_name</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col2 decl" id="752type" title='type' data-type='u32' data-ref="752type" data-ref-filename="752type">type</dfn>,</td></tr>
+<tr><th id="696">696</th><td>					<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col3 decl" id="753mask" title='mask' data-type='u32' data-ref="753mask" data-ref-filename="753mask">mask</dfn>);</td></tr>
+<tr><th id="697">697</th><td></td></tr>
+<tr><th id="698">698</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="../linux/crypto.h.html#crypto_tfm" title='crypto_tfm' data-ref="crypto_tfm" data-ref-filename="crypto_tfm">crypto_tfm</a> *<dfn class="decl def fn" id="crypto_shash_tfm" title='crypto_shash_tfm' data-ref="crypto_shash_tfm" data-ref-filename="crypto_shash_tfm">crypto_shash_tfm</dfn>(<b>struct</b> <a class="type" href="#crypto_shash" title='crypto_shash' data-ref="crypto_shash" data-ref-filename="crypto_shash">crypto_shash</a> *<dfn class="local col4 decl" id="754tfm" title='tfm' data-type='struct crypto_shash *' data-ref="754tfm" data-ref-filename="754tfm">tfm</dfn>)</td></tr>
+<tr><th id="699">699</th><td>{</td></tr>
+<tr><th id="700">700</th><td>	<b>return</b> &amp;<a class="local col4 ref" href="#754tfm" title='tfm' data-ref="754tfm" data-ref-filename="754tfm">tfm</a>-&gt;<a class="ref field" href="#crypto_shash::base" title='crypto_shash::base' data-ref="crypto_shash::base" data-ref-filename="crypto_shash..base">base</a>;</td></tr>
+<tr><th id="701">701</th><td>}</td></tr>
+<tr><th id="702">702</th><td></td></tr>
+<tr><th id="703">703</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="704">704</th><td><i class="doc"> * crypto_free_shash() - zeroize and free the message digest handle</i></td></tr>
+<tr><th id="705">705</th><td><i class="doc"> *<span class="command"> @tfm</span>: cipher handle to be freed</i></td></tr>
+<tr><th id="706">706</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="707">707</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="crypto_free_shash" title='crypto_free_shash' data-ref="crypto_free_shash" data-ref-filename="crypto_free_shash">crypto_free_shash</dfn>(<b>struct</b> <a class="type" href="#crypto_shash" title='crypto_shash' data-ref="crypto_shash" data-ref-filename="crypto_shash">crypto_shash</a> *<dfn class="local col5 decl" id="755tfm" title='tfm' data-type='struct crypto_shash *' data-ref="755tfm" data-ref-filename="755tfm">tfm</dfn>)</td></tr>
+<tr><th id="708">708</th><td>{</td></tr>
+<tr><th id="709">709</th><td>	<a class="ref fn" href="../linux/crypto.h.html#crypto_destroy_tfm" title='crypto_destroy_tfm' data-ref="crypto_destroy_tfm" data-ref-filename="crypto_destroy_tfm">crypto_destroy_tfm</a>(<a class="local col5 ref" href="#755tfm" title='tfm' data-ref="755tfm" data-ref-filename="755tfm">tfm</a>, <a class="ref fn" href="#crypto_shash_tfm" title='crypto_shash_tfm' data-ref="crypto_shash_tfm" data-ref-filename="crypto_shash_tfm">crypto_shash_tfm</a>(<a class="local col5 ref" href="#755tfm" title='tfm' data-ref="755tfm" data-ref-filename="755tfm">tfm</a>));</td></tr>
+<tr><th id="710">710</th><td>}</td></tr>
+<tr><th id="711">711</th><td></td></tr>
+<tr><th id="712">712</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>const</em> <em>char</em> *<dfn class="decl def fn" id="crypto_shash_alg_name" title='crypto_shash_alg_name' data-ref="crypto_shash_alg_name" data-ref-filename="crypto_shash_alg_name">crypto_shash_alg_name</dfn>(<b>struct</b> <a class="type" href="#crypto_shash" title='crypto_shash' data-ref="crypto_shash" data-ref-filename="crypto_shash">crypto_shash</a> *<dfn class="local col6 decl" id="756tfm" title='tfm' data-type='struct crypto_shash *' data-ref="756tfm" data-ref-filename="756tfm">tfm</dfn>)</td></tr>
+<tr><th id="713">713</th><td>{</td></tr>
+<tr><th id="714">714</th><td>	<b>return</b> <a class="ref fn" href="../linux/crypto.h.html#crypto_tfm_alg_name" title='crypto_tfm_alg_name' data-ref="crypto_tfm_alg_name" data-ref-filename="crypto_tfm_alg_name">crypto_tfm_alg_name</a>(<a class="ref fn" href="#crypto_shash_tfm" title='crypto_shash_tfm' data-ref="crypto_shash_tfm" data-ref-filename="crypto_shash_tfm">crypto_shash_tfm</a>(<a class="local col6 ref" href="#756tfm" title='tfm' data-ref="756tfm" data-ref-filename="756tfm">tfm</a>));</td></tr>
+<tr><th id="715">715</th><td>}</td></tr>
+<tr><th id="716">716</th><td></td></tr>
+<tr><th id="717">717</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>const</em> <em>char</em> *<dfn class="decl def fn" id="crypto_shash_driver_name" title='crypto_shash_driver_name' data-ref="crypto_shash_driver_name" data-ref-filename="crypto_shash_driver_name">crypto_shash_driver_name</dfn>(<b>struct</b> <a class="type" href="#crypto_shash" title='crypto_shash' data-ref="crypto_shash" data-ref-filename="crypto_shash">crypto_shash</a> *<dfn class="local col7 decl" id="757tfm" title='tfm' data-type='struct crypto_shash *' data-ref="757tfm" data-ref-filename="757tfm">tfm</dfn>)</td></tr>
+<tr><th id="718">718</th><td>{</td></tr>
+<tr><th id="719">719</th><td>	<b>return</b> <a class="ref fn" href="../linux/crypto.h.html#crypto_tfm_alg_driver_name" title='crypto_tfm_alg_driver_name' data-ref="crypto_tfm_alg_driver_name" data-ref-filename="crypto_tfm_alg_driver_name">crypto_tfm_alg_driver_name</a>(<a class="ref fn" href="#crypto_shash_tfm" title='crypto_shash_tfm' data-ref="crypto_shash_tfm" data-ref-filename="crypto_shash_tfm">crypto_shash_tfm</a>(<a class="local col7 ref" href="#757tfm" title='tfm' data-ref="757tfm" data-ref-filename="757tfm">tfm</a>));</td></tr>
+<tr><th id="720">720</th><td>}</td></tr>
+<tr><th id="721">721</th><td></td></tr>
+<tr><th id="722">722</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>int</em> <dfn class="decl def fn" id="crypto_shash_alignmask" title='crypto_shash_alignmask' data-ref="crypto_shash_alignmask" data-ref-filename="crypto_shash_alignmask">crypto_shash_alignmask</dfn>(</td></tr>
+<tr><th id="723">723</th><td>	<b>struct</b> <a class="type" href="#crypto_shash" title='crypto_shash' data-ref="crypto_shash" data-ref-filename="crypto_shash">crypto_shash</a> *<dfn class="local col8 decl" id="758tfm" title='tfm' data-type='struct crypto_shash *' data-ref="758tfm" data-ref-filename="758tfm">tfm</dfn>)</td></tr>
+<tr><th id="724">724</th><td>{</td></tr>
+<tr><th id="725">725</th><td>	<b>return</b> <a class="ref fn" href="../linux/crypto.h.html#crypto_tfm_alg_alignmask" title='crypto_tfm_alg_alignmask' data-ref="crypto_tfm_alg_alignmask" data-ref-filename="crypto_tfm_alg_alignmask">crypto_tfm_alg_alignmask</a>(<a class="ref fn" href="#crypto_shash_tfm" title='crypto_shash_tfm' data-ref="crypto_shash_tfm" data-ref-filename="crypto_shash_tfm">crypto_shash_tfm</a>(<a class="local col8 ref" href="#758tfm" title='tfm' data-ref="758tfm" data-ref-filename="758tfm">tfm</a>));</td></tr>
+<tr><th id="726">726</th><td>}</td></tr>
+<tr><th id="727">727</th><td></td></tr>
+<tr><th id="728">728</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="729">729</th><td><i class="doc"> * crypto_shash_blocksize() - obtain block size for cipher</i></td></tr>
+<tr><th id="730">730</th><td><i class="doc"> *<span class="command"> @tfm</span>: cipher handle</i></td></tr>
+<tr><th id="731">731</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="732">732</th><td><i class="doc"> * The block size for the message digest cipher referenced with the cipher</i></td></tr>
+<tr><th id="733">733</th><td><i class="doc"> * handle is returned.</i></td></tr>
+<tr><th id="734">734</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="735">735</th><td><i class="doc"> * Return: block size of cipher</i></td></tr>
+<tr><th id="736">736</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="737">737</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>int</em> <dfn class="decl def fn" id="crypto_shash_blocksize" title='crypto_shash_blocksize' data-ref="crypto_shash_blocksize" data-ref-filename="crypto_shash_blocksize">crypto_shash_blocksize</dfn>(<b>struct</b> <a class="type" href="#crypto_shash" title='crypto_shash' data-ref="crypto_shash" data-ref-filename="crypto_shash">crypto_shash</a> *<dfn class="local col9 decl" id="759tfm" title='tfm' data-type='struct crypto_shash *' data-ref="759tfm" data-ref-filename="759tfm">tfm</dfn>)</td></tr>
+<tr><th id="738">738</th><td>{</td></tr>
+<tr><th id="739">739</th><td>	<b>return</b> <a class="ref fn" href="../linux/crypto.h.html#crypto_tfm_alg_blocksize" title='crypto_tfm_alg_blocksize' data-ref="crypto_tfm_alg_blocksize" data-ref-filename="crypto_tfm_alg_blocksize">crypto_tfm_alg_blocksize</a>(<a class="ref fn" href="#crypto_shash_tfm" title='crypto_shash_tfm' data-ref="crypto_shash_tfm" data-ref-filename="crypto_shash_tfm">crypto_shash_tfm</a>(<a class="local col9 ref" href="#759tfm" title='tfm' data-ref="759tfm" data-ref-filename="759tfm">tfm</a>));</td></tr>
+<tr><th id="740">740</th><td>}</td></tr>
+<tr><th id="741">741</th><td></td></tr>
+<tr><th id="742">742</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="#shash_alg" title='shash_alg' data-ref="shash_alg" data-ref-filename="shash_alg">shash_alg</a> *<dfn class="decl def fn" id="__crypto_shash_alg" title='__crypto_shash_alg' data-ref="__crypto_shash_alg" data-ref-filename="__crypto_shash_alg">__crypto_shash_alg</dfn>(<b>struct</b> <a class="type" href="../linux/crypto.h.html#crypto_alg" title='crypto_alg' data-ref="crypto_alg" data-ref-filename="crypto_alg">crypto_alg</a> *<dfn class="local col0 decl" id="760alg" title='alg' data-type='struct crypto_alg *' data-ref="760alg" data-ref-filename="760alg">alg</dfn>)</td></tr>
+<tr><th id="743">743</th><td>{</td></tr>
+<tr><th id="744">744</th><td>	<b>return</b> <a class="macro" href="../linux/kernel.h.html#971" title="({ void *__mptr = (void *)(alg); do { extern void __compiletime_assert_744(void) ; if (!(!(!__builtin_types_compatible_p(typeof(*(alg)), typeof(((struct shash_alg *)0)-&gt;base)) &amp;&amp; !__builtin_types_compatible_p(typeof(*(alg)), typeof(void))))) __compiletime_assert_744(); } while (0); ((struct shash_alg *)(__mptr - __builtin_offsetof(struct shash_alg, base))); })" data-ref="_M/container_of">container_of</a>(<a class="local col0 ref" href="#760alg" title='alg' data-ref="760alg" data-ref-filename="760alg">alg</a>, <b>struct</b> <a class="type" href="#shash_alg" title='shash_alg' data-ref="shash_alg" data-ref-filename="shash_alg">shash_alg</a>, <a class="ref field" href="#shash_alg::base" title='shash_alg::base' data-ref="shash_alg::base" data-ref-filename="shash_alg..base">base</a>);</td></tr>
+<tr><th id="745">745</th><td>}</td></tr>
+<tr><th id="746">746</th><td></td></tr>
+<tr><th id="747">747</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="#shash_alg" title='shash_alg' data-ref="shash_alg" data-ref-filename="shash_alg">shash_alg</a> *<dfn class="decl def fn" id="crypto_shash_alg" title='crypto_shash_alg' data-ref="crypto_shash_alg" data-ref-filename="crypto_shash_alg">crypto_shash_alg</dfn>(<b>struct</b> <a class="type" href="#crypto_shash" title='crypto_shash' data-ref="crypto_shash" data-ref-filename="crypto_shash">crypto_shash</a> *<dfn class="local col1 decl" id="761tfm" title='tfm' data-type='struct crypto_shash *' data-ref="761tfm" data-ref-filename="761tfm">tfm</dfn>)</td></tr>
+<tr><th id="748">748</th><td>{</td></tr>
+<tr><th id="749">749</th><td>	<b>return</b> <a class="ref fn" href="#__crypto_shash_alg" title='__crypto_shash_alg' data-ref="__crypto_shash_alg" data-ref-filename="__crypto_shash_alg">__crypto_shash_alg</a>(<a class="ref fn" href="#crypto_shash_tfm" title='crypto_shash_tfm' data-ref="crypto_shash_tfm" data-ref-filename="crypto_shash_tfm">crypto_shash_tfm</a>(<a class="local col1 ref" href="#761tfm" title='tfm' data-ref="761tfm" data-ref-filename="761tfm">tfm</a>)-&gt;<a class="ref field" href="../linux/crypto.h.html#crypto_tfm::__crt_alg" title='crypto_tfm::__crt_alg' data-ref="crypto_tfm::__crt_alg" data-ref-filename="crypto_tfm..__crt_alg">__crt_alg</a>);</td></tr>
+<tr><th id="750">750</th><td>}</td></tr>
+<tr><th id="751">751</th><td></td></tr>
+<tr><th id="752">752</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="753">753</th><td><i class="doc"> * crypto_shash_digestsize() - obtain message digest size</i></td></tr>
+<tr><th id="754">754</th><td><i class="doc"> *<span class="command"> @tfm</span>: cipher handle</i></td></tr>
+<tr><th id="755">755</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="756">756</th><td><i class="doc"> * The size for the message digest created by the message digest cipher</i></td></tr>
+<tr><th id="757">757</th><td><i class="doc"> * referenced with the cipher handle is returned.</i></td></tr>
+<tr><th id="758">758</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="759">759</th><td><i class="doc"> * Return: digest size of cipher</i></td></tr>
+<tr><th id="760">760</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="761">761</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>int</em> <dfn class="decl def fn" id="crypto_shash_digestsize" title='crypto_shash_digestsize' data-ref="crypto_shash_digestsize" data-ref-filename="crypto_shash_digestsize">crypto_shash_digestsize</dfn>(<b>struct</b> <a class="type" href="#crypto_shash" title='crypto_shash' data-ref="crypto_shash" data-ref-filename="crypto_shash">crypto_shash</a> *<dfn class="local col2 decl" id="762tfm" title='tfm' data-type='struct crypto_shash *' data-ref="762tfm" data-ref-filename="762tfm">tfm</dfn>)</td></tr>
+<tr><th id="762">762</th><td>{</td></tr>
+<tr><th id="763">763</th><td>	<b>return</b> <a class="ref fn" href="#crypto_shash_alg" title='crypto_shash_alg' data-ref="crypto_shash_alg" data-ref-filename="crypto_shash_alg">crypto_shash_alg</a>(<a class="local col2 ref" href="#762tfm" title='tfm' data-ref="762tfm" data-ref-filename="762tfm">tfm</a>)-&gt;<a class="ref field" href="#shash_alg::digestsize" title='shash_alg::digestsize' data-ref="shash_alg::digestsize" data-ref-filename="shash_alg..digestsize">digestsize</a>;</td></tr>
+<tr><th id="764">764</th><td>}</td></tr>
+<tr><th id="765">765</th><td></td></tr>
+<tr><th id="766">766</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>int</em> <dfn class="decl def fn" id="crypto_shash_statesize" title='crypto_shash_statesize' data-ref="crypto_shash_statesize" data-ref-filename="crypto_shash_statesize">crypto_shash_statesize</dfn>(<b>struct</b> <a class="type" href="#crypto_shash" title='crypto_shash' data-ref="crypto_shash" data-ref-filename="crypto_shash">crypto_shash</a> *<dfn class="local col3 decl" id="763tfm" title='tfm' data-type='struct crypto_shash *' data-ref="763tfm" data-ref-filename="763tfm">tfm</dfn>)</td></tr>
+<tr><th id="767">767</th><td>{</td></tr>
+<tr><th id="768">768</th><td>	<b>return</b> <a class="ref fn" href="#crypto_shash_alg" title='crypto_shash_alg' data-ref="crypto_shash_alg" data-ref-filename="crypto_shash_alg">crypto_shash_alg</a>(<a class="local col3 ref" href="#763tfm" title='tfm' data-ref="763tfm" data-ref-filename="763tfm">tfm</a>)-&gt;<a class="ref field" href="#shash_alg::statesize" title='shash_alg::statesize' data-ref="shash_alg::statesize" data-ref-filename="shash_alg..statesize">statesize</a>;</td></tr>
+<tr><th id="769">769</th><td>}</td></tr>
+<tr><th id="770">770</th><td></td></tr>
+<tr><th id="771">771</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl def fn" id="crypto_shash_get_flags" title='crypto_shash_get_flags' data-ref="crypto_shash_get_flags" data-ref-filename="crypto_shash_get_flags">crypto_shash_get_flags</dfn>(<b>struct</b> <a class="type" href="#crypto_shash" title='crypto_shash' data-ref="crypto_shash" data-ref-filename="crypto_shash">crypto_shash</a> *<dfn class="local col4 decl" id="764tfm" title='tfm' data-type='struct crypto_shash *' data-ref="764tfm" data-ref-filename="764tfm">tfm</dfn>)</td></tr>
+<tr><th id="772">772</th><td>{</td></tr>
+<tr><th id="773">773</th><td>	<b>return</b> <a class="ref fn" href="../linux/crypto.h.html#crypto_tfm_get_flags" title='crypto_tfm_get_flags' data-ref="crypto_tfm_get_flags" data-ref-filename="crypto_tfm_get_flags">crypto_tfm_get_flags</a>(<a class="ref fn" href="#crypto_shash_tfm" title='crypto_shash_tfm' data-ref="crypto_shash_tfm" data-ref-filename="crypto_shash_tfm">crypto_shash_tfm</a>(<a class="local col4 ref" href="#764tfm" title='tfm' data-ref="764tfm" data-ref-filename="764tfm">tfm</a>));</td></tr>
+<tr><th id="774">774</th><td>}</td></tr>
+<tr><th id="775">775</th><td></td></tr>
+<tr><th id="776">776</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="crypto_shash_set_flags" title='crypto_shash_set_flags' data-ref="crypto_shash_set_flags" data-ref-filename="crypto_shash_set_flags">crypto_shash_set_flags</dfn>(<b>struct</b> <a class="type" href="#crypto_shash" title='crypto_shash' data-ref="crypto_shash" data-ref-filename="crypto_shash">crypto_shash</a> *<dfn class="local col5 decl" id="765tfm" title='tfm' data-type='struct crypto_shash *' data-ref="765tfm" data-ref-filename="765tfm">tfm</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col6 decl" id="766flags" title='flags' data-type='u32' data-ref="766flags" data-ref-filename="766flags">flags</dfn>)</td></tr>
+<tr><th id="777">777</th><td>{</td></tr>
+<tr><th id="778">778</th><td>	<a class="ref fn" href="../linux/crypto.h.html#crypto_tfm_set_flags" title='crypto_tfm_set_flags' data-ref="crypto_tfm_set_flags" data-ref-filename="crypto_tfm_set_flags">crypto_tfm_set_flags</a>(<a class="ref fn" href="#crypto_shash_tfm" title='crypto_shash_tfm' data-ref="crypto_shash_tfm" data-ref-filename="crypto_shash_tfm">crypto_shash_tfm</a>(<a class="local col5 ref" href="#765tfm" title='tfm' data-ref="765tfm" data-ref-filename="765tfm">tfm</a>), <a class="local col6 ref" href="#766flags" title='flags' data-ref="766flags" data-ref-filename="766flags">flags</a>);</td></tr>
+<tr><th id="779">779</th><td>}</td></tr>
+<tr><th id="780">780</th><td></td></tr>
+<tr><th id="781">781</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="crypto_shash_clear_flags" title='crypto_shash_clear_flags' data-ref="crypto_shash_clear_flags" data-ref-filename="crypto_shash_clear_flags">crypto_shash_clear_flags</dfn>(<b>struct</b> <a class="type" href="#crypto_shash" title='crypto_shash' data-ref="crypto_shash" data-ref-filename="crypto_shash">crypto_shash</a> *<dfn class="local col7 decl" id="767tfm" title='tfm' data-type='struct crypto_shash *' data-ref="767tfm" data-ref-filename="767tfm">tfm</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col8 decl" id="768flags" title='flags' data-type='u32' data-ref="768flags" data-ref-filename="768flags">flags</dfn>)</td></tr>
+<tr><th id="782">782</th><td>{</td></tr>
+<tr><th id="783">783</th><td>	<a class="ref fn" href="../linux/crypto.h.html#crypto_tfm_clear_flags" title='crypto_tfm_clear_flags' data-ref="crypto_tfm_clear_flags" data-ref-filename="crypto_tfm_clear_flags">crypto_tfm_clear_flags</a>(<a class="ref fn" href="#crypto_shash_tfm" title='crypto_shash_tfm' data-ref="crypto_shash_tfm" data-ref-filename="crypto_shash_tfm">crypto_shash_tfm</a>(<a class="local col7 ref" href="#767tfm" title='tfm' data-ref="767tfm" data-ref-filename="767tfm">tfm</a>), <a class="local col8 ref" href="#768flags" title='flags' data-ref="768flags" data-ref-filename="768flags">flags</a>);</td></tr>
+<tr><th id="784">784</th><td>}</td></tr>
+<tr><th id="785">785</th><td></td></tr>
+<tr><th id="786">786</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="787">787</th><td><i class="doc"> * crypto_shash_descsize() - obtain the operational state size</i></td></tr>
+<tr><th id="788">788</th><td><i class="doc"> *<span class="command"> @tfm</span>: cipher handle</i></td></tr>
+<tr><th id="789">789</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="790">790</th><td><i class="doc"> * The size of the operational state the cipher needs during operation is</i></td></tr>
+<tr><th id="791">791</th><td><i class="doc"> * returned for the hash referenced with the cipher handle. This size is</i></td></tr>
+<tr><th id="792">792</th><td><i class="doc"> * required to calculate the memory requirements to allow the caller allocating</i></td></tr>
+<tr><th id="793">793</th><td><i class="doc"> * sufficient memory for operational state.</i></td></tr>
+<tr><th id="794">794</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="795">795</th><td><i class="doc"> * The operational state is defined with struct shash_desc where the size of</i></td></tr>
+<tr><th id="796">796</th><td><i class="doc"> * that data structure is to be calculated as</i></td></tr>
+<tr><th id="797">797</th><td><i class="doc"> * sizeof(struct shash_desc) + crypto_shash_descsize(alg)</i></td></tr>
+<tr><th id="798">798</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="799">799</th><td><i class="doc"> * Return: size of the operational state</i></td></tr>
+<tr><th id="800">800</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="801">801</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>int</em> <dfn class="decl def fn" id="crypto_shash_descsize" title='crypto_shash_descsize' data-ref="crypto_shash_descsize" data-ref-filename="crypto_shash_descsize">crypto_shash_descsize</dfn>(<b>struct</b> <a class="type" href="#crypto_shash" title='crypto_shash' data-ref="crypto_shash" data-ref-filename="crypto_shash">crypto_shash</a> *<dfn class="local col9 decl" id="769tfm" title='tfm' data-type='struct crypto_shash *' data-ref="769tfm" data-ref-filename="769tfm">tfm</dfn>)</td></tr>
+<tr><th id="802">802</th><td>{</td></tr>
+<tr><th id="803">803</th><td>	<b>return</b> <a class="local col9 ref" href="#769tfm" title='tfm' data-ref="769tfm" data-ref-filename="769tfm">tfm</a>-&gt;<a class="ref field" href="#crypto_shash::descsize" title='crypto_shash::descsize' data-ref="crypto_shash::descsize" data-ref-filename="crypto_shash..descsize">descsize</a>;</td></tr>
+<tr><th id="804">804</th><td>}</td></tr>
+<tr><th id="805">805</th><td></td></tr>
+<tr><th id="806">806</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> *<dfn class="decl def fn" id="shash_desc_ctx" title='shash_desc_ctx' data-ref="shash_desc_ctx" data-ref-filename="shash_desc_ctx">shash_desc_ctx</dfn>(<b>struct</b> <a class="type" href="#shash_desc" title='shash_desc' data-ref="shash_desc" data-ref-filename="shash_desc">shash_desc</a> *<dfn class="local col0 decl" id="770desc" title='desc' data-type='struct shash_desc *' data-ref="770desc" data-ref-filename="770desc">desc</dfn>)</td></tr>
+<tr><th id="807">807</th><td>{</td></tr>
+<tr><th id="808">808</th><td>	<b>return</b> <a class="local col0 ref" href="#770desc" title='desc' data-ref="770desc" data-ref-filename="770desc">desc</a>-&gt;<a class="ref field" href="#shash_desc::__ctx" title='shash_desc::__ctx' data-ref="shash_desc::__ctx" data-ref-filename="shash_desc..__ctx">__ctx</a>;</td></tr>
+<tr><th id="809">809</th><td>}</td></tr>
+<tr><th id="810">810</th><td></td></tr>
+<tr><th id="811">811</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="812">812</th><td><i class="doc"> * crypto_shash_setkey() - set key for message digest</i></td></tr>
+<tr><th id="813">813</th><td><i class="doc"> *<span class="command"> @tfm</span>: cipher handle</i></td></tr>
+<tr><th id="814">814</th><td><i class="doc"> *<span class="command"> @key</span>: buffer holding the key</i></td></tr>
+<tr><th id="815">815</th><td><i class="doc"> *<span class="command"> @keylen</span>: length of the key in bytes</i></td></tr>
+<tr><th id="816">816</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="817">817</th><td><i class="doc"> * The caller provided key is set for the keyed message digest cipher. The</i></td></tr>
+<tr><th id="818">818</th><td><i class="doc"> * cipher handle must point to a keyed message digest cipher in order for this</i></td></tr>
+<tr><th id="819">819</th><td><i class="doc"> * function to succeed.</i></td></tr>
+<tr><th id="820">820</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="821">821</th><td><i class="doc"> * Context: Any context.</i></td></tr>
+<tr><th id="822">822</th><td><i class="doc"> * Return: 0 if the setting of the key was successful; &lt; 0 if an error occurred</i></td></tr>
+<tr><th id="823">823</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="824">824</th><td><em>int</em> <dfn class="decl fn" id="crypto_shash_setkey" title='crypto_shash_setkey' data-ref="crypto_shash_setkey" data-ref-filename="crypto_shash_setkey">crypto_shash_setkey</dfn>(<b>struct</b> <a class="type" href="#crypto_shash" title='crypto_shash' data-ref="crypto_shash" data-ref-filename="crypto_shash">crypto_shash</a> *<dfn class="local col1 decl" id="771tfm" title='tfm' data-type='struct crypto_shash *' data-ref="771tfm" data-ref-filename="771tfm">tfm</dfn>, <em>const</em> <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col2 decl" id="772key" title='key' data-type='const u8 *' data-ref="772key" data-ref-filename="772key">key</dfn>,</td></tr>
+<tr><th id="825">825</th><td>			<em>unsigned</em> <em>int</em> <dfn class="local col3 decl" id="773keylen" title='keylen' data-type='unsigned int' data-ref="773keylen" data-ref-filename="773keylen">keylen</dfn>);</td></tr>
+<tr><th id="826">826</th><td></td></tr>
+<tr><th id="827">827</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="828">828</th><td><i class="doc"> * crypto_shash_digest() - calculate message digest for buffer</i></td></tr>
+<tr><th id="829">829</th><td><i class="doc"> *<span class="command"> @desc</span>: see crypto_shash_final()</i></td></tr>
+<tr><th id="830">830</th><td><i class="doc"> * <span class="command">@data</span>: see crypto_shash_update()</i></td></tr>
+<tr><th id="831">831</th><td><i class="doc"> *<span class="command"> @len</span>: see crypto_shash_update()</i></td></tr>
+<tr><th id="832">832</th><td><i class="doc"> *<span class="command"> @out</span>: see crypto_shash_final()</i></td></tr>
+<tr><th id="833">833</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="834">834</th><td><i class="doc"> * This function is a "short-hand" for the function calls of crypto_shash_init,</i></td></tr>
+<tr><th id="835">835</th><td><i class="doc"> * crypto_shash_update and crypto_shash_final. The parameters have the same</i></td></tr>
+<tr><th id="836">836</th><td><i class="doc"> * meaning as discussed for those separate three functions.</i></td></tr>
+<tr><th id="837">837</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="838">838</th><td><i class="doc"> * Context: Any context.</i></td></tr>
+<tr><th id="839">839</th><td><i class="doc"> * Return: 0 if the message digest creation was successful; &lt; 0 if an error</i></td></tr>
+<tr><th id="840">840</th><td><i class="doc"> *	   occurred</i></td></tr>
+<tr><th id="841">841</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="842">842</th><td><em>int</em> <dfn class="decl fn" id="crypto_shash_digest" title='crypto_shash_digest' data-ref="crypto_shash_digest" data-ref-filename="crypto_shash_digest">crypto_shash_digest</dfn>(<b>struct</b> <a class="type" href="#shash_desc" title='shash_desc' data-ref="shash_desc" data-ref-filename="shash_desc">shash_desc</a> *<dfn class="local col4 decl" id="774desc" title='desc' data-type='struct shash_desc *' data-ref="774desc" data-ref-filename="774desc">desc</dfn>, <em>const</em> <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col5 decl" id="775data" title='data' data-type='const u8 *' data-ref="775data" data-ref-filename="775data">data</dfn>,</td></tr>
+<tr><th id="843">843</th><td>			<em>unsigned</em> <em>int</em> <dfn class="local col6 decl" id="776len" title='len' data-type='unsigned int' data-ref="776len" data-ref-filename="776len">len</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col7 decl" id="777out" title='out' data-type='u8 *' data-ref="777out" data-ref-filename="777out">out</dfn>);</td></tr>
+<tr><th id="844">844</th><td></td></tr>
+<tr><th id="845">845</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="846">846</th><td><i class="doc"> * crypto_shash_export() - extract operational state for message digest</i></td></tr>
+<tr><th id="847">847</th><td><i class="doc"> *<span class="command"> @desc</span>: reference to the operational state handle whose state is exported</i></td></tr>
+<tr><th id="848">848</th><td><i class="doc"> *<span class="command"> @out</span>: output buffer of sufficient size that can hold the hash state</i></td></tr>
+<tr><th id="849">849</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="850">850</th><td><i class="doc"> * This function exports the hash state of the operational state handle into the</i></td></tr>
+<tr><th id="851">851</th><td><i class="doc"> * caller-allocated output buffer out which must have sufficient size (e.g. by</i></td></tr>
+<tr><th id="852">852</th><td><i class="doc"> * calling crypto_shash_descsize).</i></td></tr>
+<tr><th id="853">853</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="854">854</th><td><i class="doc"> * Context: Any context.</i></td></tr>
+<tr><th id="855">855</th><td><i class="doc"> * Return: 0 if the export creation was successful; &lt; 0 if an error occurred</i></td></tr>
+<tr><th id="856">856</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="857">857</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="crypto_shash_export" title='crypto_shash_export' data-ref="crypto_shash_export" data-ref-filename="crypto_shash_export">crypto_shash_export</dfn>(<b>struct</b> <a class="type" href="#shash_desc" title='shash_desc' data-ref="shash_desc" data-ref-filename="shash_desc">shash_desc</a> *<dfn class="local col8 decl" id="778desc" title='desc' data-type='struct shash_desc *' data-ref="778desc" data-ref-filename="778desc">desc</dfn>, <em>void</em> *<dfn class="local col9 decl" id="779out" title='out' data-type='void *' data-ref="779out" data-ref-filename="779out">out</dfn>)</td></tr>
+<tr><th id="858">858</th><td>{</td></tr>
+<tr><th id="859">859</th><td>	<b>return</b> <a class="ref fn" href="#crypto_shash_alg" title='crypto_shash_alg' data-ref="crypto_shash_alg" data-ref-filename="crypto_shash_alg">crypto_shash_alg</a>(<a class="local col8 ref" href="#778desc" title='desc' data-ref="778desc" data-ref-filename="778desc">desc</a>-&gt;<a class="ref field" href="#shash_desc::tfm" title='shash_desc::tfm' data-ref="shash_desc::tfm" data-ref-filename="shash_desc..tfm">tfm</a>)-&gt;<a class="ref field" href="#shash_alg::export" title='shash_alg::export' data-ref="shash_alg::export" data-ref-filename="shash_alg..export">export</a>(<a class="local col8 ref" href="#778desc" title='desc' data-ref="778desc" data-ref-filename="778desc">desc</a>, <a class="local col9 ref" href="#779out" title='out' data-ref="779out" data-ref-filename="779out">out</a>);</td></tr>
+<tr><th id="860">860</th><td>}</td></tr>
+<tr><th id="861">861</th><td></td></tr>
+<tr><th id="862">862</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="863">863</th><td><i class="doc"> * crypto_shash_import() - import operational state</i></td></tr>
+<tr><th id="864">864</th><td><i class="doc"> *<span class="command"> @desc</span>: reference to the operational state handle the state imported into</i></td></tr>
+<tr><th id="865">865</th><td><i class="doc"> * <span class="command">@in</span>:<span class="verb"> buffer holding the state</span></i></td></tr>
+<tr><th id="866">866</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="867">867</th><td><i class="doc"> * This function imports the hash state into the operational state handle from</i></td></tr>
+<tr><th id="868">868</th><td><i class="doc"> * the input buffer. That buffer should have been generated with the</i></td></tr>
+<tr><th id="869">869</th><td><i class="doc"> * crypto_ahash_export function.</i></td></tr>
+<tr><th id="870">870</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="871">871</th><td><i class="doc"> * Context: Any context.</i></td></tr>
+<tr><th id="872">872</th><td><i class="doc"> * Return: 0 if the import was successful; &lt; 0 if an error occurred</i></td></tr>
+<tr><th id="873">873</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="874">874</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="crypto_shash_import" title='crypto_shash_import' data-ref="crypto_shash_import" data-ref-filename="crypto_shash_import">crypto_shash_import</dfn>(<b>struct</b> <a class="type" href="#shash_desc" title='shash_desc' data-ref="shash_desc" data-ref-filename="shash_desc">shash_desc</a> *<dfn class="local col0 decl" id="780desc" title='desc' data-type='struct shash_desc *' data-ref="780desc" data-ref-filename="780desc">desc</dfn>, <em>const</em> <em>void</em> *<dfn class="local col1 decl" id="781in" title='in' data-type='const void *' data-ref="781in" data-ref-filename="781in">in</dfn>)</td></tr>
+<tr><th id="875">875</th><td>{</td></tr>
+<tr><th id="876">876</th><td>	<b>struct</b> <a class="type" href="#crypto_shash" title='crypto_shash' data-ref="crypto_shash" data-ref-filename="crypto_shash">crypto_shash</a> *<dfn class="local col2 decl" id="782tfm" title='tfm' data-type='struct crypto_shash *' data-ref="782tfm" data-ref-filename="782tfm">tfm</dfn> = <a class="local col0 ref" href="#780desc" title='desc' data-ref="780desc" data-ref-filename="780desc">desc</a>-&gt;<a class="ref field" href="#shash_desc::tfm" title='shash_desc::tfm' data-ref="shash_desc::tfm" data-ref-filename="shash_desc..tfm">tfm</a>;</td></tr>
+<tr><th id="877">877</th><td></td></tr>
+<tr><th id="878">878</th><td>	<b>if</b> (<a class="ref fn" href="#crypto_shash_get_flags" title='crypto_shash_get_flags' data-ref="crypto_shash_get_flags" data-ref-filename="crypto_shash_get_flags">crypto_shash_get_flags</a>(<a class="local col2 ref" href="#782tfm" title='tfm' data-ref="782tfm" data-ref-filename="782tfm">tfm</a>) &amp; <a class="macro" href="../linux/crypto.h.html#110" title="0x00000001" data-ref="_M/CRYPTO_TFM_NEED_KEY">CRYPTO_TFM_NEED_KEY</a>)</td></tr>
+<tr><th id="879">879</th><td>		<b>return</b> -<a class="macro" href="../uapi/asm-generic/errno.h.html#110" title="126" data-ref="_M/ENOKEY">ENOKEY</a>;</td></tr>
+<tr><th id="880">880</th><td></td></tr>
+<tr><th id="881">881</th><td>	<b>return</b> <a class="ref fn" href="#crypto_shash_alg" title='crypto_shash_alg' data-ref="crypto_shash_alg" data-ref-filename="crypto_shash_alg">crypto_shash_alg</a>(<a class="local col2 ref" href="#782tfm" title='tfm' data-ref="782tfm" data-ref-filename="782tfm">tfm</a>)-&gt;<a class="ref field" href="#shash_alg::import" title='shash_alg::import' data-ref="shash_alg::import" data-ref-filename="shash_alg..import">import</a>(<a class="local col0 ref" href="#780desc" title='desc' data-ref="780desc" data-ref-filename="780desc">desc</a>, <a class="local col1 ref" href="#781in" title='in' data-ref="781in" data-ref-filename="781in">in</a>);</td></tr>
+<tr><th id="882">882</th><td>}</td></tr>
+<tr><th id="883">883</th><td></td></tr>
+<tr><th id="884">884</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="885">885</th><td><i class="doc"> * crypto_shash_init() - (re)initialize message digest</i></td></tr>
+<tr><th id="886">886</th><td><i class="doc"> *<span class="command"> @desc</span>: operational state handle that is already filled</i></td></tr>
+<tr><th id="887">887</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="888">888</th><td><i class="doc"> * The call (re-)initializes the message digest referenced by the</i></td></tr>
+<tr><th id="889">889</th><td><i class="doc"> * operational state handle. Any potentially existing state created by</i></td></tr>
+<tr><th id="890">890</th><td><i class="doc"> * previous operations is discarded.</i></td></tr>
+<tr><th id="891">891</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="892">892</th><td><i class="doc"> * Context: Any context.</i></td></tr>
+<tr><th id="893">893</th><td><i class="doc"> * Return: 0 if the message digest initialization was successful; &lt; 0 if an</i></td></tr>
+<tr><th id="894">894</th><td><i class="doc"> *	   error occurred</i></td></tr>
+<tr><th id="895">895</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="896">896</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="crypto_shash_init" title='crypto_shash_init' data-ref="crypto_shash_init" data-ref-filename="crypto_shash_init">crypto_shash_init</dfn>(<b>struct</b> <a class="type" href="#shash_desc" title='shash_desc' data-ref="shash_desc" data-ref-filename="shash_desc">shash_desc</a> *<dfn class="local col3 decl" id="783desc" title='desc' data-type='struct shash_desc *' data-ref="783desc" data-ref-filename="783desc">desc</dfn>)</td></tr>
+<tr><th id="897">897</th><td>{</td></tr>
+<tr><th id="898">898</th><td>	<b>struct</b> <a class="type" href="#crypto_shash" title='crypto_shash' data-ref="crypto_shash" data-ref-filename="crypto_shash">crypto_shash</a> *<dfn class="local col4 decl" id="784tfm" title='tfm' data-type='struct crypto_shash *' data-ref="784tfm" data-ref-filename="784tfm">tfm</dfn> = <a class="local col3 ref" href="#783desc" title='desc' data-ref="783desc" data-ref-filename="783desc">desc</a>-&gt;<a class="ref field" href="#shash_desc::tfm" title='shash_desc::tfm' data-ref="shash_desc::tfm" data-ref-filename="shash_desc..tfm">tfm</a>;</td></tr>
+<tr><th id="899">899</th><td></td></tr>
+<tr><th id="900">900</th><td>	<b>if</b> (<a class="ref fn" href="#crypto_shash_get_flags" title='crypto_shash_get_flags' data-ref="crypto_shash_get_flags" data-ref-filename="crypto_shash_get_flags">crypto_shash_get_flags</a>(<a class="local col4 ref" href="#784tfm" title='tfm' data-ref="784tfm" data-ref-filename="784tfm">tfm</a>) &amp; <a class="macro" href="../linux/crypto.h.html#110" title="0x00000001" data-ref="_M/CRYPTO_TFM_NEED_KEY">CRYPTO_TFM_NEED_KEY</a>)</td></tr>
+<tr><th id="901">901</th><td>		<b>return</b> -<a class="macro" href="../uapi/asm-generic/errno.h.html#110" title="126" data-ref="_M/ENOKEY">ENOKEY</a>;</td></tr>
+<tr><th id="902">902</th><td></td></tr>
+<tr><th id="903">903</th><td>	<b>return</b> <a class="ref fn" href="#crypto_shash_alg" title='crypto_shash_alg' data-ref="crypto_shash_alg" data-ref-filename="crypto_shash_alg">crypto_shash_alg</a>(<a class="local col4 ref" href="#784tfm" title='tfm' data-ref="784tfm" data-ref-filename="784tfm">tfm</a>)-&gt;<a class="ref field" href="#shash_alg::init" title='shash_alg::init' data-ref="shash_alg::init" data-ref-filename="shash_alg..init">init</a>(<a class="local col3 ref" href="#783desc" title='desc' data-ref="783desc" data-ref-filename="783desc">desc</a>);</td></tr>
+<tr><th id="904">904</th><td>}</td></tr>
+<tr><th id="905">905</th><td></td></tr>
+<tr><th id="906">906</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="907">907</th><td><i class="doc"> * crypto_shash_update() - add data to message digest for processing</i></td></tr>
+<tr><th id="908">908</th><td><i class="doc"> *<span class="command"> @desc</span>: operational state handle that is already initialized</i></td></tr>
+<tr><th id="909">909</th><td><i class="doc"> * <span class="command">@data</span>: input data to be added to the message digest</i></td></tr>
+<tr><th id="910">910</th><td><i class="doc"> *<span class="command"> @len</span>: length of the input data</i></td></tr>
+<tr><th id="911">911</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="912">912</th><td><i class="doc"> * Updates the message digest state of the operational state handle.</i></td></tr>
+<tr><th id="913">913</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="914">914</th><td><i class="doc"> * Context: Any context.</i></td></tr>
+<tr><th id="915">915</th><td><i class="doc"> * Return: 0 if the message digest update was successful; &lt; 0 if an error</i></td></tr>
+<tr><th id="916">916</th><td><i class="doc"> *	   occurred</i></td></tr>
+<tr><th id="917">917</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="918">918</th><td><em>int</em> <dfn class="decl fn" id="crypto_shash_update" title='crypto_shash_update' data-ref="crypto_shash_update" data-ref-filename="crypto_shash_update">crypto_shash_update</dfn>(<b>struct</b> <a class="type" href="#shash_desc" title='shash_desc' data-ref="shash_desc" data-ref-filename="shash_desc">shash_desc</a> *<dfn class="local col5 decl" id="785desc" title='desc' data-type='struct shash_desc *' data-ref="785desc" data-ref-filename="785desc">desc</dfn>, <em>const</em> <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col6 decl" id="786data" title='data' data-type='const u8 *' data-ref="786data" data-ref-filename="786data">data</dfn>,</td></tr>
+<tr><th id="919">919</th><td>			<em>unsigned</em> <em>int</em> <dfn class="local col7 decl" id="787len" title='len' data-type='unsigned int' data-ref="787len" data-ref-filename="787len">len</dfn>);</td></tr>
+<tr><th id="920">920</th><td></td></tr>
+<tr><th id="921">921</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="922">922</th><td><i class="doc"> * crypto_shash_final() - calculate message digest</i></td></tr>
+<tr><th id="923">923</th><td><i class="doc"> *<span class="command"> @desc</span>: operational state handle that is already filled with data</i></td></tr>
+<tr><th id="924">924</th><td><i class="doc"> *<span class="command"> @out</span>: output buffer filled with the message digest</i></td></tr>
+<tr><th id="925">925</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="926">926</th><td><i class="doc"> * Finalize the message digest operation and create the message digest</i></td></tr>
+<tr><th id="927">927</th><td><i class="doc"> * based on all data added to the cipher handle. The message digest is placed</i></td></tr>
+<tr><th id="928">928</th><td><i class="doc"> * into the output buffer. The caller must ensure that the output buffer is</i></td></tr>
+<tr><th id="929">929</th><td><i class="doc"> * large enough by using crypto_shash_digestsize.</i></td></tr>
+<tr><th id="930">930</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="931">931</th><td><i class="doc"> * Context: Any context.</i></td></tr>
+<tr><th id="932">932</th><td><i class="doc"> * Return: 0 if the message digest creation was successful; &lt; 0 if an error</i></td></tr>
+<tr><th id="933">933</th><td><i class="doc"> *	   occurred</i></td></tr>
+<tr><th id="934">934</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="935">935</th><td><em>int</em> <dfn class="decl fn" id="crypto_shash_final" title='crypto_shash_final' data-ref="crypto_shash_final" data-ref-filename="crypto_shash_final">crypto_shash_final</dfn>(<b>struct</b> <a class="type" href="#shash_desc" title='shash_desc' data-ref="shash_desc" data-ref-filename="shash_desc">shash_desc</a> *<dfn class="local col8 decl" id="788desc" title='desc' data-type='struct shash_desc *' data-ref="788desc" data-ref-filename="788desc">desc</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col9 decl" id="789out" title='out' data-type='u8 *' data-ref="789out" data-ref-filename="789out">out</dfn>);</td></tr>
+<tr><th id="936">936</th><td></td></tr>
+<tr><th id="937">937</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="938">938</th><td><i class="doc"> * crypto_shash_finup() - calculate message digest of buffer</i></td></tr>
+<tr><th id="939">939</th><td><i class="doc"> *<span class="command"> @desc</span>: see crypto_shash_final()</i></td></tr>
+<tr><th id="940">940</th><td><i class="doc"> * <span class="command">@data</span>: see crypto_shash_update()</i></td></tr>
+<tr><th id="941">941</th><td><i class="doc"> *<span class="command"> @len</span>: see crypto_shash_update()</i></td></tr>
+<tr><th id="942">942</th><td><i class="doc"> *<span class="command"> @out</span>: see crypto_shash_final()</i></td></tr>
+<tr><th id="943">943</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="944">944</th><td><i class="doc"> * This function is a "short-hand" for the function calls of</i></td></tr>
+<tr><th id="945">945</th><td><i class="doc"> * crypto_shash_update and crypto_shash_final. The parameters have the same</i></td></tr>
+<tr><th id="946">946</th><td><i class="doc"> * meaning as discussed for those separate functions.</i></td></tr>
+<tr><th id="947">947</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="948">948</th><td><i class="doc"> * Context: Any context.</i></td></tr>
+<tr><th id="949">949</th><td><i class="doc"> * Return: 0 if the message digest creation was successful; &lt; 0 if an error</i></td></tr>
+<tr><th id="950">950</th><td><i class="doc"> *	   occurred</i></td></tr>
+<tr><th id="951">951</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="952">952</th><td><em>int</em> <dfn class="decl fn" id="crypto_shash_finup" title='crypto_shash_finup' data-ref="crypto_shash_finup" data-ref-filename="crypto_shash_finup">crypto_shash_finup</dfn>(<b>struct</b> <a class="type" href="#shash_desc" title='shash_desc' data-ref="shash_desc" data-ref-filename="shash_desc">shash_desc</a> *<dfn class="local col0 decl" id="790desc" title='desc' data-type='struct shash_desc *' data-ref="790desc" data-ref-filename="790desc">desc</dfn>, <em>const</em> <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col1 decl" id="791data" title='data' data-type='const u8 *' data-ref="791data" data-ref-filename="791data">data</dfn>,</td></tr>
+<tr><th id="953">953</th><td>		       <em>unsigned</em> <em>int</em> <dfn class="local col2 decl" id="792len" title='len' data-type='unsigned int' data-ref="792len" data-ref-filename="792len">len</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col3 decl" id="793out" title='out' data-type='u8 *' data-ref="793out" data-ref-filename="793out">out</dfn>);</td></tr>
+<tr><th id="954">954</th><td></td></tr>
+<tr><th id="955">955</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="shash_desc_zero" title='shash_desc_zero' data-ref="shash_desc_zero" data-ref-filename="shash_desc_zero">shash_desc_zero</dfn>(<b>struct</b> <a class="type" href="#shash_desc" title='shash_desc' data-ref="shash_desc" data-ref-filename="shash_desc">shash_desc</a> *<dfn class="local col4 decl" id="794desc" title='desc' data-type='struct shash_desc *' data-ref="794desc" data-ref-filename="794desc">desc</dfn>)</td></tr>
+<tr><th id="956">956</th><td>{</td></tr>
+<tr><th id="957">957</th><td>	<a class="ref fn" href="../linux/string.h.html#memzero_explicit" title='memzero_explicit' data-ref="memzero_explicit" data-ref-filename="memzero_explicit">memzero_explicit</a>(<a class="local col4 ref" href="#794desc" title='desc' data-ref="794desc" data-ref-filename="794desc">desc</a>,</td></tr>
+<tr><th id="958">958</th><td>			 <b>sizeof</b>(*<a class="local col4 ref" href="#794desc" title='desc' data-ref="794desc" data-ref-filename="794desc">desc</a>) + <a class="ref fn" href="#crypto_shash_descsize" title='crypto_shash_descsize' data-ref="crypto_shash_descsize" data-ref-filename="crypto_shash_descsize">crypto_shash_descsize</a>(<a class="local col4 ref" href="#794desc" title='desc' data-ref="794desc" data-ref-filename="794desc">desc</a>-&gt;<a class="ref field" href="#shash_desc::tfm" title='shash_desc::tfm' data-ref="shash_desc::tfm" data-ref-filename="shash_desc..tfm">tfm</a>));</td></tr>
+<tr><th id="959">959</th><td>}</td></tr>
+<tr><th id="960">960</th><td></td></tr>
+<tr><th id="961">961</th><td><u>#<span data-ppcond="8">endif</span>	/* _CRYPTO_HASH_H */</u></td></tr>
+<tr><th id="962">962</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../arch/x86/events/core.c.html'>linux-5.3.1/arch/x86/events/core.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

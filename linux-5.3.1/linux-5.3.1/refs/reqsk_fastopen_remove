@@ -1,0 +1,52 @@
+<dec f='linux-5.3.1/include/net/request_sock.h' l='183' type='void reqsk_fastopen_remove(struct sock * sk, struct request_sock * req, bool reset)'/>
+<def f='linux-5.3.1/net/core/request_sock.c' l='91' ll='132' type='void reqsk_fastopen_remove(struct sock * sk, struct request_sock * req, bool reset)'/>
+<doc f='linux-5.3.1/net/core/request_sock.c' l='46'>/*
+ * This function is called to set a Fast Open socket&apos;s &quot;fastopen_rsk&quot; field
+ * to NULL when a TFO socket no longer needs to access the request_sock.
+ * This happens only after 3WHS has been either completed or aborted (e.g.,
+ * RST is received).
+ *
+ * Before TFO, a child socket is created only after 3WHS is completed,
+ * hence it never needs to access the request_sock. things get a lot more
+ * complex with TFO. A child socket, accepted or not, has to access its
+ * request_sock for 3WHS processing, e.g., to retransmit SYN-ACK pkts,
+ * until 3WHS is either completed or aborted. Afterwards the req will stay
+ * until either the child socket is accepted, or in the rare case when the
+ * listener is closed before the child is accepted.
+ *
+ * In short, a request socket is only freed after BOTH 3WHS has completed
+ * (or aborted) and the child socket has been accepted (or listener closed).
+ * When a child socket is accepted, its corresponding req-&gt;sk is set to
+ * NULL since it&apos;s no longer needed. More importantly, &quot;req-&gt;sk == NULL&quot;
+ * will be used by the code below to determine if a child socket has been
+ * accepted or not, and the check is protected by the fastopenq-&gt;lock
+ * described below.
+ *
+ * Note that fastopen_rsk is only accessed from the child socket&apos;s context
+ * with its socket lock held. But a request_sock (req) can be accessed by
+ * both its child socket through fastopen_rsk, and a listener socket through
+ * icsk_accept_queue.rskq_accept_head. To protect the access a simple spin
+ * lock per listener &quot;icsk-&gt;icsk_accept_queue.fastopenq-&gt;lock&quot; is created.
+ * only in the rare case when both the listener and the child locks are held,
+ * e.g., in inet_csk_listen_stop() do we not need to acquire the lock.
+ * The lock also protects other fields such as fastopenq-&gt;qlen, which is
+ * decremented by this function when fastopen_rsk is no longer needed.
+ *
+ * Note that another solution was to simply use the existing socket lock
+ * from the listener. But first socket lock is difficult to use. It is not
+ * a simple spin lock - one must consider sock_owned_by_user() and arrange
+ * to use sk_add_backlog() stuff. But what really makes it infeasible is the
+ * locking hierarchy violation. E.g., inet_csk_listen_stop() may try to
+ * acquire a child&apos;s lock while holding listener&apos;s socket lock. A corner
+ * case might also exist in tcp_v4_hnd_req() that will trigger this locking
+ * order.
+ *
+ * This function also sets &quot;treq-&gt;tfo_listener&quot; to false.
+ * treq-&gt;tfo_listener is used by the listener so it is protected by the
+ * fastopenq-&gt;lock in this function.
+ */</doc>
+<use f='linux-5.3.1/net/ipv4/tcp.c' l='2495' u='c' c='tcp_close'/>
+<use f='linux-5.3.1/net/ipv4/tcp.c' l='3838' u='c' c='tcp_done'/>
+<use f='linux-5.3.1/net/ipv4/tcp_input.c' l='6055' u='c' c='tcp_rcv_synrecv_state_fastopen'/>
+<use f='linux-5.3.1/net/ipv4/tcp_input.c' l='6581' u='c' c='tcp_conn_request'/>
+<use f='linux-5.3.1/net/ipv4/tcp_minisocks.c' l='789' u='c' c='tcp_check_req'/>

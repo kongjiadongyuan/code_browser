@@ -1,0 +1,36 @@
+<dec f='linux-5.3.1/include/linux/device.h' l='303' type='struct driver_private *'/>
+<offset>960</offset>
+<use f='linux-5.3.1/drivers/base/bus.c' l='452' u='r' c='bus_for_each_drv'/>
+<use f='linux-5.3.1/drivers/base/bus.c' l='608' u='r' c='uevent_store'/>
+<use f='linux-5.3.1/drivers/base/bus.c' l='636' u='w' c='bus_add_driver'/>
+<use f='linux-5.3.1/drivers/base/bus.c' l='677' u='w' c='bus_add_driver'/>
+<use f='linux-5.3.1/drivers/base/bus.c' l='700' u='r' c='bus_remove_driver'/>
+<use f='linux-5.3.1/drivers/base/bus.c' l='704' u='r' c='bus_remove_driver'/>
+<use f='linux-5.3.1/drivers/base/dd.c' l='378' u='r' c='driver_bound'/>
+<use f='linux-5.3.1/drivers/base/dd.c' l='416' u='r' c='driver_sysfs_add'/>
+<use f='linux-5.3.1/drivers/base/dd.c' l='421' u='r' c='driver_sysfs_add'/>
+<use f='linux-5.3.1/drivers/base/dd.c' l='433' u='r' c='driver_sysfs_add'/>
+<use f='linux-5.3.1/drivers/base/dd.c' l='447' u='r' c='driver_sysfs_remove'/>
+<use f='linux-5.3.1/drivers/base/dd.c' l='1203' u='r' c='driver_detach'/>
+<use f='linux-5.3.1/drivers/base/dd.c' l='1204' u='r' c='driver_detach'/>
+<use f='linux-5.3.1/drivers/base/dd.c' l='1205' u='r' c='driver_detach'/>
+<use f='linux-5.3.1/drivers/base/dd.c' l='1208' u='r' c='driver_detach'/>
+<use f='linux-5.3.1/drivers/base/dd.c' l='1208' u='r' c='driver_detach'/>
+<use f='linux-5.3.1/drivers/base/dd.c' l='1208' u='r' c='driver_detach'/>
+<use f='linux-5.3.1/drivers/base/dd.c' l='1213' u='r' c='driver_detach'/>
+<use f='linux-5.3.1/drivers/base/driver.c' l='51' u='r' c='driver_for_each_device'/>
+<use f='linux-5.3.1/drivers/base/driver.c' l='82' u='r' c='driver_find_device'/>
+<use f='linux-5.3.1/drivers/base/driver.c' l='85' u='r' c='driver_find_device'/>
+<use f='linux-5.3.1/drivers/base/driver.c' l='106' u='r' c='driver_create_file'/>
+<use f='linux-5.3.1/drivers/base/driver.c' l='122' u='r' c='driver_remove_file'/>
+<use f='linux-5.3.1/drivers/base/driver.c' l='129' u='r' c='driver_add_groups'/>
+<use f='linux-5.3.1/drivers/base/driver.c' l='135' u='r' c='driver_remove_groups'/>
+<use f='linux-5.3.1/drivers/base/driver.c' l='178' u='r' c='driver_register'/>
+<use f='linux-5.3.1/drivers/base/driver.c' l='192' u='r' c='driver_unregister'/>
+<use f='linux-5.3.1/drivers/base/module.c' l='52' u='r' c='module_add_driver'/>
+<use f='linux-5.3.1/drivers/base/module.c' l='62' u='r' c='module_add_driver'/>
+<use f='linux-5.3.1/drivers/base/module.c' l='66' u='r' c='module_add_driver'/>
+<use f='linux-5.3.1/drivers/base/module.c' l='80' u='r' c='module_remove_driver'/>
+<use f='linux-5.3.1/drivers/base/module.c' l='84' u='r' c='module_remove_driver'/>
+<use f='linux-5.3.1/drivers/base/module.c' l='85' u='r' c='module_remove_driver'/>
+<use f='linux-5.3.1/drivers/base/platform.c' l='749' u='r' c='__platform_driver_probe'/>

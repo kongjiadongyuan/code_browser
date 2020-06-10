@@ -1,0 +1,141 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>timer.c source code [linux-5.3.1/net/sunrpc/timer.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/net/sunrpc/timer.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>net</a>/<a href='./'>sunrpc</a>/<a href='timer.c.html'>timer.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0-only</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * linux/net/sunrpc/timer.c</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * Estimate RPC request round trip time.</i></td></tr>
+<tr><th id="6">6</th><td><i> *</i></td></tr>
+<tr><th id="7">7</th><td><i> * Based on packet round-trip and variance estimator algorithms described</i></td></tr>
+<tr><th id="8">8</th><td><i> * in appendix A of "Congestion Avoidance and Control" by Van Jacobson</i></td></tr>
+<tr><th id="9">9</th><td><i> * and Michael J. Karels (ACM Computer Communication Review; Proceedings</i></td></tr>
+<tr><th id="10">10</th><td><i> * of the Sigcomm '88 Symposium in Stanford, CA, August, 1988).</i></td></tr>
+<tr><th id="11">11</th><td><i> *</i></td></tr>
+<tr><th id="12">12</th><td><i> * This RTT estimator is used only for RPC over datagram protocols.</i></td></tr>
+<tr><th id="13">13</th><td><i> *</i></td></tr>
+<tr><th id="14">14</th><td><i> * Copyright (C) 2002 Trond Myklebust &lt;trond.myklebust@fys.uio.no&gt;</i></td></tr>
+<tr><th id="15">15</th><td><i> */</i></td></tr>
+<tr><th id="16">16</th><td></td></tr>
+<tr><th id="17">17</th><td><u>#include <a href="../../arch/x86/include/uapi/asm/param.h.html">&lt;asm/param.h&gt;</a></u></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../include/linux/types.h.html">&lt;linux/types.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../include/uapi/linux/unistd.h.html">&lt;linux/unistd.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../include/linux/module.h.html">&lt;linux/module.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../../include/linux/sunrpc/clnt.h.html">&lt;linux/sunrpc/clnt.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><u>#define <dfn class="macro" id="_M/RPC_RTO_MAX" data-ref="_M/RPC_RTO_MAX">RPC_RTO_MAX</dfn> (60*HZ)</u></td></tr>
+<tr><th id="26">26</th><td><u>#define <dfn class="macro" id="_M/RPC_RTO_INIT" data-ref="_M/RPC_RTO_INIT">RPC_RTO_INIT</dfn> (HZ/5)</u></td></tr>
+<tr><th id="27">27</th><td><u>#define <dfn class="macro" id="_M/RPC_RTO_MIN" data-ref="_M/RPC_RTO_MIN">RPC_RTO_MIN</dfn> (HZ/10)</u></td></tr>
+<tr><th id="28">28</th><td></td></tr>
+<tr><th id="29">29</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="30">30</th><td><i class="doc"> * rpc_init_rtt - Initialize an RPC RTT estimator context</i></td></tr>
+<tr><th id="31">31</th><td><i class="doc"> *<span class="command"> @rt</span>: context to initialize</i></td></tr>
+<tr><th id="32">32</th><td><i class="doc"> *<span class="command"> @timeo</span>: initial timeout value, in jiffies</i></td></tr>
+<tr><th id="33">33</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="34">34</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="35">35</th><td><em>void</em> <dfn class="decl def fn" id="rpc_init_rtt" title='rpc_init_rtt' data-ref="rpc_init_rtt" data-ref-filename="rpc_init_rtt">rpc_init_rtt</dfn>(<b>struct</b> <a class="type" href="../../include/linux/sunrpc/timer.h.html#rpc_rtt" title='rpc_rtt' data-ref="rpc_rtt" data-ref-filename="rpc_rtt">rpc_rtt</a> *<dfn class="local col1 decl" id="1rt" title='rt' data-type='struct rpc_rtt *' data-ref="1rt" data-ref-filename="1rt">rt</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col2 decl" id="2timeo" title='timeo' data-type='unsigned long' data-ref="2timeo" data-ref-filename="2timeo">timeo</dfn>)</td></tr>
+<tr><th id="36">36</th><td>{</td></tr>
+<tr><th id="37">37</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col3 decl" id="3init" title='init' data-type='unsigned long' data-ref="3init" data-ref-filename="3init">init</dfn> = <var>0</var>;</td></tr>
+<tr><th id="38">38</th><td>	<em>unsigned</em> <em>int</em> <dfn class="local col4 decl" id="4i" title='i' data-type='unsigned int' data-ref="4i" data-ref-filename="4i">i</dfn>;</td></tr>
+<tr><th id="39">39</th><td></td></tr>
+<tr><th id="40">40</th><td>	<a class="local col1 ref" href="#1rt" title='rt' data-ref="1rt" data-ref-filename="1rt">rt</a>-&gt;<a class="ref field" href="../../include/linux/sunrpc/timer.h.html#rpc_rtt::timeo" title='rpc_rtt::timeo' data-ref="rpc_rtt::timeo" data-ref-filename="rpc_rtt..timeo">timeo</a> = <a class="local col2 ref" href="#2timeo" title='timeo' data-ref="2timeo" data-ref-filename="2timeo">timeo</a>;</td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td>	<b>if</b> (<a class="local col2 ref" href="#2timeo" title='timeo' data-ref="2timeo" data-ref-filename="2timeo">timeo</a> &gt; <a class="macro" href="#26" title="(1000/5)" data-ref="_M/RPC_RTO_INIT">RPC_RTO_INIT</a>)</td></tr>
+<tr><th id="43">43</th><td>		<a class="local col3 ref" href="#3init" title='init' data-ref="3init" data-ref-filename="3init">init</a> = (<a class="local col2 ref" href="#2timeo" title='timeo' data-ref="2timeo" data-ref-filename="2timeo">timeo</a> - <a class="macro" href="#26" title="(1000/5)" data-ref="_M/RPC_RTO_INIT">RPC_RTO_INIT</a>) &lt;&lt; <var>3</var>;</td></tr>
+<tr><th id="44">44</th><td>	<b>for</b> (<a class="local col4 ref" href="#4i" title='i' data-ref="4i" data-ref-filename="4i">i</a> = <var>0</var>; <a class="local col4 ref" href="#4i" title='i' data-ref="4i" data-ref-filename="4i">i</a> &lt; <var>5</var>; <a class="local col4 ref" href="#4i" title='i' data-ref="4i" data-ref-filename="4i">i</a>++) {</td></tr>
+<tr><th id="45">45</th><td>		<a class="local col1 ref" href="#1rt" title='rt' data-ref="1rt" data-ref-filename="1rt">rt</a>-&gt;<a class="ref field" href="../../include/linux/sunrpc/timer.h.html#rpc_rtt::srtt" title='rpc_rtt::srtt' data-ref="rpc_rtt::srtt" data-ref-filename="rpc_rtt..srtt">srtt</a>[<a class="local col4 ref" href="#4i" title='i' data-ref="4i" data-ref-filename="4i">i</a>] = <a class="local col3 ref" href="#3init" title='init' data-ref="3init" data-ref-filename="3init">init</a>;</td></tr>
+<tr><th id="46">46</th><td>		<a class="local col1 ref" href="#1rt" title='rt' data-ref="1rt" data-ref-filename="1rt">rt</a>-&gt;<a class="ref field" href="../../include/linux/sunrpc/timer.h.html#rpc_rtt::sdrtt" title='rpc_rtt::sdrtt' data-ref="rpc_rtt::sdrtt" data-ref-filename="rpc_rtt..sdrtt">sdrtt</a>[<a class="local col4 ref" href="#4i" title='i' data-ref="4i" data-ref-filename="4i">i</a>] = <a class="macro" href="#26" title="(1000/5)" data-ref="_M/RPC_RTO_INIT">RPC_RTO_INIT</a>;</td></tr>
+<tr><th id="47">47</th><td>		<a class="local col1 ref" href="#1rt" title='rt' data-ref="1rt" data-ref-filename="1rt">rt</a>-&gt;<a class="ref field" href="../../include/linux/sunrpc/timer.h.html#rpc_rtt::ntimeouts" title='rpc_rtt::ntimeouts' data-ref="rpc_rtt::ntimeouts" data-ref-filename="rpc_rtt..ntimeouts">ntimeouts</a>[<a class="local col4 ref" href="#4i" title='i' data-ref="4i" data-ref-filename="4i">i</a>] = <var>0</var>;</td></tr>
+<tr><th id="48">48</th><td>	}</td></tr>
+<tr><th id="49">49</th><td>}</td></tr>
+<tr><th id="50">50</th><td><a class="macro" href="../../include/linux/export.h.html#126" title="extern typeof(rpc_init_rtt) rpc_init_rtt; static const char __kstrtab_rpc_init_rtt[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;rpc_init_rtt&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_rpc_init_rtt50 = (void *)&amp;rpc_init_rtt; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;rpc_init_rtt&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;rpc_init_rtt&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;rpc_init_rtt&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;rpc_init_rtt&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#rpc_init_rtt" title='rpc_init_rtt' data-ref="rpc_init_rtt" data-ref-filename="rpc_init_rtt"><a class="ref fn" href="#rpc_init_rtt" title='rpc_init_rtt' data-ref="rpc_init_rtt" data-ref-filename="rpc_init_rtt"><a class="ref fn" href="#rpc_init_rtt" title='rpc_init_rtt' data-ref="rpc_init_rtt" data-ref-filename="rpc_init_rtt">rpc_init_rtt</a></a></a>);</td></tr>
+<tr><th id="51">51</th><td></td></tr>
+<tr><th id="52">52</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="53">53</th><td><i class="doc"> * rpc_update_rtt - Update an RPC RTT estimator context</i></td></tr>
+<tr><th id="54">54</th><td><i class="doc"> *<span class="command"> @rt</span>: context to update</i></td></tr>
+<tr><th id="55">55</th><td><i class="doc"> *<span class="command"> @timer</span>: timer array index (request type)</i></td></tr>
+<tr><th id="56">56</th><td><i class="doc"> *<span class="command"> @m</span>: recent actual RTT, in jiffies</i></td></tr>
+<tr><th id="57">57</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="58">58</th><td><i class="doc"> * NB: When computing the smoothed RTT and standard deviation,</i></td></tr>
+<tr><th id="59">59</th><td><i class="doc"> *     be careful not to produce negative intermediate results.</i></td></tr>
+<tr><th id="60">60</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="61">61</th><td><em>void</em> <dfn class="decl def fn" id="rpc_update_rtt" title='rpc_update_rtt' data-ref="rpc_update_rtt" data-ref-filename="rpc_update_rtt">rpc_update_rtt</dfn>(<b>struct</b> <a class="type" href="../../include/linux/sunrpc/timer.h.html#rpc_rtt" title='rpc_rtt' data-ref="rpc_rtt" data-ref-filename="rpc_rtt">rpc_rtt</a> *<dfn class="local col5 decl" id="5rt" title='rt' data-type='struct rpc_rtt *' data-ref="5rt" data-ref-filename="5rt">rt</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col6 decl" id="6timer" title='timer' data-type='unsigned int' data-ref="6timer" data-ref-filename="6timer">timer</dfn>, <em>long</em> <dfn class="local col7 decl" id="7m" title='m' data-type='long' data-ref="7m" data-ref-filename="7m">m</dfn>)</td></tr>
+<tr><th id="62">62</th><td>{</td></tr>
+<tr><th id="63">63</th><td>	<em>long</em> *<dfn class="local col8 decl" id="8srtt" title='srtt' data-type='long *' data-ref="8srtt" data-ref-filename="8srtt">srtt</dfn>, *<dfn class="local col9 decl" id="9sdrtt" title='sdrtt' data-type='long *' data-ref="9sdrtt" data-ref-filename="9sdrtt">sdrtt</dfn>;</td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td>	<b>if</b> (<a class="local col6 ref" href="#6timer" title='timer' data-ref="6timer" data-ref-filename="6timer">timer</a>-- == <var>0</var>)</td></tr>
+<tr><th id="66">66</th><td>		<b>return</b>;</td></tr>
+<tr><th id="67">67</th><td></td></tr>
+<tr><th id="68">68</th><td>	<i>/* jiffies wrapped; ignore this one */</i></td></tr>
+<tr><th id="69">69</th><td>	<b>if</b> (<a class="local col7 ref" href="#7m" title='m' data-ref="7m" data-ref-filename="7m">m</a> &lt; <var>0</var>)</td></tr>
+<tr><th id="70">70</th><td>		<b>return</b>;</td></tr>
+<tr><th id="71">71</th><td></td></tr>
+<tr><th id="72">72</th><td>	<b>if</b> (<a class="local col7 ref" href="#7m" title='m' data-ref="7m" data-ref-filename="7m">m</a> == <var>0</var>)</td></tr>
+<tr><th id="73">73</th><td>		<a class="local col7 ref" href="#7m" title='m' data-ref="7m" data-ref-filename="7m">m</a> = <var>1L</var>;</td></tr>
+<tr><th id="74">74</th><td></td></tr>
+<tr><th id="75">75</th><td>	<a class="local col8 ref" href="#8srtt" title='srtt' data-ref="8srtt" data-ref-filename="8srtt">srtt</a> = (<em>long</em> *)&amp;<a class="local col5 ref" href="#5rt" title='rt' data-ref="5rt" data-ref-filename="5rt">rt</a>-&gt;<a class="ref field" href="../../include/linux/sunrpc/timer.h.html#rpc_rtt::srtt" title='rpc_rtt::srtt' data-ref="rpc_rtt::srtt" data-ref-filename="rpc_rtt..srtt">srtt</a>[<a class="local col6 ref" href="#6timer" title='timer' data-ref="6timer" data-ref-filename="6timer">timer</a>];</td></tr>
+<tr><th id="76">76</th><td>	<a class="local col7 ref" href="#7m" title='m' data-ref="7m" data-ref-filename="7m">m</a> -= *<a class="local col8 ref" href="#8srtt" title='srtt' data-ref="8srtt" data-ref-filename="8srtt">srtt</a> &gt;&gt; <var>3</var>;</td></tr>
+<tr><th id="77">77</th><td>	*<a class="local col8 ref" href="#8srtt" title='srtt' data-ref="8srtt" data-ref-filename="8srtt">srtt</a> += <a class="local col7 ref" href="#7m" title='m' data-ref="7m" data-ref-filename="7m">m</a>;</td></tr>
+<tr><th id="78">78</th><td></td></tr>
+<tr><th id="79">79</th><td>	<b>if</b> (<a class="local col7 ref" href="#7m" title='m' data-ref="7m" data-ref-filename="7m">m</a> &lt; <var>0</var>)</td></tr>
+<tr><th id="80">80</th><td>		<a class="local col7 ref" href="#7m" title='m' data-ref="7m" data-ref-filename="7m">m</a> = -<a class="local col7 ref" href="#7m" title='m' data-ref="7m" data-ref-filename="7m">m</a>;</td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td>	<a class="local col9 ref" href="#9sdrtt" title='sdrtt' data-ref="9sdrtt" data-ref-filename="9sdrtt">sdrtt</a> = (<em>long</em> *)&amp;<a class="local col5 ref" href="#5rt" title='rt' data-ref="5rt" data-ref-filename="5rt">rt</a>-&gt;<a class="ref field" href="../../include/linux/sunrpc/timer.h.html#rpc_rtt::sdrtt" title='rpc_rtt::sdrtt' data-ref="rpc_rtt::sdrtt" data-ref-filename="rpc_rtt..sdrtt">sdrtt</a>[<a class="local col6 ref" href="#6timer" title='timer' data-ref="6timer" data-ref-filename="6timer">timer</a>];</td></tr>
+<tr><th id="83">83</th><td>	<a class="local col7 ref" href="#7m" title='m' data-ref="7m" data-ref-filename="7m">m</a> -= *<a class="local col9 ref" href="#9sdrtt" title='sdrtt' data-ref="9sdrtt" data-ref-filename="9sdrtt">sdrtt</a> &gt;&gt; <var>2</var>;</td></tr>
+<tr><th id="84">84</th><td>	*<a class="local col9 ref" href="#9sdrtt" title='sdrtt' data-ref="9sdrtt" data-ref-filename="9sdrtt">sdrtt</a> += <a class="local col7 ref" href="#7m" title='m' data-ref="7m" data-ref-filename="7m">m</a>;</td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td>	<i>/* Set lower bound on the variance */</i></td></tr>
+<tr><th id="87">87</th><td>	<b>if</b> (*<a class="local col9 ref" href="#9sdrtt" title='sdrtt' data-ref="9sdrtt" data-ref-filename="9sdrtt">sdrtt</a> &lt; <a class="macro" href="#27" title="(1000/10)" data-ref="_M/RPC_RTO_MIN">RPC_RTO_MIN</a>)</td></tr>
+<tr><th id="88">88</th><td>		*<a class="local col9 ref" href="#9sdrtt" title='sdrtt' data-ref="9sdrtt" data-ref-filename="9sdrtt">sdrtt</a> = <a class="macro" href="#27" title="(1000/10)" data-ref="_M/RPC_RTO_MIN">RPC_RTO_MIN</a>;</td></tr>
+<tr><th id="89">89</th><td>}</td></tr>
+<tr><th id="90">90</th><td><a class="macro" href="../../include/linux/export.h.html#126" title="extern typeof(rpc_update_rtt) rpc_update_rtt; static const char __kstrtab_rpc_update_rtt[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;rpc_update_rtt&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_rpc_update_rtt90 = (void *)&amp;rpc_update_rtt; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;rpc_update_rtt&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;rpc_update_rtt&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;rpc_update_rtt&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;rpc_update_rtt&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#rpc_update_rtt" title='rpc_update_rtt' data-ref="rpc_update_rtt" data-ref-filename="rpc_update_rtt"><a class="ref fn" href="#rpc_update_rtt" title='rpc_update_rtt' data-ref="rpc_update_rtt" data-ref-filename="rpc_update_rtt"><a class="ref fn" href="#rpc_update_rtt" title='rpc_update_rtt' data-ref="rpc_update_rtt" data-ref-filename="rpc_update_rtt">rpc_update_rtt</a></a></a>);</td></tr>
+<tr><th id="91">91</th><td></td></tr>
+<tr><th id="92">92</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="93">93</th><td><i class="doc"> * rpc_calc_rto - Provide an estimated timeout value</i></td></tr>
+<tr><th id="94">94</th><td><i class="doc"> *<span class="command"> @rt</span>: context to use for calculation</i></td></tr>
+<tr><th id="95">95</th><td><i class="doc"> *<span class="command"> @timer</span>: timer array index (request type)</i></td></tr>
+<tr><th id="96">96</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="97">97</th><td><i class="doc"> * Estimate RTO for an NFS RPC sent via an unreliable datagram.  Use</i></td></tr>
+<tr><th id="98">98</th><td><i class="doc"> * the mean and mean deviation of RTT for the appropriate type of RPC</i></td></tr>
+<tr><th id="99">99</th><td><i class="doc"> * for frequently issued RPCs, and a fixed default for the others.</i></td></tr>
+<tr><th id="100">100</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="101">101</th><td><i class="doc"> * The justification for doing "other" this way is that these RPCs</i></td></tr>
+<tr><th id="102">102</th><td><i class="doc"> * happen so infrequently that timer estimation would probably be</i></td></tr>
+<tr><th id="103">103</th><td><i class="doc"> * stale.  Also, since many of these RPCs are non-idempotent, a</i></td></tr>
+<tr><th id="104">104</th><td><i class="doc"> * conservative timeout is desired.</i></td></tr>
+<tr><th id="105">105</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="106">106</th><td><i class="doc"> * getattr, lookup,</i></td></tr>
+<tr><th id="107">107</th><td><i class="doc"> * read, write, commit     - A+4D</i></td></tr>
+<tr><th id="108">108</th><td><i class="doc"> * other                   - timeo</i></td></tr>
+<tr><th id="109">109</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="110">110</th><td><em>unsigned</em> <em>long</em> <dfn class="decl def fn" id="rpc_calc_rto" title='rpc_calc_rto' data-ref="rpc_calc_rto" data-ref-filename="rpc_calc_rto">rpc_calc_rto</dfn>(<b>struct</b> <a class="type" href="../../include/linux/sunrpc/timer.h.html#rpc_rtt" title='rpc_rtt' data-ref="rpc_rtt" data-ref-filename="rpc_rtt">rpc_rtt</a> *<dfn class="local col0 decl" id="10rt" title='rt' data-type='struct rpc_rtt *' data-ref="10rt" data-ref-filename="10rt">rt</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col1 decl" id="11timer" title='timer' data-type='unsigned int' data-ref="11timer" data-ref-filename="11timer">timer</dfn>)</td></tr>
+<tr><th id="111">111</th><td>{</td></tr>
+<tr><th id="112">112</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col2 decl" id="12res" title='res' data-type='unsigned long' data-ref="12res" data-ref-filename="12res">res</dfn>;</td></tr>
+<tr><th id="113">113</th><td></td></tr>
+<tr><th id="114">114</th><td>	<b>if</b> (<a class="local col1 ref" href="#11timer" title='timer' data-ref="11timer" data-ref-filename="11timer">timer</a>-- == <var>0</var>)</td></tr>
+<tr><th id="115">115</th><td>		<b>return</b> <a class="local col0 ref" href="#10rt" title='rt' data-ref="10rt" data-ref-filename="10rt">rt</a>-&gt;<a class="ref field" href="../../include/linux/sunrpc/timer.h.html#rpc_rtt::timeo" title='rpc_rtt::timeo' data-ref="rpc_rtt::timeo" data-ref-filename="rpc_rtt..timeo">timeo</a>;</td></tr>
+<tr><th id="116">116</th><td></td></tr>
+<tr><th id="117">117</th><td>	<a class="local col2 ref" href="#12res" title='res' data-ref="12res" data-ref-filename="12res">res</a> = ((<a class="local col0 ref" href="#10rt" title='rt' data-ref="10rt" data-ref-filename="10rt">rt</a>-&gt;<a class="ref field" href="../../include/linux/sunrpc/timer.h.html#rpc_rtt::srtt" title='rpc_rtt::srtt' data-ref="rpc_rtt::srtt" data-ref-filename="rpc_rtt..srtt">srtt</a>[<a class="local col1 ref" href="#11timer" title='timer' data-ref="11timer" data-ref-filename="11timer">timer</a>] + <var>7</var>) &gt;&gt; <var>3</var>) + <a class="local col0 ref" href="#10rt" title='rt' data-ref="10rt" data-ref-filename="10rt">rt</a>-&gt;<a class="ref field" href="../../include/linux/sunrpc/timer.h.html#rpc_rtt::sdrtt" title='rpc_rtt::sdrtt' data-ref="rpc_rtt::sdrtt" data-ref-filename="rpc_rtt..sdrtt">sdrtt</a>[<a class="local col1 ref" href="#11timer" title='timer' data-ref="11timer" data-ref-filename="11timer">timer</a>];</td></tr>
+<tr><th id="118">118</th><td>	<b>if</b> (<a class="local col2 ref" href="#12res" title='res' data-ref="12res" data-ref-filename="12res">res</a> &gt; <a class="macro" href="#25" title="(60*1000)" data-ref="_M/RPC_RTO_MAX">RPC_RTO_MAX</a>)</td></tr>
+<tr><th id="119">119</th><td>		<a class="local col2 ref" href="#12res" title='res' data-ref="12res" data-ref-filename="12res">res</a> = <a class="macro" href="#25" title="(60*1000)" data-ref="_M/RPC_RTO_MAX">RPC_RTO_MAX</a>;</td></tr>
+<tr><th id="120">120</th><td></td></tr>
+<tr><th id="121">121</th><td>	<b>return</b> <a class="local col2 ref" href="#12res" title='res' data-ref="12res" data-ref-filename="12res">res</a>;</td></tr>
+<tr><th id="122">122</th><td>}</td></tr>
+<tr><th id="123">123</th><td><a class="macro" href="../../include/linux/export.h.html#126" title="extern typeof(rpc_calc_rto) rpc_calc_rto; static const char __kstrtab_rpc_calc_rto[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;rpc_calc_rto&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_rpc_calc_rto123 = (void *)&amp;rpc_calc_rto; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;rpc_calc_rto&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;rpc_calc_rto&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;rpc_calc_rto&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;rpc_calc_rto&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#rpc_calc_rto" title='rpc_calc_rto' data-ref="rpc_calc_rto" data-ref-filename="rpc_calc_rto"><a class="ref fn" href="#rpc_calc_rto" title='rpc_calc_rto' data-ref="rpc_calc_rto" data-ref-filename="rpc_calc_rto"><a class="ref fn" href="#rpc_calc_rto" title='rpc_calc_rto' data-ref="rpc_calc_rto" data-ref-filename="rpc_calc_rto">rpc_calc_rto</a></a></a>);</td></tr>
+<tr><th id="124">124</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

@@ -1,0 +1,103 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>symlink.c source code [linux-5.3.1/fs/nfs/symlink.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/fs/nfs/symlink.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>fs</a>/<a href='./'>nfs</a>/<a href='symlink.c.html'>symlink.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> *  linux/fs/nfs/symlink.c</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> *  Copyright (C) 1992  Rick Sladkey</i></td></tr>
+<tr><th id="6">6</th><td><i> *</i></td></tr>
+<tr><th id="7">7</th><td><i> *  Optimization changes Copyright (C) 1994 Florian La Roche</i></td></tr>
+<tr><th id="8">8</th><td><i> *</i></td></tr>
+<tr><th id="9">9</th><td><i> *  Jun 7 1999, cache symlink lookups in the page cache.  -DaveM</i></td></tr>
+<tr><th id="10">10</th><td><i> *</i></td></tr>
+<tr><th id="11">11</th><td><i> *  nfs symlink handling code</i></td></tr>
+<tr><th id="12">12</th><td><i> */</i></td></tr>
+<tr><th id="13">13</th><td></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="../../include/linux/time.h.html">&lt;linux/time.h&gt;</a></u></td></tr>
+<tr><th id="15">15</th><td><u>#include <a href="../../include/linux/errno.h.html">&lt;linux/errno.h&gt;</a></u></td></tr>
+<tr><th id="16">16</th><td><u>#include <a href="../../include/linux/sunrpc/clnt.h.html">&lt;linux/sunrpc/clnt.h&gt;</a></u></td></tr>
+<tr><th id="17">17</th><td><u>#include <a href="../../include/linux/nfs.h.html">&lt;linux/nfs.h&gt;</a></u></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../../include/uapi/linux/nfs2.h.html">&lt;linux/nfs2.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../include/linux/nfs_fs.h.html">&lt;linux/nfs_fs.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../include/linux/pagemap.h.html">&lt;linux/pagemap.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../include/linux/stat.h.html">&lt;linux/stat.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../../include/linux/mm.h.html">&lt;linux/mm.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../../include/linux/string.h.html">&lt;linux/string.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><i  data-doc="nfs_symlink_filler">/* Symlink caching in the page cache is even more simplistic</i></td></tr>
+<tr><th id="26">26</th><td><i  data-doc="nfs_symlink_filler"> * and straight-forward than readdir caching.</i></td></tr>
+<tr><th id="27">27</th><td><i  data-doc="nfs_symlink_filler"> */</i></td></tr>
+<tr><th id="28">28</th><td></td></tr>
+<tr><th id="29">29</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="nfs_symlink_filler" title='nfs_symlink_filler' data-type='int nfs_symlink_filler(void * data, struct page * page)' data-ref="nfs_symlink_filler" data-ref-filename="nfs_symlink_filler">nfs_symlink_filler</dfn>(<em>void</em> *<dfn class="local col1 decl" id="1data" title='data' data-type='void *' data-ref="1data" data-ref-filename="1data">data</dfn>, <b>struct</b> <a class="type" href="../../include/linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="local col2 decl" id="2page" title='page' data-type='struct page *' data-ref="2page" data-ref-filename="2page">page</dfn>)</td></tr>
+<tr><th id="30">30</th><td>{</td></tr>
+<tr><th id="31">31</th><td>	<b>struct</b> <a class="type" href="../../include/linux/fs.h.html#inode" title='inode' data-ref="inode" data-ref-filename="inode">inode</a> *<dfn class="local col3 decl" id="3inode" title='inode' data-type='struct inode *' data-ref="3inode" data-ref-filename="3inode">inode</dfn> = <a class="local col1 ref" href="#1data" title='data' data-ref="1data" data-ref-filename="1data">data</a>;</td></tr>
+<tr><th id="32">32</th><td>	<em>int</em> <dfn class="local col4 decl" id="4error" title='error' data-type='int' data-ref="4error" data-ref-filename="4error">error</dfn>;</td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td>	<a class="local col4 ref" href="#4error" title='error' data-ref="4error" data-ref-filename="4error">error</a> = <a class="ref fn" href="../../include/linux/nfs_fs.h.html#NFS_PROTO" title='NFS_PROTO' data-ref="NFS_PROTO" data-ref-filename="NFS_PROTO">NFS_PROTO</a>(<a class="local col3 ref" href="#3inode" title='inode' data-ref="3inode" data-ref-filename="3inode">inode</a>)-&gt;<a class="ref field" href="../../include/linux/nfs_xdr.h.html#nfs_rpc_ops::readlink" title='nfs_rpc_ops::readlink' data-ref="nfs_rpc_ops::readlink" data-ref-filename="nfs_rpc_ops..readlink">readlink</a>(<a class="local col3 ref" href="#3inode" title='inode' data-ref="3inode" data-ref-filename="3inode">inode</a>, <a class="local col2 ref" href="#2page" title='page' data-ref="2page" data-ref-filename="2page">page</a>, <var>0</var>, <a class="macro" href="../../arch/x86/include/asm/page_types.h.html#11" title="((1UL) &lt;&lt; 12)" data-ref="_M/PAGE_SIZE">PAGE_SIZE</a>);</td></tr>
+<tr><th id="35">35</th><td>	<b>if</b> (<a class="local col4 ref" href="#4error" title='error' data-ref="4error" data-ref-filename="4error">error</a> &lt; <var>0</var>)</td></tr>
+<tr><th id="36">36</th><td>		<b>goto</b> <a class="lbl" href="#5error" data-ref="5error" data-ref-filename="5error">error</a>;</td></tr>
+<tr><th id="37">37</th><td>	<a class="ref fn" href="../../include/linux/page-flags.h.html#SetPageUptodate" title='SetPageUptodate' data-ref="SetPageUptodate" data-ref-filename="SetPageUptodate">SetPageUptodate</a>(<a class="local col2 ref" href="#2page" title='page' data-ref="2page" data-ref-filename="2page">page</a>);</td></tr>
+<tr><th id="38">38</th><td>	<a class="ref fn" href="../../include/linux/pagemap.h.html#unlock_page" title='unlock_page' data-ref="unlock_page" data-ref-filename="unlock_page">unlock_page</a>(<a class="local col2 ref" href="#2page" title='page' data-ref="2page" data-ref-filename="2page">page</a>);</td></tr>
+<tr><th id="39">39</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="40">40</th><td></td></tr>
+<tr><th id="41">41</th><td><dfn class="lbl" id="5error" data-ref="5error" data-ref-filename="5error">error</dfn>:</td></tr>
+<tr><th id="42">42</th><td>	<a class="ref fn" href="../../include/linux/page-flags.h.html#314" title='SetPageError' data-ref="SetPageError" data-ref-filename="SetPageError">SetPageError</a>(<a class="local col2 ref" href="#2page" title='page' data-ref="2page" data-ref-filename="2page">page</a>);</td></tr>
+<tr><th id="43">43</th><td>	<a class="ref fn" href="../../include/linux/pagemap.h.html#unlock_page" title='unlock_page' data-ref="unlock_page" data-ref-filename="unlock_page">unlock_page</a>(<a class="local col2 ref" href="#2page" title='page' data-ref="2page" data-ref-filename="2page">page</a>);</td></tr>
+<tr><th id="44">44</th><td>	<b>return</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#9" title="5" data-ref="_M/EIO">EIO</a>;</td></tr>
+<tr><th id="45">45</th><td>}</td></tr>
+<tr><th id="46">46</th><td></td></tr>
+<tr><th id="47">47</th><td><em>static</em> <em>const</em> <em>char</em> *<dfn class="tu decl def fn" id="nfs_get_link" title='nfs_get_link' data-type='const char * nfs_get_link(struct dentry * dentry, struct inode * inode, struct delayed_call * done)' data-ref="nfs_get_link" data-ref-filename="nfs_get_link">nfs_get_link</dfn>(<b>struct</b> <a class="type" href="../../include/linux/dcache.h.html#dentry" title='dentry' data-ref="dentry" data-ref-filename="dentry">dentry</a> *<dfn class="local col6 decl" id="6dentry" title='dentry' data-type='struct dentry *' data-ref="6dentry" data-ref-filename="6dentry">dentry</dfn>,</td></tr>
+<tr><th id="48">48</th><td>				<b>struct</b> <a class="type" href="../../include/linux/fs.h.html#inode" title='inode' data-ref="inode" data-ref-filename="inode">inode</a> *<dfn class="local col7 decl" id="7inode" title='inode' data-type='struct inode *' data-ref="7inode" data-ref-filename="7inode">inode</dfn>,</td></tr>
+<tr><th id="49">49</th><td>				<b>struct</b> <a class="type" href="../../include/linux/delayed_call.h.html#delayed_call" title='delayed_call' data-ref="delayed_call" data-ref-filename="delayed_call">delayed_call</a> *<dfn class="local col8 decl" id="8done" title='done' data-type='struct delayed_call *' data-ref="8done" data-ref-filename="8done">done</dfn>)</td></tr>
+<tr><th id="50">50</th><td>{</td></tr>
+<tr><th id="51">51</th><td>	<b>struct</b> <a class="type" href="../../include/linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="local col9 decl" id="9page" title='page' data-type='struct page *' data-ref="9page" data-ref-filename="9page">page</dfn>;</td></tr>
+<tr><th id="52">52</th><td>	<em>void</em> *<dfn class="local col0 decl" id="10err" title='err' data-type='void *' data-ref="10err" data-ref-filename="10err">err</dfn>;</td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td>	<b>if</b> (!<a class="local col6 ref" href="#6dentry" title='dentry' data-ref="6dentry" data-ref-filename="6dentry">dentry</a>) {</td></tr>
+<tr><th id="55">55</th><td>		<a class="local col0 ref" href="#10err" title='err' data-ref="10err" data-ref-filename="10err">err</a> = <a class="ref fn" href="../../include/linux/err.h.html#ERR_PTR" title='ERR_PTR' data-ref="ERR_PTR" data-ref-filename="ERR_PTR">ERR_PTR</a>(<a class="ref fn" href="../../include/linux/nfs_fs.h.html#nfs_revalidate_mapping_rcu" title='nfs_revalidate_mapping_rcu' data-ref="nfs_revalidate_mapping_rcu" data-ref-filename="nfs_revalidate_mapping_rcu">nfs_revalidate_mapping_rcu</a>(<a class="local col7 ref" href="#7inode" title='inode' data-ref="7inode" data-ref-filename="7inode">inode</a>));</td></tr>
+<tr><th id="56">56</th><td>		<b>if</b> (<a class="local col0 ref" href="#10err" title='err' data-ref="10err" data-ref-filename="10err">err</a>)</td></tr>
+<tr><th id="57">57</th><td>			<b>return</b> <a class="local col0 ref" href="#10err" title='err' data-ref="10err" data-ref-filename="10err">err</a>;</td></tr>
+<tr><th id="58">58</th><td>		<a class="local col9 ref" href="#9page" title='page' data-ref="9page" data-ref-filename="9page">page</a> = <a class="ref fn" href="../../include/linux/pagemap.h.html#find_get_page" title='find_get_page' data-ref="find_get_page" data-ref-filename="find_get_page">find_get_page</a>(<a class="local col7 ref" href="#7inode" title='inode' data-ref="7inode" data-ref-filename="7inode">inode</a>-&gt;<a class="ref field" href="../../include/linux/fs.h.html#inode::i_mapping" title='inode::i_mapping' data-ref="inode::i_mapping" data-ref-filename="inode..i_mapping">i_mapping</a>, <var>0</var>);</td></tr>
+<tr><th id="59">59</th><td>		<b>if</b> (!<a class="local col9 ref" href="#9page" title='page' data-ref="9page" data-ref-filename="9page">page</a>)</td></tr>
+<tr><th id="60">60</th><td>			<b>return</b> <a class="ref fn" href="../../include/linux/err.h.html#ERR_PTR" title='ERR_PTR' data-ref="ERR_PTR" data-ref-filename="ERR_PTR">ERR_PTR</a>(-<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#14" title="10" data-ref="_M/ECHILD">ECHILD</a>);</td></tr>
+<tr><th id="61">61</th><td>		<b>if</b> (!<a class="ref fn" href="../../include/linux/page-flags.h.html#PageUptodate" title='PageUptodate' data-ref="PageUptodate" data-ref-filename="PageUptodate">PageUptodate</a>(<a class="local col9 ref" href="#9page" title='page' data-ref="9page" data-ref-filename="9page">page</a>)) {</td></tr>
+<tr><th id="62">62</th><td>			<a class="ref fn" href="../../include/linux/mm.h.html#put_page" title='put_page' data-ref="put_page" data-ref-filename="put_page">put_page</a>(<a class="local col9 ref" href="#9page" title='page' data-ref="9page" data-ref-filename="9page">page</a>);</td></tr>
+<tr><th id="63">63</th><td>			<b>return</b> <a class="ref fn" href="../../include/linux/err.h.html#ERR_PTR" title='ERR_PTR' data-ref="ERR_PTR" data-ref-filename="ERR_PTR">ERR_PTR</a>(-<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#14" title="10" data-ref="_M/ECHILD">ECHILD</a>);</td></tr>
+<tr><th id="64">64</th><td>		}</td></tr>
+<tr><th id="65">65</th><td>	} <b>else</b> {</td></tr>
+<tr><th id="66">66</th><td>		<a class="local col0 ref" href="#10err" title='err' data-ref="10err" data-ref-filename="10err">err</a> = <a class="ref fn" href="../../include/linux/err.h.html#ERR_PTR" title='ERR_PTR' data-ref="ERR_PTR" data-ref-filename="ERR_PTR">ERR_PTR</a>(<a class="ref fn" href="../../include/linux/nfs_fs.h.html#nfs_revalidate_mapping" title='nfs_revalidate_mapping' data-ref="nfs_revalidate_mapping" data-ref-filename="nfs_revalidate_mapping">nfs_revalidate_mapping</a>(<a class="local col7 ref" href="#7inode" title='inode' data-ref="7inode" data-ref-filename="7inode">inode</a>, <a class="local col7 ref" href="#7inode" title='inode' data-ref="7inode" data-ref-filename="7inode">inode</a>-&gt;<a class="ref field" href="../../include/linux/fs.h.html#inode::i_mapping" title='inode::i_mapping' data-ref="inode::i_mapping" data-ref-filename="inode..i_mapping">i_mapping</a>));</td></tr>
+<tr><th id="67">67</th><td>		<b>if</b> (<a class="local col0 ref" href="#10err" title='err' data-ref="10err" data-ref-filename="10err">err</a>)</td></tr>
+<tr><th id="68">68</th><td>			<b>return</b> <a class="local col0 ref" href="#10err" title='err' data-ref="10err" data-ref-filename="10err">err</a>;</td></tr>
+<tr><th id="69">69</th><td>		<a class="local col9 ref" href="#9page" title='page' data-ref="9page" data-ref-filename="9page">page</a> = <a class="ref fn" href="../../include/linux/pagemap.h.html#read_cache_page" title='read_cache_page' data-ref="read_cache_page" data-ref-filename="read_cache_page">read_cache_page</a>(&amp;<a class="local col7 ref" href="#7inode" title='inode' data-ref="7inode" data-ref-filename="7inode">inode</a>-&gt;<a class="ref field" href="../../include/linux/fs.h.html#inode::i_data" title='inode::i_data' data-ref="inode::i_data" data-ref-filename="inode..i_data">i_data</a>, <var>0</var>, <a class="tu ref fn" href="#nfs_symlink_filler" title='nfs_symlink_filler' data-use='r' data-ref="nfs_symlink_filler" data-ref-filename="nfs_symlink_filler">nfs_symlink_filler</a>,</td></tr>
+<tr><th id="70">70</th><td>				<a class="local col7 ref" href="#7inode" title='inode' data-ref="7inode" data-ref-filename="7inode">inode</a>);</td></tr>
+<tr><th id="71">71</th><td>		<b>if</b> (<a class="ref fn" href="../../include/linux/err.h.html#IS_ERR" title='IS_ERR' data-ref="IS_ERR" data-ref-filename="IS_ERR">IS_ERR</a>(<a class="local col9 ref" href="#9page" title='page' data-ref="9page" data-ref-filename="9page">page</a>))</td></tr>
+<tr><th id="72">72</th><td>			<b>return</b> <a class="ref fn" href="../../include/linux/err.h.html#ERR_CAST" title='ERR_CAST' data-ref="ERR_CAST" data-ref-filename="ERR_CAST">ERR_CAST</a>(<a class="local col9 ref" href="#9page" title='page' data-ref="9page" data-ref-filename="9page">page</a>);</td></tr>
+<tr><th id="73">73</th><td>	}</td></tr>
+<tr><th id="74">74</th><td>	<a class="ref fn" href="../../include/linux/delayed_call.h.html#set_delayed_call" title='set_delayed_call' data-ref="set_delayed_call" data-ref-filename="set_delayed_call">set_delayed_call</a>(<a class="local col8 ref" href="#8done" title='done' data-ref="8done" data-ref-filename="8done">done</a>, <a class="ref fn" href="../../include/linux/fs.h.html#page_put_link" title='page_put_link' data-ref="page_put_link" data-ref-filename="page_put_link">page_put_link</a>, <a class="local col9 ref" href="#9page" title='page' data-ref="9page" data-ref-filename="9page">page</a>);</td></tr>
+<tr><th id="75">75</th><td>	<b>return</b> <a class="macro" href="../../include/linux/mm.h.html#1328" title="lowmem_page_address(page)" data-ref="_M/page_address">page_address</a>(<a class="local col9 ref" href="#9page" title='page' data-ref="9page" data-ref-filename="9page">page</a>);</td></tr>
+<tr><th id="76">76</th><td>}</td></tr>
+<tr><th id="77">77</th><td></td></tr>
+<tr><th id="78">78</th><td><i>/*</i></td></tr>
+<tr><th id="79">79</th><td><i> * symlinks can't do much...</i></td></tr>
+<tr><th id="80">80</th><td><i> */</i></td></tr>
+<tr><th id="81">81</th><td><em>const</em> <b>struct</b> <a class="type" href="../../include/linux/fs.h.html#inode_operations" title='inode_operations' data-ref="inode_operations" data-ref-filename="inode_operations">inode_operations</a> <dfn class="decl def" id="nfs_symlink_inode_operations" title='nfs_symlink_inode_operations' data-ref="nfs_symlink_inode_operations" data-ref-filename="nfs_symlink_inode_operations">nfs_symlink_inode_operations</dfn> = {</td></tr>
+<tr><th id="82">82</th><td>	.<a class="ref field" href="../../include/linux/fs.h.html#inode_operations::get_link" title='inode_operations::get_link' data-ref="inode_operations::get_link" data-ref-filename="inode_operations..get_link">get_link</a>	= <a class="tu ref fn" href="#nfs_get_link" title='nfs_get_link' data-ref="nfs_get_link" data-ref-filename="nfs_get_link">nfs_get_link</a>,</td></tr>
+<tr><th id="83">83</th><td>	.<a class="ref field" href="../../include/linux/fs.h.html#inode_operations::getattr" title='inode_operations::getattr' data-ref="inode_operations::getattr" data-ref-filename="inode_operations..getattr">getattr</a>	= <a class="ref fn" href="../../include/linux/nfs_fs.h.html#nfs_getattr" title='nfs_getattr' data-ref="nfs_getattr" data-ref-filename="nfs_getattr">nfs_getattr</a>,</td></tr>
+<tr><th id="84">84</th><td>	.<a class="ref field" href="../../include/linux/fs.h.html#inode_operations::setattr" title='inode_operations::setattr' data-ref="inode_operations::setattr" data-ref-filename="inode_operations..setattr">setattr</a>	= <a class="ref fn" href="../../include/linux/nfs_fs.h.html#nfs_setattr" title='nfs_setattr' data-ref="nfs_setattr" data-ref-filename="nfs_setattr">nfs_setattr</a>,</td></tr>
+<tr><th id="85">85</th><td>};</td></tr>
+<tr><th id="86">86</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

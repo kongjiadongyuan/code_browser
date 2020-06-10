@@ -1,0 +1,27 @@
+<dec f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='273' type='struct rpc_pipe_msg'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='364' u='m' c='__gss_unhash_msg'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='385' u='m' c='gss_handle_downcall_result'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='397' u='m' c='gss_handle_downcall_result'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='411' u='m' c='gss_upcall_callback'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='422' u='m' c='gss_encode_v0_msg'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='423' u='m' c='gss_encode_v0_msg'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='434' u='r' c='gss_v0_upcall'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='455' u='m' c='gss_encode_v1_msg'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='465' u='m' c='gss_encode_v1_msg'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='491' u='m' c='gss_encode_v1_msg'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='499' u='m' c='gss_encode_v1_msg'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='505' u='m' c='gss_encode_v1_msg'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='506' u='m' c='gss_encode_v1_msg'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='519' u='r' c='gss_v1_upcall'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='586' u='a' c='gss_setup_upcall'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='633' u='m' c='gss_refresh_upcall'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='640' u='m' c='gss_refresh_upcall'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='689' u='m' c='gss_create_upcall'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='702' u='m' c='gss_create_upcall'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='773' u='m' c='gss_pipe_downcall'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='780' u='m' c='gss_pipe_downcall'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='785' u='m' c='gss_pipe_downcall'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='850' u='m' c='gss_pipe_release'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='852' u='m' c='gss_pipe_release'/>
+<use f='linux-5.3.1/net/sunrpc/auth_gss/auth_gss.c' l='867' u='r' c='gss_pipe_destroy_msg'/>
+<offset>128</offset>

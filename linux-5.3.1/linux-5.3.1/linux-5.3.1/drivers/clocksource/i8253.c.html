@@ -1,0 +1,214 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>i8253.c source code [linux-5.3.1/drivers/clocksource/i8253.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/drivers/clocksource/i8253.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>drivers</a>/<a href='./'>clocksource</a>/<a href='i8253.c.html'>i8253.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * i8253 PIT clocksource</i></td></tr>
+<tr><th id="4">4</th><td><i> */</i></td></tr>
+<tr><th id="5">5</th><td><u>#include <a href="../../include/linux/clockchips.h.html">&lt;linux/clockchips.h&gt;</a></u></td></tr>
+<tr><th id="6">6</th><td><u>#include <a href="../../include/linux/init.h.html">&lt;linux/init.h&gt;</a></u></td></tr>
+<tr><th id="7">7</th><td><u>#include <a href="../../include/linux/io.h.html">&lt;linux/io.h&gt;</a></u></td></tr>
+<tr><th id="8">8</th><td><u>#include <a href="../../include/linux/spinlock.h.html">&lt;linux/spinlock.h&gt;</a></u></td></tr>
+<tr><th id="9">9</th><td><u>#include <a href="../../include/linux/timex.h.html">&lt;linux/timex.h&gt;</a></u></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="../../include/linux/module.h.html">&lt;linux/module.h&gt;</a></u></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../../include/linux/i8253.h.html">&lt;linux/i8253.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="../../include/linux/smp.h.html">&lt;linux/smp.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td></td></tr>
+<tr><th id="14">14</th><td><i>/*</i></td></tr>
+<tr><th id="15">15</th><td><i> * Protects access to I/O ports</i></td></tr>
+<tr><th id="16">16</th><td><i> *</i></td></tr>
+<tr><th id="17">17</th><td><i> * 0040-0043 : timer0, i8253 / i8254</i></td></tr>
+<tr><th id="18">18</th><td><i> * 0061-0061 : NMI Control Register which contains two speaker control bits.</i></td></tr>
+<tr><th id="19">19</th><td><i> */</i></td></tr>
+<tr><th id="20">20</th><td><a class="macro" href="../../include/linux/spinlock_types.h.html#59" title="raw_spinlock_t i8253_lock = (raw_spinlock_t) { .raw_lock = { { .val = { (0) } } }, }" data-ref="_M/DEFINE_RAW_SPINLOCK">DEFINE_RAW_SPINLOCK</a>(<dfn class="decl def" id="i8253_lock" title='i8253_lock' data-ref="i8253_lock" data-ref-filename="i8253_lock">i8253_lock</dfn>);</td></tr>
+<tr><th id="21">21</th><td><a class="macro" href="../../include/linux/export.h.html#123" title="extern typeof(i8253_lock) i8253_lock; static const char __kstrtab_i8253_lock[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;i8253_lock&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_i8253_lock21 = (void *)&amp;i8253_lock; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;&quot; &quot;+&quot; &quot;i8253_lock&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;i8253_lock&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;i8253_lock&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;i8253_lock&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL">EXPORT_SYMBOL</a>(<a class="decl" href="../../include/linux/i8253.h.html#i8253_lock" title='i8253_lock' data-ref="i8253_lock" data-ref-filename="i8253_lock" id="i8253_lock"><a class="ref" href="../../include/linux/i8253.h.html#i8253_lock" title='i8253_lock' data-ref="i8253_lock" data-ref-filename="i8253_lock"><a class="ref" href="../../include/linux/i8253.h.html#i8253_lock" title='i8253_lock' data-ref="i8253_lock" data-ref-filename="i8253_lock">i8253_lock</a></a></a>);</td></tr>
+<tr><th id="22">22</th><td></td></tr>
+<tr><th id="23">23</th><td><i>/*</i></td></tr>
+<tr><th id="24">24</th><td><i> * Handle PIT quirk in pit_shutdown() where zeroing the counter register</i></td></tr>
+<tr><th id="25">25</th><td><i> * restarts the PIT, negating the shutdown. On platforms with the quirk,</i></td></tr>
+<tr><th id="26">26</th><td><i> * platform specific code can set this to false.</i></td></tr>
+<tr><th id="27">27</th><td><i> */</i></td></tr>
+<tr><th id="28">28</th><td><a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def" id="i8253_clear_counter_on_shutdown" title='i8253_clear_counter_on_shutdown' data-ref="i8253_clear_counter_on_shutdown" data-ref-filename="i8253_clear_counter_on_shutdown">i8253_clear_counter_on_shutdown</dfn> <a class="macro" href="../../include/linux/cache.h.html#31" title="__attribute__((__section__(&quot;.data..ro_after_init&quot;)))" data-ref="_M/__ro_after_init">__ro_after_init</a> = <a class="enum" href="../../include/linux/stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>;</td></tr>
+<tr><th id="29">29</th><td></td></tr>
+<tr><th id="30">30</th><td><u>#<span data-ppcond="30">ifdef</span> <span class="macro" data-ref="_M/CONFIG_CLKSRC_I8253">CONFIG_CLKSRC_I8253</span></u></td></tr>
+<tr><th id="31">31</th><td><i>/*</i></td></tr>
+<tr><th id="32">32</th><td><i> * Since the PIT overflows every tick, its not very useful</i></td></tr>
+<tr><th id="33">33</th><td><i> * to just read by itself. So use jiffies to emulate a free</i></td></tr>
+<tr><th id="34">34</th><td><i> * running counter:</i></td></tr>
+<tr><th id="35">35</th><td><i> */</i></td></tr>
+<tr><th id="36">36</th><td><em>static</em> u64 i8253_read(<b>struct</b> clocksource *cs)</td></tr>
+<tr><th id="37">37</th><td>{</td></tr>
+<tr><th id="38">38</th><td>	<em>static</em> <em>int</em> old_count;</td></tr>
+<tr><th id="39">39</th><td>	<em>static</em> u32 old_jifs;</td></tr>
+<tr><th id="40">40</th><td>	<em>unsigned</em> <em>long</em> flags;</td></tr>
+<tr><th id="41">41</th><td>	<em>int</em> count;</td></tr>
+<tr><th id="42">42</th><td>	u32 jifs;</td></tr>
+<tr><th id="43">43</th><td></td></tr>
+<tr><th id="44">44</th><td>	raw_spin_lock_irqsave(&amp;i8253_lock, flags);</td></tr>
+<tr><th id="45">45</th><td>	<i>/*</i></td></tr>
+<tr><th id="46">46</th><td><i>	 * Although our caller may have the read side of jiffies_lock,</i></td></tr>
+<tr><th id="47">47</th><td><i>	 * this is now a seqlock, and we are cheating in this routine</i></td></tr>
+<tr><th id="48">48</th><td><i>	 * by having side effects on state that we cannot undo if</i></td></tr>
+<tr><th id="49">49</th><td><i>	 * there is a collision on the seqlock and our caller has to</i></td></tr>
+<tr><th id="50">50</th><td><i>	 * retry.  (Namely, old_jifs and old_count.)  So we must treat</i></td></tr>
+<tr><th id="51">51</th><td><i>	 * jiffies as volatile despite the lock.  We read jiffies</i></td></tr>
+<tr><th id="52">52</th><td><i>	 * before latching the timer count to guarantee that although</i></td></tr>
+<tr><th id="53">53</th><td><i>	 * the jiffies value might be older than the count (that is,</i></td></tr>
+<tr><th id="54">54</th><td><i>	 * the counter may underflow between the last point where</i></td></tr>
+<tr><th id="55">55</th><td><i>	 * jiffies was incremented and the point where we latch the</i></td></tr>
+<tr><th id="56">56</th><td><i>	 * count), it cannot be newer.</i></td></tr>
+<tr><th id="57">57</th><td><i>	 */</i></td></tr>
+<tr><th id="58">58</th><td>	jifs = jiffies;</td></tr>
+<tr><th id="59">59</th><td>	outb_p(<var>0x00</var>, PIT_MODE);	<i>/* latch the count ASAP */</i></td></tr>
+<tr><th id="60">60</th><td>	count = inb_p(PIT_CH0);	<i>/* read the latched count */</i></td></tr>
+<tr><th id="61">61</th><td>	count |= inb_p(PIT_CH0) &lt;&lt; <var>8</var>;</td></tr>
+<tr><th id="62">62</th><td></td></tr>
+<tr><th id="63">63</th><td>	<i>/* VIA686a test code... reset the latch if count &gt; max + 1 */</i></td></tr>
+<tr><th id="64">64</th><td>	<b>if</b> (count &gt; PIT_LATCH) {</td></tr>
+<tr><th id="65">65</th><td>		outb_p(<var>0x34</var>, PIT_MODE);</td></tr>
+<tr><th id="66">66</th><td>		outb_p(PIT_LATCH &amp; <var>0xff</var>, PIT_CH0);</td></tr>
+<tr><th id="67">67</th><td>		outb_p(PIT_LATCH &gt;&gt; <var>8</var>, PIT_CH0);</td></tr>
+<tr><th id="68">68</th><td>		count = PIT_LATCH - <var>1</var>;</td></tr>
+<tr><th id="69">69</th><td>	}</td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td>	<i>/*</i></td></tr>
+<tr><th id="72">72</th><td><i>	 * It's possible for count to appear to go the wrong way for a</i></td></tr>
+<tr><th id="73">73</th><td><i>	 * couple of reasons:</i></td></tr>
+<tr><th id="74">74</th><td><i>	 *</i></td></tr>
+<tr><th id="75">75</th><td><i>	 *  1. The timer counter underflows, but we haven't handled the</i></td></tr>
+<tr><th id="76">76</th><td><i>	 *     resulting interrupt and incremented jiffies yet.</i></td></tr>
+<tr><th id="77">77</th><td><i>	 *  2. Hardware problem with the timer, not giving us continuous time,</i></td></tr>
+<tr><th id="78">78</th><td><i>	 *     the counter does small "jumps" upwards on some Pentium systems,</i></td></tr>
+<tr><th id="79">79</th><td><i>	 *     (see c't 95/10 page 335 for Neptun bug.)</i></td></tr>
+<tr><th id="80">80</th><td><i>	 *</i></td></tr>
+<tr><th id="81">81</th><td><i>	 * Previous attempts to handle these cases intelligently were</i></td></tr>
+<tr><th id="82">82</th><td><i>	 * buggy, so we just do the simple thing now.</i></td></tr>
+<tr><th id="83">83</th><td><i>	 */</i></td></tr>
+<tr><th id="84">84</th><td>	<b>if</b> (count &gt; old_count &amp;&amp; jifs == old_jifs)</td></tr>
+<tr><th id="85">85</th><td>		count = old_count;</td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td>	old_count = count;</td></tr>
+<tr><th id="88">88</th><td>	old_jifs = jifs;</td></tr>
+<tr><th id="89">89</th><td></td></tr>
+<tr><th id="90">90</th><td>	raw_spin_unlock_irqrestore(&amp;i8253_lock, flags);</td></tr>
+<tr><th id="91">91</th><td></td></tr>
+<tr><th id="92">92</th><td>	count = (PIT_LATCH - <var>1</var>) - count;</td></tr>
+<tr><th id="93">93</th><td></td></tr>
+<tr><th id="94">94</th><td>	<b>return</b> (u64)(jifs * PIT_LATCH) + count;</td></tr>
+<tr><th id="95">95</th><td>}</td></tr>
+<tr><th id="96">96</th><td></td></tr>
+<tr><th id="97">97</th><td><em>static</em> <b>struct</b> clocksource i8253_cs = {</td></tr>
+<tr><th id="98">98</th><td>	.name		= <q>"pit"</q>,</td></tr>
+<tr><th id="99">99</th><td>	.rating		= <var>110</var>,</td></tr>
+<tr><th id="100">100</th><td>	.read		= i8253_read,</td></tr>
+<tr><th id="101">101</th><td>	.mask		= CLOCKSOURCE_MASK(<var>32</var>),</td></tr>
+<tr><th id="102">102</th><td>};</td></tr>
+<tr><th id="103">103</th><td></td></tr>
+<tr><th id="104">104</th><td><em>int</em> __init clocksource_i8253_init(<em>void</em>)</td></tr>
+<tr><th id="105">105</th><td>{</td></tr>
+<tr><th id="106">106</th><td>	<b>return</b> clocksource_register_hz(&amp;i8253_cs, PIT_TICK_RATE);</td></tr>
+<tr><th id="107">107</th><td>}</td></tr>
+<tr><th id="108">108</th><td><u>#<span data-ppcond="30">endif</span></u></td></tr>
+<tr><th id="109">109</th><td></td></tr>
+<tr><th id="110">110</th><td><u>#<span data-ppcond="110">ifdef</span> <a class="macro" href="../../include/generated/autoconf.h.html#1351" data-ref="_M/CONFIG_CLKEVT_I8253">CONFIG_CLKEVT_I8253</a></u></td></tr>
+<tr><th id="111">111</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="pit_shutdown" title='pit_shutdown' data-type='int pit_shutdown(struct clock_event_device * evt)' data-ref="pit_shutdown" data-ref-filename="pit_shutdown">pit_shutdown</dfn>(<b>struct</b> <a class="type" href="../../include/linux/clockchips.h.html#clock_event_device" title='clock_event_device' data-ref="clock_event_device" data-ref-filename="clock_event_device">clock_event_device</a> *<dfn class="local col1 decl" id="1evt" title='evt' data-type='struct clock_event_device *' data-ref="1evt" data-ref-filename="1evt">evt</dfn>)</td></tr>
+<tr><th id="112">112</th><td>{</td></tr>
+<tr><th id="113">113</th><td>	<b>if</b> (!<a class="ref fn" href="../../include/linux/clockchips.h.html#clockevent_state_oneshot" title='clockevent_state_oneshot' data-ref="clockevent_state_oneshot" data-ref-filename="clockevent_state_oneshot">clockevent_state_oneshot</a>(<a class="local col1 ref" href="#1evt" title='evt' data-ref="1evt" data-ref-filename="1evt">evt</a>) &amp;&amp; !<a class="ref fn" href="../../include/linux/clockchips.h.html#clockevent_state_periodic" title='clockevent_state_periodic' data-ref="clockevent_state_periodic" data-ref-filename="clockevent_state_periodic">clockevent_state_periodic</a>(<a class="local col1 ref" href="#1evt" title='evt' data-ref="1evt" data-ref-filename="1evt">evt</a>))</td></tr>
+<tr><th id="114">114</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td>	<a class="macro" href="../../include/linux/spinlock.h.html#223" title="_raw_spin_lock(&amp;i8253_lock)" data-ref="_M/raw_spin_lock">raw_spin_lock</a>(&amp;<a class="ref" href="../../include/linux/i8253.h.html#i8253_lock" title='i8253_lock' data-ref="i8253_lock" data-ref-filename="i8253_lock">i8253_lock</a>);</td></tr>
+<tr><th id="117">117</th><td></td></tr>
+<tr><th id="118">118</th><td>	<a class="macro" href="../../arch/x86/include/asm/io.h.html#356" title="outb_p" data-ref="_M/outb_p">outb_p</a>(<var>0x30</var>, <a class="macro" href="../../include/linux/i8253.h.html#17" title="0x43" data-ref="_M/PIT_MODE">PIT_MODE</a>);</td></tr>
+<tr><th id="119">119</th><td></td></tr>
+<tr><th id="120">120</th><td>	<b>if</b> (<a class="ref" href="../../include/linux/i8253.h.html#i8253_clear_counter_on_shutdown" title='i8253_clear_counter_on_shutdown' data-ref="i8253_clear_counter_on_shutdown" data-ref-filename="i8253_clear_counter_on_shutdown">i8253_clear_counter_on_shutdown</a>) {</td></tr>
+<tr><th id="121">121</th><td>		<a class="macro" href="../../arch/x86/include/asm/io.h.html#356" title="outb_p" data-ref="_M/outb_p">outb_p</a>(<var>0</var>, <a class="macro" href="../../include/linux/i8253.h.html#18" title="0x40" data-ref="_M/PIT_CH0">PIT_CH0</a>);</td></tr>
+<tr><th id="122">122</th><td>		<a class="macro" href="../../arch/x86/include/asm/io.h.html#356" title="outb_p" data-ref="_M/outb_p">outb_p</a>(<var>0</var>, <a class="macro" href="../../include/linux/i8253.h.html#18" title="0x40" data-ref="_M/PIT_CH0">PIT_CH0</a>);</td></tr>
+<tr><th id="123">123</th><td>	}</td></tr>
+<tr><th id="124">124</th><td></td></tr>
+<tr><th id="125">125</th><td>	<a class="macro" href="../../include/linux/spinlock.h.html#282" title="__raw_spin_unlock(&amp;i8253_lock)" data-ref="_M/raw_spin_unlock">raw_spin_unlock</a>(&amp;<a class="ref" href="../../include/linux/i8253.h.html#i8253_lock" title='i8253_lock' data-ref="i8253_lock" data-ref-filename="i8253_lock">i8253_lock</a>);</td></tr>
+<tr><th id="126">126</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="127">127</th><td>}</td></tr>
+<tr><th id="128">128</th><td></td></tr>
+<tr><th id="129">129</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="pit_set_oneshot" title='pit_set_oneshot' data-type='int pit_set_oneshot(struct clock_event_device * evt)' data-ref="pit_set_oneshot" data-ref-filename="pit_set_oneshot">pit_set_oneshot</dfn>(<b>struct</b> <a class="type" href="../../include/linux/clockchips.h.html#clock_event_device" title='clock_event_device' data-ref="clock_event_device" data-ref-filename="clock_event_device">clock_event_device</a> *<dfn class="local col2 decl" id="2evt" title='evt' data-type='struct clock_event_device *' data-ref="2evt" data-ref-filename="2evt">evt</dfn>)</td></tr>
+<tr><th id="130">130</th><td>{</td></tr>
+<tr><th id="131">131</th><td>	<a class="macro" href="../../include/linux/spinlock.h.html#223" title="_raw_spin_lock(&amp;i8253_lock)" data-ref="_M/raw_spin_lock">raw_spin_lock</a>(&amp;<a class="ref" href="../../include/linux/i8253.h.html#i8253_lock" title='i8253_lock' data-ref="i8253_lock" data-ref-filename="i8253_lock">i8253_lock</a>);</td></tr>
+<tr><th id="132">132</th><td>	<a class="macro" href="../../arch/x86/include/asm/io.h.html#356" title="outb_p" data-ref="_M/outb_p">outb_p</a>(<var>0x38</var>, <a class="macro" href="../../include/linux/i8253.h.html#17" title="0x43" data-ref="_M/PIT_MODE">PIT_MODE</a>);</td></tr>
+<tr><th id="133">133</th><td>	<a class="macro" href="../../include/linux/spinlock.h.html#282" title="__raw_spin_unlock(&amp;i8253_lock)" data-ref="_M/raw_spin_unlock">raw_spin_unlock</a>(&amp;<a class="ref" href="../../include/linux/i8253.h.html#i8253_lock" title='i8253_lock' data-ref="i8253_lock" data-ref-filename="i8253_lock">i8253_lock</a>);</td></tr>
+<tr><th id="134">134</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="135">135</th><td>}</td></tr>
+<tr><th id="136">136</th><td></td></tr>
+<tr><th id="137">137</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="pit_set_periodic" title='pit_set_periodic' data-type='int pit_set_periodic(struct clock_event_device * evt)' data-ref="pit_set_periodic" data-ref-filename="pit_set_periodic">pit_set_periodic</dfn>(<b>struct</b> <a class="type" href="../../include/linux/clockchips.h.html#clock_event_device" title='clock_event_device' data-ref="clock_event_device" data-ref-filename="clock_event_device">clock_event_device</a> *<dfn class="local col3 decl" id="3evt" title='evt' data-type='struct clock_event_device *' data-ref="3evt" data-ref-filename="3evt">evt</dfn>)</td></tr>
+<tr><th id="138">138</th><td>{</td></tr>
+<tr><th id="139">139</th><td>	<a class="macro" href="../../include/linux/spinlock.h.html#223" title="_raw_spin_lock(&amp;i8253_lock)" data-ref="_M/raw_spin_lock">raw_spin_lock</a>(&amp;<a class="ref" href="../../include/linux/i8253.h.html#i8253_lock" title='i8253_lock' data-ref="i8253_lock" data-ref-filename="i8253_lock">i8253_lock</a>);</td></tr>
+<tr><th id="140">140</th><td></td></tr>
+<tr><th id="141">141</th><td>	<i>/* binary, mode 2, LSB/MSB, ch 0 */</i></td></tr>
+<tr><th id="142">142</th><td>	<a class="macro" href="../../arch/x86/include/asm/io.h.html#356" title="outb_p" data-ref="_M/outb_p">outb_p</a>(<var>0x34</var>, <a class="macro" href="../../include/linux/i8253.h.html#17" title="0x43" data-ref="_M/PIT_MODE">PIT_MODE</a>);</td></tr>
+<tr><th id="143">143</th><td>	<a class="macro" href="../../arch/x86/include/asm/io.h.html#356" title="outb_p" data-ref="_M/outb_p">outb_p</a>(<a class="macro" href="../../include/linux/i8253.h.html#21" title="((1193182ul + 1000/2) / 1000)" data-ref="_M/PIT_LATCH">PIT_LATCH</a> &amp; <var>0xff</var>, <a class="macro" href="../../include/linux/i8253.h.html#18" title="0x40" data-ref="_M/PIT_CH0">PIT_CH0</a>);	<i>/* LSB */</i></td></tr>
+<tr><th id="144">144</th><td>	<a class="macro" href="../../arch/x86/include/asm/io.h.html#356" title="outb_p" data-ref="_M/outb_p">outb_p</a>(<a class="macro" href="../../include/linux/i8253.h.html#21" title="((1193182ul + 1000/2) / 1000)" data-ref="_M/PIT_LATCH">PIT_LATCH</a> &gt;&gt; <var>8</var>, <a class="macro" href="../../include/linux/i8253.h.html#18" title="0x40" data-ref="_M/PIT_CH0">PIT_CH0</a>);	<i>/* MSB */</i></td></tr>
+<tr><th id="145">145</th><td></td></tr>
+<tr><th id="146">146</th><td>	<a class="macro" href="../../include/linux/spinlock.h.html#282" title="__raw_spin_unlock(&amp;i8253_lock)" data-ref="_M/raw_spin_unlock">raw_spin_unlock</a>(&amp;<a class="ref" href="../../include/linux/i8253.h.html#i8253_lock" title='i8253_lock' data-ref="i8253_lock" data-ref-filename="i8253_lock">i8253_lock</a>);</td></tr>
+<tr><th id="147">147</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="148">148</th><td>}</td></tr>
+<tr><th id="149">149</th><td></td></tr>
+<tr><th id="150">150</th><td><i  data-doc="pit_next_event">/*</i></td></tr>
+<tr><th id="151">151</th><td><i  data-doc="pit_next_event"> * Program the next event in oneshot mode</i></td></tr>
+<tr><th id="152">152</th><td><i  data-doc="pit_next_event"> *</i></td></tr>
+<tr><th id="153">153</th><td><i  data-doc="pit_next_event"> * Delta is given in PIT ticks</i></td></tr>
+<tr><th id="154">154</th><td><i  data-doc="pit_next_event"> */</i></td></tr>
+<tr><th id="155">155</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="pit_next_event" title='pit_next_event' data-type='int pit_next_event(unsigned long delta, struct clock_event_device * evt)' data-ref="pit_next_event" data-ref-filename="pit_next_event">pit_next_event</dfn>(<em>unsigned</em> <em>long</em> <dfn class="local col4 decl" id="4delta" title='delta' data-type='unsigned long' data-ref="4delta" data-ref-filename="4delta">delta</dfn>, <b>struct</b> <a class="type" href="../../include/linux/clockchips.h.html#clock_event_device" title='clock_event_device' data-ref="clock_event_device" data-ref-filename="clock_event_device">clock_event_device</a> *<dfn class="local col5 decl" id="5evt" title='evt' data-type='struct clock_event_device *' data-ref="5evt" data-ref-filename="5evt">evt</dfn>)</td></tr>
+<tr><th id="156">156</th><td>{</td></tr>
+<tr><th id="157">157</th><td>	<a class="macro" href="../../include/linux/spinlock.h.html#223" title="_raw_spin_lock(&amp;i8253_lock)" data-ref="_M/raw_spin_lock">raw_spin_lock</a>(&amp;<a class="ref" href="../../include/linux/i8253.h.html#i8253_lock" title='i8253_lock' data-ref="i8253_lock" data-ref-filename="i8253_lock">i8253_lock</a>);</td></tr>
+<tr><th id="158">158</th><td>	<a class="macro" href="../../arch/x86/include/asm/io.h.html#356" title="outb_p" data-ref="_M/outb_p">outb_p</a>(<a class="local col4 ref" href="#4delta" title='delta' data-ref="4delta" data-ref-filename="4delta">delta</a> &amp; <var>0xff</var> , <a class="macro" href="../../include/linux/i8253.h.html#18" title="0x40" data-ref="_M/PIT_CH0">PIT_CH0</a>);	<i>/* LSB */</i></td></tr>
+<tr><th id="159">159</th><td>	<a class="macro" href="../../arch/x86/include/asm/io.h.html#356" title="outb_p" data-ref="_M/outb_p">outb_p</a>(<a class="local col4 ref" href="#4delta" title='delta' data-ref="4delta" data-ref-filename="4delta">delta</a> &gt;&gt; <var>8</var> , <a class="macro" href="../../include/linux/i8253.h.html#18" title="0x40" data-ref="_M/PIT_CH0">PIT_CH0</a>);		<i>/* MSB */</i></td></tr>
+<tr><th id="160">160</th><td>	<a class="macro" href="../../include/linux/spinlock.h.html#282" title="__raw_spin_unlock(&amp;i8253_lock)" data-ref="_M/raw_spin_unlock">raw_spin_unlock</a>(&amp;<a class="ref" href="../../include/linux/i8253.h.html#i8253_lock" title='i8253_lock' data-ref="i8253_lock" data-ref-filename="i8253_lock">i8253_lock</a>);</td></tr>
+<tr><th id="161">161</th><td></td></tr>
+<tr><th id="162">162</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="163">163</th><td>}</td></tr>
+<tr><th id="164">164</th><td></td></tr>
+<tr><th id="165">165</th><td><i>/*</i></td></tr>
+<tr><th id="166">166</th><td><i> * On UP the PIT can serve all of the possible timer functions. On SMP systems</i></td></tr>
+<tr><th id="167">167</th><td><i> * it can be solely used for the global tick.</i></td></tr>
+<tr><th id="168">168</th><td><i> */</i></td></tr>
+<tr><th id="169">169</th><td><b>struct</b> <a class="type" href="../../include/linux/clockchips.h.html#clock_event_device" title='clock_event_device' data-ref="clock_event_device" data-ref-filename="clock_event_device">clock_event_device</a> <dfn class="decl def" id="i8253_clockevent" title='i8253_clockevent' data-ref="i8253_clockevent" data-ref-filename="i8253_clockevent">i8253_clockevent</dfn> = {</td></tr>
+<tr><th id="170">170</th><td>	.<a class="ref field" href="../../include/linux/clockchips.h.html#clock_event_device::name" title='clock_event_device::name' data-ref="clock_event_device::name" data-ref-filename="clock_event_device..name">name</a>			= <q>"pit"</q>,</td></tr>
+<tr><th id="171">171</th><td>	.<a class="ref field" href="../../include/linux/clockchips.h.html#clock_event_device::features" title='clock_event_device::features' data-ref="clock_event_device::features" data-ref-filename="clock_event_device..features">features</a>		= <a class="macro" href="../../include/linux/clockchips.h.html#46" title="0x000001" data-ref="_M/CLOCK_EVT_FEAT_PERIODIC">CLOCK_EVT_FEAT_PERIODIC</a>,</td></tr>
+<tr><th id="172">172</th><td>	.<a class="ref field" href="../../include/linux/clockchips.h.html#clock_event_device::set_state_shutdown" title='clock_event_device::set_state_shutdown' data-ref="clock_event_device::set_state_shutdown" data-ref-filename="clock_event_device..set_state_shutdown">set_state_shutdown</a>	= <a class="tu ref fn" href="#pit_shutdown" title='pit_shutdown' data-ref="pit_shutdown" data-ref-filename="pit_shutdown">pit_shutdown</a>,</td></tr>
+<tr><th id="173">173</th><td>	.<a class="ref field" href="../../include/linux/clockchips.h.html#clock_event_device::set_state_periodic" title='clock_event_device::set_state_periodic' data-ref="clock_event_device::set_state_periodic" data-ref-filename="clock_event_device..set_state_periodic">set_state_periodic</a>	= <a class="tu ref fn" href="#pit_set_periodic" title='pit_set_periodic' data-ref="pit_set_periodic" data-ref-filename="pit_set_periodic">pit_set_periodic</a>,</td></tr>
+<tr><th id="174">174</th><td>	.<a class="ref field" href="../../include/linux/clockchips.h.html#clock_event_device::set_next_event" title='clock_event_device::set_next_event' data-ref="clock_event_device::set_next_event" data-ref-filename="clock_event_device..set_next_event">set_next_event</a>		= <a class="tu ref fn" href="#pit_next_event" title='pit_next_event' data-ref="pit_next_event" data-ref-filename="pit_next_event">pit_next_event</a>,</td></tr>
+<tr><th id="175">175</th><td>};</td></tr>
+<tr><th id="176">176</th><td></td></tr>
+<tr><th id="177">177</th><td><i>/*</i></td></tr>
+<tr><th id="178">178</th><td><i> * Initialize the conversion factor and the min/max deltas of the clock event</i></td></tr>
+<tr><th id="179">179</th><td><i> * structure and register the clock event source with the framework.</i></td></tr>
+<tr><th id="180">180</th><td><i> */</i></td></tr>
+<tr><th id="181">181</th><td><em>void</em> <a class="macro" href="../../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="decl def fn" id="clockevent_i8253_init" title='clockevent_i8253_init' data-ref="clockevent_i8253_init" data-ref-filename="clockevent_i8253_init">clockevent_i8253_init</dfn>(<a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col6 decl" id="6oneshot" title='oneshot' data-type='bool' data-ref="6oneshot" data-ref-filename="6oneshot">oneshot</dfn>)</td></tr>
+<tr><th id="182">182</th><td>{</td></tr>
+<tr><th id="183">183</th><td>	<b>if</b> (<a class="local col6 ref" href="#6oneshot" title='oneshot' data-ref="6oneshot" data-ref-filename="6oneshot">oneshot</a>) {</td></tr>
+<tr><th id="184">184</th><td>		<a class="ref" href="../../include/linux/i8253.h.html#i8253_clockevent" title='i8253_clockevent' data-ref="i8253_clockevent" data-ref-filename="i8253_clockevent">i8253_clockevent</a>.<a class="ref field" href="../../include/linux/clockchips.h.html#clock_event_device::features" title='clock_event_device::features' data-ref="clock_event_device::features" data-ref-filename="clock_event_device..features">features</a> |= <a class="macro" href="../../include/linux/clockchips.h.html#47" title="0x000002" data-ref="_M/CLOCK_EVT_FEAT_ONESHOT">CLOCK_EVT_FEAT_ONESHOT</a>;</td></tr>
+<tr><th id="185">185</th><td>		<a class="ref" href="../../include/linux/i8253.h.html#i8253_clockevent" title='i8253_clockevent' data-ref="i8253_clockevent" data-ref-filename="i8253_clockevent">i8253_clockevent</a>.<a class="ref field" href="../../include/linux/clockchips.h.html#clock_event_device::set_state_oneshot" title='clock_event_device::set_state_oneshot' data-ref="clock_event_device::set_state_oneshot" data-ref-filename="clock_event_device..set_state_oneshot">set_state_oneshot</a> = <a class="tu ref fn" href="#pit_set_oneshot" title='pit_set_oneshot' data-use='r' data-ref="pit_set_oneshot" data-ref-filename="pit_set_oneshot">pit_set_oneshot</a>;</td></tr>
+<tr><th id="186">186</th><td>	}</td></tr>
+<tr><th id="187">187</th><td>	<i>/*</i></td></tr>
+<tr><th id="188">188</th><td><i>	 * Start pit with the boot cpu mask. x86 might make it global</i></td></tr>
+<tr><th id="189">189</th><td><i>	 * when it is used as broadcast device later.</i></td></tr>
+<tr><th id="190">190</th><td><i>	 */</i></td></tr>
+<tr><th id="191">191</th><td>	<a class="ref" href="../../include/linux/i8253.h.html#i8253_clockevent" title='i8253_clockevent' data-ref="i8253_clockevent" data-ref-filename="i8253_clockevent">i8253_clockevent</a>.<a class="ref field" href="../../include/linux/clockchips.h.html#clock_event_device::cpumask" title='clock_event_device::cpumask' data-ref="clock_event_device::cpumask" data-ref-filename="clock_event_device..cpumask">cpumask</a> = <a class="macro" href="../../include/linux/cpumask.h.html#596" title="(get_cpu_mask(({ __this_cpu_preempt_check(&quot;read&quot;); ({ typeof(cpu_number) pscr_ret__; do { const void *__vpp_verify = (typeof((&amp;(cpu_number)) + 0))((void *)0); (void)__vpp_verify; } while (0); switch(sizeof(cpu_number)) { case 1: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; case 2: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; case 4: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; case 8: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; default: __bad_size_call_parameter(); break; } pscr_ret__; }); })))" data-ref="_M/cpumask_of">cpumask_of</a>(<a class="macro" href="../../include/linux/smp.h.html#219" title="({ __this_cpu_preempt_check(&quot;read&quot;); ({ typeof(cpu_number) pscr_ret__; do { const void *__vpp_verify = (typeof((&amp;(cpu_number)) + 0))((void *)0); (void)__vpp_verify; } while (0); switch(sizeof(cpu_number)) { case 1: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; case 2: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; case 4: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; case 8: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; default: __bad_size_call_parameter(); break; } pscr_ret__; }); })" data-ref="_M/smp_processor_id">smp_processor_id</a>());</td></tr>
+<tr><th id="192">192</th><td></td></tr>
+<tr><th id="193">193</th><td>	<a class="ref fn" href="../../include/linux/clockchips.h.html#clockevents_config_and_register" title='clockevents_config_and_register' data-ref="clockevents_config_and_register" data-ref-filename="clockevents_config_and_register">clockevents_config_and_register</a>(&amp;<a class="ref" href="../../include/linux/i8253.h.html#i8253_clockevent" title='i8253_clockevent' data-ref="i8253_clockevent" data-ref-filename="i8253_clockevent">i8253_clockevent</a>, <a class="macro" href="../../include/linux/timex.h.html#163" title="1193182ul" data-ref="_M/PIT_TICK_RATE">PIT_TICK_RATE</a>,</td></tr>
+<tr><th id="194">194</th><td>					<var>0xF</var>, <var>0x7FFF</var>);</td></tr>
+<tr><th id="195">195</th><td>}</td></tr>
+<tr><th id="196">196</th><td><u>#<span data-ppcond="110">endif</span></u></td></tr>
+<tr><th id="197">197</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

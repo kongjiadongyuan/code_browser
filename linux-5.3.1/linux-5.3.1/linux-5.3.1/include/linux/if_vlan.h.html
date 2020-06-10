@@ -1,0 +1,782 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>if_vlan.h source code [linux-5.3.1/include/linux/if_vlan.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="vlan_ethhdr,vlan_hdr,vlan_pcpu_stats "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/include/linux/if_vlan.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>include</a>/<a href='./'>linux</a>/<a href='if_vlan.h.html'>if_vlan.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0-or-later */</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * VLAN		An implementation of 802.1Q VLAN tagging.</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * Authors:	Ben Greear &lt;greearb@candelatech.com&gt;</i></td></tr>
+<tr><th id="6">6</th><td><i> */</i></td></tr>
+<tr><th id="7">7</th><td><u>#<span data-ppcond="7">ifndef</span> <span class="macro" data-ref="_M/_LINUX_IF_VLAN_H_">_LINUX_IF_VLAN_H_</span></u></td></tr>
+<tr><th id="8">8</th><td><u>#define <dfn class="macro" id="_M/_LINUX_IF_VLAN_H_" data-ref="_M/_LINUX_IF_VLAN_H_">_LINUX_IF_VLAN_H_</dfn></u></td></tr>
+<tr><th id="9">9</th><td></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="netdevice.h.html">&lt;linux/netdevice.h&gt;</a></u></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="etherdevice.h.html">&lt;linux/etherdevice.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="rtnetlink.h.html">&lt;linux/rtnetlink.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="bug.h.html">&lt;linux/bug.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="../uapi/linux/if_vlan.h.html">&lt;uapi/linux/if_vlan.h&gt;</a></u></td></tr>
+<tr><th id="15">15</th><td></td></tr>
+<tr><th id="16">16</th><td><u>#define <dfn class="macro" id="_M/VLAN_HLEN" data-ref="_M/VLAN_HLEN">VLAN_HLEN</dfn>	4		/* The additional bytes required by VLAN</u></td></tr>
+<tr><th id="17">17</th><td><u>					 * (in addition to the Ethernet header)</u></td></tr>
+<tr><th id="18">18</th><td><u>					 */</u></td></tr>
+<tr><th id="19">19</th><td><u>#define <dfn class="macro" id="_M/VLAN_ETH_HLEN" data-ref="_M/VLAN_ETH_HLEN">VLAN_ETH_HLEN</dfn>	18		/* Total octets in header.	 */</u></td></tr>
+<tr><th id="20">20</th><td><u>#define <dfn class="macro" id="_M/VLAN_ETH_ZLEN" data-ref="_M/VLAN_ETH_ZLEN">VLAN_ETH_ZLEN</dfn>	64		/* Min. octets in frame sans FCS */</u></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td><i>/*</i></td></tr>
+<tr><th id="23">23</th><td><i> * According to 802.3ac, the packet can be 4 bytes longer. --Klika Jan</i></td></tr>
+<tr><th id="24">24</th><td><i> */</i></td></tr>
+<tr><th id="25">25</th><td><u>#define <dfn class="macro" id="_M/VLAN_ETH_DATA_LEN" data-ref="_M/VLAN_ETH_DATA_LEN">VLAN_ETH_DATA_LEN</dfn>	1500	/* Max. octets in payload	 */</u></td></tr>
+<tr><th id="26">26</th><td><u>#define <dfn class="macro" id="_M/VLAN_ETH_FRAME_LEN" data-ref="_M/VLAN_ETH_FRAME_LEN">VLAN_ETH_FRAME_LEN</dfn>	1518	/* Max. octets in frame sans FCS */</u></td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td><i>/*</i></td></tr>
+<tr><th id="29">29</th><td><i> * 	struct vlan_hdr - vlan header</i></td></tr>
+<tr><th id="30">30</th><td><i> * 	@h_vlan_TCI: priority and VLAN ID</i></td></tr>
+<tr><th id="31">31</th><td><i> *	@h_vlan_encapsulated_proto: packet type ID or len</i></td></tr>
+<tr><th id="32">32</th><td><i> */</i></td></tr>
+<tr><th id="33">33</th><td><b>struct</b> <dfn class="type def" id="vlan_hdr" title='vlan_hdr' data-ref="vlan_hdr" data-ref-filename="vlan_hdr">vlan_hdr</dfn> {</td></tr>
+<tr><th id="34">34</th><td>	<a class="typedef" href="../uapi/linux/types.h.html#__be16" title='__be16' data-type='__u16' data-ref="__be16" data-ref-filename="__be16">__be16</a>	<dfn class="decl field" id="vlan_hdr::h_vlan_TCI" title='vlan_hdr::h_vlan_TCI' data-ref="vlan_hdr::h_vlan_TCI" data-ref-filename="vlan_hdr..h_vlan_TCI">h_vlan_TCI</dfn>;</td></tr>
+<tr><th id="35">35</th><td>	<a class="typedef" href="../uapi/linux/types.h.html#__be16" title='__be16' data-type='__u16' data-ref="__be16" data-ref-filename="__be16">__be16</a>	<dfn class="decl field" id="vlan_hdr::h_vlan_encapsulated_proto" title='vlan_hdr::h_vlan_encapsulated_proto' data-ref="vlan_hdr::h_vlan_encapsulated_proto" data-ref-filename="vlan_hdr..h_vlan_encapsulated_proto">h_vlan_encapsulated_proto</dfn>;</td></tr>
+<tr><th id="36">36</th><td>};</td></tr>
+<tr><th id="37">37</th><td></td></tr>
+<tr><th id="38">38</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="39">39</th><td><i class="doc"> *	struct vlan_ethhdr - vlan ethernet header (ethhdr + vlan_hdr)</i></td></tr>
+<tr><th id="40">40</th><td><i class="doc"> *<span class="command">	@h</span>_dest: destination ethernet address</i></td></tr>
+<tr><th id="41">41</th><td><i class="doc"> *<span class="command">	@h</span>_source: source ethernet address</i></td></tr>
+<tr><th id="42">42</th><td><i class="doc"> *<span class="command">	@h</span>_vlan_proto: ethernet protocol</i></td></tr>
+<tr><th id="43">43</th><td><i class="doc"> *<span class="command">	@h</span>_vlan_TCI: priority and VLAN ID</i></td></tr>
+<tr><th id="44">44</th><td><i class="doc"> *<span class="command">	@h</span>_vlan_encapsulated_proto: packet type ID or len</i></td></tr>
+<tr><th id="45">45</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="46">46</th><td><b>struct</b> <dfn class="type def" id="vlan_ethhdr" title='vlan_ethhdr' data-ref="vlan_ethhdr" data-ref-filename="vlan_ethhdr">vlan_ethhdr</dfn> {</td></tr>
+<tr><th id="47">47</th><td>	<em>unsigned</em> <em>char</em>	<dfn class="decl field" id="vlan_ethhdr::h_dest" title='vlan_ethhdr::h_dest' data-ref="vlan_ethhdr::h_dest" data-ref-filename="vlan_ethhdr..h_dest">h_dest</dfn>[<a class="macro" href="../uapi/linux/if_ether.h.html#32" title="6" data-ref="_M/ETH_ALEN">ETH_ALEN</a>];</td></tr>
+<tr><th id="48">48</th><td>	<em>unsigned</em> <em>char</em>	<dfn class="decl field" id="vlan_ethhdr::h_source" title='vlan_ethhdr::h_source' data-ref="vlan_ethhdr::h_source" data-ref-filename="vlan_ethhdr..h_source">h_source</dfn>[<a class="macro" href="../uapi/linux/if_ether.h.html#32" title="6" data-ref="_M/ETH_ALEN">ETH_ALEN</a>];</td></tr>
+<tr><th id="49">49</th><td>	<a class="typedef" href="../uapi/linux/types.h.html#__be16" title='__be16' data-type='__u16' data-ref="__be16" data-ref-filename="__be16">__be16</a>		<dfn class="decl field" id="vlan_ethhdr::h_vlan_proto" title='vlan_ethhdr::h_vlan_proto' data-ref="vlan_ethhdr::h_vlan_proto" data-ref-filename="vlan_ethhdr..h_vlan_proto">h_vlan_proto</dfn>;</td></tr>
+<tr><th id="50">50</th><td>	<a class="typedef" href="../uapi/linux/types.h.html#__be16" title='__be16' data-type='__u16' data-ref="__be16" data-ref-filename="__be16">__be16</a>		<dfn class="decl field" id="vlan_ethhdr::h_vlan_TCI" title='vlan_ethhdr::h_vlan_TCI' data-ref="vlan_ethhdr::h_vlan_TCI" data-ref-filename="vlan_ethhdr..h_vlan_TCI">h_vlan_TCI</dfn>;</td></tr>
+<tr><th id="51">51</th><td>	<a class="typedef" href="../uapi/linux/types.h.html#__be16" title='__be16' data-type='__u16' data-ref="__be16" data-ref-filename="__be16">__be16</a>		<dfn class="decl field" id="vlan_ethhdr::h_vlan_encapsulated_proto" title='vlan_ethhdr::h_vlan_encapsulated_proto' data-ref="vlan_ethhdr::h_vlan_encapsulated_proto" data-ref-filename="vlan_ethhdr..h_vlan_encapsulated_proto">h_vlan_encapsulated_proto</dfn>;</td></tr>
+<tr><th id="52">52</th><td>};</td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td><u>#include <a href="skbuff.h.html">&lt;linux/skbuff.h&gt;</a></u></td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="#vlan_ethhdr" title='vlan_ethhdr' data-ref="vlan_ethhdr" data-ref-filename="vlan_ethhdr">vlan_ethhdr</a> *<dfn class="decl def fn" id="vlan_eth_hdr" title='vlan_eth_hdr' data-ref="vlan_eth_hdr" data-ref-filename="vlan_eth_hdr">vlan_eth_hdr</dfn>(<em>const</em> <b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col1 decl" id="1skb" title='skb' data-type='const struct sk_buff *' data-ref="1skb" data-ref-filename="1skb">skb</dfn>)</td></tr>
+<tr><th id="57">57</th><td>{</td></tr>
+<tr><th id="58">58</th><td>	<b>return</b> (<b>struct</b> <a class="type" href="#vlan_ethhdr" title='vlan_ethhdr' data-ref="vlan_ethhdr" data-ref-filename="vlan_ethhdr">vlan_ethhdr</a> *)<a class="ref fn" href="skbuff.h.html#skb_mac_header" title='skb_mac_header' data-ref="skb_mac_header" data-ref-filename="skb_mac_header">skb_mac_header</a>(<a class="local col1 ref" href="#1skb" title='skb' data-ref="1skb" data-ref-filename="1skb">skb</a>);</td></tr>
+<tr><th id="59">59</th><td>}</td></tr>
+<tr><th id="60">60</th><td></td></tr>
+<tr><th id="61">61</th><td><u>#define <dfn class="macro" id="_M/VLAN_PRIO_MASK" data-ref="_M/VLAN_PRIO_MASK">VLAN_PRIO_MASK</dfn>		0xe000 /* Priority Code Point */</u></td></tr>
+<tr><th id="62">62</th><td><u>#define <dfn class="macro" id="_M/VLAN_PRIO_SHIFT" data-ref="_M/VLAN_PRIO_SHIFT">VLAN_PRIO_SHIFT</dfn>		13</u></td></tr>
+<tr><th id="63">63</th><td><u>#define <dfn class="macro" id="_M/VLAN_CFI_MASK" data-ref="_M/VLAN_CFI_MASK">VLAN_CFI_MASK</dfn>		0x1000 /* Canonical Format Indicator / Drop Eligible Indicator */</u></td></tr>
+<tr><th id="64">64</th><td><u>#define <dfn class="macro" id="_M/VLAN_VID_MASK" data-ref="_M/VLAN_VID_MASK">VLAN_VID_MASK</dfn>		0x0fff /* VLAN Identifier */</u></td></tr>
+<tr><th id="65">65</th><td><u>#define <dfn class="macro" id="_M/VLAN_N_VID" data-ref="_M/VLAN_N_VID">VLAN_N_VID</dfn>		4096</u></td></tr>
+<tr><th id="66">66</th><td></td></tr>
+<tr><th id="67">67</th><td><i>/* found in socket.c */</i></td></tr>
+<tr><th id="68">68</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="vlan_ioctl_set" title='vlan_ioctl_set' data-ref="vlan_ioctl_set" data-ref-filename="vlan_ioctl_set">vlan_ioctl_set</dfn>(<em>int</em> (*<dfn class="local col2 decl" id="2hook" title='hook' data-type='int (*)(struct net *, void *)' data-ref="2hook" data-ref-filename="2hook">hook</dfn>)(<b>struct</b> <a class="type" href="../net/net_namespace.h.html#net" title='net' data-ref="net" data-ref-filename="net">net</a> *, <em>void</em> <a class="macro" href="compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *));</td></tr>
+<tr><th id="69">69</th><td></td></tr>
+<tr><th id="70">70</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="is_vlan_dev" title='is_vlan_dev' data-ref="is_vlan_dev" data-ref-filename="is_vlan_dev">is_vlan_dev</dfn>(<em>const</em> <b>struct</b> <a class="type" href="netdevice.h.html#net_device" title='net_device' data-ref="net_device" data-ref-filename="net_device">net_device</a> *<dfn class="local col3 decl" id="3dev" title='dev' data-type='const struct net_device *' data-ref="3dev" data-ref-filename="3dev">dev</dfn>)</td></tr>
+<tr><th id="71">71</th><td>{</td></tr>
+<tr><th id="72">72</th><td>        <b>return</b> <a class="local col3 ref" href="#3dev" title='dev' data-ref="3dev" data-ref-filename="3dev">dev</a>-&gt;<a class="ref field" href="netdevice.h.html#net_device::priv_flags" title='net_device::priv_flags' data-ref="net_device::priv_flags" data-ref-filename="net_device..priv_flags">priv_flags</a> &amp; <a class="macro" href="netdevice.h.html#1512" title="IFF_802_1Q_VLAN" data-ref="_M/IFF_802_1Q_VLAN">IFF_802_1Q_VLAN</a>;</td></tr>
+<tr><th id="73">73</th><td>}</td></tr>
+<tr><th id="74">74</th><td></td></tr>
+<tr><th id="75">75</th><td><u>#define <dfn class="macro" id="_M/skb_vlan_tag_present" data-ref="_M/skb_vlan_tag_present">skb_vlan_tag_present</dfn>(__skb)	((__skb)-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::vlan_present" title='sk_buff::vlan_present' data-ref="sk_buff::vlan_present" data-ref-filename="sk_buff..vlan_present">vlan_present</a>)</u></td></tr>
+<tr><th id="76">76</th><td><u>#define <dfn class="macro" id="_M/skb_vlan_tag_get" data-ref="_M/skb_vlan_tag_get">skb_vlan_tag_get</dfn>(__skb)		((__skb)-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::vlan_tci" title='sk_buff::vlan_tci' data-ref="sk_buff::vlan_tci" data-ref-filename="sk_buff..vlan_tci">vlan_tci</a>)</u></td></tr>
+<tr><th id="77">77</th><td><u>#define <dfn class="macro" id="_M/skb_vlan_tag_get_id" data-ref="_M/skb_vlan_tag_get_id">skb_vlan_tag_get_id</dfn>(__skb)	((__skb)-&gt;vlan_tci &amp; VLAN_VID_MASK)</u></td></tr>
+<tr><th id="78">78</th><td><u>#define <dfn class="macro" id="_M/skb_vlan_tag_get_cfi" data-ref="_M/skb_vlan_tag_get_cfi">skb_vlan_tag_get_cfi</dfn>(__skb)	(!!((__skb)-&gt;vlan_tci &amp; VLAN_CFI_MASK))</u></td></tr>
+<tr><th id="79">79</th><td><u>#define <dfn class="macro" id="_M/skb_vlan_tag_get_prio" data-ref="_M/skb_vlan_tag_get_prio">skb_vlan_tag_get_prio</dfn>(__skb)	(((__skb)-&gt;vlan_tci &amp; VLAN_PRIO_MASK) &gt;&gt; VLAN_PRIO_SHIFT)</u></td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="vlan_get_rx_ctag_filter_info" title='vlan_get_rx_ctag_filter_info' data-ref="vlan_get_rx_ctag_filter_info" data-ref-filename="vlan_get_rx_ctag_filter_info">vlan_get_rx_ctag_filter_info</dfn>(<b>struct</b> <a class="type" href="netdevice.h.html#net_device" title='net_device' data-ref="net_device" data-ref-filename="net_device">net_device</a> *<dfn class="local col4 decl" id="4dev" title='dev' data-type='struct net_device *' data-ref="4dev" data-ref-filename="4dev">dev</dfn>)</td></tr>
+<tr><th id="82">82</th><td>{</td></tr>
+<tr><th id="83">83</th><td>	<a class="macro" href="rtnetlink.h.html#109" title="({ static bool __attribute__((__section__(&quot;.data.once&quot;))) __warned; int __ret_warn_once = !!(!rtnl_is_locked()); if (__builtin_expect(!!(__ret_warn_once &amp;&amp; !__warned), 0)) { __warned = true; ({ int __ret_warn_on = !!(1); if (__builtin_expect(!!(__ret_warn_on), 0)) do { __warn_printk(&quot;RTNL: assertion failed at %s (%d)\n&quot;, &quot;/home/woboq/linux-5.3.1/./include/linux/if_vlan.h&quot;, 83); do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/./include/linux/if_vlan.h&quot;), &quot;i&quot; (83), &quot;i&quot; ((1 &lt;&lt; 0)|(((9) &lt;&lt; 8))), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.reachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (125)); }); } while (0); } while (0); __builtin_expect(!!(__ret_warn_on), 0); }); } __builtin_expect(!!(__ret_warn_once), 0); })" data-ref="_M/ASSERT_RTNL">ASSERT_RTNL</a>();</td></tr>
+<tr><th id="84">84</th><td>	<b>return</b> <a class="ref fn" href="notifier.h.html#notifier_to_errno" title='notifier_to_errno' data-ref="notifier_to_errno" data-ref-filename="notifier_to_errno">notifier_to_errno</a>(<a class="ref fn" href="netdevice.h.html#call_netdevice_notifiers" title='call_netdevice_notifiers' data-ref="call_netdevice_notifiers" data-ref-filename="call_netdevice_notifiers">call_netdevice_notifiers</a>(<a class="enum" href="netdevice.h.html#NETDEV_CVLAN_FILTER_PUSH_INFO" title='NETDEV_CVLAN_FILTER_PUSH_INFO' data-ref="NETDEV_CVLAN_FILTER_PUSH_INFO" data-ref-filename="NETDEV_CVLAN_FILTER_PUSH_INFO">NETDEV_CVLAN_FILTER_PUSH_INFO</a>, <a class="local col4 ref" href="#4dev" title='dev' data-ref="4dev" data-ref-filename="4dev">dev</a>));</td></tr>
+<tr><th id="85">85</th><td>}</td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="vlan_drop_rx_ctag_filter_info" title='vlan_drop_rx_ctag_filter_info' data-ref="vlan_drop_rx_ctag_filter_info" data-ref-filename="vlan_drop_rx_ctag_filter_info">vlan_drop_rx_ctag_filter_info</dfn>(<b>struct</b> <a class="type" href="netdevice.h.html#net_device" title='net_device' data-ref="net_device" data-ref-filename="net_device">net_device</a> *<dfn class="local col5 decl" id="5dev" title='dev' data-type='struct net_device *' data-ref="5dev" data-ref-filename="5dev">dev</dfn>)</td></tr>
+<tr><th id="88">88</th><td>{</td></tr>
+<tr><th id="89">89</th><td>	<a class="macro" href="rtnetlink.h.html#109" title="({ static bool __attribute__((__section__(&quot;.data.once&quot;))) __warned; int __ret_warn_once = !!(!rtnl_is_locked()); if (__builtin_expect(!!(__ret_warn_once &amp;&amp; !__warned), 0)) { __warned = true; ({ int __ret_warn_on = !!(1); if (__builtin_expect(!!(__ret_warn_on), 0)) do { __warn_printk(&quot;RTNL: assertion failed at %s (%d)\n&quot;, &quot;/home/woboq/linux-5.3.1/./include/linux/if_vlan.h&quot;, 89); do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/./include/linux/if_vlan.h&quot;), &quot;i&quot; (89), &quot;i&quot; ((1 &lt;&lt; 0)|(((9) &lt;&lt; 8))), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.reachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (127)); }); } while (0); } while (0); __builtin_expect(!!(__ret_warn_on), 0); }); } __builtin_expect(!!(__ret_warn_once), 0); })" data-ref="_M/ASSERT_RTNL">ASSERT_RTNL</a>();</td></tr>
+<tr><th id="90">90</th><td>	<a class="ref fn" href="netdevice.h.html#call_netdevice_notifiers" title='call_netdevice_notifiers' data-ref="call_netdevice_notifiers" data-ref-filename="call_netdevice_notifiers">call_netdevice_notifiers</a>(<a class="enum" href="netdevice.h.html#NETDEV_CVLAN_FILTER_DROP_INFO" title='NETDEV_CVLAN_FILTER_DROP_INFO' data-ref="NETDEV_CVLAN_FILTER_DROP_INFO" data-ref-filename="NETDEV_CVLAN_FILTER_DROP_INFO">NETDEV_CVLAN_FILTER_DROP_INFO</a>, <a class="local col5 ref" href="#5dev" title='dev' data-ref="5dev" data-ref-filename="5dev">dev</a>);</td></tr>
+<tr><th id="91">91</th><td>}</td></tr>
+<tr><th id="92">92</th><td></td></tr>
+<tr><th id="93">93</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="vlan_get_rx_stag_filter_info" title='vlan_get_rx_stag_filter_info' data-ref="vlan_get_rx_stag_filter_info" data-ref-filename="vlan_get_rx_stag_filter_info">vlan_get_rx_stag_filter_info</dfn>(<b>struct</b> <a class="type" href="netdevice.h.html#net_device" title='net_device' data-ref="net_device" data-ref-filename="net_device">net_device</a> *<dfn class="local col6 decl" id="6dev" title='dev' data-type='struct net_device *' data-ref="6dev" data-ref-filename="6dev">dev</dfn>)</td></tr>
+<tr><th id="94">94</th><td>{</td></tr>
+<tr><th id="95">95</th><td>	<a class="macro" href="rtnetlink.h.html#109" title="({ static bool __attribute__((__section__(&quot;.data.once&quot;))) __warned; int __ret_warn_once = !!(!rtnl_is_locked()); if (__builtin_expect(!!(__ret_warn_once &amp;&amp; !__warned), 0)) { __warned = true; ({ int __ret_warn_on = !!(1); if (__builtin_expect(!!(__ret_warn_on), 0)) do { __warn_printk(&quot;RTNL: assertion failed at %s (%d)\n&quot;, &quot;/home/woboq/linux-5.3.1/./include/linux/if_vlan.h&quot;, 95); do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/./include/linux/if_vlan.h&quot;), &quot;i&quot; (95), &quot;i&quot; ((1 &lt;&lt; 0)|(((9) &lt;&lt; 8))), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.reachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (129)); }); } while (0); } while (0); __builtin_expect(!!(__ret_warn_on), 0); }); } __builtin_expect(!!(__ret_warn_once), 0); })" data-ref="_M/ASSERT_RTNL">ASSERT_RTNL</a>();</td></tr>
+<tr><th id="96">96</th><td>	<b>return</b> <a class="ref fn" href="notifier.h.html#notifier_to_errno" title='notifier_to_errno' data-ref="notifier_to_errno" data-ref-filename="notifier_to_errno">notifier_to_errno</a>(<a class="ref fn" href="netdevice.h.html#call_netdevice_notifiers" title='call_netdevice_notifiers' data-ref="call_netdevice_notifiers" data-ref-filename="call_netdevice_notifiers">call_netdevice_notifiers</a>(<a class="enum" href="netdevice.h.html#NETDEV_SVLAN_FILTER_PUSH_INFO" title='NETDEV_SVLAN_FILTER_PUSH_INFO' data-ref="NETDEV_SVLAN_FILTER_PUSH_INFO" data-ref-filename="NETDEV_SVLAN_FILTER_PUSH_INFO">NETDEV_SVLAN_FILTER_PUSH_INFO</a>, <a class="local col6 ref" href="#6dev" title='dev' data-ref="6dev" data-ref-filename="6dev">dev</a>));</td></tr>
+<tr><th id="97">97</th><td>}</td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="vlan_drop_rx_stag_filter_info" title='vlan_drop_rx_stag_filter_info' data-ref="vlan_drop_rx_stag_filter_info" data-ref-filename="vlan_drop_rx_stag_filter_info">vlan_drop_rx_stag_filter_info</dfn>(<b>struct</b> <a class="type" href="netdevice.h.html#net_device" title='net_device' data-ref="net_device" data-ref-filename="net_device">net_device</a> *<dfn class="local col7 decl" id="7dev" title='dev' data-type='struct net_device *' data-ref="7dev" data-ref-filename="7dev">dev</dfn>)</td></tr>
+<tr><th id="100">100</th><td>{</td></tr>
+<tr><th id="101">101</th><td>	<a class="macro" href="rtnetlink.h.html#109" title="({ static bool __attribute__((__section__(&quot;.data.once&quot;))) __warned; int __ret_warn_once = !!(!rtnl_is_locked()); if (__builtin_expect(!!(__ret_warn_once &amp;&amp; !__warned), 0)) { __warned = true; ({ int __ret_warn_on = !!(1); if (__builtin_expect(!!(__ret_warn_on), 0)) do { __warn_printk(&quot;RTNL: assertion failed at %s (%d)\n&quot;, &quot;/home/woboq/linux-5.3.1/./include/linux/if_vlan.h&quot;, 101); do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/./include/linux/if_vlan.h&quot;), &quot;i&quot; (101), &quot;i&quot; ((1 &lt;&lt; 0)|(((9) &lt;&lt; 8))), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.reachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (131)); }); } while (0); } while (0); __builtin_expect(!!(__ret_warn_on), 0); }); } __builtin_expect(!!(__ret_warn_once), 0); })" data-ref="_M/ASSERT_RTNL">ASSERT_RTNL</a>();</td></tr>
+<tr><th id="102">102</th><td>	<a class="ref fn" href="netdevice.h.html#call_netdevice_notifiers" title='call_netdevice_notifiers' data-ref="call_netdevice_notifiers" data-ref-filename="call_netdevice_notifiers">call_netdevice_notifiers</a>(<a class="enum" href="netdevice.h.html#NETDEV_SVLAN_FILTER_DROP_INFO" title='NETDEV_SVLAN_FILTER_DROP_INFO' data-ref="NETDEV_SVLAN_FILTER_DROP_INFO" data-ref-filename="NETDEV_SVLAN_FILTER_DROP_INFO">NETDEV_SVLAN_FILTER_DROP_INFO</a>, <a class="local col7 ref" href="#7dev" title='dev' data-ref="7dev" data-ref-filename="7dev">dev</a>);</td></tr>
+<tr><th id="103">103</th><td>}</td></tr>
+<tr><th id="104">104</th><td></td></tr>
+<tr><th id="105">105</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="106">106</th><td><i class="doc"> *	struct vlan_pcpu_stats - VLAN percpu rx/tx stats</i></td></tr>
+<tr><th id="107">107</th><td><i class="doc"> *<span class="command">	@rx</span>_packets: number of received packets</i></td></tr>
+<tr><th id="108">108</th><td><i class="doc"> *<span class="command">	@rx</span>_bytes: number of received bytes</i></td></tr>
+<tr><th id="109">109</th><td><i class="doc"> *<span class="command">	@rx</span>_multicast: number of received multicast packets</i></td></tr>
+<tr><th id="110">110</th><td><i class="doc"> *<span class="command">	@tx</span>_packets: number of transmitted packets</i></td></tr>
+<tr><th id="111">111</th><td><i class="doc"> *<span class="command">	@tx</span>_bytes: number of transmitted bytes</i></td></tr>
+<tr><th id="112">112</th><td><i class="doc"> *<span class="command">	@syncp</span>: synchronization point for 64bit counters</i></td></tr>
+<tr><th id="113">113</th><td><i class="doc"> *<span class="command">	@rx</span>_errors: number of rx errors</i></td></tr>
+<tr><th id="114">114</th><td><i class="doc"> *<span class="command">	@tx</span>_dropped: number of tx drops</i></td></tr>
+<tr><th id="115">115</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="116">116</th><td><b>struct</b> <dfn class="type def" id="vlan_pcpu_stats" title='vlan_pcpu_stats' data-ref="vlan_pcpu_stats" data-ref-filename="vlan_pcpu_stats">vlan_pcpu_stats</dfn> {</td></tr>
+<tr><th id="117">117</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a>			<dfn class="decl field" id="vlan_pcpu_stats::rx_packets" title='vlan_pcpu_stats::rx_packets' data-ref="vlan_pcpu_stats::rx_packets" data-ref-filename="vlan_pcpu_stats..rx_packets">rx_packets</dfn>;</td></tr>
+<tr><th id="118">118</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a>			<dfn class="decl field" id="vlan_pcpu_stats::rx_bytes" title='vlan_pcpu_stats::rx_bytes' data-ref="vlan_pcpu_stats::rx_bytes" data-ref-filename="vlan_pcpu_stats..rx_bytes">rx_bytes</dfn>;</td></tr>
+<tr><th id="119">119</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a>			<dfn class="decl field" id="vlan_pcpu_stats::rx_multicast" title='vlan_pcpu_stats::rx_multicast' data-ref="vlan_pcpu_stats::rx_multicast" data-ref-filename="vlan_pcpu_stats..rx_multicast">rx_multicast</dfn>;</td></tr>
+<tr><th id="120">120</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a>			<dfn class="decl field" id="vlan_pcpu_stats::tx_packets" title='vlan_pcpu_stats::tx_packets' data-ref="vlan_pcpu_stats::tx_packets" data-ref-filename="vlan_pcpu_stats..tx_packets">tx_packets</dfn>;</td></tr>
+<tr><th id="121">121</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a>			<dfn class="decl field" id="vlan_pcpu_stats::tx_bytes" title='vlan_pcpu_stats::tx_bytes' data-ref="vlan_pcpu_stats::tx_bytes" data-ref-filename="vlan_pcpu_stats..tx_bytes">tx_bytes</dfn>;</td></tr>
+<tr><th id="122">122</th><td>	<b>struct</b> <a class="type" href="u64_stats_sync.h.html#u64_stats_sync" title='u64_stats_sync' data-ref="u64_stats_sync" data-ref-filename="u64_stats_sync">u64_stats_sync</a>	<dfn class="decl field" id="vlan_pcpu_stats::syncp" title='vlan_pcpu_stats::syncp' data-ref="vlan_pcpu_stats::syncp" data-ref-filename="vlan_pcpu_stats..syncp">syncp</dfn>;</td></tr>
+<tr><th id="123">123</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>			<dfn class="decl field" id="vlan_pcpu_stats::rx_errors" title='vlan_pcpu_stats::rx_errors' data-ref="vlan_pcpu_stats::rx_errors" data-ref-filename="vlan_pcpu_stats..rx_errors">rx_errors</dfn>;</td></tr>
+<tr><th id="124">124</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>			<dfn class="decl field" id="vlan_pcpu_stats::tx_dropped" title='vlan_pcpu_stats::tx_dropped' data-ref="vlan_pcpu_stats::tx_dropped" data-ref-filename="vlan_pcpu_stats..tx_dropped">tx_dropped</dfn>;</td></tr>
+<tr><th id="125">125</th><td>};</td></tr>
+<tr><th id="126">126</th><td></td></tr>
+<tr><th id="127">127</th><td><u>#<span data-ppcond="127">if</span> defined(<span class="macro" data-ref="_M/CONFIG_VLAN_8021Q">CONFIG_VLAN_8021Q</span>) || defined(<span class="macro" data-ref="_M/CONFIG_VLAN_8021Q_MODULE">CONFIG_VLAN_8021Q_MODULE</span>)</u></td></tr>
+<tr><th id="128">128</th><td></td></tr>
+<tr><th id="129">129</th><td><b>extern</b> <b>struct</b> net_device *__vlan_find_dev_deep_rcu(<b>struct</b> net_device *real_dev,</td></tr>
+<tr><th id="130">130</th><td>					       __be16 vlan_proto, u16 vlan_id);</td></tr>
+<tr><th id="131">131</th><td><b>extern</b> <em>int</em> vlan_for_each(<b>struct</b> net_device *dev,</td></tr>
+<tr><th id="132">132</th><td>			 <em>int</em> (*action)(<b>struct</b> net_device *dev, <em>int</em> vid,</td></tr>
+<tr><th id="133">133</th><td>				       <em>void</em> *arg), <em>void</em> *arg);</td></tr>
+<tr><th id="134">134</th><td><b>extern</b> <b>struct</b> net_device *vlan_dev_real_dev(<em>const</em> <b>struct</b> net_device *dev);</td></tr>
+<tr><th id="135">135</th><td><b>extern</b> u16 vlan_dev_vlan_id(<em>const</em> <b>struct</b> net_device *dev);</td></tr>
+<tr><th id="136">136</th><td><b>extern</b> __be16 vlan_dev_vlan_proto(<em>const</em> <b>struct</b> net_device *dev);</td></tr>
+<tr><th id="137">137</th><td></td></tr>
+<tr><th id="138">138</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="139">139</th><td><i class="doc"> *	struct vlan_priority_tci_mapping - vlan egress priority mappings</i></td></tr>
+<tr><th id="140">140</th><td><i class="doc"> *<span class="command">	@priority</span>: skb priority</i></td></tr>
+<tr><th id="141">141</th><td><i class="doc"> *<span class="command">	@vlan</span>_qos: vlan priority: (skb-&gt;priority &lt;&lt; 13) &amp; 0xE000</i></td></tr>
+<tr><th id="142">142</th><td><i class="doc"> *<span class="command">	@next</span>: pointer to next struct</i></td></tr>
+<tr><th id="143">143</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="144">144</th><td><b>struct</b> vlan_priority_tci_mapping {</td></tr>
+<tr><th id="145">145</th><td>	u32					priority;</td></tr>
+<tr><th id="146">146</th><td>	u16					vlan_qos;</td></tr>
+<tr><th id="147">147</th><td>	<b>struct</b> vlan_priority_tci_mapping	*next;</td></tr>
+<tr><th id="148">148</th><td>};</td></tr>
+<tr><th id="149">149</th><td></td></tr>
+<tr><th id="150">150</th><td><b>struct</b> proc_dir_entry;</td></tr>
+<tr><th id="151">151</th><td><b>struct</b> netpoll;</td></tr>
+<tr><th id="152">152</th><td></td></tr>
+<tr><th id="153">153</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="154">154</th><td><i class="doc"> *	struct vlan_dev_priv - VLAN private device data</i></td></tr>
+<tr><th id="155">155</th><td><i class="doc"> *<span class="command">	@nr</span>_ingress_mappings: number of ingress priority mappings</i></td></tr>
+<tr><th id="156">156</th><td><i class="doc"> *<span class="command">	@ingress</span>_priority_map: ingress priority mappings</i></td></tr>
+<tr><th id="157">157</th><td><i class="doc"> *<span class="command">	@nr</span>_egress_mappings: number of egress priority mappings</i></td></tr>
+<tr><th id="158">158</th><td><i class="doc"> *<span class="command">	@egress</span>_priority_map: hash of egress priority mappings</i></td></tr>
+<tr><th id="159">159</th><td><i class="doc"> *<span class="command">	@vlan</span>_proto: VLAN encapsulation protocol</i></td></tr>
+<tr><th id="160">160</th><td><i class="doc"> *<span class="command">	@vlan</span>_id: VLAN identifier</i></td></tr>
+<tr><th id="161">161</th><td><i class="doc"> *<span class="command">	@flags</span>: device flags</i></td></tr>
+<tr><th id="162">162</th><td><i class="doc"> *<span class="command">	@real</span>_dev: underlying netdevice</i></td></tr>
+<tr><th id="163">163</th><td><i class="doc"> *<span class="command">	@real</span>_dev_addr: address of underlying netdevice</i></td></tr>
+<tr><th id="164">164</th><td><i class="doc"> *<span class="command">	@dent</span>: proc dir entry</i></td></tr>
+<tr><th id="165">165</th><td><i class="doc"> *<span class="command">	@vlan</span>_pcpu_stats: ptr to percpu rx stats</i></td></tr>
+<tr><th id="166">166</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="167">167</th><td><b>struct</b> vlan_dev_priv {</td></tr>
+<tr><th id="168">168</th><td>	<em>unsigned</em> <em>int</em>				nr_ingress_mappings;</td></tr>
+<tr><th id="169">169</th><td>	u32					ingress_priority_map[<var>8</var>];</td></tr>
+<tr><th id="170">170</th><td>	<em>unsigned</em> <em>int</em>				nr_egress_mappings;</td></tr>
+<tr><th id="171">171</th><td>	<b>struct</b> vlan_priority_tci_mapping	*egress_priority_map[<var>16</var>];</td></tr>
+<tr><th id="172">172</th><td></td></tr>
+<tr><th id="173">173</th><td>	__be16					vlan_proto;</td></tr>
+<tr><th id="174">174</th><td>	u16					vlan_id;</td></tr>
+<tr><th id="175">175</th><td>	u16					flags;</td></tr>
+<tr><th id="176">176</th><td></td></tr>
+<tr><th id="177">177</th><td>	<b>struct</b> net_device			*real_dev;</td></tr>
+<tr><th id="178">178</th><td>	<em>unsigned</em> <em>char</em>				real_dev_addr[ETH_ALEN];</td></tr>
+<tr><th id="179">179</th><td></td></tr>
+<tr><th id="180">180</th><td>	<b>struct</b> proc_dir_entry			*dent;</td></tr>
+<tr><th id="181">181</th><td>	<b>struct</b> vlan_pcpu_stats __percpu		*vlan_pcpu_stats;</td></tr>
+<tr><th id="182">182</th><td><u>#ifdef CONFIG_NET_POLL_CONTROLLER</u></td></tr>
+<tr><th id="183">183</th><td>	<b>struct</b> netpoll				*netpoll;</td></tr>
+<tr><th id="184">184</th><td><u>#endif</u></td></tr>
+<tr><th id="185">185</th><td>	<em>unsigned</em> <em>int</em>				nest_level;</td></tr>
+<tr><th id="186">186</th><td>};</td></tr>
+<tr><th id="187">187</th><td></td></tr>
+<tr><th id="188">188</th><td><em>static</em> <b>inline</b> <b>struct</b> vlan_dev_priv *vlan_dev_priv(<em>const</em> <b>struct</b> net_device *dev)</td></tr>
+<tr><th id="189">189</th><td>{</td></tr>
+<tr><th id="190">190</th><td>	<b>return</b> netdev_priv(dev);</td></tr>
+<tr><th id="191">191</th><td>}</td></tr>
+<tr><th id="192">192</th><td></td></tr>
+<tr><th id="193">193</th><td><em>static</em> <b>inline</b> u16</td></tr>
+<tr><th id="194">194</th><td>vlan_dev_get_egress_qos_mask(<b>struct</b> net_device *dev, u32 skprio)</td></tr>
+<tr><th id="195">195</th><td>{</td></tr>
+<tr><th id="196">196</th><td>	<b>struct</b> vlan_priority_tci_mapping *mp;</td></tr>
+<tr><th id="197">197</th><td></td></tr>
+<tr><th id="198">198</th><td>	smp_rmb(); <i>/* coupled with smp_wmb() in vlan_dev_set_egress_priority() */</i></td></tr>
+<tr><th id="199">199</th><td></td></tr>
+<tr><th id="200">200</th><td>	mp = vlan_dev_priv(dev)-&gt;egress_priority_map[(skprio &amp; <var>0xF</var>)];</td></tr>
+<tr><th id="201">201</th><td>	<b>while</b> (mp) {</td></tr>
+<tr><th id="202">202</th><td>		<b>if</b> (mp-&gt;priority == skprio) {</td></tr>
+<tr><th id="203">203</th><td>			<b>return</b> mp-&gt;vlan_qos; <i>/* This should already be shifted</i></td></tr>
+<tr><th id="204">204</th><td><i>					      * to mask correctly with the</i></td></tr>
+<tr><th id="205">205</th><td><i>					      * VLAN's TCI */</i></td></tr>
+<tr><th id="206">206</th><td>		}</td></tr>
+<tr><th id="207">207</th><td>		mp = mp-&gt;next;</td></tr>
+<tr><th id="208">208</th><td>	}</td></tr>
+<tr><th id="209">209</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="210">210</th><td>}</td></tr>
+<tr><th id="211">211</th><td></td></tr>
+<tr><th id="212">212</th><td><b>extern</b> bool vlan_do_receive(<b>struct</b> sk_buff **skb);</td></tr>
+<tr><th id="213">213</th><td></td></tr>
+<tr><th id="214">214</th><td><b>extern</b> <em>int</em> vlan_vid_add(<b>struct</b> net_device *dev, __be16 proto, u16 vid);</td></tr>
+<tr><th id="215">215</th><td><b>extern</b> <em>void</em> vlan_vid_del(<b>struct</b> net_device *dev, __be16 proto, u16 vid);</td></tr>
+<tr><th id="216">216</th><td></td></tr>
+<tr><th id="217">217</th><td><b>extern</b> <em>int</em> vlan_vids_add_by_dev(<b>struct</b> net_device *dev,</td></tr>
+<tr><th id="218">218</th><td>				<em>const</em> <b>struct</b> net_device *by_dev);</td></tr>
+<tr><th id="219">219</th><td><b>extern</b> <em>void</em> vlan_vids_del_by_dev(<b>struct</b> net_device *dev,</td></tr>
+<tr><th id="220">220</th><td>				 <em>const</em> <b>struct</b> net_device *by_dev);</td></tr>
+<tr><th id="221">221</th><td></td></tr>
+<tr><th id="222">222</th><td><b>extern</b> bool vlan_uses_dev(<em>const</em> <b>struct</b> net_device *dev);</td></tr>
+<tr><th id="223">223</th><td></td></tr>
+<tr><th id="224">224</th><td><em>static</em> <b>inline</b> <em>int</em> vlan_get_encap_level(<b>struct</b> net_device *dev)</td></tr>
+<tr><th id="225">225</th><td>{</td></tr>
+<tr><th id="226">226</th><td>	BUG_ON(!is_vlan_dev(dev));</td></tr>
+<tr><th id="227">227</th><td>	<b>return</b> vlan_dev_priv(dev)-&gt;nest_level;</td></tr>
+<tr><th id="228">228</th><td>}</td></tr>
+<tr><th id="229">229</th><td><u>#<span data-ppcond="127">else</span></u></td></tr>
+<tr><th id="230">230</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="netdevice.h.html#net_device" title='net_device' data-ref="net_device" data-ref-filename="net_device">net_device</a> *</td></tr>
+<tr><th id="231">231</th><td><dfn class="decl def fn" id="__vlan_find_dev_deep_rcu" title='__vlan_find_dev_deep_rcu' data-ref="__vlan_find_dev_deep_rcu" data-ref-filename="__vlan_find_dev_deep_rcu">__vlan_find_dev_deep_rcu</dfn>(<b>struct</b> <a class="type" href="netdevice.h.html#net_device" title='net_device' data-ref="net_device" data-ref-filename="net_device">net_device</a> *<dfn class="local col8 decl" id="8real_dev" title='real_dev' data-type='struct net_device *' data-ref="8real_dev" data-ref-filename="8real_dev">real_dev</dfn>,</td></tr>
+<tr><th id="232">232</th><td>		     <a class="typedef" href="../uapi/linux/types.h.html#__be16" title='__be16' data-type='__u16' data-ref="__be16" data-ref-filename="__be16">__be16</a> <dfn class="local col9 decl" id="9vlan_proto" title='vlan_proto' data-type='__be16' data-ref="9vlan_proto" data-ref-filename="9vlan_proto">vlan_proto</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col0 decl" id="10vlan_id" title='vlan_id' data-type='u16' data-ref="10vlan_id" data-ref-filename="10vlan_id">vlan_id</dfn>)</td></tr>
+<tr><th id="233">233</th><td>{</td></tr>
+<tr><th id="234">234</th><td>	<b>return</b> <a class="macro" href="stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="235">235</th><td>}</td></tr>
+<tr><th id="236">236</th><td></td></tr>
+<tr><th id="237">237</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em></td></tr>
+<tr><th id="238">238</th><td><dfn class="decl def fn" id="vlan_for_each" title='vlan_for_each' data-ref="vlan_for_each" data-ref-filename="vlan_for_each">vlan_for_each</dfn>(<b>struct</b> <a class="type" href="netdevice.h.html#net_device" title='net_device' data-ref="net_device" data-ref-filename="net_device">net_device</a> *<dfn class="local col1 decl" id="11dev" title='dev' data-type='struct net_device *' data-ref="11dev" data-ref-filename="11dev">dev</dfn>,</td></tr>
+<tr><th id="239">239</th><td>	      <em>int</em> (*<dfn class="local col2 decl" id="12action" title='action' data-type='int (*)(struct net_device *, int, void *)' data-ref="12action" data-ref-filename="12action">action</dfn>)(<b>struct</b> <a class="type" href="netdevice.h.html#net_device" title='net_device' data-ref="net_device" data-ref-filename="net_device">net_device</a> *<dfn class="local col3 decl" id="13dev" title='dev' data-type='struct net_device *' data-ref="13dev" data-ref-filename="13dev">dev</dfn>, <em>int</em> <dfn class="local col4 decl" id="14vid" title='vid' data-type='int' data-ref="14vid" data-ref-filename="14vid">vid</dfn>, <em>void</em> *<dfn class="local col5 decl" id="15arg" title='arg' data-type='void *' data-ref="15arg" data-ref-filename="15arg">arg</dfn>),</td></tr>
+<tr><th id="240">240</th><td>	      <em>void</em> *<dfn class="local col6 decl" id="16arg" title='arg' data-type='void *' data-ref="16arg" data-ref-filename="16arg">arg</dfn>)</td></tr>
+<tr><th id="241">241</th><td>{</td></tr>
+<tr><th id="242">242</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="243">243</th><td>}</td></tr>
+<tr><th id="244">244</th><td></td></tr>
+<tr><th id="245">245</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="netdevice.h.html#net_device" title='net_device' data-ref="net_device" data-ref-filename="net_device">net_device</a> *<dfn class="decl def fn" id="vlan_dev_real_dev" title='vlan_dev_real_dev' data-ref="vlan_dev_real_dev" data-ref-filename="vlan_dev_real_dev">vlan_dev_real_dev</dfn>(<em>const</em> <b>struct</b> <a class="type" href="netdevice.h.html#net_device" title='net_device' data-ref="net_device" data-ref-filename="net_device">net_device</a> *<dfn class="local col7 decl" id="17dev" title='dev' data-type='const struct net_device *' data-ref="17dev" data-ref-filename="17dev">dev</dfn>)</td></tr>
+<tr><th id="246">246</th><td>{</td></tr>
+<tr><th id="247">247</th><td>	<a class="macro" href="../../arch/x86/include/asm/bug.h.html#71" title="do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/./include/linux/if_vlan.h&quot;), &quot;i&quot; (247), &quot;i&quot; (0), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); do { ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.unreachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (133)); }); __builtin_unreachable(); } while (0); } while (0)" data-ref="_M/BUG">BUG</a>();</td></tr>
+<tr><th id="248">248</th><td>	<b>return</b> <a class="macro" href="stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="249">249</th><td>}</td></tr>
+<tr><th id="250">250</th><td></td></tr>
+<tr><th id="251">251</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="decl def fn" id="vlan_dev_vlan_id" title='vlan_dev_vlan_id' data-ref="vlan_dev_vlan_id" data-ref-filename="vlan_dev_vlan_id">vlan_dev_vlan_id</dfn>(<em>const</em> <b>struct</b> <a class="type" href="netdevice.h.html#net_device" title='net_device' data-ref="net_device" data-ref-filename="net_device">net_device</a> *<dfn class="local col8 decl" id="18dev" title='dev' data-type='const struct net_device *' data-ref="18dev" data-ref-filename="18dev">dev</dfn>)</td></tr>
+<tr><th id="252">252</th><td>{</td></tr>
+<tr><th id="253">253</th><td>	<a class="macro" href="../../arch/x86/include/asm/bug.h.html#71" title="do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/./include/linux/if_vlan.h&quot;), &quot;i&quot; (253), &quot;i&quot; (0), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); do { ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.unreachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (135)); }); __builtin_unreachable(); } while (0); } while (0)" data-ref="_M/BUG">BUG</a>();</td></tr>
+<tr><th id="254">254</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="255">255</th><td>}</td></tr>
+<tr><th id="256">256</th><td></td></tr>
+<tr><th id="257">257</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../uapi/linux/types.h.html#__be16" title='__be16' data-type='__u16' data-ref="__be16" data-ref-filename="__be16">__be16</a> <dfn class="decl def fn" id="vlan_dev_vlan_proto" title='vlan_dev_vlan_proto' data-ref="vlan_dev_vlan_proto" data-ref-filename="vlan_dev_vlan_proto">vlan_dev_vlan_proto</dfn>(<em>const</em> <b>struct</b> <a class="type" href="netdevice.h.html#net_device" title='net_device' data-ref="net_device" data-ref-filename="net_device">net_device</a> *<dfn class="local col9 decl" id="19dev" title='dev' data-type='const struct net_device *' data-ref="19dev" data-ref-filename="19dev">dev</dfn>)</td></tr>
+<tr><th id="258">258</th><td>{</td></tr>
+<tr><th id="259">259</th><td>	<a class="macro" href="../../arch/x86/include/asm/bug.h.html#71" title="do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/./include/linux/if_vlan.h&quot;), &quot;i&quot; (259), &quot;i&quot; (0), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); do { ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.unreachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (137)); }); __builtin_unreachable(); } while (0); } while (0)" data-ref="_M/BUG">BUG</a>();</td></tr>
+<tr><th id="260">260</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="261">261</th><td>}</td></tr>
+<tr><th id="262">262</th><td></td></tr>
+<tr><th id="263">263</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="decl def fn" id="vlan_dev_get_egress_qos_mask" title='vlan_dev_get_egress_qos_mask' data-ref="vlan_dev_get_egress_qos_mask" data-ref-filename="vlan_dev_get_egress_qos_mask">vlan_dev_get_egress_qos_mask</dfn>(<b>struct</b> <a class="type" href="netdevice.h.html#net_device" title='net_device' data-ref="net_device" data-ref-filename="net_device">net_device</a> *<dfn class="local col0 decl" id="20dev" title='dev' data-type='struct net_device *' data-ref="20dev" data-ref-filename="20dev">dev</dfn>,</td></tr>
+<tr><th id="264">264</th><td>					       <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col1 decl" id="21skprio" title='skprio' data-type='u32' data-ref="21skprio" data-ref-filename="21skprio">skprio</dfn>)</td></tr>
+<tr><th id="265">265</th><td>{</td></tr>
+<tr><th id="266">266</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="267">267</th><td>}</td></tr>
+<tr><th id="268">268</th><td></td></tr>
+<tr><th id="269">269</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="vlan_do_receive" title='vlan_do_receive' data-ref="vlan_do_receive" data-ref-filename="vlan_do_receive">vlan_do_receive</dfn>(<b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> **<dfn class="local col2 decl" id="22skb" title='skb' data-type='struct sk_buff **' data-ref="22skb" data-ref-filename="22skb">skb</dfn>)</td></tr>
+<tr><th id="270">270</th><td>{</td></tr>
+<tr><th id="271">271</th><td>	<b>return</b> <a class="enum" href="stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="272">272</th><td>}</td></tr>
+<tr><th id="273">273</th><td></td></tr>
+<tr><th id="274">274</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="vlan_vid_add" title='vlan_vid_add' data-ref="vlan_vid_add" data-ref-filename="vlan_vid_add">vlan_vid_add</dfn>(<b>struct</b> <a class="type" href="netdevice.h.html#net_device" title='net_device' data-ref="net_device" data-ref-filename="net_device">net_device</a> *<dfn class="local col3 decl" id="23dev" title='dev' data-type='struct net_device *' data-ref="23dev" data-ref-filename="23dev">dev</dfn>, <a class="typedef" href="../uapi/linux/types.h.html#__be16" title='__be16' data-type='__u16' data-ref="__be16" data-ref-filename="__be16">__be16</a> <dfn class="local col4 decl" id="24proto" title='proto' data-type='__be16' data-ref="24proto" data-ref-filename="24proto">proto</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col5 decl" id="25vid" title='vid' data-type='u16' data-ref="25vid" data-ref-filename="25vid">vid</dfn>)</td></tr>
+<tr><th id="275">275</th><td>{</td></tr>
+<tr><th id="276">276</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="277">277</th><td>}</td></tr>
+<tr><th id="278">278</th><td></td></tr>
+<tr><th id="279">279</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="vlan_vid_del" title='vlan_vid_del' data-ref="vlan_vid_del" data-ref-filename="vlan_vid_del">vlan_vid_del</dfn>(<b>struct</b> <a class="type" href="netdevice.h.html#net_device" title='net_device' data-ref="net_device" data-ref-filename="net_device">net_device</a> *<dfn class="local col6 decl" id="26dev" title='dev' data-type='struct net_device *' data-ref="26dev" data-ref-filename="26dev">dev</dfn>, <a class="typedef" href="../uapi/linux/types.h.html#__be16" title='__be16' data-type='__u16' data-ref="__be16" data-ref-filename="__be16">__be16</a> <dfn class="local col7 decl" id="27proto" title='proto' data-type='__be16' data-ref="27proto" data-ref-filename="27proto">proto</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col8 decl" id="28vid" title='vid' data-type='u16' data-ref="28vid" data-ref-filename="28vid">vid</dfn>)</td></tr>
+<tr><th id="280">280</th><td>{</td></tr>
+<tr><th id="281">281</th><td>}</td></tr>
+<tr><th id="282">282</th><td></td></tr>
+<tr><th id="283">283</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="vlan_vids_add_by_dev" title='vlan_vids_add_by_dev' data-ref="vlan_vids_add_by_dev" data-ref-filename="vlan_vids_add_by_dev">vlan_vids_add_by_dev</dfn>(<b>struct</b> <a class="type" href="netdevice.h.html#net_device" title='net_device' data-ref="net_device" data-ref-filename="net_device">net_device</a> *<dfn class="local col9 decl" id="29dev" title='dev' data-type='struct net_device *' data-ref="29dev" data-ref-filename="29dev">dev</dfn>,</td></tr>
+<tr><th id="284">284</th><td>				       <em>const</em> <b>struct</b> <a class="type" href="netdevice.h.html#net_device" title='net_device' data-ref="net_device" data-ref-filename="net_device">net_device</a> *<dfn class="local col0 decl" id="30by_dev" title='by_dev' data-type='const struct net_device *' data-ref="30by_dev" data-ref-filename="30by_dev">by_dev</dfn>)</td></tr>
+<tr><th id="285">285</th><td>{</td></tr>
+<tr><th id="286">286</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="287">287</th><td>}</td></tr>
+<tr><th id="288">288</th><td></td></tr>
+<tr><th id="289">289</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="vlan_vids_del_by_dev" title='vlan_vids_del_by_dev' data-ref="vlan_vids_del_by_dev" data-ref-filename="vlan_vids_del_by_dev">vlan_vids_del_by_dev</dfn>(<b>struct</b> <a class="type" href="netdevice.h.html#net_device" title='net_device' data-ref="net_device" data-ref-filename="net_device">net_device</a> *<dfn class="local col1 decl" id="31dev" title='dev' data-type='struct net_device *' data-ref="31dev" data-ref-filename="31dev">dev</dfn>,</td></tr>
+<tr><th id="290">290</th><td>					<em>const</em> <b>struct</b> <a class="type" href="netdevice.h.html#net_device" title='net_device' data-ref="net_device" data-ref-filename="net_device">net_device</a> *<dfn class="local col2 decl" id="32by_dev" title='by_dev' data-type='const struct net_device *' data-ref="32by_dev" data-ref-filename="32by_dev">by_dev</dfn>)</td></tr>
+<tr><th id="291">291</th><td>{</td></tr>
+<tr><th id="292">292</th><td>}</td></tr>
+<tr><th id="293">293</th><td></td></tr>
+<tr><th id="294">294</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="vlan_uses_dev" title='vlan_uses_dev' data-ref="vlan_uses_dev" data-ref-filename="vlan_uses_dev">vlan_uses_dev</dfn>(<em>const</em> <b>struct</b> <a class="type" href="netdevice.h.html#net_device" title='net_device' data-ref="net_device" data-ref-filename="net_device">net_device</a> *<dfn class="local col3 decl" id="33dev" title='dev' data-type='const struct net_device *' data-ref="33dev" data-ref-filename="33dev">dev</dfn>)</td></tr>
+<tr><th id="295">295</th><td>{</td></tr>
+<tr><th id="296">296</th><td>	<b>return</b> <a class="enum" href="stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="297">297</th><td>}</td></tr>
+<tr><th id="298">298</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="vlan_get_encap_level" title='vlan_get_encap_level' data-ref="vlan_get_encap_level" data-ref-filename="vlan_get_encap_level">vlan_get_encap_level</dfn>(<b>struct</b> <a class="type" href="netdevice.h.html#net_device" title='net_device' data-ref="net_device" data-ref-filename="net_device">net_device</a> *<dfn class="local col4 decl" id="34dev" title='dev' data-type='struct net_device *' data-ref="34dev" data-ref-filename="34dev">dev</dfn>)</td></tr>
+<tr><th id="299">299</th><td>{</td></tr>
+<tr><th id="300">300</th><td>	<a class="macro" href="../../arch/x86/include/asm/bug.h.html#71" title="do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/./include/linux/if_vlan.h&quot;), &quot;i&quot; (300), &quot;i&quot; (0), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); do { ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.unreachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (139)); }); __builtin_unreachable(); } while (0); } while (0)" data-ref="_M/BUG">BUG</a>();</td></tr>
+<tr><th id="301">301</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="302">302</th><td>}</td></tr>
+<tr><th id="303">303</th><td><u>#<span data-ppcond="127">endif</span></u></td></tr>
+<tr><th id="304">304</th><td></td></tr>
+<tr><th id="305">305</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="306">306</th><td><i class="doc"> * eth_type_vlan - check for valid vlan ether type.</i></td></tr>
+<tr><th id="307">307</th><td><i class="doc"> *<span class="command"> @ethertype</span>: ether type to check</i></td></tr>
+<tr><th id="308">308</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="309">309</th><td><i class="doc"> * Returns true if the ether type is a vlan ether type.</i></td></tr>
+<tr><th id="310">310</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="311">311</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="eth_type_vlan" title='eth_type_vlan' data-ref="eth_type_vlan" data-ref-filename="eth_type_vlan">eth_type_vlan</dfn>(<a class="typedef" href="../uapi/linux/types.h.html#__be16" title='__be16' data-type='__u16' data-ref="__be16" data-ref-filename="__be16">__be16</a> <dfn class="local col5 decl" id="35ethertype" title='ethertype' data-type='__be16' data-ref="35ethertype" data-ref-filename="35ethertype">ethertype</dfn>)</td></tr>
+<tr><th id="312">312</th><td>{</td></tr>
+<tr><th id="313">313</th><td>	<b>switch</b> (<a class="local col5 ref" href="#35ethertype" title='ethertype' data-ref="35ethertype" data-ref-filename="35ethertype">ethertype</a>) {</td></tr>
+<tr><th id="314">314</th><td>	<b>case</b> <a class="macro" href="byteorder/generic.h.html#141" title="(( __be16)(__builtin_constant_p((__u16)((0x8100))) ? ((__u16)( (((__u16)((0x8100)) &amp; (__u16)0x00ffU) &lt;&lt; 8) | (((__u16)((0x8100)) &amp; (__u16)0xff00U) &gt;&gt; 8))) : __fswab16((0x8100))))" data-ref="_M/htons">htons</a>(<a class="macro" href="../uapi/linux/if_ether.h.html#71" title="0x8100" data-ref="_M/ETH_P_8021Q">ETH_P_8021Q</a>):</td></tr>
+<tr><th id="315">315</th><td>	<b>case</b> <a class="macro" href="byteorder/generic.h.html#141" title="(( __be16)(__builtin_constant_p((__u16)((0x88A8))) ? ((__u16)( (((__u16)((0x88A8)) &amp; (__u16)0x00ffU) &lt;&lt; 8) | (((__u16)((0x88A8)) &amp; (__u16)0xff00U) &gt;&gt; 8))) : __fswab16((0x88A8))))" data-ref="_M/htons">htons</a>(<a class="macro" href="../uapi/linux/if_ether.h.html#90" title="0x88A8" data-ref="_M/ETH_P_8021AD">ETH_P_8021AD</a>):</td></tr>
+<tr><th id="316">316</th><td>		<b>return</b> <a class="enum" href="stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>;</td></tr>
+<tr><th id="317">317</th><td>	<b>default</b>:</td></tr>
+<tr><th id="318">318</th><td>		<b>return</b> <a class="enum" href="stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="319">319</th><td>	}</td></tr>
+<tr><th id="320">320</th><td>}</td></tr>
+<tr><th id="321">321</th><td></td></tr>
+<tr><th id="322">322</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="vlan_hw_offload_capable" title='vlan_hw_offload_capable' data-ref="vlan_hw_offload_capable" data-ref-filename="vlan_hw_offload_capable">vlan_hw_offload_capable</dfn>(<a class="typedef" href="netdev_features.h.html#netdev_features_t" title='netdev_features_t' data-type='u64' data-ref="netdev_features_t" data-ref-filename="netdev_features_t">netdev_features_t</a> <dfn class="local col6 decl" id="36features" title='features' data-type='netdev_features_t' data-ref="36features" data-ref-filename="36features">features</dfn>,</td></tr>
+<tr><th id="323">323</th><td>					   <a class="typedef" href="../uapi/linux/types.h.html#__be16" title='__be16' data-type='__u16' data-ref="__be16" data-ref-filename="__be16">__be16</a> <dfn class="local col7 decl" id="37proto" title='proto' data-type='__be16' data-ref="37proto" data-ref-filename="37proto">proto</dfn>)</td></tr>
+<tr><th id="324">324</th><td>{</td></tr>
+<tr><th id="325">325</th><td>	<b>if</b> (<a class="local col7 ref" href="#37proto" title='proto' data-ref="37proto" data-ref-filename="37proto">proto</a> == <a class="macro" href="byteorder/generic.h.html#141" title="(( __be16)(__builtin_constant_p((__u16)((0x8100))) ? ((__u16)( (((__u16)((0x8100)) &amp; (__u16)0x00ffU) &lt;&lt; 8) | (((__u16)((0x8100)) &amp; (__u16)0xff00U) &gt;&gt; 8))) : __fswab16((0x8100))))" data-ref="_M/htons">htons</a>(<a class="macro" href="../uapi/linux/if_ether.h.html#71" title="0x8100" data-ref="_M/ETH_P_8021Q">ETH_P_8021Q</a>) &amp;&amp; <a class="local col6 ref" href="#36features" title='features' data-ref="36features" data-ref-filename="36features">features</a> &amp; <a class="macro" href="netdev_features.h.html#110" title="((netdev_features_t)1 &lt;&lt; (NETIF_F_HW_VLAN_CTAG_TX_BIT))" data-ref="_M/NETIF_F_HW_VLAN_CTAG_TX">NETIF_F_HW_VLAN_CTAG_TX</a>)</td></tr>
+<tr><th id="326">326</th><td>		<b>return</b> <a class="enum" href="stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>;</td></tr>
+<tr><th id="327">327</th><td>	<b>if</b> (<a class="local col7 ref" href="#37proto" title='proto' data-ref="37proto" data-ref-filename="37proto">proto</a> == <a class="macro" href="byteorder/generic.h.html#141" title="(( __be16)(__builtin_constant_p((__u16)((0x88A8))) ? ((__u16)( (((__u16)((0x88A8)) &amp; (__u16)0x00ffU) &lt;&lt; 8) | (((__u16)((0x88A8)) &amp; (__u16)0xff00U) &gt;&gt; 8))) : __fswab16((0x88A8))))" data-ref="_M/htons">htons</a>(<a class="macro" href="../uapi/linux/if_ether.h.html#90" title="0x88A8" data-ref="_M/ETH_P_8021AD">ETH_P_8021AD</a>) &amp;&amp; <a class="local col6 ref" href="#36features" title='features' data-ref="36features" data-ref-filename="36features">features</a> &amp; <a class="macro" href="netdev_features.h.html#143" title="((netdev_features_t)1 &lt;&lt; (NETIF_F_HW_VLAN_STAG_TX_BIT))" data-ref="_M/NETIF_F_HW_VLAN_STAG_TX">NETIF_F_HW_VLAN_STAG_TX</a>)</td></tr>
+<tr><th id="328">328</th><td>		<b>return</b> <a class="enum" href="stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>;</td></tr>
+<tr><th id="329">329</th><td>	<b>return</b> <a class="enum" href="stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="330">330</th><td>}</td></tr>
+<tr><th id="331">331</th><td></td></tr>
+<tr><th id="332">332</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="333">333</th><td><i class="doc"> * __vlan_insert_inner_tag - inner VLAN tag inserting</i></td></tr>
+<tr><th id="334">334</th><td><i class="doc"> *<span class="command"> @skb</span>: skbuff to tag</i></td></tr>
+<tr><th id="335">335</th><td><i class="doc"> *<span class="command"> @vlan</span>_proto: VLAN encapsulation protocol</i></td></tr>
+<tr><th id="336">336</th><td><i class="doc"> *<span class="command"> @vlan</span>_tci: VLAN TCI to insert</i></td></tr>
+<tr><th id="337">337</th><td><i class="doc"> * <span class="command">@mac</span><span class="verb">_len: MAC header length including outer vlan headers</span></i></td></tr>
+<tr><th id="338">338</th><td><i class="doc"><span class="verb"></span> *<span class="verb"></span></i></td></tr>
+<tr><th id="339">339</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> Inserts the VLAN tag into @skb as part of the payload at offset mac_len</span></i></td></tr>
+<tr><th id="340">340</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> Returns error if skb_cow_head fails.</span></i></td></tr>
+<tr><th id="341">341</th><td><i class="doc"><span class="verb"></span> *<span class="verb"></span></i></td></tr>
+<tr><th id="342">342</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> Does not change skb-&gt;protocol so this function can be used during receive.</span></i></td></tr>
+<tr><th id="343">343</th><td><i class="doc"><span class="verb"></span><span class="verb"> *</span>/</i><span class="verb"></span></td></tr>
+<tr><th id="344">344</th><td><span class="verb"></span><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="__vlan_insert_inner_tag" title='__vlan_insert_inner_tag' data-ref="__vlan_insert_inner_tag" data-ref-filename="__vlan_insert_inner_tag">__vlan_insert_inner_tag</dfn>(<b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col8 decl" id="38skb" title='skb' data-type='struct sk_buff *' data-ref="38skb" data-ref-filename="38skb">skb</dfn>,</td></tr>
+<tr><th id="345">345</th><td>					  <a class="typedef" href="../uapi/linux/types.h.html#__be16" title='__be16' data-type='__u16' data-ref="__be16" data-ref-filename="__be16">__be16</a> <dfn class="local col9 decl" id="39vlan_proto" title='vlan_proto' data-type='__be16' data-ref="39vlan_proto" data-ref-filename="39vlan_proto">vlan_proto</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col0 decl" id="40vlan_tci" title='vlan_tci' data-type='u16' data-ref="40vlan_tci" data-ref-filename="40vlan_tci">vlan_tci</dfn>,</td></tr>
+<tr><th id="346">346</th><td>					  <em>unsigned</em> <em>int</em> <dfn class="local col1 decl" id="41mac_len" title='mac_len' data-type='unsigned int' data-ref="41mac_len" data-ref-filename="41mac_len">mac_len</dfn>)</td></tr>
+<tr><th id="347">347</th><td>{</td></tr>
+<tr><th id="348">348</th><td>	<b>struct</b> <a class="type" href="#vlan_ethhdr" title='vlan_ethhdr' data-ref="vlan_ethhdr" data-ref-filename="vlan_ethhdr">vlan_ethhdr</a> *<dfn class="local col2 decl" id="42veth" title='veth' data-type='struct vlan_ethhdr *' data-ref="42veth" data-ref-filename="42veth">veth</dfn>;</td></tr>
+<tr><th id="349">349</th><td></td></tr>
+<tr><th id="350">350</th><td>	<b>if</b> (<a class="ref fn" href="skbuff.h.html#skb_cow_head" title='skb_cow_head' data-ref="skb_cow_head" data-ref-filename="skb_cow_head">skb_cow_head</a>(<a class="local col8 ref" href="#38skb" title='skb' data-ref="38skb" data-ref-filename="38skb">skb</a>, <a class="macro" href="#16" title="4" data-ref="_M/VLAN_HLEN">VLAN_HLEN</a>) &lt; <var>0</var>)</td></tr>
+<tr><th id="351">351</th><td>		<b>return</b> -<a class="macro" href="../uapi/asm-generic/errno-base.h.html#16" title="12" data-ref="_M/ENOMEM">ENOMEM</a>;</td></tr>
+<tr><th id="352">352</th><td></td></tr>
+<tr><th id="353">353</th><td>	<a class="ref fn" href="skbuff.h.html#skb_push" title='skb_push' data-ref="skb_push" data-ref-filename="skb_push">skb_push</a>(<a class="local col8 ref" href="#38skb" title='skb' data-ref="38skb" data-ref-filename="38skb">skb</a>, <a class="macro" href="#16" title="4" data-ref="_M/VLAN_HLEN">VLAN_HLEN</a>);</td></tr>
+<tr><th id="354">354</th><td></td></tr>
+<tr><th id="355">355</th><td>	<i>/* Move the mac header sans proto to the beginning of the new header. */</i></td></tr>
+<tr><th id="356">356</th><td>	<b>if</b> (<a class="macro" href="compiler.h.html#77" title="__builtin_expect(!!(mac_len &gt; 2), 1)" data-ref="_M/likely">likely</a>(<a class="local col1 ref" href="#41mac_len" title='mac_len' data-ref="41mac_len" data-ref-filename="41mac_len">mac_len</a> &gt; <a class="macro" href="../uapi/linux/if_ether.h.html#33" title="2" data-ref="_M/ETH_TLEN">ETH_TLEN</a>))</td></tr>
+<tr><th id="357">357</th><td>		<a class="ref fn" href="../../arch/x86/include/asm/string_64.h.html#memmove" title='memmove' data-ref="memmove" data-ref-filename="memmove">memmove</a>(<a class="local col8 ref" href="#38skb" title='skb' data-ref="38skb" data-ref-filename="38skb">skb</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::data" title='sk_buff::data' data-ref="sk_buff::data" data-ref-filename="sk_buff..data">data</a>, <a class="local col8 ref" href="#38skb" title='skb' data-ref="38skb" data-ref-filename="38skb">skb</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::data" title='sk_buff::data' data-ref="sk_buff::data" data-ref-filename="sk_buff..data">data</a> + <a class="macro" href="#16" title="4" data-ref="_M/VLAN_HLEN">VLAN_HLEN</a>, <a class="local col1 ref" href="#41mac_len" title='mac_len' data-ref="41mac_len" data-ref-filename="41mac_len">mac_len</a> - <a class="macro" href="../uapi/linux/if_ether.h.html#33" title="2" data-ref="_M/ETH_TLEN">ETH_TLEN</a>);</td></tr>
+<tr><th id="358">358</th><td>	<a class="local col8 ref" href="#38skb" title='skb' data-ref="38skb" data-ref-filename="38skb">skb</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::mac_header" title='sk_buff::mac_header' data-ref="sk_buff::mac_header" data-ref-filename="sk_buff..mac_header">mac_header</a> -= <a class="macro" href="#16" title="4" data-ref="_M/VLAN_HLEN">VLAN_HLEN</a>;</td></tr>
+<tr><th id="359">359</th><td></td></tr>
+<tr><th id="360">360</th><td>	<a class="local col2 ref" href="#42veth" title='veth' data-ref="42veth" data-ref-filename="42veth">veth</a> = (<b>struct</b> <a class="type" href="#vlan_ethhdr" title='vlan_ethhdr' data-ref="vlan_ethhdr" data-ref-filename="vlan_ethhdr">vlan_ethhdr</a> *)(<a class="local col8 ref" href="#38skb" title='skb' data-ref="38skb" data-ref-filename="38skb">skb</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::data" title='sk_buff::data' data-ref="sk_buff::data" data-ref-filename="sk_buff..data">data</a> + <a class="local col1 ref" href="#41mac_len" title='mac_len' data-ref="41mac_len" data-ref-filename="41mac_len">mac_len</a> - <a class="macro" href="../uapi/linux/if_ether.h.html#34" title="14" data-ref="_M/ETH_HLEN">ETH_HLEN</a>);</td></tr>
+<tr><th id="361">361</th><td></td></tr>
+<tr><th id="362">362</th><td>	<i>/* first, the ethernet type */</i></td></tr>
+<tr><th id="363">363</th><td>	<b>if</b> (<a class="macro" href="compiler.h.html#77" title="__builtin_expect(!!(mac_len &gt;= 2), 1)" data-ref="_M/likely">likely</a>(<a class="local col1 ref" href="#41mac_len" title='mac_len' data-ref="41mac_len" data-ref-filename="41mac_len">mac_len</a> &gt;= <a class="macro" href="../uapi/linux/if_ether.h.html#33" title="2" data-ref="_M/ETH_TLEN">ETH_TLEN</a>)) {</td></tr>
+<tr><th id="364">364</th><td>		<i>/* h_vlan_encapsulated_proto should already be populated, and</i></td></tr>
+<tr><th id="365">365</th><td><i>		 * skb-&gt;data has space for h_vlan_proto</i></td></tr>
+<tr><th id="366">366</th><td><i>		 */</i></td></tr>
+<tr><th id="367">367</th><td>		<a class="local col2 ref" href="#42veth" title='veth' data-ref="42veth" data-ref-filename="42veth">veth</a>-&gt;<a class="ref field" href="#vlan_ethhdr::h_vlan_proto" title='vlan_ethhdr::h_vlan_proto' data-ref="vlan_ethhdr::h_vlan_proto" data-ref-filename="vlan_ethhdr..h_vlan_proto">h_vlan_proto</a> = <a class="local col9 ref" href="#39vlan_proto" title='vlan_proto' data-ref="39vlan_proto" data-ref-filename="39vlan_proto">vlan_proto</a>;</td></tr>
+<tr><th id="368">368</th><td>	} <b>else</b> {</td></tr>
+<tr><th id="369">369</th><td>		<i>/* h_vlan_encapsulated_proto should not be populated, and</i></td></tr>
+<tr><th id="370">370</th><td><i>		 * skb-&gt;data has no space for h_vlan_proto</i></td></tr>
+<tr><th id="371">371</th><td><i>		 */</i></td></tr>
+<tr><th id="372">372</th><td>		<a class="local col2 ref" href="#42veth" title='veth' data-ref="42veth" data-ref-filename="42veth">veth</a>-&gt;<a class="ref field" href="#vlan_ethhdr::h_vlan_encapsulated_proto" title='vlan_ethhdr::h_vlan_encapsulated_proto' data-ref="vlan_ethhdr::h_vlan_encapsulated_proto" data-ref-filename="vlan_ethhdr..h_vlan_encapsulated_proto">h_vlan_encapsulated_proto</a> = <a class="local col8 ref" href="#38skb" title='skb' data-ref="38skb" data-ref-filename="38skb">skb</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::protocol" title='sk_buff::protocol' data-ref="sk_buff::protocol" data-ref-filename="sk_buff..protocol">protocol</a>;</td></tr>
+<tr><th id="373">373</th><td>	}</td></tr>
+<tr><th id="374">374</th><td></td></tr>
+<tr><th id="375">375</th><td>	<i>/* now, the TCI */</i></td></tr>
+<tr><th id="376">376</th><td>	<a class="local col2 ref" href="#42veth" title='veth' data-ref="42veth" data-ref-filename="42veth">veth</a>-&gt;<a class="ref field" href="#vlan_ethhdr::h_vlan_TCI" title='vlan_ethhdr::h_vlan_TCI' data-ref="vlan_ethhdr::h_vlan_TCI" data-ref-filename="vlan_ethhdr..h_vlan_TCI">h_vlan_TCI</a> = <a class="macro" href="byteorder/generic.h.html#141" title="(( __be16)(__builtin_constant_p((__u16)((vlan_tci))) ? ((__u16)( (((__u16)((vlan_tci)) &amp; (__u16)0x00ffU) &lt;&lt; 8) | (((__u16)((vlan_tci)) &amp; (__u16)0xff00U) &gt;&gt; 8))) : __fswab16((vlan_tci))))" data-ref="_M/htons">htons</a>(<a class="local col0 ref" href="#40vlan_tci" title='vlan_tci' data-ref="40vlan_tci" data-ref-filename="40vlan_tci">vlan_tci</a>);</td></tr>
+<tr><th id="377">377</th><td></td></tr>
+<tr><th id="378">378</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="379">379</th><td>}</td></tr>
+<tr><th id="380">380</th><td></td></tr>
+<tr><th id="381">381</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="382">382</th><td><i class="doc"> * __vlan_insert_tag - regular VLAN tag inserting</i></td></tr>
+<tr><th id="383">383</th><td><i class="doc"> *<span class="command"> @skb</span>: skbuff to tag</i></td></tr>
+<tr><th id="384">384</th><td><i class="doc"> *<span class="command"> @vlan</span>_proto: VLAN encapsulation protocol</i></td></tr>
+<tr><th id="385">385</th><td><i class="doc"> *<span class="command"> @vlan</span>_tci: VLAN TCI to insert</i></td></tr>
+<tr><th id="386">386</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="387">387</th><td><i class="doc"> * Inserts the VLAN tag into<span class="command"> @skb</span> as part of the payload</i></td></tr>
+<tr><th id="388">388</th><td><i class="doc"> * Returns error if skb_cow_head fails.</i></td></tr>
+<tr><th id="389">389</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="390">390</th><td><i class="doc"> * Does not change skb-&gt;protocol so this function can be used during receive.</i></td></tr>
+<tr><th id="391">391</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="392">392</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="__vlan_insert_tag" title='__vlan_insert_tag' data-ref="__vlan_insert_tag" data-ref-filename="__vlan_insert_tag">__vlan_insert_tag</dfn>(<b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col3 decl" id="43skb" title='skb' data-type='struct sk_buff *' data-ref="43skb" data-ref-filename="43skb">skb</dfn>,</td></tr>
+<tr><th id="393">393</th><td>				    <a class="typedef" href="../uapi/linux/types.h.html#__be16" title='__be16' data-type='__u16' data-ref="__be16" data-ref-filename="__be16">__be16</a> <dfn class="local col4 decl" id="44vlan_proto" title='vlan_proto' data-type='__be16' data-ref="44vlan_proto" data-ref-filename="44vlan_proto">vlan_proto</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col5 decl" id="45vlan_tci" title='vlan_tci' data-type='u16' data-ref="45vlan_tci" data-ref-filename="45vlan_tci">vlan_tci</dfn>)</td></tr>
+<tr><th id="394">394</th><td>{</td></tr>
+<tr><th id="395">395</th><td>	<b>return</b> <a class="ref fn" href="#__vlan_insert_inner_tag" title='__vlan_insert_inner_tag' data-ref="__vlan_insert_inner_tag" data-ref-filename="__vlan_insert_inner_tag">__vlan_insert_inner_tag</a>(<a class="local col3 ref" href="#43skb" title='skb' data-ref="43skb" data-ref-filename="43skb">skb</a>, <a class="local col4 ref" href="#44vlan_proto" title='vlan_proto' data-ref="44vlan_proto" data-ref-filename="44vlan_proto">vlan_proto</a>, <a class="local col5 ref" href="#45vlan_tci" title='vlan_tci' data-ref="45vlan_tci" data-ref-filename="45vlan_tci">vlan_tci</a>, <a class="macro" href="../uapi/linux/if_ether.h.html#34" title="14" data-ref="_M/ETH_HLEN">ETH_HLEN</a>);</td></tr>
+<tr><th id="396">396</th><td>}</td></tr>
+<tr><th id="397">397</th><td></td></tr>
+<tr><th id="398">398</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="399">399</th><td><i class="doc"> * vlan_insert_inner_tag - inner VLAN tag inserting</i></td></tr>
+<tr><th id="400">400</th><td><i class="doc"> *<span class="command"> @skb</span>: skbuff to tag</i></td></tr>
+<tr><th id="401">401</th><td><i class="doc"> *<span class="command"> @vlan</span>_proto: VLAN encapsulation protocol</i></td></tr>
+<tr><th id="402">402</th><td><i class="doc"> *<span class="command"> @vlan</span>_tci: VLAN TCI to insert</i></td></tr>
+<tr><th id="403">403</th><td><i class="doc"> * <span class="command">@mac</span><span class="verb">_len: MAC header length including outer vlan headers</span></i></td></tr>
+<tr><th id="404">404</th><td><i class="doc"><span class="verb"></span> *<span class="verb"></span></i></td></tr>
+<tr><th id="405">405</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> Inserts the VLAN tag into @skb as part of the payload at offset mac_len</span></i></td></tr>
+<tr><th id="406">406</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> Returns a VLAN tagged skb. If a new skb is created, @skb is freed.</span></i></td></tr>
+<tr><th id="407">407</th><td><i class="doc"><span class="verb"></span> *<span class="verb"></span></i></td></tr>
+<tr><th id="408">408</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> Following the skb_unshare() example, in case of error, the calling function</span></i></td></tr>
+<tr><th id="409">409</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> doesn't have to worry about freeing the original skb.</span></i></td></tr>
+<tr><th id="410">410</th><td><i class="doc"><span class="verb"></span> *<span class="verb"></span></i></td></tr>
+<tr><th id="411">411</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> Does not change skb-&gt;protocol so this function can be used during receive.</span></i></td></tr>
+<tr><th id="412">412</th><td><i class="doc"><span class="verb"></span><span class="verb"> *</span>/</i><span class="verb"></span></td></tr>
+<tr><th id="413">413</th><td><span class="verb"></span><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="decl def fn" id="vlan_insert_inner_tag" title='vlan_insert_inner_tag' data-ref="vlan_insert_inner_tag" data-ref-filename="vlan_insert_inner_tag">vlan_insert_inner_tag</dfn>(<b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col6 decl" id="46skb" title='skb' data-type='struct sk_buff *' data-ref="46skb" data-ref-filename="46skb">skb</dfn>,</td></tr>
+<tr><th id="414">414</th><td>						    <a class="typedef" href="../uapi/linux/types.h.html#__be16" title='__be16' data-type='__u16' data-ref="__be16" data-ref-filename="__be16">__be16</a> <dfn class="local col7 decl" id="47vlan_proto" title='vlan_proto' data-type='__be16' data-ref="47vlan_proto" data-ref-filename="47vlan_proto">vlan_proto</dfn>,</td></tr>
+<tr><th id="415">415</th><td>						    <a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col8 decl" id="48vlan_tci" title='vlan_tci' data-type='u16' data-ref="48vlan_tci" data-ref-filename="48vlan_tci">vlan_tci</dfn>,</td></tr>
+<tr><th id="416">416</th><td>						    <em>unsigned</em> <em>int</em> <dfn class="local col9 decl" id="49mac_len" title='mac_len' data-type='unsigned int' data-ref="49mac_len" data-ref-filename="49mac_len">mac_len</dfn>)</td></tr>
+<tr><th id="417">417</th><td>{</td></tr>
+<tr><th id="418">418</th><td>	<em>int</em> <dfn class="local col0 decl" id="50err" title='err' data-type='int' data-ref="50err" data-ref-filename="50err">err</dfn>;</td></tr>
+<tr><th id="419">419</th><td></td></tr>
+<tr><th id="420">420</th><td>	<a class="local col0 ref" href="#50err" title='err' data-ref="50err" data-ref-filename="50err">err</a> = <a class="ref fn" href="#__vlan_insert_inner_tag" title='__vlan_insert_inner_tag' data-ref="__vlan_insert_inner_tag" data-ref-filename="__vlan_insert_inner_tag">__vlan_insert_inner_tag</a>(<a class="local col6 ref" href="#46skb" title='skb' data-ref="46skb" data-ref-filename="46skb">skb</a>, <a class="local col7 ref" href="#47vlan_proto" title='vlan_proto' data-ref="47vlan_proto" data-ref-filename="47vlan_proto">vlan_proto</a>, <a class="local col8 ref" href="#48vlan_tci" title='vlan_tci' data-ref="48vlan_tci" data-ref-filename="48vlan_tci">vlan_tci</a>, <a class="local col9 ref" href="#49mac_len" title='mac_len' data-ref="49mac_len" data-ref-filename="49mac_len">mac_len</a>);</td></tr>
+<tr><th id="421">421</th><td>	<b>if</b> (<a class="local col0 ref" href="#50err" title='err' data-ref="50err" data-ref-filename="50err">err</a>) {</td></tr>
+<tr><th id="422">422</th><td>		<a class="ref fn" href="netdevice.h.html#dev_kfree_skb_any" title='dev_kfree_skb_any' data-ref="dev_kfree_skb_any" data-ref-filename="dev_kfree_skb_any">dev_kfree_skb_any</a>(<a class="local col6 ref" href="#46skb" title='skb' data-ref="46skb" data-ref-filename="46skb">skb</a>);</td></tr>
+<tr><th id="423">423</th><td>		<b>return</b> <a class="macro" href="stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="424">424</th><td>	}</td></tr>
+<tr><th id="425">425</th><td>	<b>return</b> <a class="local col6 ref" href="#46skb" title='skb' data-ref="46skb" data-ref-filename="46skb">skb</a>;</td></tr>
+<tr><th id="426">426</th><td>}</td></tr>
+<tr><th id="427">427</th><td></td></tr>
+<tr><th id="428">428</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="429">429</th><td><i class="doc"> * vlan_insert_tag - regular VLAN tag inserting</i></td></tr>
+<tr><th id="430">430</th><td><i class="doc"> *<span class="command"> @skb</span>: skbuff to tag</i></td></tr>
+<tr><th id="431">431</th><td><i class="doc"> *<span class="command"> @vlan</span>_proto: VLAN encapsulation protocol</i></td></tr>
+<tr><th id="432">432</th><td><i class="doc"> *<span class="command"> @vlan</span>_tci: VLAN TCI to insert</i></td></tr>
+<tr><th id="433">433</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="434">434</th><td><i class="doc"> * Inserts the VLAN tag into<span class="command"> @skb</span> as part of the payload</i></td></tr>
+<tr><th id="435">435</th><td><i class="doc"> * Returns a VLAN tagged skb. If a new skb is created,<span class="command"> @skb</span> is freed.</i></td></tr>
+<tr><th id="436">436</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="437">437</th><td><i class="doc"> * Following the skb_unshare() example, in case of error, the calling function</i></td></tr>
+<tr><th id="438">438</th><td><i class="doc"> * doesn't have to worry about freeing the original skb.</i></td></tr>
+<tr><th id="439">439</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="440">440</th><td><i class="doc"> * Does not change skb-&gt;protocol so this function can be used during receive.</i></td></tr>
+<tr><th id="441">441</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="442">442</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="decl def fn" id="vlan_insert_tag" title='vlan_insert_tag' data-ref="vlan_insert_tag" data-ref-filename="vlan_insert_tag">vlan_insert_tag</dfn>(<b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col1 decl" id="51skb" title='skb' data-type='struct sk_buff *' data-ref="51skb" data-ref-filename="51skb">skb</dfn>,</td></tr>
+<tr><th id="443">443</th><td>					      <a class="typedef" href="../uapi/linux/types.h.html#__be16" title='__be16' data-type='__u16' data-ref="__be16" data-ref-filename="__be16">__be16</a> <dfn class="local col2 decl" id="52vlan_proto" title='vlan_proto' data-type='__be16' data-ref="52vlan_proto" data-ref-filename="52vlan_proto">vlan_proto</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col3 decl" id="53vlan_tci" title='vlan_tci' data-type='u16' data-ref="53vlan_tci" data-ref-filename="53vlan_tci">vlan_tci</dfn>)</td></tr>
+<tr><th id="444">444</th><td>{</td></tr>
+<tr><th id="445">445</th><td>	<b>return</b> <a class="ref fn" href="#vlan_insert_inner_tag" title='vlan_insert_inner_tag' data-ref="vlan_insert_inner_tag" data-ref-filename="vlan_insert_inner_tag">vlan_insert_inner_tag</a>(<a class="local col1 ref" href="#51skb" title='skb' data-ref="51skb" data-ref-filename="51skb">skb</a>, <a class="local col2 ref" href="#52vlan_proto" title='vlan_proto' data-ref="52vlan_proto" data-ref-filename="52vlan_proto">vlan_proto</a>, <a class="local col3 ref" href="#53vlan_tci" title='vlan_tci' data-ref="53vlan_tci" data-ref-filename="53vlan_tci">vlan_tci</a>, <a class="macro" href="../uapi/linux/if_ether.h.html#34" title="14" data-ref="_M/ETH_HLEN">ETH_HLEN</a>);</td></tr>
+<tr><th id="446">446</th><td>}</td></tr>
+<tr><th id="447">447</th><td></td></tr>
+<tr><th id="448">448</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="449">449</th><td><i class="doc"> * vlan_insert_tag_set_proto - regular VLAN tag inserting</i></td></tr>
+<tr><th id="450">450</th><td><i class="doc"> *<span class="command"> @skb</span>: skbuff to tag</i></td></tr>
+<tr><th id="451">451</th><td><i class="doc"> *<span class="command"> @vlan</span>_proto: VLAN encapsulation protocol</i></td></tr>
+<tr><th id="452">452</th><td><i class="doc"> *<span class="command"> @vlan</span>_tci: VLAN TCI to insert</i></td></tr>
+<tr><th id="453">453</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="454">454</th><td><i class="doc"> * Inserts the VLAN tag into<span class="command"> @skb</span> as part of the payload</i></td></tr>
+<tr><th id="455">455</th><td><i class="doc"> * Returns a VLAN tagged skb. If a new skb is created,<span class="command"> @skb</span> is freed.</i></td></tr>
+<tr><th id="456">456</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="457">457</th><td><i class="doc"> * Following the skb_unshare() example, in case of error, the calling function</i></td></tr>
+<tr><th id="458">458</th><td><i class="doc"> * doesn't have to worry about freeing the original skb.</i></td></tr>
+<tr><th id="459">459</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="460">460</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="decl def fn" id="vlan_insert_tag_set_proto" title='vlan_insert_tag_set_proto' data-ref="vlan_insert_tag_set_proto" data-ref-filename="vlan_insert_tag_set_proto">vlan_insert_tag_set_proto</dfn>(<b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col4 decl" id="54skb" title='skb' data-type='struct sk_buff *' data-ref="54skb" data-ref-filename="54skb">skb</dfn>,</td></tr>
+<tr><th id="461">461</th><td>							<a class="typedef" href="../uapi/linux/types.h.html#__be16" title='__be16' data-type='__u16' data-ref="__be16" data-ref-filename="__be16">__be16</a> <dfn class="local col5 decl" id="55vlan_proto" title='vlan_proto' data-type='__be16' data-ref="55vlan_proto" data-ref-filename="55vlan_proto">vlan_proto</dfn>,</td></tr>
+<tr><th id="462">462</th><td>							<a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col6 decl" id="56vlan_tci" title='vlan_tci' data-type='u16' data-ref="56vlan_tci" data-ref-filename="56vlan_tci">vlan_tci</dfn>)</td></tr>
+<tr><th id="463">463</th><td>{</td></tr>
+<tr><th id="464">464</th><td>	<a class="local col4 ref" href="#54skb" title='skb' data-ref="54skb" data-ref-filename="54skb">skb</a> = <a class="ref fn" href="#vlan_insert_tag" title='vlan_insert_tag' data-ref="vlan_insert_tag" data-ref-filename="vlan_insert_tag">vlan_insert_tag</a>(<a class="local col4 ref" href="#54skb" title='skb' data-ref="54skb" data-ref-filename="54skb">skb</a>, <a class="local col5 ref" href="#55vlan_proto" title='vlan_proto' data-ref="55vlan_proto" data-ref-filename="55vlan_proto">vlan_proto</a>, <a class="local col6 ref" href="#56vlan_tci" title='vlan_tci' data-ref="56vlan_tci" data-ref-filename="56vlan_tci">vlan_tci</a>);</td></tr>
+<tr><th id="465">465</th><td>	<b>if</b> (<a class="local col4 ref" href="#54skb" title='skb' data-ref="54skb" data-ref-filename="54skb">skb</a>)</td></tr>
+<tr><th id="466">466</th><td>		<a class="local col4 ref" href="#54skb" title='skb' data-ref="54skb" data-ref-filename="54skb">skb</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::protocol" title='sk_buff::protocol' data-ref="sk_buff::protocol" data-ref-filename="sk_buff..protocol">protocol</a> = <a class="local col5 ref" href="#55vlan_proto" title='vlan_proto' data-ref="55vlan_proto" data-ref-filename="55vlan_proto">vlan_proto</a>;</td></tr>
+<tr><th id="467">467</th><td>	<b>return</b> <a class="local col4 ref" href="#54skb" title='skb' data-ref="54skb" data-ref-filename="54skb">skb</a>;</td></tr>
+<tr><th id="468">468</th><td>}</td></tr>
+<tr><th id="469">469</th><td></td></tr>
+<tr><th id="470">470</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="471">471</th><td><i class="doc"> * __vlan_hwaccel_clear_tag - clear hardware accelerated VLAN info</i></td></tr>
+<tr><th id="472">472</th><td><i class="doc"> *<span class="command"> @skb</span>: skbuff to clear</i></td></tr>
+<tr><th id="473">473</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="474">474</th><td><i class="doc"> * Clears the VLAN information from<span class="command"> @skb</span></i></td></tr>
+<tr><th id="475">475</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="476">476</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="__vlan_hwaccel_clear_tag" title='__vlan_hwaccel_clear_tag' data-ref="__vlan_hwaccel_clear_tag" data-ref-filename="__vlan_hwaccel_clear_tag">__vlan_hwaccel_clear_tag</dfn>(<b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col7 decl" id="57skb" title='skb' data-type='struct sk_buff *' data-ref="57skb" data-ref-filename="57skb">skb</dfn>)</td></tr>
+<tr><th id="477">477</th><td>{</td></tr>
+<tr><th id="478">478</th><td>	<a class="local col7 ref" href="#57skb" title='skb' data-ref="57skb" data-ref-filename="57skb">skb</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::vlan_present" title='sk_buff::vlan_present' data-ref="sk_buff::vlan_present" data-ref-filename="sk_buff..vlan_present">vlan_present</a> = <var>0</var>;</td></tr>
+<tr><th id="479">479</th><td>}</td></tr>
+<tr><th id="480">480</th><td></td></tr>
+<tr><th id="481">481</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="482">482</th><td><i class="doc"> * __vlan_hwaccel_copy_tag - copy hardware accelerated VLAN info from another skb</i></td></tr>
+<tr><th id="483">483</th><td><i class="doc"> * <span class="command">@dst</span><span class="verb">: skbuff to copy to</span></i></td></tr>
+<tr><th id="484">484</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> @src: skbuff to copy from</span></i></td></tr>
+<tr><th id="485">485</th><td><i class="doc"><span class="verb"></span> *<span class="verb"></span></i></td></tr>
+<tr><th id="486">486</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> Copies VLAN information from @src to @dst (for branchless code)</span></i></td></tr>
+<tr><th id="487">487</th><td><i class="doc"><span class="verb"></span><span class="verb"> *</span>/</i><span class="verb"></span></td></tr>
+<tr><th id="488">488</th><td><span class="verb"></span><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="__vlan_hwaccel_copy_tag" title='__vlan_hwaccel_copy_tag' data-ref="__vlan_hwaccel_copy_tag" data-ref-filename="__vlan_hwaccel_copy_tag">__vlan_hwaccel_copy_tag</dfn>(<b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col8 decl" id="58dst" title='dst' data-type='struct sk_buff *' data-ref="58dst" data-ref-filename="58dst">dst</dfn>, <em>const</em> <b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col9 decl" id="59src" title='src' data-type='const struct sk_buff *' data-ref="59src" data-ref-filename="59src">src</dfn>)</td></tr>
+<tr><th id="489">489</th><td>{</td></tr>
+<tr><th id="490">490</th><td>	<a class="local col8 ref" href="#58dst" title='dst' data-ref="58dst" data-ref-filename="58dst">dst</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::vlan_present" title='sk_buff::vlan_present' data-ref="sk_buff::vlan_present" data-ref-filename="sk_buff..vlan_present">vlan_present</a> = <a class="local col9 ref" href="#59src" title='src' data-ref="59src" data-ref-filename="59src">src</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::vlan_present" title='sk_buff::vlan_present' data-ref="sk_buff::vlan_present" data-ref-filename="sk_buff..vlan_present">vlan_present</a>;</td></tr>
+<tr><th id="491">491</th><td>	<a class="local col8 ref" href="#58dst" title='dst' data-ref="58dst" data-ref-filename="58dst">dst</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::vlan_proto" title='sk_buff::vlan_proto' data-ref="sk_buff::vlan_proto" data-ref-filename="sk_buff..vlan_proto">vlan_proto</a> = <a class="local col9 ref" href="#59src" title='src' data-ref="59src" data-ref-filename="59src">src</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::vlan_proto" title='sk_buff::vlan_proto' data-ref="sk_buff::vlan_proto" data-ref-filename="sk_buff..vlan_proto">vlan_proto</a>;</td></tr>
+<tr><th id="492">492</th><td>	<a class="local col8 ref" href="#58dst" title='dst' data-ref="58dst" data-ref-filename="58dst">dst</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::vlan_tci" title='sk_buff::vlan_tci' data-ref="sk_buff::vlan_tci" data-ref-filename="sk_buff..vlan_tci">vlan_tci</a> = <a class="local col9 ref" href="#59src" title='src' data-ref="59src" data-ref-filename="59src">src</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::vlan_tci" title='sk_buff::vlan_tci' data-ref="sk_buff::vlan_tci" data-ref-filename="sk_buff..vlan_tci">vlan_tci</a>;</td></tr>
+<tr><th id="493">493</th><td>}</td></tr>
+<tr><th id="494">494</th><td></td></tr>
+<tr><th id="495">495</th><td><i>/*</i></td></tr>
+<tr><th id="496">496</th><td><i> * __vlan_hwaccel_push_inside - pushes vlan tag to the payload</i></td></tr>
+<tr><th id="497">497</th><td><i> * @skb: skbuff to tag</i></td></tr>
+<tr><th id="498">498</th><td><i> *</i></td></tr>
+<tr><th id="499">499</th><td><i> * Pushes the VLAN tag from @skb-&gt;vlan_tci inside to the payload.</i></td></tr>
+<tr><th id="500">500</th><td><i> *</i></td></tr>
+<tr><th id="501">501</th><td><i> * Following the skb_unshare() example, in case of error, the calling function</i></td></tr>
+<tr><th id="502">502</th><td><i> * doesn't have to worry about freeing the original skb.</i></td></tr>
+<tr><th id="503">503</th><td><i> */</i></td></tr>
+<tr><th id="504">504</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="decl def fn" id="__vlan_hwaccel_push_inside" title='__vlan_hwaccel_push_inside' data-ref="__vlan_hwaccel_push_inside" data-ref-filename="__vlan_hwaccel_push_inside">__vlan_hwaccel_push_inside</dfn>(<b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col0 decl" id="60skb" title='skb' data-type='struct sk_buff *' data-ref="60skb" data-ref-filename="60skb">skb</dfn>)</td></tr>
+<tr><th id="505">505</th><td>{</td></tr>
+<tr><th id="506">506</th><td>	<a class="local col0 ref" href="#60skb" title='skb' data-ref="60skb" data-ref-filename="60skb">skb</a> = <a class="ref fn" href="#vlan_insert_tag_set_proto" title='vlan_insert_tag_set_proto' data-ref="vlan_insert_tag_set_proto" data-ref-filename="vlan_insert_tag_set_proto">vlan_insert_tag_set_proto</a>(<a class="local col0 ref" href="#60skb" title='skb' data-ref="60skb" data-ref-filename="60skb">skb</a>, <a class="local col0 ref" href="#60skb" title='skb' data-ref="60skb" data-ref-filename="60skb">skb</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::vlan_proto" title='sk_buff::vlan_proto' data-ref="sk_buff::vlan_proto" data-ref-filename="sk_buff..vlan_proto">vlan_proto</a>,</td></tr>
+<tr><th id="507">507</th><td>					<a class="macro" href="#76" title="((skb)-&gt;vlan_tci)" data-ref="_M/skb_vlan_tag_get">skb_vlan_tag_get</a>(<a class="local col0 ref" href="#60skb" title='skb' data-ref="60skb" data-ref-filename="60skb">skb</a>));</td></tr>
+<tr><th id="508">508</th><td>	<b>if</b> (<a class="macro" href="compiler.h.html#77" title="__builtin_expect(!!(skb), 1)" data-ref="_M/likely">likely</a>(<a class="local col0 ref" href="#60skb" title='skb' data-ref="60skb" data-ref-filename="60skb">skb</a>))</td></tr>
+<tr><th id="509">509</th><td>		<a class="ref fn" href="#__vlan_hwaccel_clear_tag" title='__vlan_hwaccel_clear_tag' data-ref="__vlan_hwaccel_clear_tag" data-ref-filename="__vlan_hwaccel_clear_tag">__vlan_hwaccel_clear_tag</a>(<a class="local col0 ref" href="#60skb" title='skb' data-ref="60skb" data-ref-filename="60skb">skb</a>);</td></tr>
+<tr><th id="510">510</th><td>	<b>return</b> <a class="local col0 ref" href="#60skb" title='skb' data-ref="60skb" data-ref-filename="60skb">skb</a>;</td></tr>
+<tr><th id="511">511</th><td>}</td></tr>
+<tr><th id="512">512</th><td></td></tr>
+<tr><th id="513">513</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="514">514</th><td><i class="doc"> * __vlan_hwaccel_put_tag - hardware accelerated VLAN inserting</i></td></tr>
+<tr><th id="515">515</th><td><i class="doc"> *<span class="command"> @skb</span>: skbuff to tag</i></td></tr>
+<tr><th id="516">516</th><td><i class="doc"> *<span class="command"> @vlan</span>_proto: VLAN encapsulation protocol</i></td></tr>
+<tr><th id="517">517</th><td><i class="doc"> *<span class="command"> @vlan</span>_tci: VLAN TCI to insert</i></td></tr>
+<tr><th id="518">518</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="519">519</th><td><i class="doc"> * Puts the VLAN TCI in<span class="command"> @skb</span>-&gt;vlan_tci and lets the device do the rest</i></td></tr>
+<tr><th id="520">520</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="521">521</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="__vlan_hwaccel_put_tag" title='__vlan_hwaccel_put_tag' data-ref="__vlan_hwaccel_put_tag" data-ref-filename="__vlan_hwaccel_put_tag">__vlan_hwaccel_put_tag</dfn>(<b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col1 decl" id="61skb" title='skb' data-type='struct sk_buff *' data-ref="61skb" data-ref-filename="61skb">skb</dfn>,</td></tr>
+<tr><th id="522">522</th><td>					  <a class="typedef" href="../uapi/linux/types.h.html#__be16" title='__be16' data-type='__u16' data-ref="__be16" data-ref-filename="__be16">__be16</a> <dfn class="local col2 decl" id="62vlan_proto" title='vlan_proto' data-type='__be16' data-ref="62vlan_proto" data-ref-filename="62vlan_proto">vlan_proto</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col3 decl" id="63vlan_tci" title='vlan_tci' data-type='u16' data-ref="63vlan_tci" data-ref-filename="63vlan_tci">vlan_tci</dfn>)</td></tr>
+<tr><th id="523">523</th><td>{</td></tr>
+<tr><th id="524">524</th><td>	<a class="local col1 ref" href="#61skb" title='skb' data-ref="61skb" data-ref-filename="61skb">skb</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::vlan_proto" title='sk_buff::vlan_proto' data-ref="sk_buff::vlan_proto" data-ref-filename="sk_buff..vlan_proto">vlan_proto</a> = <a class="local col2 ref" href="#62vlan_proto" title='vlan_proto' data-ref="62vlan_proto" data-ref-filename="62vlan_proto">vlan_proto</a>;</td></tr>
+<tr><th id="525">525</th><td>	<a class="local col1 ref" href="#61skb" title='skb' data-ref="61skb" data-ref-filename="61skb">skb</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::vlan_tci" title='sk_buff::vlan_tci' data-ref="sk_buff::vlan_tci" data-ref-filename="sk_buff..vlan_tci">vlan_tci</a> = <a class="local col3 ref" href="#63vlan_tci" title='vlan_tci' data-ref="63vlan_tci" data-ref-filename="63vlan_tci">vlan_tci</a>;</td></tr>
+<tr><th id="526">526</th><td>	<a class="local col1 ref" href="#61skb" title='skb' data-ref="61skb" data-ref-filename="61skb">skb</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::vlan_present" title='sk_buff::vlan_present' data-ref="sk_buff::vlan_present" data-ref-filename="sk_buff..vlan_present">vlan_present</a> = <var>1</var>;</td></tr>
+<tr><th id="527">527</th><td>}</td></tr>
+<tr><th id="528">528</th><td></td></tr>
+<tr><th id="529">529</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="530">530</th><td><i class="doc"> * __vlan_get_tag - get the VLAN ID that is part of the payload</i></td></tr>
+<tr><th id="531">531</th><td><i class="doc"> *<span class="command"> @skb</span>: skbuff to query</i></td></tr>
+<tr><th id="532">532</th><td><i class="doc"> *<span class="command"> @vlan</span>_tci: buffer to store value</i></td></tr>
+<tr><th id="533">533</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="534">534</th><td><i class="doc"> * Returns error if the skb is not of VLAN type</i></td></tr>
+<tr><th id="535">535</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="536">536</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="__vlan_get_tag" title='__vlan_get_tag' data-ref="__vlan_get_tag" data-ref-filename="__vlan_get_tag">__vlan_get_tag</dfn>(<em>const</em> <b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col4 decl" id="64skb" title='skb' data-type='const struct sk_buff *' data-ref="64skb" data-ref-filename="64skb">skb</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> *<dfn class="local col5 decl" id="65vlan_tci" title='vlan_tci' data-type='u16 *' data-ref="65vlan_tci" data-ref-filename="65vlan_tci">vlan_tci</dfn>)</td></tr>
+<tr><th id="537">537</th><td>{</td></tr>
+<tr><th id="538">538</th><td>	<b>struct</b> <a class="type" href="#vlan_ethhdr" title='vlan_ethhdr' data-ref="vlan_ethhdr" data-ref-filename="vlan_ethhdr">vlan_ethhdr</a> *<dfn class="local col6 decl" id="66veth" title='veth' data-type='struct vlan_ethhdr *' data-ref="66veth" data-ref-filename="66veth">veth</dfn> = (<b>struct</b> <a class="type" href="#vlan_ethhdr" title='vlan_ethhdr' data-ref="vlan_ethhdr" data-ref-filename="vlan_ethhdr">vlan_ethhdr</a> *)<a class="local col4 ref" href="#64skb" title='skb' data-ref="64skb" data-ref-filename="64skb">skb</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::data" title='sk_buff::data' data-ref="sk_buff::data" data-ref-filename="sk_buff..data">data</a>;</td></tr>
+<tr><th id="539">539</th><td></td></tr>
+<tr><th id="540">540</th><td>	<b>if</b> (!<a class="ref fn" href="#eth_type_vlan" title='eth_type_vlan' data-ref="eth_type_vlan" data-ref-filename="eth_type_vlan">eth_type_vlan</a>(<a class="local col6 ref" href="#66veth" title='veth' data-ref="66veth" data-ref-filename="66veth">veth</a>-&gt;<a class="ref field" href="#vlan_ethhdr::h_vlan_proto" title='vlan_ethhdr::h_vlan_proto' data-ref="vlan_ethhdr::h_vlan_proto" data-ref-filename="vlan_ethhdr..h_vlan_proto">h_vlan_proto</a>))</td></tr>
+<tr><th id="541">541</th><td>		<b>return</b> -<a class="macro" href="../uapi/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="542">542</th><td></td></tr>
+<tr><th id="543">543</th><td>	*<a class="local col5 ref" href="#65vlan_tci" title='vlan_tci' data-ref="65vlan_tci" data-ref-filename="65vlan_tci">vlan_tci</a> = <a class="macro" href="byteorder/generic.h.html#142" title="(__builtin_constant_p((__u16)(( __u16)(__be16)(veth-&gt;h_vlan_TCI))) ? ((__u16)( (((__u16)(( __u16)(__be16)(veth-&gt;h_vlan_TCI)) &amp; (__u16)0x00ffU) &lt;&lt; 8) | (((__u16)(( __u16)(__be16)(veth-&gt;h_vlan_TCI)) &amp; (__u16)0xff00U) &gt;&gt; 8))) : __fswab16(( __u16)(__be16)(veth-&gt;h_vlan_TCI)))" data-ref="_M/ntohs">ntohs</a>(<a class="local col6 ref" href="#66veth" title='veth' data-ref="66veth" data-ref-filename="66veth">veth</a>-&gt;<a class="ref field" href="#vlan_ethhdr::h_vlan_TCI" title='vlan_ethhdr::h_vlan_TCI' data-ref="vlan_ethhdr::h_vlan_TCI" data-ref-filename="vlan_ethhdr..h_vlan_TCI">h_vlan_TCI</a>);</td></tr>
+<tr><th id="544">544</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="545">545</th><td>}</td></tr>
+<tr><th id="546">546</th><td></td></tr>
+<tr><th id="547">547</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="548">548</th><td><i class="doc"> * __vlan_hwaccel_get_tag - get the VLAN ID that is in<span class="command"> @skb</span>-&gt;cb[]</i></td></tr>
+<tr><th id="549">549</th><td><i class="doc"> *<span class="command"> @skb</span>: skbuff to query</i></td></tr>
+<tr><th id="550">550</th><td><i class="doc"> *<span class="command"> @vlan</span>_tci: buffer to store value</i></td></tr>
+<tr><th id="551">551</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="552">552</th><td><i class="doc"> * Returns error if<span class="command"> @skb</span>-&gt;vlan_tci is not set correctly</i></td></tr>
+<tr><th id="553">553</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="554">554</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="__vlan_hwaccel_get_tag" title='__vlan_hwaccel_get_tag' data-ref="__vlan_hwaccel_get_tag" data-ref-filename="__vlan_hwaccel_get_tag">__vlan_hwaccel_get_tag</dfn>(<em>const</em> <b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col7 decl" id="67skb" title='skb' data-type='const struct sk_buff *' data-ref="67skb" data-ref-filename="67skb">skb</dfn>,</td></tr>
+<tr><th id="555">555</th><td>					 <a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> *<dfn class="local col8 decl" id="68vlan_tci" title='vlan_tci' data-type='u16 *' data-ref="68vlan_tci" data-ref-filename="68vlan_tci">vlan_tci</dfn>)</td></tr>
+<tr><th id="556">556</th><td>{</td></tr>
+<tr><th id="557">557</th><td>	<b>if</b> (<a class="macro" href="#75" title="((skb)-&gt;vlan_present)" data-ref="_M/skb_vlan_tag_present">skb_vlan_tag_present</a>(<a class="local col7 ref" href="#67skb" title='skb' data-ref="67skb" data-ref-filename="67skb">skb</a>)) {</td></tr>
+<tr><th id="558">558</th><td>		*<a class="local col8 ref" href="#68vlan_tci" title='vlan_tci' data-ref="68vlan_tci" data-ref-filename="68vlan_tci">vlan_tci</a> = <a class="macro" href="#76" title="((skb)-&gt;vlan_tci)" data-ref="_M/skb_vlan_tag_get">skb_vlan_tag_get</a>(<a class="local col7 ref" href="#67skb" title='skb' data-ref="67skb" data-ref-filename="67skb">skb</a>);</td></tr>
+<tr><th id="559">559</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="560">560</th><td>	} <b>else</b> {</td></tr>
+<tr><th id="561">561</th><td>		*<a class="local col8 ref" href="#68vlan_tci" title='vlan_tci' data-ref="68vlan_tci" data-ref-filename="68vlan_tci">vlan_tci</a> = <var>0</var>;</td></tr>
+<tr><th id="562">562</th><td>		<b>return</b> -<a class="macro" href="../uapi/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="563">563</th><td>	}</td></tr>
+<tr><th id="564">564</th><td>}</td></tr>
+<tr><th id="565">565</th><td></td></tr>
+<tr><th id="566">566</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="567">567</th><td><i class="doc"> * vlan_get_tag - get the VLAN ID from the skb</i></td></tr>
+<tr><th id="568">568</th><td><i class="doc"> *<span class="command"> @skb</span>: skbuff to query</i></td></tr>
+<tr><th id="569">569</th><td><i class="doc"> *<span class="command"> @vlan</span>_tci: buffer to store value</i></td></tr>
+<tr><th id="570">570</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="571">571</th><td><i class="doc"> * Returns error if the skb is not VLAN tagged</i></td></tr>
+<tr><th id="572">572</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="573">573</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="vlan_get_tag" title='vlan_get_tag' data-ref="vlan_get_tag" data-ref-filename="vlan_get_tag">vlan_get_tag</dfn>(<em>const</em> <b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col9 decl" id="69skb" title='skb' data-type='const struct sk_buff *' data-ref="69skb" data-ref-filename="69skb">skb</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> *<dfn class="local col0 decl" id="70vlan_tci" title='vlan_tci' data-type='u16 *' data-ref="70vlan_tci" data-ref-filename="70vlan_tci">vlan_tci</dfn>)</td></tr>
+<tr><th id="574">574</th><td>{</td></tr>
+<tr><th id="575">575</th><td>	<b>if</b> (<a class="local col9 ref" href="#69skb" title='skb' data-ref="69skb" data-ref-filename="69skb">skb</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::(anonymousunion)::(anonymousstruct)::(anonymous)::dev" title='sk_buff::(anonymous union)::(anonymous struct)::(anonymous union)::dev' data-ref="sk_buff::(anonymousunion)::(anonymousstruct)::(anonymous)::dev" data-ref-filename="sk_buff..(anonymousunion)..(anonymousstruct)..(anonymous)..dev">dev</a>-&gt;<a class="ref field" href="netdevice.h.html#net_device::features" title='net_device::features' data-ref="net_device::features" data-ref-filename="net_device..features">features</a> &amp; <a class="macro" href="netdev_features.h.html#110" title="((netdev_features_t)1 &lt;&lt; (NETIF_F_HW_VLAN_CTAG_TX_BIT))" data-ref="_M/NETIF_F_HW_VLAN_CTAG_TX">NETIF_F_HW_VLAN_CTAG_TX</a>) {</td></tr>
+<tr><th id="576">576</th><td>		<b>return</b> <a class="ref fn" href="#__vlan_hwaccel_get_tag" title='__vlan_hwaccel_get_tag' data-ref="__vlan_hwaccel_get_tag" data-ref-filename="__vlan_hwaccel_get_tag">__vlan_hwaccel_get_tag</a>(<a class="local col9 ref" href="#69skb" title='skb' data-ref="69skb" data-ref-filename="69skb">skb</a>, <a class="local col0 ref" href="#70vlan_tci" title='vlan_tci' data-ref="70vlan_tci" data-ref-filename="70vlan_tci">vlan_tci</a>);</td></tr>
+<tr><th id="577">577</th><td>	} <b>else</b> {</td></tr>
+<tr><th id="578">578</th><td>		<b>return</b> <a class="ref fn" href="#__vlan_get_tag" title='__vlan_get_tag' data-ref="__vlan_get_tag" data-ref-filename="__vlan_get_tag">__vlan_get_tag</a>(<a class="local col9 ref" href="#69skb" title='skb' data-ref="69skb" data-ref-filename="69skb">skb</a>, <a class="local col0 ref" href="#70vlan_tci" title='vlan_tci' data-ref="70vlan_tci" data-ref-filename="70vlan_tci">vlan_tci</a>);</td></tr>
+<tr><th id="579">579</th><td>	}</td></tr>
+<tr><th id="580">580</th><td>}</td></tr>
+<tr><th id="581">581</th><td></td></tr>
+<tr><th id="582">582</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="583">583</th><td><i class="doc"> * vlan_get_protocol - get protocol EtherType.</i></td></tr>
+<tr><th id="584">584</th><td><i class="doc"> *<span class="command"> @skb</span>: skbuff to query</i></td></tr>
+<tr><th id="585">585</th><td><i class="doc"> *<span class="command"> @type</span>: first vlan protocol</i></td></tr>
+<tr><th id="586">586</th><td><i class="doc"> *<span class="command"> @depth</span>: buffer to store length of eth and vlan tags in bytes</i></td></tr>
+<tr><th id="587">587</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="588">588</th><td><i class="doc"> * Returns the EtherType of the packet, regardless of whether it is</i></td></tr>
+<tr><th id="589">589</th><td><i class="doc"> * vlan encapsulated (normal or hardware accelerated) or not.</i></td></tr>
+<tr><th id="590">590</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="591">591</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../uapi/linux/types.h.html#__be16" title='__be16' data-type='__u16' data-ref="__be16" data-ref-filename="__be16">__be16</a> <dfn class="decl def fn" id="__vlan_get_protocol" title='__vlan_get_protocol' data-ref="__vlan_get_protocol" data-ref-filename="__vlan_get_protocol">__vlan_get_protocol</dfn>(<b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col1 decl" id="71skb" title='skb' data-type='struct sk_buff *' data-ref="71skb" data-ref-filename="71skb">skb</dfn>, <a class="typedef" href="../uapi/linux/types.h.html#__be16" title='__be16' data-type='__u16' data-ref="__be16" data-ref-filename="__be16">__be16</a> <dfn class="local col2 decl" id="72type" title='type' data-type='__be16' data-ref="72type" data-ref-filename="72type">type</dfn>,</td></tr>
+<tr><th id="592">592</th><td>					 <em>int</em> *<dfn class="local col3 decl" id="73depth" title='depth' data-type='int *' data-ref="73depth" data-ref-filename="73depth">depth</dfn>)</td></tr>
+<tr><th id="593">593</th><td>{</td></tr>
+<tr><th id="594">594</th><td>	<em>unsigned</em> <em>int</em> <dfn class="local col4 decl" id="74vlan_depth" title='vlan_depth' data-type='unsigned int' data-ref="74vlan_depth" data-ref-filename="74vlan_depth">vlan_depth</dfn> = <a class="local col1 ref" href="#71skb" title='skb' data-ref="71skb" data-ref-filename="71skb">skb</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::mac_len" title='sk_buff::mac_len' data-ref="sk_buff::mac_len" data-ref-filename="sk_buff..mac_len">mac_len</a>;</td></tr>
+<tr><th id="595">595</th><td></td></tr>
+<tr><th id="596">596</th><td>	<i>/* if type is 802.1Q/AD then the header should already be</i></td></tr>
+<tr><th id="597">597</th><td><i>	 * present at mac_len - VLAN_HLEN (if mac_len &gt; 0), or at</i></td></tr>
+<tr><th id="598">598</th><td><i>	 * ETH_HLEN otherwise</i></td></tr>
+<tr><th id="599">599</th><td><i>	 */</i></td></tr>
+<tr><th id="600">600</th><td>	<b>if</b> (<a class="ref fn" href="#eth_type_vlan" title='eth_type_vlan' data-ref="eth_type_vlan" data-ref-filename="eth_type_vlan">eth_type_vlan</a>(<a class="local col2 ref" href="#72type" title='type' data-ref="72type" data-ref-filename="72type">type</a>)) {</td></tr>
+<tr><th id="601">601</th><td>		<b>if</b> (<a class="local col4 ref" href="#74vlan_depth" title='vlan_depth' data-ref="74vlan_depth" data-ref-filename="74vlan_depth">vlan_depth</a>) {</td></tr>
+<tr><th id="602">602</th><td>			<b>if</b> (<a class="macro" href="../asm-generic/bug.h.html#123" title="({ int __ret_warn_on = !!(vlan_depth &lt; 4); if (__builtin_expect(!!(__ret_warn_on), 0)) do { printk(&quot;\001&quot; &quot;4&quot; &quot;------------[ cut here ]------------\n&quot;); do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/./include/linux/if_vlan.h&quot;), &quot;i&quot; (602), &quot;i&quot; ((1 &lt;&lt; 0)|(((9) &lt;&lt; 8))), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.reachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (141)); }); } while (0); } while (0); __builtin_expect(!!(__ret_warn_on), 0); })" data-ref="_M/WARN_ON">WARN_ON</a>(<a class="local col4 ref" href="#74vlan_depth" title='vlan_depth' data-ref="74vlan_depth" data-ref-filename="74vlan_depth">vlan_depth</a> &lt; <a class="macro" href="#16" title="4" data-ref="_M/VLAN_HLEN">VLAN_HLEN</a>))</td></tr>
+<tr><th id="603">603</th><td>				<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="604">604</th><td>			<a class="local col4 ref" href="#74vlan_depth" title='vlan_depth' data-ref="74vlan_depth" data-ref-filename="74vlan_depth">vlan_depth</a> -= <a class="macro" href="#16" title="4" data-ref="_M/VLAN_HLEN">VLAN_HLEN</a>;</td></tr>
+<tr><th id="605">605</th><td>		} <b>else</b> {</td></tr>
+<tr><th id="606">606</th><td>			<a class="local col4 ref" href="#74vlan_depth" title='vlan_depth' data-ref="74vlan_depth" data-ref-filename="74vlan_depth">vlan_depth</a> = <a class="macro" href="../uapi/linux/if_ether.h.html#34" title="14" data-ref="_M/ETH_HLEN">ETH_HLEN</a>;</td></tr>
+<tr><th id="607">607</th><td>		}</td></tr>
+<tr><th id="608">608</th><td>		<b>do</b> {</td></tr>
+<tr><th id="609">609</th><td>			<b>struct</b> <a class="type" href="#vlan_hdr" title='vlan_hdr' data-ref="vlan_hdr" data-ref-filename="vlan_hdr">vlan_hdr</a> *<dfn class="local col5 decl" id="75vh" title='vh' data-type='struct vlan_hdr *' data-ref="75vh" data-ref-filename="75vh">vh</dfn>;</td></tr>
+<tr><th id="610">610</th><td></td></tr>
+<tr><th id="611">611</th><td>			<b>if</b> (<a class="macro" href="compiler.h.html#78" title="__builtin_expect(!!(!pskb_may_pull(skb, vlan_depth + 4)), 0)" data-ref="_M/unlikely">unlikely</a>(!<a class="ref fn" href="skbuff.h.html#pskb_may_pull" title='pskb_may_pull' data-ref="pskb_may_pull" data-ref-filename="pskb_may_pull">pskb_may_pull</a>(<a class="local col1 ref" href="#71skb" title='skb' data-ref="71skb" data-ref-filename="71skb">skb</a>,</td></tr>
+<tr><th id="612">612</th><td>						    <a class="local col4 ref" href="#74vlan_depth" title='vlan_depth' data-ref="74vlan_depth" data-ref-filename="74vlan_depth">vlan_depth</a> + <a class="macro" href="#16" title="4" data-ref="_M/VLAN_HLEN">VLAN_HLEN</a>)))</td></tr>
+<tr><th id="613">613</th><td>				<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="614">614</th><td></td></tr>
+<tr><th id="615">615</th><td>			<a class="local col5 ref" href="#75vh" title='vh' data-ref="75vh" data-ref-filename="75vh">vh</a> = (<b>struct</b> <a class="type" href="#vlan_hdr" title='vlan_hdr' data-ref="vlan_hdr" data-ref-filename="vlan_hdr">vlan_hdr</a> *)(<a class="local col1 ref" href="#71skb" title='skb' data-ref="71skb" data-ref-filename="71skb">skb</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::data" title='sk_buff::data' data-ref="sk_buff::data" data-ref-filename="sk_buff..data">data</a> + <a class="local col4 ref" href="#74vlan_depth" title='vlan_depth' data-ref="74vlan_depth" data-ref-filename="74vlan_depth">vlan_depth</a>);</td></tr>
+<tr><th id="616">616</th><td>			<a class="local col2 ref" href="#72type" title='type' data-ref="72type" data-ref-filename="72type">type</a> = <a class="local col5 ref" href="#75vh" title='vh' data-ref="75vh" data-ref-filename="75vh">vh</a>-&gt;<a class="ref field" href="#vlan_hdr::h_vlan_encapsulated_proto" title='vlan_hdr::h_vlan_encapsulated_proto' data-ref="vlan_hdr::h_vlan_encapsulated_proto" data-ref-filename="vlan_hdr..h_vlan_encapsulated_proto">h_vlan_encapsulated_proto</a>;</td></tr>
+<tr><th id="617">617</th><td>			<a class="local col4 ref" href="#74vlan_depth" title='vlan_depth' data-ref="74vlan_depth" data-ref-filename="74vlan_depth">vlan_depth</a> += <a class="macro" href="#16" title="4" data-ref="_M/VLAN_HLEN">VLAN_HLEN</a>;</td></tr>
+<tr><th id="618">618</th><td>		} <b>while</b> (<a class="ref fn" href="#eth_type_vlan" title='eth_type_vlan' data-ref="eth_type_vlan" data-ref-filename="eth_type_vlan">eth_type_vlan</a>(<a class="local col2 ref" href="#72type" title='type' data-ref="72type" data-ref-filename="72type">type</a>));</td></tr>
+<tr><th id="619">619</th><td>	}</td></tr>
+<tr><th id="620">620</th><td></td></tr>
+<tr><th id="621">621</th><td>	<b>if</b> (<a class="local col3 ref" href="#73depth" title='depth' data-ref="73depth" data-ref-filename="73depth">depth</a>)</td></tr>
+<tr><th id="622">622</th><td>		*<a class="local col3 ref" href="#73depth" title='depth' data-ref="73depth" data-ref-filename="73depth">depth</a> = <a class="local col4 ref" href="#74vlan_depth" title='vlan_depth' data-ref="74vlan_depth" data-ref-filename="74vlan_depth">vlan_depth</a>;</td></tr>
+<tr><th id="623">623</th><td></td></tr>
+<tr><th id="624">624</th><td>	<b>return</b> <a class="local col2 ref" href="#72type" title='type' data-ref="72type" data-ref-filename="72type">type</a>;</td></tr>
+<tr><th id="625">625</th><td>}</td></tr>
+<tr><th id="626">626</th><td></td></tr>
+<tr><th id="627">627</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="628">628</th><td><i class="doc"> * vlan_get_protocol - get protocol EtherType.</i></td></tr>
+<tr><th id="629">629</th><td><i class="doc"> *<span class="command"> @skb</span>: skbuff to query</i></td></tr>
+<tr><th id="630">630</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="631">631</th><td><i class="doc"> * Returns the EtherType of the packet, regardless of whether it is</i></td></tr>
+<tr><th id="632">632</th><td><i class="doc"> * vlan encapsulated (normal or hardware accelerated) or not.</i></td></tr>
+<tr><th id="633">633</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="634">634</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../uapi/linux/types.h.html#__be16" title='__be16' data-type='__u16' data-ref="__be16" data-ref-filename="__be16">__be16</a> <dfn class="decl def fn" id="vlan_get_protocol" title='vlan_get_protocol' data-ref="vlan_get_protocol" data-ref-filename="vlan_get_protocol">vlan_get_protocol</dfn>(<b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col6 decl" id="76skb" title='skb' data-type='struct sk_buff *' data-ref="76skb" data-ref-filename="76skb">skb</dfn>)</td></tr>
+<tr><th id="635">635</th><td>{</td></tr>
+<tr><th id="636">636</th><td>	<b>return</b> <a class="ref fn" href="#__vlan_get_protocol" title='__vlan_get_protocol' data-ref="__vlan_get_protocol" data-ref-filename="__vlan_get_protocol">__vlan_get_protocol</a>(<a class="local col6 ref" href="#76skb" title='skb' data-ref="76skb" data-ref-filename="76skb">skb</a>, <a class="local col6 ref" href="#76skb" title='skb' data-ref="76skb" data-ref-filename="76skb">skb</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::protocol" title='sk_buff::protocol' data-ref="sk_buff::protocol" data-ref-filename="sk_buff..protocol">protocol</a>, <a class="macro" href="stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>);</td></tr>
+<tr><th id="637">637</th><td>}</td></tr>
+<tr><th id="638">638</th><td></td></tr>
+<tr><th id="639">639</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="vlan_set_encap_proto" title='vlan_set_encap_proto' data-ref="vlan_set_encap_proto" data-ref-filename="vlan_set_encap_proto">vlan_set_encap_proto</dfn>(<b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col7 decl" id="77skb" title='skb' data-type='struct sk_buff *' data-ref="77skb" data-ref-filename="77skb">skb</dfn>,</td></tr>
+<tr><th id="640">640</th><td>					<b>struct</b> <a class="type" href="#vlan_hdr" title='vlan_hdr' data-ref="vlan_hdr" data-ref-filename="vlan_hdr">vlan_hdr</a> *<dfn class="local col8 decl" id="78vhdr" title='vhdr' data-type='struct vlan_hdr *' data-ref="78vhdr" data-ref-filename="78vhdr">vhdr</dfn>)</td></tr>
+<tr><th id="641">641</th><td>{</td></tr>
+<tr><th id="642">642</th><td>	<a class="typedef" href="../uapi/linux/types.h.html#__be16" title='__be16' data-type='__u16' data-ref="__be16" data-ref-filename="__be16">__be16</a> <dfn class="local col9 decl" id="79proto" title='proto' data-type='__be16' data-ref="79proto" data-ref-filename="79proto">proto</dfn>;</td></tr>
+<tr><th id="643">643</th><td>	<em>unsigned</em> <em>short</em> *<dfn class="local col0 decl" id="80rawp" title='rawp' data-type='unsigned short *' data-ref="80rawp" data-ref-filename="80rawp">rawp</dfn>;</td></tr>
+<tr><th id="644">644</th><td></td></tr>
+<tr><th id="645">645</th><td>	<i>/*</i></td></tr>
+<tr><th id="646">646</th><td><i>	 * Was a VLAN packet, grab the encapsulated protocol, which the layer</i></td></tr>
+<tr><th id="647">647</th><td><i>	 * three protocols care about.</i></td></tr>
+<tr><th id="648">648</th><td><i>	 */</i></td></tr>
+<tr><th id="649">649</th><td></td></tr>
+<tr><th id="650">650</th><td>	<a class="local col9 ref" href="#79proto" title='proto' data-ref="79proto" data-ref-filename="79proto">proto</a> = <a class="local col8 ref" href="#78vhdr" title='vhdr' data-ref="78vhdr" data-ref-filename="78vhdr">vhdr</a>-&gt;<a class="ref field" href="#vlan_hdr::h_vlan_encapsulated_proto" title='vlan_hdr::h_vlan_encapsulated_proto' data-ref="vlan_hdr::h_vlan_encapsulated_proto" data-ref-filename="vlan_hdr..h_vlan_encapsulated_proto">h_vlan_encapsulated_proto</a>;</td></tr>
+<tr><th id="651">651</th><td>	<b>if</b> (<a class="ref fn" href="etherdevice.h.html#eth_proto_is_802_3" title='eth_proto_is_802_3' data-ref="eth_proto_is_802_3" data-ref-filename="eth_proto_is_802_3">eth_proto_is_802_3</a>(<a class="local col9 ref" href="#79proto" title='proto' data-ref="79proto" data-ref-filename="79proto">proto</a>)) {</td></tr>
+<tr><th id="652">652</th><td>		<a class="local col7 ref" href="#77skb" title='skb' data-ref="77skb" data-ref-filename="77skb">skb</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::protocol" title='sk_buff::protocol' data-ref="sk_buff::protocol" data-ref-filename="sk_buff..protocol">protocol</a> = <a class="local col9 ref" href="#79proto" title='proto' data-ref="79proto" data-ref-filename="79proto">proto</a>;</td></tr>
+<tr><th id="653">653</th><td>		<b>return</b>;</td></tr>
+<tr><th id="654">654</th><td>	}</td></tr>
+<tr><th id="655">655</th><td></td></tr>
+<tr><th id="656">656</th><td>	<a class="local col0 ref" href="#80rawp" title='rawp' data-ref="80rawp" data-ref-filename="80rawp">rawp</a> = (<em>unsigned</em> <em>short</em> *)(<a class="local col8 ref" href="#78vhdr" title='vhdr' data-ref="78vhdr" data-ref-filename="78vhdr">vhdr</a> + <var>1</var>);</td></tr>
+<tr><th id="657">657</th><td>	<b>if</b> (*<a class="local col0 ref" href="#80rawp" title='rawp' data-ref="80rawp" data-ref-filename="80rawp">rawp</a> == <var>0xFFFF</var>)</td></tr>
+<tr><th id="658">658</th><td>		<i>/*</i></td></tr>
+<tr><th id="659">659</th><td><i>		 * This is a magic hack to spot IPX packets. Older Novell</i></td></tr>
+<tr><th id="660">660</th><td><i>		 * breaks the protocol design and runs IPX over 802.3 without</i></td></tr>
+<tr><th id="661">661</th><td><i>		 * an 802.2 LLC layer. We look for FFFF which isn't a used</i></td></tr>
+<tr><th id="662">662</th><td><i>		 * 802.2 SSAP/DSAP. This won't work for fault tolerant netware</i></td></tr>
+<tr><th id="663">663</th><td><i>		 * but does for the rest.</i></td></tr>
+<tr><th id="664">664</th><td><i>		 */</i></td></tr>
+<tr><th id="665">665</th><td>		<a class="local col7 ref" href="#77skb" title='skb' data-ref="77skb" data-ref-filename="77skb">skb</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::protocol" title='sk_buff::protocol' data-ref="sk_buff::protocol" data-ref-filename="sk_buff..protocol">protocol</a> = <a class="macro" href="byteorder/generic.h.html#141" title="(( __be16)(__builtin_constant_p((__u16)((0x0001))) ? ((__u16)( (((__u16)((0x0001)) &amp; (__u16)0x00ffU) &lt;&lt; 8) | (((__u16)((0x0001)) &amp; (__u16)0xff00U) &gt;&gt; 8))) : __fswab16((0x0001))))" data-ref="_M/htons">htons</a>(<a class="macro" href="../uapi/linux/if_ether.h.html#124" title="0x0001" data-ref="_M/ETH_P_802_3">ETH_P_802_3</a>);</td></tr>
+<tr><th id="666">666</th><td>	<b>else</b></td></tr>
+<tr><th id="667">667</th><td>		<i>/*</i></td></tr>
+<tr><th id="668">668</th><td><i>		 * Real 802.2 LLC</i></td></tr>
+<tr><th id="669">669</th><td><i>		 */</i></td></tr>
+<tr><th id="670">670</th><td>		<a class="local col7 ref" href="#77skb" title='skb' data-ref="77skb" data-ref-filename="77skb">skb</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::protocol" title='sk_buff::protocol' data-ref="sk_buff::protocol" data-ref-filename="sk_buff..protocol">protocol</a> = <a class="macro" href="byteorder/generic.h.html#141" title="(( __be16)(__builtin_constant_p((__u16)((0x0004))) ? ((__u16)( (((__u16)((0x0004)) &amp; (__u16)0x00ffU) &lt;&lt; 8) | (((__u16)((0x0004)) &amp; (__u16)0xff00U) &gt;&gt; 8))) : __fswab16((0x0004))))" data-ref="_M/htons">htons</a>(<a class="macro" href="../uapi/linux/if_ether.h.html#127" title="0x0004" data-ref="_M/ETH_P_802_2">ETH_P_802_2</a>);</td></tr>
+<tr><th id="671">671</th><td>}</td></tr>
+<tr><th id="672">672</th><td></td></tr>
+<tr><th id="673">673</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="674">674</th><td><i class="doc"> * skb_vlan_tagged - check if skb is vlan tagged.</i></td></tr>
+<tr><th id="675">675</th><td><i class="doc"> *<span class="command"> @skb</span>: skbuff to query</i></td></tr>
+<tr><th id="676">676</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="677">677</th><td><i class="doc"> * Returns true if the skb is tagged, regardless of whether it is hardware</i></td></tr>
+<tr><th id="678">678</th><td><i class="doc"> * accelerated or not.</i></td></tr>
+<tr><th id="679">679</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="680">680</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="skb_vlan_tagged" title='skb_vlan_tagged' data-ref="skb_vlan_tagged" data-ref-filename="skb_vlan_tagged">skb_vlan_tagged</dfn>(<em>const</em> <b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col1 decl" id="81skb" title='skb' data-type='const struct sk_buff *' data-ref="81skb" data-ref-filename="81skb">skb</dfn>)</td></tr>
+<tr><th id="681">681</th><td>{</td></tr>
+<tr><th id="682">682</th><td>	<b>if</b> (!<a class="macro" href="#75" title="((skb)-&gt;vlan_present)" data-ref="_M/skb_vlan_tag_present">skb_vlan_tag_present</a>(<a class="local col1 ref" href="#81skb" title='skb' data-ref="81skb" data-ref-filename="81skb">skb</a>) &amp;&amp;</td></tr>
+<tr><th id="683">683</th><td>	    <a class="macro" href="compiler.h.html#77" title="__builtin_expect(!!(!eth_type_vlan(skb-&gt;protocol)), 1)" data-ref="_M/likely">likely</a>(!<a class="ref fn" href="#eth_type_vlan" title='eth_type_vlan' data-ref="eth_type_vlan" data-ref-filename="eth_type_vlan">eth_type_vlan</a>(<a class="local col1 ref" href="#81skb" title='skb' data-ref="81skb" data-ref-filename="81skb">skb</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::protocol" title='sk_buff::protocol' data-ref="sk_buff::protocol" data-ref-filename="sk_buff..protocol">protocol</a>)))</td></tr>
+<tr><th id="684">684</th><td>		<b>return</b> <a class="enum" href="stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="685">685</th><td></td></tr>
+<tr><th id="686">686</th><td>	<b>return</b> <a class="enum" href="stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>;</td></tr>
+<tr><th id="687">687</th><td>}</td></tr>
+<tr><th id="688">688</th><td></td></tr>
+<tr><th id="689">689</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="690">690</th><td><i class="doc"> * skb_vlan_tagged_multi - check if skb is vlan tagged with multiple headers.</i></td></tr>
+<tr><th id="691">691</th><td><i class="doc"> *<span class="command"> @skb</span>: skbuff to query</i></td></tr>
+<tr><th id="692">692</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="693">693</th><td><i class="doc"> * Returns true if the skb is tagged with multiple vlan headers, regardless</i></td></tr>
+<tr><th id="694">694</th><td><i class="doc"> * of whether it is hardware accelerated or not.</i></td></tr>
+<tr><th id="695">695</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="696">696</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="skb_vlan_tagged_multi" title='skb_vlan_tagged_multi' data-ref="skb_vlan_tagged_multi" data-ref-filename="skb_vlan_tagged_multi">skb_vlan_tagged_multi</dfn>(<b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col2 decl" id="82skb" title='skb' data-type='struct sk_buff *' data-ref="82skb" data-ref-filename="82skb">skb</dfn>)</td></tr>
+<tr><th id="697">697</th><td>{</td></tr>
+<tr><th id="698">698</th><td>	<a class="typedef" href="../uapi/linux/types.h.html#__be16" title='__be16' data-type='__u16' data-ref="__be16" data-ref-filename="__be16">__be16</a> <dfn class="local col3 decl" id="83protocol" title='protocol' data-type='__be16' data-ref="83protocol" data-ref-filename="83protocol">protocol</dfn> = <a class="local col2 ref" href="#82skb" title='skb' data-ref="82skb" data-ref-filename="82skb">skb</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::protocol" title='sk_buff::protocol' data-ref="sk_buff::protocol" data-ref-filename="sk_buff..protocol">protocol</a>;</td></tr>
+<tr><th id="699">699</th><td></td></tr>
+<tr><th id="700">700</th><td>	<b>if</b> (!<a class="macro" href="#75" title="((skb)-&gt;vlan_present)" data-ref="_M/skb_vlan_tag_present">skb_vlan_tag_present</a>(<a class="local col2 ref" href="#82skb" title='skb' data-ref="82skb" data-ref-filename="82skb">skb</a>)) {</td></tr>
+<tr><th id="701">701</th><td>		<b>struct</b> <a class="type" href="#vlan_ethhdr" title='vlan_ethhdr' data-ref="vlan_ethhdr" data-ref-filename="vlan_ethhdr">vlan_ethhdr</a> *<dfn class="local col4 decl" id="84veh" title='veh' data-type='struct vlan_ethhdr *' data-ref="84veh" data-ref-filename="84veh">veh</dfn>;</td></tr>
+<tr><th id="702">702</th><td></td></tr>
+<tr><th id="703">703</th><td>		<b>if</b> (<a class="macro" href="compiler.h.html#77" title="__builtin_expect(!!(!eth_type_vlan(protocol)), 1)" data-ref="_M/likely">likely</a>(!<a class="ref fn" href="#eth_type_vlan" title='eth_type_vlan' data-ref="eth_type_vlan" data-ref-filename="eth_type_vlan">eth_type_vlan</a>(<a class="local col3 ref" href="#83protocol" title='protocol' data-ref="83protocol" data-ref-filename="83protocol">protocol</a>)))</td></tr>
+<tr><th id="704">704</th><td>			<b>return</b> <a class="enum" href="stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="705">705</th><td></td></tr>
+<tr><th id="706">706</th><td>		<b>if</b> (<a class="macro" href="compiler.h.html#78" title="__builtin_expect(!!(!pskb_may_pull(skb, 18)), 0)" data-ref="_M/unlikely">unlikely</a>(!<a class="ref fn" href="skbuff.h.html#pskb_may_pull" title='pskb_may_pull' data-ref="pskb_may_pull" data-ref-filename="pskb_may_pull">pskb_may_pull</a>(<a class="local col2 ref" href="#82skb" title='skb' data-ref="82skb" data-ref-filename="82skb">skb</a>, <a class="macro" href="#19" title="18" data-ref="_M/VLAN_ETH_HLEN">VLAN_ETH_HLEN</a>)))</td></tr>
+<tr><th id="707">707</th><td>			<b>return</b> <a class="enum" href="stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="708">708</th><td></td></tr>
+<tr><th id="709">709</th><td>		<a class="local col4 ref" href="#84veh" title='veh' data-ref="84veh" data-ref-filename="84veh">veh</a> = (<b>struct</b> <a class="type" href="#vlan_ethhdr" title='vlan_ethhdr' data-ref="vlan_ethhdr" data-ref-filename="vlan_ethhdr">vlan_ethhdr</a> *)<a class="local col2 ref" href="#82skb" title='skb' data-ref="82skb" data-ref-filename="82skb">skb</a>-&gt;<a class="ref field" href="skbuff.h.html#sk_buff::data" title='sk_buff::data' data-ref="sk_buff::data" data-ref-filename="sk_buff..data">data</a>;</td></tr>
+<tr><th id="710">710</th><td>		<a class="local col3 ref" href="#83protocol" title='protocol' data-ref="83protocol" data-ref-filename="83protocol">protocol</a> = <a class="local col4 ref" href="#84veh" title='veh' data-ref="84veh" data-ref-filename="84veh">veh</a>-&gt;<a class="ref field" href="#vlan_ethhdr::h_vlan_encapsulated_proto" title='vlan_ethhdr::h_vlan_encapsulated_proto' data-ref="vlan_ethhdr::h_vlan_encapsulated_proto" data-ref-filename="vlan_ethhdr..h_vlan_encapsulated_proto">h_vlan_encapsulated_proto</a>;</td></tr>
+<tr><th id="711">711</th><td>	}</td></tr>
+<tr><th id="712">712</th><td></td></tr>
+<tr><th id="713">713</th><td>	<b>if</b> (!<a class="ref fn" href="#eth_type_vlan" title='eth_type_vlan' data-ref="eth_type_vlan" data-ref-filename="eth_type_vlan">eth_type_vlan</a>(<a class="local col3 ref" href="#83protocol" title='protocol' data-ref="83protocol" data-ref-filename="83protocol">protocol</a>))</td></tr>
+<tr><th id="714">714</th><td>		<b>return</b> <a class="enum" href="stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="715">715</th><td></td></tr>
+<tr><th id="716">716</th><td>	<b>return</b> <a class="enum" href="stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>;</td></tr>
+<tr><th id="717">717</th><td>}</td></tr>
+<tr><th id="718">718</th><td></td></tr>
+<tr><th id="719">719</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="720">720</th><td><i class="doc"> * vlan_features_check - drop unsafe features for skb with multiple tags.</i></td></tr>
+<tr><th id="721">721</th><td><i class="doc"> *<span class="command"> @skb</span>: skbuff to query</i></td></tr>
+<tr><th id="722">722</th><td><i class="doc"> *<span class="command"> @features</span>: features to be checked</i></td></tr>
+<tr><th id="723">723</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="724">724</th><td><i class="doc"> * Returns features without unsafe ones if the skb has multiple tags.</i></td></tr>
+<tr><th id="725">725</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="726">726</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="netdev_features.h.html#netdev_features_t" title='netdev_features_t' data-type='u64' data-ref="netdev_features_t" data-ref-filename="netdev_features_t">netdev_features_t</a> <dfn class="decl def fn" id="vlan_features_check" title='vlan_features_check' data-ref="vlan_features_check" data-ref-filename="vlan_features_check">vlan_features_check</dfn>(<b>struct</b> <a class="type" href="skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col5 decl" id="85skb" title='skb' data-type='struct sk_buff *' data-ref="85skb" data-ref-filename="85skb">skb</dfn>,</td></tr>
+<tr><th id="727">727</th><td>						    <a class="typedef" href="netdev_features.h.html#netdev_features_t" title='netdev_features_t' data-type='u64' data-ref="netdev_features_t" data-ref-filename="netdev_features_t">netdev_features_t</a> <dfn class="local col6 decl" id="86features" title='features' data-type='netdev_features_t' data-ref="86features" data-ref-filename="86features">features</dfn>)</td></tr>
+<tr><th id="728">728</th><td>{</td></tr>
+<tr><th id="729">729</th><td>	<b>if</b> (<a class="ref fn" href="#skb_vlan_tagged_multi" title='skb_vlan_tagged_multi' data-ref="skb_vlan_tagged_multi" data-ref-filename="skb_vlan_tagged_multi">skb_vlan_tagged_multi</a>(<a class="local col5 ref" href="#85skb" title='skb' data-ref="85skb" data-ref-filename="85skb">skb</a>)) {</td></tr>
+<tr><th id="730">730</th><td>		<i>/* In the case of multi-tagged packets, use a direct mask</i></td></tr>
+<tr><th id="731">731</th><td><i>		 * instead of using netdev_interesect_features(), to make</i></td></tr>
+<tr><th id="732">732</th><td><i>		 * sure that only devices supporting NETIF_F_HW_CSUM will</i></td></tr>
+<tr><th id="733">733</th><td><i>		 * have checksum offloading support.</i></td></tr>
+<tr><th id="734">734</th><td><i>		 */</i></td></tr>
+<tr><th id="735">735</th><td>		<a class="local col6 ref" href="#86features" title='features' data-ref="86features" data-ref-filename="86features">features</a> &amp;= <a class="macro" href="netdev_features.h.html#122" title="((netdev_features_t)1 &lt;&lt; (NETIF_F_SG_BIT))" data-ref="_M/NETIF_F_SG">NETIF_F_SG</a> | <a class="macro" href="netdev_features.h.html#106" title="((netdev_features_t)1 &lt;&lt; (NETIF_F_HIGHDMA_BIT))" data-ref="_M/NETIF_F_HIGHDMA">NETIF_F_HIGHDMA</a> | <a class="macro" href="netdev_features.h.html#107" title="((netdev_features_t)1 &lt;&lt; (NETIF_F_HW_CSUM_BIT))" data-ref="_M/NETIF_F_HW_CSUM">NETIF_F_HW_CSUM</a> |</td></tr>
+<tr><th id="736">736</th><td>			    <a class="macro" href="netdev_features.h.html#100" title="((netdev_features_t)1 &lt;&lt; (NETIF_F_FRAGLIST_BIT))" data-ref="_M/NETIF_F_FRAGLIST">NETIF_F_FRAGLIST</a> | <a class="macro" href="netdev_features.h.html#110" title="((netdev_features_t)1 &lt;&lt; (NETIF_F_HW_VLAN_CTAG_TX_BIT))" data-ref="_M/NETIF_F_HW_VLAN_CTAG_TX">NETIF_F_HW_VLAN_CTAG_TX</a> |</td></tr>
+<tr><th id="737">737</th><td>			    <a class="macro" href="netdev_features.h.html#143" title="((netdev_features_t)1 &lt;&lt; (NETIF_F_HW_VLAN_STAG_TX_BIT))" data-ref="_M/NETIF_F_HW_VLAN_STAG_TX">NETIF_F_HW_VLAN_STAG_TX</a>;</td></tr>
+<tr><th id="738">738</th><td>	}</td></tr>
+<tr><th id="739">739</th><td></td></tr>
+<tr><th id="740">740</th><td>	<b>return</b> <a class="local col6 ref" href="#86features" title='features' data-ref="86features" data-ref-filename="86features">features</a>;</td></tr>
+<tr><th id="741">741</th><td>}</td></tr>
+<tr><th id="742">742</th><td></td></tr>
+<tr><th id="743">743</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="744">744</th><td><i class="doc"> * compare_vlan_header - Compare two vlan headers</i></td></tr>
+<tr><th id="745">745</th><td><i class="doc"> *<span class="command"> @h1</span>: Pointer to vlan header</i></td></tr>
+<tr><th id="746">746</th><td><i class="doc"> *<span class="command"> @h2</span>: Pointer to vlan header</i></td></tr>
+<tr><th id="747">747</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="748">748</th><td><i class="doc"> * Compare two vlan headers, returns 0 if equal.</i></td></tr>
+<tr><th id="749">749</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="750">750</th><td><i class="doc"> * Please note that alignment of h1 &amp; h2 are only guaranteed to be 16 bits.</i></td></tr>
+<tr><th id="751">751</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="752">752</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>long</em> <dfn class="decl def fn" id="compare_vlan_header" title='compare_vlan_header' data-ref="compare_vlan_header" data-ref-filename="compare_vlan_header">compare_vlan_header</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#vlan_hdr" title='vlan_hdr' data-ref="vlan_hdr" data-ref-filename="vlan_hdr">vlan_hdr</a> *<dfn class="local col7 decl" id="87h1" title='h1' data-type='const struct vlan_hdr *' data-ref="87h1" data-ref-filename="87h1">h1</dfn>,</td></tr>
+<tr><th id="753">753</th><td>						<em>const</em> <b>struct</b> <a class="type" href="#vlan_hdr" title='vlan_hdr' data-ref="vlan_hdr" data-ref-filename="vlan_hdr">vlan_hdr</a> *<dfn class="local col8 decl" id="88h2" title='h2' data-type='const struct vlan_hdr *' data-ref="88h2" data-ref-filename="88h2">h2</dfn>)</td></tr>
+<tr><th id="754">754</th><td>{</td></tr>
+<tr><th id="755">755</th><td><u>#<span data-ppcond="755">if</span> defined(<a class="macro" href="../generated/autoconf.h.html#1378" data-ref="_M/CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS">CONFIG_HAVE_EFFICIENT_UNALIGNED_ACCESS</a>)</u></td></tr>
+<tr><th id="756">756</th><td>	<b>return</b> *(<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> *)<a class="local col7 ref" href="#87h1" title='h1' data-ref="87h1" data-ref-filename="87h1">h1</a> ^ *(<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> *)<a class="local col8 ref" href="#88h2" title='h2' data-ref="88h2" data-ref-filename="88h2">h2</a>;</td></tr>
+<tr><th id="757">757</th><td><u>#<span data-ppcond="755">else</span></u></td></tr>
+<tr><th id="758">758</th><td>	<b>return</b> ((__force u32)h1-&gt;h_vlan_TCI ^ (__force u32)h2-&gt;h_vlan_TCI) |</td></tr>
+<tr><th id="759">759</th><td>	       ((__force u32)h1-&gt;h_vlan_encapsulated_proto ^</td></tr>
+<tr><th id="760">760</th><td>		(__force u32)h2-&gt;h_vlan_encapsulated_proto);</td></tr>
+<tr><th id="761">761</th><td><u>#<span data-ppcond="755">endif</span></u></td></tr>
+<tr><th id="762">762</th><td>}</td></tr>
+<tr><th id="763">763</th><td><u>#<span data-ppcond="7">endif</span> /* !(_LINUX_IF_VLAN_H_) */</u></td></tr>
+<tr><th id="764">764</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../drivers/connector/cn_proc.c.html'>linux-5.3.1/drivers/connector/cn_proc.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

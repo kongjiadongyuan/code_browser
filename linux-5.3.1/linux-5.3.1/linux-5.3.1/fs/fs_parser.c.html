@@ -1,0 +1,462 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>fs_parser.c source code [linux-5.3.1/fs/fs_parser.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/fs/fs_parser.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>linux-5.3.1</a>/<a href='./'>fs</a>/<a href='fs_parser.c.html'>fs_parser.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0-or-later</i></td></tr>
+<tr><th id="2">2</th><td><i>/* Filesystem parameter parser.</i></td></tr>
+<tr><th id="3">3</th><td><i> *</i></td></tr>
+<tr><th id="4">4</th><td><i> * Copyright (C) 2018 Red Hat, Inc. All Rights Reserved.</i></td></tr>
+<tr><th id="5">5</th><td><i> * Written by David Howells (dhowells@redhat.com)</i></td></tr>
+<tr><th id="6">6</th><td><i> */</i></td></tr>
+<tr><th id="7">7</th><td></td></tr>
+<tr><th id="8">8</th><td><u>#include <a href="../include/linux/export.h.html">&lt;linux/export.h&gt;</a></u></td></tr>
+<tr><th id="9">9</th><td><u>#include <a href="../include/linux/fs_context.h.html">&lt;linux/fs_context.h&gt;</a></u></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="../include/linux/fs_parser.h.html">&lt;linux/fs_parser.h&gt;</a></u></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../include/linux/slab.h.html">&lt;linux/slab.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="../include/linux/security.h.html">&lt;linux/security.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="../include/linux/namei.h.html">&lt;linux/namei.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="internal.h.html">"internal.h"</a></u></td></tr>
+<tr><th id="15">15</th><td></td></tr>
+<tr><th id="16">16</th><td><em>static</em> <em>const</em> <b>struct</b> <a class="type" href="../include/linux/fs_parser.h.html#constant_table" title='constant_table' data-ref="constant_table" data-ref-filename="constant_table">constant_table</a> <dfn class="tu decl def" id="bool_names" title='bool_names' data-type='const struct constant_table [6]' data-ref="bool_names" data-ref-filename="bool_names">bool_names</dfn>[] = {</td></tr>
+<tr><th id="17">17</th><td>	{ <q>"0"</q>,		<a class="enum" href="../include/linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a> },</td></tr>
+<tr><th id="18">18</th><td>	{ <q>"1"</q>,		<a class="enum" href="../include/linux/stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a> },</td></tr>
+<tr><th id="19">19</th><td>	{ <q>"false"</q>,	<a class="enum" href="../include/linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a> },</td></tr>
+<tr><th id="20">20</th><td>	{ <q>"no"</q>,		<a class="enum" href="../include/linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a> },</td></tr>
+<tr><th id="21">21</th><td>	{ <q>"true"</q>,	<a class="enum" href="../include/linux/stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a> },</td></tr>
+<tr><th id="22">22</th><td>	{ <q>"yes"</q>,	<a class="enum" href="../include/linux/stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a> },</td></tr>
+<tr><th id="23">23</th><td>};</td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="26">26</th><td><i class="doc"> * lookup_constant - Look up a constant by name in an ordered table</i></td></tr>
+<tr><th id="27">27</th><td><i class="doc"> *<span class="command"> @tbl</span>: The table of constants to search.</i></td></tr>
+<tr><th id="28">28</th><td><i class="doc"> *<span class="command"> @tbl</span>_size: The size of the table.</i></td></tr>
+<tr><th id="29">29</th><td><i class="doc"> * <span class="command">@name</span>:<span class="verb"> The name to look up.</span></i></td></tr>
+<tr><th id="30">30</th><td><i class="doc"> *<span class="command"> @not</span>_found: The value to return if the name is not found.</i></td></tr>
+<tr><th id="31">31</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="32">32</th><td><em>int</em> <dfn class="decl def fn" id="__lookup_constant" title='__lookup_constant' data-ref="__lookup_constant" data-ref-filename="__lookup_constant">__lookup_constant</dfn>(<em>const</em> <b>struct</b> <a class="type" href="../include/linux/fs_parser.h.html#constant_table" title='constant_table' data-ref="constant_table" data-ref-filename="constant_table">constant_table</a> *<dfn class="local col1 decl" id="1tbl" title='tbl' data-type='const struct constant_table *' data-ref="1tbl" data-ref-filename="1tbl">tbl</dfn>, <a class="typedef" href="../include/linux/types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col2 decl" id="2tbl_size" title='tbl_size' data-type='size_t' data-ref="2tbl_size" data-ref-filename="2tbl_size">tbl_size</dfn>,</td></tr>
+<tr><th id="33">33</th><td>		      <em>const</em> <em>char</em> *<dfn class="local col3 decl" id="3name" title='name' data-type='const char *' data-ref="3name" data-ref-filename="3name">name</dfn>, <em>int</em> <dfn class="local col4 decl" id="4not_found" title='not_found' data-type='int' data-ref="4not_found" data-ref-filename="4not_found">not_found</dfn>)</td></tr>
+<tr><th id="34">34</th><td>{</td></tr>
+<tr><th id="35">35</th><td>	<em>unsigned</em> <em>int</em> <dfn class="local col5 decl" id="5i" title='i' data-type='unsigned int' data-ref="5i" data-ref-filename="5i">i</dfn>;</td></tr>
+<tr><th id="36">36</th><td></td></tr>
+<tr><th id="37">37</th><td>	<b>for</b> (<a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a> = <var>0</var>; <a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a> &lt; <a class="local col2 ref" href="#2tbl_size" title='tbl_size' data-ref="2tbl_size" data-ref-filename="2tbl_size">tbl_size</a>; <a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a>++)</td></tr>
+<tr><th id="38">38</th><td>		<b>if</b> (<a class="ref fn" href="../arch/x86/include/asm/string_64.h.html#strcmp" title='strcmp' data-ref="strcmp" data-ref-filename="strcmp">strcmp</a>(<a class="local col3 ref" href="#3name" title='name' data-ref="3name" data-ref-filename="3name">name</a>, <a class="local col1 ref" href="#1tbl" title='tbl' data-ref="1tbl" data-ref-filename="1tbl">tbl</a>[<a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a>].<a class="ref field" href="../include/linux/fs_parser.h.html#constant_table::name" title='constant_table::name' data-ref="constant_table::name" data-ref-filename="constant_table..name">name</a>) == <var>0</var>)</td></tr>
+<tr><th id="39">39</th><td>			<b>return</b> <a class="local col1 ref" href="#1tbl" title='tbl' data-ref="1tbl" data-ref-filename="1tbl">tbl</a>[<a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a>].<a class="ref field" href="../include/linux/fs_parser.h.html#constant_table::value" title='constant_table::value' data-ref="constant_table::value" data-ref-filename="constant_table..value">value</a>;</td></tr>
+<tr><th id="40">40</th><td></td></tr>
+<tr><th id="41">41</th><td>	<b>return</b> <a class="local col4 ref" href="#4not_found" title='not_found' data-ref="4not_found" data-ref-filename="4not_found">not_found</a>;</td></tr>
+<tr><th id="42">42</th><td>}</td></tr>
+<tr><th id="43">43</th><td><a class="macro" href="../include/linux/export.h.html#123" title="extern typeof(__lookup_constant) __lookup_constant; static const char __kstrtab___lookup_constant[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;__lookup_constant&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable___lookup_constant43 = (void *)&amp;__lookup_constant; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;&quot; &quot;+&quot; &quot;__lookup_constant&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;__lookup_constant&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;__lookup_constant&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;__lookup_constant&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL">EXPORT_SYMBOL</a>(<a class="decl fn" href="#__lookup_constant" title='__lookup_constant' data-ref="__lookup_constant" data-ref-filename="__lookup_constant"><a class="ref fn" href="#__lookup_constant" title='__lookup_constant' data-ref="__lookup_constant" data-ref-filename="__lookup_constant"><a class="ref fn" href="#__lookup_constant" title='__lookup_constant' data-ref="__lookup_constant" data-ref-filename="__lookup_constant">__lookup_constant</a></a></a>);</td></tr>
+<tr><th id="44">44</th><td></td></tr>
+<tr><th id="45">45</th><td><em>static</em> <em>const</em> <b>struct</b> <a class="type" href="../include/linux/fs_parser.h.html#fs_parameter_spec" title='fs_parameter_spec' data-ref="fs_parameter_spec" data-ref-filename="fs_parameter_spec">fs_parameter_spec</a> *<dfn class="tu decl def fn" id="fs_lookup_key" title='fs_lookup_key' data-type='const struct fs_parameter_spec * fs_lookup_key(const struct fs_parameter_description * desc, const char * name)' data-ref="fs_lookup_key" data-ref-filename="fs_lookup_key">fs_lookup_key</dfn>(</td></tr>
+<tr><th id="46">46</th><td>	<em>const</em> <b>struct</b> <a class="type" href="../include/linux/fs_parser.h.html#fs_parameter_description" title='fs_parameter_description' data-ref="fs_parameter_description" data-ref-filename="fs_parameter_description">fs_parameter_description</a> *<dfn class="local col6 decl" id="6desc" title='desc' data-type='const struct fs_parameter_description *' data-ref="6desc" data-ref-filename="6desc">desc</dfn>,</td></tr>
+<tr><th id="47">47</th><td>	<em>const</em> <em>char</em> *<dfn class="local col7 decl" id="7name" title='name' data-type='const char *' data-ref="7name" data-ref-filename="7name">name</dfn>)</td></tr>
+<tr><th id="48">48</th><td>{</td></tr>
+<tr><th id="49">49</th><td>	<em>const</em> <b>struct</b> <a class="type" href="../include/linux/fs_parser.h.html#fs_parameter_spec" title='fs_parameter_spec' data-ref="fs_parameter_spec" data-ref-filename="fs_parameter_spec">fs_parameter_spec</a> *<dfn class="local col8 decl" id="8p" title='p' data-type='const struct fs_parameter_spec *' data-ref="8p" data-ref-filename="8p">p</dfn>;</td></tr>
+<tr><th id="50">50</th><td></td></tr>
+<tr><th id="51">51</th><td>	<b>if</b> (!<a class="local col6 ref" href="#6desc" title='desc' data-ref="6desc" data-ref-filename="6desc">desc</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parameter_description::specs" title='fs_parameter_description::specs' data-ref="fs_parameter_description::specs" data-ref-filename="fs_parameter_description..specs">specs</a>)</td></tr>
+<tr><th id="52">52</th><td>		<b>return</b> <a class="macro" href="../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td>	<b>for</b> (<a class="local col8 ref" href="#8p" title='p' data-ref="8p" data-ref-filename="8p">p</a> = <a class="local col6 ref" href="#6desc" title='desc' data-ref="6desc" data-ref-filename="6desc">desc</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parameter_description::specs" title='fs_parameter_description::specs' data-ref="fs_parameter_description::specs" data-ref-filename="fs_parameter_description..specs">specs</a>; <a class="local col8 ref" href="#8p" title='p' data-ref="8p" data-ref-filename="8p">p</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parameter_spec::name" title='fs_parameter_spec::name' data-ref="fs_parameter_spec::name" data-ref-filename="fs_parameter_spec..name">name</a>; <a class="local col8 ref" href="#8p" title='p' data-ref="8p" data-ref-filename="8p">p</a>++)</td></tr>
+<tr><th id="55">55</th><td>		<b>if</b> (<a class="ref fn" href="../arch/x86/include/asm/string_64.h.html#strcmp" title='strcmp' data-ref="strcmp" data-ref-filename="strcmp">strcmp</a>(<a class="local col8 ref" href="#8p" title='p' data-ref="8p" data-ref-filename="8p">p</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parameter_spec::name" title='fs_parameter_spec::name' data-ref="fs_parameter_spec::name" data-ref-filename="fs_parameter_spec..name">name</a>, <a class="local col7 ref" href="#7name" title='name' data-ref="7name" data-ref-filename="7name">name</a>) == <var>0</var>)</td></tr>
+<tr><th id="56">56</th><td>			<b>return</b> <a class="local col8 ref" href="#8p" title='p' data-ref="8p" data-ref-filename="8p">p</a>;</td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td>	<b>return</b> <a class="macro" href="../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="59">59</th><td>}</td></tr>
+<tr><th id="60">60</th><td></td></tr>
+<tr><th id="61">61</th><td><i>/*</i></td></tr>
+<tr><th id="62">62</th><td><i> * fs_parse - Parse a filesystem configuration parameter</i></td></tr>
+<tr><th id="63">63</th><td><i> * @fc: The filesystem context to log errors through.</i></td></tr>
+<tr><th id="64">64</th><td><i> * @desc: The parameter description to use.</i></td></tr>
+<tr><th id="65">65</th><td><i> * @param: The parameter.</i></td></tr>
+<tr><th id="66">66</th><td><i> * @result: Where to place the result of the parse</i></td></tr>
+<tr><th id="67">67</th><td><i> *</i></td></tr>
+<tr><th id="68">68</th><td><i> * Parse a filesystem configuration parameter and attempt a conversion for a</i></td></tr>
+<tr><th id="69">69</th><td><i> * simple parameter for which this is requested.  If successful, the determined</i></td></tr>
+<tr><th id="70">70</th><td><i> * parameter ID is placed into @result-&gt;key, the desired type is indicated in</i></td></tr>
+<tr><th id="71">71</th><td><i> * @result-&gt;t and any converted value is placed into an appropriate member of</i></td></tr>
+<tr><th id="72">72</th><td><i> * the union in @result.</i></td></tr>
+<tr><th id="73">73</th><td><i> *</i></td></tr>
+<tr><th id="74">74</th><td><i> * The function returns the parameter number if the parameter was matched,</i></td></tr>
+<tr><th id="75">75</th><td><i> * -ENOPARAM if it wasn't matched and @desc-&gt;ignore_unknown indicated that</i></td></tr>
+<tr><th id="76">76</th><td><i> * unknown parameters are okay and -EINVAL if there was a conversion issue or</i></td></tr>
+<tr><th id="77">77</th><td><i> * the parameter wasn't recognised and unknowns aren't okay.</i></td></tr>
+<tr><th id="78">78</th><td><i> */</i></td></tr>
+<tr><th id="79">79</th><td><em>int</em> <dfn class="decl def fn" id="fs_parse" title='fs_parse' data-ref="fs_parse" data-ref-filename="fs_parse">fs_parse</dfn>(<b>struct</b> <a class="type" href="../include/linux/fs_context.h.html#fs_context" title='fs_context' data-ref="fs_context" data-ref-filename="fs_context">fs_context</a> *<dfn class="local col9 decl" id="9fc" title='fc' data-type='struct fs_context *' data-ref="9fc" data-ref-filename="9fc">fc</dfn>,</td></tr>
+<tr><th id="80">80</th><td>	     <em>const</em> <b>struct</b> <a class="type" href="../include/linux/fs_parser.h.html#fs_parameter_description" title='fs_parameter_description' data-ref="fs_parameter_description" data-ref-filename="fs_parameter_description">fs_parameter_description</a> *<dfn class="local col0 decl" id="10desc" title='desc' data-type='const struct fs_parameter_description *' data-ref="10desc" data-ref-filename="10desc">desc</dfn>,</td></tr>
+<tr><th id="81">81</th><td>	     <b>struct</b> <a class="type" href="../include/linux/fs_context.h.html#fs_parameter" title='fs_parameter' data-ref="fs_parameter" data-ref-filename="fs_parameter">fs_parameter</a> *<dfn class="local col1 decl" id="11param" title='param' data-type='struct fs_parameter *' data-ref="11param" data-ref-filename="11param">param</dfn>,</td></tr>
+<tr><th id="82">82</th><td>	     <b>struct</b> <a class="type" href="../include/linux/fs_parser.h.html#fs_parse_result" title='fs_parse_result' data-ref="fs_parse_result" data-ref-filename="fs_parse_result">fs_parse_result</a> *<dfn class="local col2 decl" id="12result" title='result' data-type='struct fs_parse_result *' data-ref="12result" data-ref-filename="12result">result</dfn>)</td></tr>
+<tr><th id="83">83</th><td>{</td></tr>
+<tr><th id="84">84</th><td>	<em>const</em> <b>struct</b> <a class="type" href="../include/linux/fs_parser.h.html#fs_parameter_spec" title='fs_parameter_spec' data-ref="fs_parameter_spec" data-ref-filename="fs_parameter_spec">fs_parameter_spec</a> *<dfn class="local col3 decl" id="13p" title='p' data-type='const struct fs_parameter_spec *' data-ref="13p" data-ref-filename="13p">p</dfn>;</td></tr>
+<tr><th id="85">85</th><td>	<em>const</em> <b>struct</b> <a class="type" href="../include/linux/fs_parser.h.html#fs_parameter_enum" title='fs_parameter_enum' data-ref="fs_parameter_enum" data-ref-filename="fs_parameter_enum">fs_parameter_enum</a> *<dfn class="local col4 decl" id="14e" title='e' data-type='const struct fs_parameter_enum *' data-ref="14e" data-ref-filename="14e">e</dfn>;</td></tr>
+<tr><th id="86">86</th><td>	<em>int</em> <dfn class="local col5 decl" id="15ret" title='ret' data-type='int' data-ref="15ret" data-ref-filename="15ret">ret</dfn> = -<a class="macro" href="../include/linux/errno.h.html#21" title="519" data-ref="_M/ENOPARAM">ENOPARAM</a>, <dfn class="local col6 decl" id="16b" title='b' data-type='int' data-ref="16b" data-ref-filename="16b">b</dfn>;</td></tr>
+<tr><th id="87">87</th><td></td></tr>
+<tr><th id="88">88</th><td>	<a class="local col2 ref" href="#12result" title='result' data-ref="12result" data-ref-filename="12result">result</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parse_result::has_value" title='fs_parse_result::has_value' data-ref="fs_parse_result::has_value" data-ref-filename="fs_parse_result..has_value">has_value</a> = !!<a class="local col1 ref" href="#11param" title='param' data-ref="11param" data-ref-filename="11param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::(anonymous)::string" title='fs_parameter::(anonymous union)::string' data-ref="fs_parameter::(anonymous)::string" data-ref-filename="fs_parameter..(anonymous)..string">string</a>;</td></tr>
+<tr><th id="89">89</th><td>	<a class="local col2 ref" href="#12result" title='result' data-ref="12result" data-ref-filename="12result">result</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parse_result::negated" title='fs_parse_result::negated' data-ref="fs_parse_result::negated" data-ref-filename="fs_parse_result..negated">negated</a> = <a class="enum" href="../include/linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="90">90</th><td>	<a class="local col2 ref" href="#12result" title='result' data-ref="12result" data-ref-filename="12result">result</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parse_result::(anonymous)::uint_64" title='fs_parse_result::(anonymous union)::uint_64' data-ref="fs_parse_result::(anonymous)::uint_64" data-ref-filename="fs_parse_result..(anonymous)..uint_64">uint_64</a> = <var>0</var>;</td></tr>
+<tr><th id="91">91</th><td></td></tr>
+<tr><th id="92">92</th><td>	<a class="local col3 ref" href="#13p" title='p' data-ref="13p" data-ref-filename="13p">p</a> = <a class="tu ref fn" href="#fs_lookup_key" title='fs_lookup_key' data-use='c' data-ref="fs_lookup_key" data-ref-filename="fs_lookup_key">fs_lookup_key</a>(<a class="local col0 ref" href="#10desc" title='desc' data-ref="10desc" data-ref-filename="10desc">desc</a>, <a class="local col1 ref" href="#11param" title='param' data-ref="11param" data-ref-filename="11param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::key" title='fs_parameter::key' data-ref="fs_parameter::key" data-ref-filename="fs_parameter..key">key</a>);</td></tr>
+<tr><th id="93">93</th><td>	<b>if</b> (!<a class="local col3 ref" href="#13p" title='p' data-ref="13p" data-ref-filename="13p">p</a>) {</td></tr>
+<tr><th id="94">94</th><td>		<i>/* If we didn't find something that looks like "noxxx", see if</i></td></tr>
+<tr><th id="95">95</th><td><i>		 * "xxx" takes the "no"-form negative - but only if there</i></td></tr>
+<tr><th id="96">96</th><td><i>		 * wasn't an value.</i></td></tr>
+<tr><th id="97">97</th><td><i>		 */</i></td></tr>
+<tr><th id="98">98</th><td>		<b>if</b> (<a class="local col2 ref" href="#12result" title='result' data-ref="12result" data-ref-filename="12result">result</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parse_result::has_value" title='fs_parse_result::has_value' data-ref="fs_parse_result::has_value" data-ref-filename="fs_parse_result..has_value">has_value</a>)</td></tr>
+<tr><th id="99">99</th><td>			<b>goto</b> <a class="lbl" href="#17unknown_parameter" data-ref="17unknown_parameter" data-ref-filename="17unknown_parameter">unknown_parameter</a>;</td></tr>
+<tr><th id="100">100</th><td>		<b>if</b> (<a class="local col1 ref" href="#11param" title='param' data-ref="11param" data-ref-filename="11param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::key" title='fs_parameter::key' data-ref="fs_parameter::key" data-ref-filename="fs_parameter..key">key</a>[<var>0</var>] != <kbd>'n'</kbd> || <a class="local col1 ref" href="#11param" title='param' data-ref="11param" data-ref-filename="11param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::key" title='fs_parameter::key' data-ref="fs_parameter::key" data-ref-filename="fs_parameter..key">key</a>[<var>1</var>] != <kbd>'o'</kbd> || !<a class="local col1 ref" href="#11param" title='param' data-ref="11param" data-ref-filename="11param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::key" title='fs_parameter::key' data-ref="fs_parameter::key" data-ref-filename="fs_parameter..key">key</a>[<var>2</var>])</td></tr>
+<tr><th id="101">101</th><td>			<b>goto</b> <a class="lbl" href="#17unknown_parameter" data-ref="17unknown_parameter" data-ref-filename="17unknown_parameter">unknown_parameter</a>;</td></tr>
+<tr><th id="102">102</th><td></td></tr>
+<tr><th id="103">103</th><td>		<a class="local col3 ref" href="#13p" title='p' data-ref="13p" data-ref-filename="13p">p</a> = <a class="tu ref fn" href="#fs_lookup_key" title='fs_lookup_key' data-use='c' data-ref="fs_lookup_key" data-ref-filename="fs_lookup_key">fs_lookup_key</a>(<a class="local col0 ref" href="#10desc" title='desc' data-ref="10desc" data-ref-filename="10desc">desc</a>, <a class="local col1 ref" href="#11param" title='param' data-ref="11param" data-ref-filename="11param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::key" title='fs_parameter::key' data-ref="fs_parameter::key" data-ref-filename="fs_parameter..key">key</a> + <var>2</var>);</td></tr>
+<tr><th id="104">104</th><td>		<b>if</b> (!<a class="local col3 ref" href="#13p" title='p' data-ref="13p" data-ref-filename="13p">p</a>)</td></tr>
+<tr><th id="105">105</th><td>			<b>goto</b> <a class="lbl" href="#17unknown_parameter" data-ref="17unknown_parameter" data-ref-filename="17unknown_parameter">unknown_parameter</a>;</td></tr>
+<tr><th id="106">106</th><td>		<b>if</b> (!(<a class="local col3 ref" href="#13p" title='p' data-ref="13p" data-ref-filename="13p">p</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parameter_spec::flags" title='fs_parameter_spec::flags' data-ref="fs_parameter_spec::flags" data-ref-filename="fs_parameter_spec..flags">flags</a> &amp; <a class="macro" href="../include/linux/fs_parser.h.html#53" title="0x0002" data-ref="_M/fs_param_neg_with_no">fs_param_neg_with_no</a>))</td></tr>
+<tr><th id="107">107</th><td>			<b>goto</b> <a class="lbl" href="#17unknown_parameter" data-ref="17unknown_parameter" data-ref-filename="17unknown_parameter">unknown_parameter</a>;</td></tr>
+<tr><th id="108">108</th><td>		<a class="local col2 ref" href="#12result" title='result' data-ref="12result" data-ref-filename="12result">result</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parse_result::(anonymous)::boolean" title='fs_parse_result::(anonymous union)::boolean' data-ref="fs_parse_result::(anonymous)::boolean" data-ref-filename="fs_parse_result..(anonymous)..boolean">boolean</a> = <a class="enum" href="../include/linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="109">109</th><td>		<a class="local col2 ref" href="#12result" title='result' data-ref="12result" data-ref-filename="12result">result</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parse_result::negated" title='fs_parse_result::negated' data-ref="fs_parse_result::negated" data-ref-filename="fs_parse_result..negated">negated</a> = <a class="enum" href="../include/linux/stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>;</td></tr>
+<tr><th id="110">110</th><td>	}</td></tr>
+<tr><th id="111">111</th><td></td></tr>
+<tr><th id="112">112</th><td>	<b>if</b> (<a class="local col3 ref" href="#13p" title='p' data-ref="13p" data-ref-filename="13p">p</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parameter_spec::flags" title='fs_parameter_spec::flags' data-ref="fs_parameter_spec::flags" data-ref-filename="fs_parameter_spec..flags">flags</a> &amp; <a class="macro" href="../include/linux/fs_parser.h.html#55" title="0x0008" data-ref="_M/fs_param_deprecated">fs_param_deprecated</a>)</td></tr>
+<tr><th id="113">113</th><td>		<a class="macro" href="../include/linux/fs_context.h.html#193" title="({ logfc(fc, &quot;w &quot;&quot;%s: Deprecated parameter &apos;%s&apos;&quot;, desc-&gt;name, param-&gt;key); })" data-ref="_M/warnf">warnf</a>(<a class="local col9 ref" href="#9fc" title='fc' data-ref="9fc" data-ref-filename="9fc">fc</a>, <q>"%s: Deprecated parameter '%s'"</q>,</td></tr>
+<tr><th id="114">114</th><td>		      <a class="local col0 ref" href="#10desc" title='desc' data-ref="10desc" data-ref-filename="10desc">desc</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parameter_description::name" title='fs_parameter_description::name' data-ref="fs_parameter_description::name" data-ref-filename="fs_parameter_description..name">name</a>, <a class="local col1 ref" href="#11param" title='param' data-ref="11param" data-ref-filename="11param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::key" title='fs_parameter::key' data-ref="fs_parameter::key" data-ref-filename="fs_parameter..key">key</a>);</td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td>	<b>if</b> (<a class="local col2 ref" href="#12result" title='result' data-ref="12result" data-ref-filename="12result">result</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parse_result::negated" title='fs_parse_result::negated' data-ref="fs_parse_result::negated" data-ref-filename="fs_parse_result..negated">negated</a>)</td></tr>
+<tr><th id="117">117</th><td>		<b>goto</b> <a class="lbl" href="#18okay" data-ref="18okay" data-ref-filename="18okay">okay</a>;</td></tr>
+<tr><th id="118">118</th><td></td></tr>
+<tr><th id="119">119</th><td>	<i>/* Certain parameter types only take a string and convert it. */</i></td></tr>
+<tr><th id="120">120</th><td>	<b>switch</b> (<a class="local col3 ref" href="#13p" title='p' data-ref="13p" data-ref-filename="13p">p</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parameter_spec::type" title='fs_parameter_spec::type' data-ref="fs_parameter_spec::type" data-ref-filename="fs_parameter_spec..type">type</a>) {</td></tr>
+<tr><th id="121">121</th><td>	<b>case</b> <a class="enum" href="../include/linux/fs_parser.h.html#__fs_param_wasnt_defined" title='__fs_param_wasnt_defined' data-ref="__fs_param_wasnt_defined" data-ref-filename="__fs_param_wasnt_defined">__fs_param_wasnt_defined</a>:</td></tr>
+<tr><th id="122">122</th><td>		<b>return</b> -<a class="macro" href="../include/uapi/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="123">123</th><td>	<b>case</b> <a class="enum" href="../include/linux/fs_parser.h.html#fs_param_is_u32" title='fs_param_is_u32' data-ref="fs_param_is_u32" data-ref-filename="fs_param_is_u32">fs_param_is_u32</a>:</td></tr>
+<tr><th id="124">124</th><td>	<b>case</b> <a class="enum" href="../include/linux/fs_parser.h.html#fs_param_is_u32_octal" title='fs_param_is_u32_octal' data-ref="fs_param_is_u32_octal" data-ref-filename="fs_param_is_u32_octal">fs_param_is_u32_octal</a>:</td></tr>
+<tr><th id="125">125</th><td>	<b>case</b> <a class="enum" href="../include/linux/fs_parser.h.html#fs_param_is_u32_hex" title='fs_param_is_u32_hex' data-ref="fs_param_is_u32_hex" data-ref-filename="fs_param_is_u32_hex">fs_param_is_u32_hex</a>:</td></tr>
+<tr><th id="126">126</th><td>	<b>case</b> <a class="enum" href="../include/linux/fs_parser.h.html#fs_param_is_s32" title='fs_param_is_s32' data-ref="fs_param_is_s32" data-ref-filename="fs_param_is_s32">fs_param_is_s32</a>:</td></tr>
+<tr><th id="127">127</th><td>	<b>case</b> <a class="enum" href="../include/linux/fs_parser.h.html#fs_param_is_u64" title='fs_param_is_u64' data-ref="fs_param_is_u64" data-ref-filename="fs_param_is_u64">fs_param_is_u64</a>:</td></tr>
+<tr><th id="128">128</th><td>	<b>case</b> <a class="enum" href="../include/linux/fs_parser.h.html#fs_param_is_enum" title='fs_param_is_enum' data-ref="fs_param_is_enum" data-ref-filename="fs_param_is_enum">fs_param_is_enum</a>:</td></tr>
+<tr><th id="129">129</th><td>	<b>case</b> <a class="enum" href="../include/linux/fs_parser.h.html#fs_param_is_string" title='fs_param_is_string' data-ref="fs_param_is_string" data-ref-filename="fs_param_is_string">fs_param_is_string</a>:</td></tr>
+<tr><th id="130">130</th><td>		<b>if</b> (<a class="local col1 ref" href="#11param" title='param' data-ref="11param" data-ref-filename="11param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::type" title='fs_parameter::type' data-ref="fs_parameter::type" data-ref-filename="fs_parameter..type">type</a> != <a class="enum" href="../include/linux/fs_context.h.html#fs_value_is_string" title='fs_value_is_string' data-ref="fs_value_is_string" data-ref-filename="fs_value_is_string">fs_value_is_string</a>)</td></tr>
+<tr><th id="131">131</th><td>			<b>goto</b> <a class="lbl" href="#19bad_value" data-ref="19bad_value" data-ref-filename="19bad_value">bad_value</a>;</td></tr>
+<tr><th id="132">132</th><td>		<b>if</b> (!<a class="local col2 ref" href="#12result" title='result' data-ref="12result" data-ref-filename="12result">result</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parse_result::has_value" title='fs_parse_result::has_value' data-ref="fs_parse_result::has_value" data-ref-filename="fs_parse_result..has_value">has_value</a>) {</td></tr>
+<tr><th id="133">133</th><td>			<b>if</b> (<a class="local col3 ref" href="#13p" title='p' data-ref="13p" data-ref-filename="13p">p</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parameter_spec::flags" title='fs_parameter_spec::flags' data-ref="fs_parameter_spec::flags" data-ref-filename="fs_parameter_spec..flags">flags</a> &amp; <a class="macro" href="../include/linux/fs_parser.h.html#52" title="0x0001" data-ref="_M/fs_param_v_optional">fs_param_v_optional</a>)</td></tr>
+<tr><th id="134">134</th><td>				<b>goto</b> <a class="lbl" href="#18okay" data-ref="18okay" data-ref-filename="18okay">okay</a>;</td></tr>
+<tr><th id="135">135</th><td>			<b>goto</b> <a class="lbl" href="#19bad_value" data-ref="19bad_value" data-ref-filename="19bad_value">bad_value</a>;</td></tr>
+<tr><th id="136">136</th><td>		}</td></tr>
+<tr><th id="137">137</th><td>		<i>/* Fall through */</i></td></tr>
+<tr><th id="138">138</th><td>	<b>default</b>:</td></tr>
+<tr><th id="139">139</th><td>		<b>break</b>;</td></tr>
+<tr><th id="140">140</th><td>	}</td></tr>
+<tr><th id="141">141</th><td></td></tr>
+<tr><th id="142">142</th><td>	<i>/* Try to turn the type we were given into the type desired by the</i></td></tr>
+<tr><th id="143">143</th><td><i>	 * parameter and give an error if we can't.</i></td></tr>
+<tr><th id="144">144</th><td><i>	 */</i></td></tr>
+<tr><th id="145">145</th><td>	<b>switch</b> (<a class="local col3 ref" href="#13p" title='p' data-ref="13p" data-ref-filename="13p">p</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parameter_spec::type" title='fs_parameter_spec::type' data-ref="fs_parameter_spec::type" data-ref-filename="fs_parameter_spec..type">type</a>) {</td></tr>
+<tr><th id="146">146</th><td>	<b>case</b> <a class="enum" href="../include/linux/fs_parser.h.html#fs_param_is_flag" title='fs_param_is_flag' data-ref="fs_param_is_flag" data-ref-filename="fs_param_is_flag">fs_param_is_flag</a>:</td></tr>
+<tr><th id="147">147</th><td>		<b>if</b> (<a class="local col1 ref" href="#11param" title='param' data-ref="11param" data-ref-filename="11param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::type" title='fs_parameter::type' data-ref="fs_parameter::type" data-ref-filename="fs_parameter..type">type</a> != <a class="enum" href="../include/linux/fs_context.h.html#fs_value_is_flag" title='fs_value_is_flag' data-ref="fs_value_is_flag" data-ref-filename="fs_value_is_flag">fs_value_is_flag</a> &amp;&amp;</td></tr>
+<tr><th id="148">148</th><td>		    (<a class="local col1 ref" href="#11param" title='param' data-ref="11param" data-ref-filename="11param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::type" title='fs_parameter::type' data-ref="fs_parameter::type" data-ref-filename="fs_parameter..type">type</a> != <a class="enum" href="../include/linux/fs_context.h.html#fs_value_is_string" title='fs_value_is_string' data-ref="fs_value_is_string" data-ref-filename="fs_value_is_string">fs_value_is_string</a> || <a class="local col2 ref" href="#12result" title='result' data-ref="12result" data-ref-filename="12result">result</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parse_result::has_value" title='fs_parse_result::has_value' data-ref="fs_parse_result::has_value" data-ref-filename="fs_parse_result..has_value">has_value</a>))</td></tr>
+<tr><th id="149">149</th><td>			<b>return</b> <a class="macro" href="../include/linux/fs_context.h.html#213" title="({ ({ logfc(fc, &quot;e &quot;&quot;%s: Unexpected value for &apos;%s&apos;&quot;, desc-&gt;name, param-&gt;key); }); -22; })" data-ref="_M/invalf">invalf</a>(<a class="local col9 ref" href="#9fc" title='fc' data-ref="9fc" data-ref-filename="9fc">fc</a>, <q>"%s: Unexpected value for '%s'"</q>,</td></tr>
+<tr><th id="150">150</th><td>				      <a class="local col0 ref" href="#10desc" title='desc' data-ref="10desc" data-ref-filename="10desc">desc</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parameter_description::name" title='fs_parameter_description::name' data-ref="fs_parameter_description::name" data-ref-filename="fs_parameter_description..name">name</a>, <a class="local col1 ref" href="#11param" title='param' data-ref="11param" data-ref-filename="11param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::key" title='fs_parameter::key' data-ref="fs_parameter::key" data-ref-filename="fs_parameter..key">key</a>);</td></tr>
+<tr><th id="151">151</th><td>		<a class="local col2 ref" href="#12result" title='result' data-ref="12result" data-ref-filename="12result">result</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parse_result::(anonymous)::boolean" title='fs_parse_result::(anonymous union)::boolean' data-ref="fs_parse_result::(anonymous)::boolean" data-ref-filename="fs_parse_result..(anonymous)..boolean">boolean</a> = <a class="enum" href="../include/linux/stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>;</td></tr>
+<tr><th id="152">152</th><td>		<b>goto</b> <a class="lbl" href="#18okay" data-ref="18okay" data-ref-filename="18okay">okay</a>;</td></tr>
+<tr><th id="153">153</th><td></td></tr>
+<tr><th id="154">154</th><td>	<b>case</b> <a class="enum" href="../include/linux/fs_parser.h.html#fs_param_is_bool" title='fs_param_is_bool' data-ref="fs_param_is_bool" data-ref-filename="fs_param_is_bool">fs_param_is_bool</a>:</td></tr>
+<tr><th id="155">155</th><td>		<b>switch</b> (<a class="local col1 ref" href="#11param" title='param' data-ref="11param" data-ref-filename="11param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::type" title='fs_parameter::type' data-ref="fs_parameter::type" data-ref-filename="fs_parameter..type">type</a>) {</td></tr>
+<tr><th id="156">156</th><td>		<b>case</b> <a class="enum" href="../include/linux/fs_context.h.html#fs_value_is_flag" title='fs_value_is_flag' data-ref="fs_value_is_flag" data-ref-filename="fs_value_is_flag">fs_value_is_flag</a>:</td></tr>
+<tr><th id="157">157</th><td>			<a class="local col2 ref" href="#12result" title='result' data-ref="12result" data-ref-filename="12result">result</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parse_result::(anonymous)::boolean" title='fs_parse_result::(anonymous union)::boolean' data-ref="fs_parse_result::(anonymous)::boolean" data-ref-filename="fs_parse_result..(anonymous)..boolean">boolean</a> = <a class="enum" href="../include/linux/stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>;</td></tr>
+<tr><th id="158">158</th><td>			<b>goto</b> <a class="lbl" href="#18okay" data-ref="18okay" data-ref-filename="18okay">okay</a>;</td></tr>
+<tr><th id="159">159</th><td>		<b>case</b> <a class="enum" href="../include/linux/fs_context.h.html#fs_value_is_string" title='fs_value_is_string' data-ref="fs_value_is_string" data-ref-filename="fs_value_is_string">fs_value_is_string</a>:</td></tr>
+<tr><th id="160">160</th><td>			<b>if</b> (<a class="local col1 ref" href="#11param" title='param' data-ref="11param" data-ref-filename="11param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::size" title='fs_parameter::size' data-ref="fs_parameter::size" data-ref-filename="fs_parameter..size">size</a> == <var>0</var>) {</td></tr>
+<tr><th id="161">161</th><td>				<a class="local col2 ref" href="#12result" title='result' data-ref="12result" data-ref-filename="12result">result</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parse_result::(anonymous)::boolean" title='fs_parse_result::(anonymous union)::boolean' data-ref="fs_parse_result::(anonymous)::boolean" data-ref-filename="fs_parse_result..(anonymous)..boolean">boolean</a> = <a class="enum" href="../include/linux/stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>;</td></tr>
+<tr><th id="162">162</th><td>				<b>goto</b> <a class="lbl" href="#18okay" data-ref="18okay" data-ref-filename="18okay">okay</a>;</td></tr>
+<tr><th id="163">163</th><td>			}</td></tr>
+<tr><th id="164">164</th><td>			<a class="local col6 ref" href="#16b" title='b' data-ref="16b" data-ref-filename="16b">b</a> = <a class="macro" href="../include/linux/fs_parser.h.html#95" title="__lookup_constant(bool_names, (sizeof(bool_names) / sizeof((bool_names)[0]) + (sizeof(struct { int:(-!!(__builtin_types_compatible_p(typeof((bool_names)), typeof(&amp;(bool_names)[0])))); }))), (param-&gt;string), (-1))" data-ref="_M/lookup_constant">lookup_constant</a>(<a class="tu ref" href="#bool_names" title='bool_names' data-use='r' data-ref="bool_names" data-ref-filename="bool_names">bool_names</a>, <a class="local col1 ref" href="#11param" title='param' data-ref="11param" data-ref-filename="11param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::(anonymous)::string" title='fs_parameter::(anonymous union)::string' data-ref="fs_parameter::(anonymous)::string" data-ref-filename="fs_parameter..(anonymous)..string">string</a>, -<var>1</var>);</td></tr>
+<tr><th id="165">165</th><td>			<b>if</b> (<a class="local col6 ref" href="#16b" title='b' data-ref="16b" data-ref-filename="16b">b</a> == -<var>1</var>)</td></tr>
+<tr><th id="166">166</th><td>				<b>goto</b> <a class="lbl" href="#19bad_value" data-ref="19bad_value" data-ref-filename="19bad_value">bad_value</a>;</td></tr>
+<tr><th id="167">167</th><td>			<a class="local col2 ref" href="#12result" title='result' data-ref="12result" data-ref-filename="12result">result</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parse_result::(anonymous)::boolean" title='fs_parse_result::(anonymous union)::boolean' data-ref="fs_parse_result::(anonymous)::boolean" data-ref-filename="fs_parse_result..(anonymous)..boolean">boolean</a> = <a class="local col6 ref" href="#16b" title='b' data-ref="16b" data-ref-filename="16b">b</a>;</td></tr>
+<tr><th id="168">168</th><td>			<b>goto</b> <a class="lbl" href="#18okay" data-ref="18okay" data-ref-filename="18okay">okay</a>;</td></tr>
+<tr><th id="169">169</th><td>		<b>default</b>:</td></tr>
+<tr><th id="170">170</th><td>			<b>goto</b> <a class="lbl" href="#19bad_value" data-ref="19bad_value" data-ref-filename="19bad_value">bad_value</a>;</td></tr>
+<tr><th id="171">171</th><td>		}</td></tr>
+<tr><th id="172">172</th><td></td></tr>
+<tr><th id="173">173</th><td>	<b>case</b> <a class="enum" href="../include/linux/fs_parser.h.html#fs_param_is_u32" title='fs_param_is_u32' data-ref="fs_param_is_u32" data-ref-filename="fs_param_is_u32">fs_param_is_u32</a>:</td></tr>
+<tr><th id="174">174</th><td>		<a class="local col5 ref" href="#15ret" title='ret' data-ref="15ret" data-ref-filename="15ret">ret</a> = <a class="ref fn" href="../include/linux/kernel.h.html#kstrtouint" title='kstrtouint' data-ref="kstrtouint" data-ref-filename="kstrtouint">kstrtouint</a>(<a class="local col1 ref" href="#11param" title='param' data-ref="11param" data-ref-filename="11param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::(anonymous)::string" title='fs_parameter::(anonymous union)::string' data-ref="fs_parameter::(anonymous)::string" data-ref-filename="fs_parameter..(anonymous)..string">string</a>, <var>0</var>, &amp;<a class="local col2 ref" href="#12result" title='result' data-ref="12result" data-ref-filename="12result">result</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parse_result::(anonymous)::uint_32" title='fs_parse_result::(anonymous union)::uint_32' data-ref="fs_parse_result::(anonymous)::uint_32" data-ref-filename="fs_parse_result..(anonymous)..uint_32">uint_32</a>);</td></tr>
+<tr><th id="175">175</th><td>		<b>goto</b> <a class="lbl" href="#20maybe_okay" data-ref="20maybe_okay" data-ref-filename="20maybe_okay">maybe_okay</a>;</td></tr>
+<tr><th id="176">176</th><td>	<b>case</b> <a class="enum" href="../include/linux/fs_parser.h.html#fs_param_is_u32_octal" title='fs_param_is_u32_octal' data-ref="fs_param_is_u32_octal" data-ref-filename="fs_param_is_u32_octal">fs_param_is_u32_octal</a>:</td></tr>
+<tr><th id="177">177</th><td>		<a class="local col5 ref" href="#15ret" title='ret' data-ref="15ret" data-ref-filename="15ret">ret</a> = <a class="ref fn" href="../include/linux/kernel.h.html#kstrtouint" title='kstrtouint' data-ref="kstrtouint" data-ref-filename="kstrtouint">kstrtouint</a>(<a class="local col1 ref" href="#11param" title='param' data-ref="11param" data-ref-filename="11param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::(anonymous)::string" title='fs_parameter::(anonymous union)::string' data-ref="fs_parameter::(anonymous)::string" data-ref-filename="fs_parameter..(anonymous)..string">string</a>, <var>8</var>, &amp;<a class="local col2 ref" href="#12result" title='result' data-ref="12result" data-ref-filename="12result">result</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parse_result::(anonymous)::uint_32" title='fs_parse_result::(anonymous union)::uint_32' data-ref="fs_parse_result::(anonymous)::uint_32" data-ref-filename="fs_parse_result..(anonymous)..uint_32">uint_32</a>);</td></tr>
+<tr><th id="178">178</th><td>		<b>goto</b> <a class="lbl" href="#20maybe_okay" data-ref="20maybe_okay" data-ref-filename="20maybe_okay">maybe_okay</a>;</td></tr>
+<tr><th id="179">179</th><td>	<b>case</b> <a class="enum" href="../include/linux/fs_parser.h.html#fs_param_is_u32_hex" title='fs_param_is_u32_hex' data-ref="fs_param_is_u32_hex" data-ref-filename="fs_param_is_u32_hex">fs_param_is_u32_hex</a>:</td></tr>
+<tr><th id="180">180</th><td>		<a class="local col5 ref" href="#15ret" title='ret' data-ref="15ret" data-ref-filename="15ret">ret</a> = <a class="ref fn" href="../include/linux/kernel.h.html#kstrtouint" title='kstrtouint' data-ref="kstrtouint" data-ref-filename="kstrtouint">kstrtouint</a>(<a class="local col1 ref" href="#11param" title='param' data-ref="11param" data-ref-filename="11param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::(anonymous)::string" title='fs_parameter::(anonymous union)::string' data-ref="fs_parameter::(anonymous)::string" data-ref-filename="fs_parameter..(anonymous)..string">string</a>, <var>16</var>, &amp;<a class="local col2 ref" href="#12result" title='result' data-ref="12result" data-ref-filename="12result">result</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parse_result::(anonymous)::uint_32" title='fs_parse_result::(anonymous union)::uint_32' data-ref="fs_parse_result::(anonymous)::uint_32" data-ref-filename="fs_parse_result..(anonymous)..uint_32">uint_32</a>);</td></tr>
+<tr><th id="181">181</th><td>		<b>goto</b> <a class="lbl" href="#20maybe_okay" data-ref="20maybe_okay" data-ref-filename="20maybe_okay">maybe_okay</a>;</td></tr>
+<tr><th id="182">182</th><td>	<b>case</b> <a class="enum" href="../include/linux/fs_parser.h.html#fs_param_is_s32" title='fs_param_is_s32' data-ref="fs_param_is_s32" data-ref-filename="fs_param_is_s32">fs_param_is_s32</a>:</td></tr>
+<tr><th id="183">183</th><td>		<a class="local col5 ref" href="#15ret" title='ret' data-ref="15ret" data-ref-filename="15ret">ret</a> = <a class="ref fn" href="../include/linux/kernel.h.html#kstrtoint" title='kstrtoint' data-ref="kstrtoint" data-ref-filename="kstrtoint">kstrtoint</a>(<a class="local col1 ref" href="#11param" title='param' data-ref="11param" data-ref-filename="11param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::(anonymous)::string" title='fs_parameter::(anonymous union)::string' data-ref="fs_parameter::(anonymous)::string" data-ref-filename="fs_parameter..(anonymous)..string">string</a>, <var>0</var>, &amp;<a class="local col2 ref" href="#12result" title='result' data-ref="12result" data-ref-filename="12result">result</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parse_result::(anonymous)::int_32" title='fs_parse_result::(anonymous union)::int_32' data-ref="fs_parse_result::(anonymous)::int_32" data-ref-filename="fs_parse_result..(anonymous)..int_32">int_32</a>);</td></tr>
+<tr><th id="184">184</th><td>		<b>goto</b> <a class="lbl" href="#20maybe_okay" data-ref="20maybe_okay" data-ref-filename="20maybe_okay">maybe_okay</a>;</td></tr>
+<tr><th id="185">185</th><td>	<b>case</b> <a class="enum" href="../include/linux/fs_parser.h.html#fs_param_is_u64" title='fs_param_is_u64' data-ref="fs_param_is_u64" data-ref-filename="fs_param_is_u64">fs_param_is_u64</a>:</td></tr>
+<tr><th id="186">186</th><td>		<a class="local col5 ref" href="#15ret" title='ret' data-ref="15ret" data-ref-filename="15ret">ret</a> = <a class="ref fn" href="../include/linux/kernel.h.html#kstrtoull" title='kstrtoull' data-ref="kstrtoull" data-ref-filename="kstrtoull">kstrtoull</a>(<a class="local col1 ref" href="#11param" title='param' data-ref="11param" data-ref-filename="11param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::(anonymous)::string" title='fs_parameter::(anonymous union)::string' data-ref="fs_parameter::(anonymous)::string" data-ref-filename="fs_parameter..(anonymous)..string">string</a>, <var>0</var>, &amp;<a class="local col2 ref" href="#12result" title='result' data-ref="12result" data-ref-filename="12result">result</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parse_result::(anonymous)::uint_64" title='fs_parse_result::(anonymous union)::uint_64' data-ref="fs_parse_result::(anonymous)::uint_64" data-ref-filename="fs_parse_result..(anonymous)..uint_64">uint_64</a>);</td></tr>
+<tr><th id="187">187</th><td>		<b>goto</b> <a class="lbl" href="#20maybe_okay" data-ref="20maybe_okay" data-ref-filename="20maybe_okay">maybe_okay</a>;</td></tr>
+<tr><th id="188">188</th><td></td></tr>
+<tr><th id="189">189</th><td>	<b>case</b> <a class="enum" href="../include/linux/fs_parser.h.html#fs_param_is_enum" title='fs_param_is_enum' data-ref="fs_param_is_enum" data-ref-filename="fs_param_is_enum">fs_param_is_enum</a>:</td></tr>
+<tr><th id="190">190</th><td>		<b>for</b> (<a class="local col4 ref" href="#14e" title='e' data-ref="14e" data-ref-filename="14e">e</a> = <a class="local col0 ref" href="#10desc" title='desc' data-ref="10desc" data-ref-filename="10desc">desc</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parameter_description::enums" title='fs_parameter_description::enums' data-ref="fs_parameter_description::enums" data-ref-filename="fs_parameter_description..enums">enums</a>; <a class="local col4 ref" href="#14e" title='e' data-ref="14e" data-ref-filename="14e">e</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parameter_enum::name" title='fs_parameter_enum::name' data-ref="fs_parameter_enum::name" data-ref-filename="fs_parameter_enum..name">name</a>[<var>0</var>]; <a class="local col4 ref" href="#14e" title='e' data-ref="14e" data-ref-filename="14e">e</a>++) {</td></tr>
+<tr><th id="191">191</th><td>			<b>if</b> (<a class="local col4 ref" href="#14e" title='e' data-ref="14e" data-ref-filename="14e">e</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parameter_enum::opt" title='fs_parameter_enum::opt' data-ref="fs_parameter_enum::opt" data-ref-filename="fs_parameter_enum..opt">opt</a> == <a class="local col3 ref" href="#13p" title='p' data-ref="13p" data-ref-filename="13p">p</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parameter_spec::opt" title='fs_parameter_spec::opt' data-ref="fs_parameter_spec::opt" data-ref-filename="fs_parameter_spec..opt">opt</a> &amp;&amp;</td></tr>
+<tr><th id="192">192</th><td>			    <a class="ref fn" href="../arch/x86/include/asm/string_64.h.html#strcmp" title='strcmp' data-ref="strcmp" data-ref-filename="strcmp">strcmp</a>(<a class="local col4 ref" href="#14e" title='e' data-ref="14e" data-ref-filename="14e">e</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parameter_enum::name" title='fs_parameter_enum::name' data-ref="fs_parameter_enum::name" data-ref-filename="fs_parameter_enum..name">name</a>, <a class="local col1 ref" href="#11param" title='param' data-ref="11param" data-ref-filename="11param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::(anonymous)::string" title='fs_parameter::(anonymous union)::string' data-ref="fs_parameter::(anonymous)::string" data-ref-filename="fs_parameter..(anonymous)..string">string</a>) == <var>0</var>) {</td></tr>
+<tr><th id="193">193</th><td>				<a class="local col2 ref" href="#12result" title='result' data-ref="12result" data-ref-filename="12result">result</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parse_result::(anonymous)::uint_32" title='fs_parse_result::(anonymous union)::uint_32' data-ref="fs_parse_result::(anonymous)::uint_32" data-ref-filename="fs_parse_result..(anonymous)..uint_32">uint_32</a> = <a class="local col4 ref" href="#14e" title='e' data-ref="14e" data-ref-filename="14e">e</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parameter_enum::value" title='fs_parameter_enum::value' data-ref="fs_parameter_enum::value" data-ref-filename="fs_parameter_enum..value">value</a>;</td></tr>
+<tr><th id="194">194</th><td>				<b>goto</b> <a class="lbl" href="#18okay" data-ref="18okay" data-ref-filename="18okay">okay</a>;</td></tr>
+<tr><th id="195">195</th><td>			}</td></tr>
+<tr><th id="196">196</th><td>		}</td></tr>
+<tr><th id="197">197</th><td>		<b>goto</b> <a class="lbl" href="#19bad_value" data-ref="19bad_value" data-ref-filename="19bad_value">bad_value</a>;</td></tr>
+<tr><th id="198">198</th><td></td></tr>
+<tr><th id="199">199</th><td>	<b>case</b> <a class="enum" href="../include/linux/fs_parser.h.html#fs_param_is_string" title='fs_param_is_string' data-ref="fs_param_is_string" data-ref-filename="fs_param_is_string">fs_param_is_string</a>:</td></tr>
+<tr><th id="200">200</th><td>		<b>goto</b> <a class="lbl" href="#18okay" data-ref="18okay" data-ref-filename="18okay">okay</a>;</td></tr>
+<tr><th id="201">201</th><td>	<b>case</b> <a class="enum" href="../include/linux/fs_parser.h.html#fs_param_is_blob" title='fs_param_is_blob' data-ref="fs_param_is_blob" data-ref-filename="fs_param_is_blob">fs_param_is_blob</a>:</td></tr>
+<tr><th id="202">202</th><td>		<b>if</b> (<a class="local col1 ref" href="#11param" title='param' data-ref="11param" data-ref-filename="11param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::type" title='fs_parameter::type' data-ref="fs_parameter::type" data-ref-filename="fs_parameter..type">type</a> != <a class="enum" href="../include/linux/fs_context.h.html#fs_value_is_blob" title='fs_value_is_blob' data-ref="fs_value_is_blob" data-ref-filename="fs_value_is_blob">fs_value_is_blob</a>)</td></tr>
+<tr><th id="203">203</th><td>			<b>goto</b> <a class="lbl" href="#19bad_value" data-ref="19bad_value" data-ref-filename="19bad_value">bad_value</a>;</td></tr>
+<tr><th id="204">204</th><td>		<b>goto</b> <a class="lbl" href="#18okay" data-ref="18okay" data-ref-filename="18okay">okay</a>;</td></tr>
+<tr><th id="205">205</th><td></td></tr>
+<tr><th id="206">206</th><td>	<b>case</b> <a class="enum" href="../include/linux/fs_parser.h.html#fs_param_is_fd" title='fs_param_is_fd' data-ref="fs_param_is_fd" data-ref-filename="fs_param_is_fd">fs_param_is_fd</a>: {</td></tr>
+<tr><th id="207">207</th><td>		<b>if</b> (<a class="local col1 ref" href="#11param" title='param' data-ref="11param" data-ref-filename="11param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::type" title='fs_parameter::type' data-ref="fs_parameter::type" data-ref-filename="fs_parameter..type">type</a> != <a class="enum" href="../include/linux/fs_context.h.html#fs_value_is_file" title='fs_value_is_file' data-ref="fs_value_is_file" data-ref-filename="fs_value_is_file">fs_value_is_file</a>)</td></tr>
+<tr><th id="208">208</th><td>			<b>goto</b> <a class="lbl" href="#19bad_value" data-ref="19bad_value" data-ref-filename="19bad_value">bad_value</a>;</td></tr>
+<tr><th id="209">209</th><td>		<b>goto</b> <a class="lbl" href="#18okay" data-ref="18okay" data-ref-filename="18okay">okay</a>;</td></tr>
+<tr><th id="210">210</th><td>	}</td></tr>
+<tr><th id="211">211</th><td></td></tr>
+<tr><th id="212">212</th><td>	<b>case</b> <a class="enum" href="../include/linux/fs_parser.h.html#fs_param_is_blockdev" title='fs_param_is_blockdev' data-ref="fs_param_is_blockdev" data-ref-filename="fs_param_is_blockdev">fs_param_is_blockdev</a>:</td></tr>
+<tr><th id="213">213</th><td>	<b>case</b> <a class="enum" href="../include/linux/fs_parser.h.html#fs_param_is_path" title='fs_param_is_path' data-ref="fs_param_is_path" data-ref-filename="fs_param_is_path">fs_param_is_path</a>:</td></tr>
+<tr><th id="214">214</th><td>		<b>goto</b> <a class="lbl" href="#18okay" data-ref="18okay" data-ref-filename="18okay">okay</a>;</td></tr>
+<tr><th id="215">215</th><td>	<b>default</b>:</td></tr>
+<tr><th id="216">216</th><td>		<a class="macro" href="../arch/x86/include/asm/bug.h.html#71" title="do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/fs/fs_parser.c&quot;), &quot;i&quot; (216), &quot;i&quot; (0), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); do { ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.unreachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (34)); }); __builtin_unreachable(); } while (0); } while (0)" data-ref="_M/BUG">BUG</a>();</td></tr>
+<tr><th id="217">217</th><td>	}</td></tr>
+<tr><th id="218">218</th><td></td></tr>
+<tr><th id="219">219</th><td><dfn class="lbl" id="20maybe_okay" data-ref="20maybe_okay" data-ref-filename="20maybe_okay">maybe_okay</dfn>:</td></tr>
+<tr><th id="220">220</th><td>	<b>if</b> (<a class="local col5 ref" href="#15ret" title='ret' data-ref="15ret" data-ref-filename="15ret">ret</a> &lt; <var>0</var>)</td></tr>
+<tr><th id="221">221</th><td>		<b>goto</b> <a class="lbl" href="#19bad_value" data-ref="19bad_value" data-ref-filename="19bad_value">bad_value</a>;</td></tr>
+<tr><th id="222">222</th><td><dfn class="lbl" id="18okay" data-ref="18okay" data-ref-filename="18okay">okay</dfn>:</td></tr>
+<tr><th id="223">223</th><td>	<b>return</b> <a class="local col3 ref" href="#13p" title='p' data-ref="13p" data-ref-filename="13p">p</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parameter_spec::opt" title='fs_parameter_spec::opt' data-ref="fs_parameter_spec::opt" data-ref-filename="fs_parameter_spec..opt">opt</a>;</td></tr>
+<tr><th id="224">224</th><td></td></tr>
+<tr><th id="225">225</th><td><dfn class="lbl" id="19bad_value" data-ref="19bad_value" data-ref-filename="19bad_value">bad_value</dfn>:</td></tr>
+<tr><th id="226">226</th><td>	<b>return</b> <a class="macro" href="../include/linux/fs_context.h.html#213" title="({ ({ logfc(fc, &quot;e &quot;&quot;%s: Bad value for &apos;%s&apos;&quot;, desc-&gt;name, param-&gt;key); }); -22; })" data-ref="_M/invalf">invalf</a>(<a class="local col9 ref" href="#9fc" title='fc' data-ref="9fc" data-ref-filename="9fc">fc</a>, <q>"%s: Bad value for '%s'"</q>, <a class="local col0 ref" href="#10desc" title='desc' data-ref="10desc" data-ref-filename="10desc">desc</a>-&gt;<a class="ref field" href="../include/linux/fs_parser.h.html#fs_parameter_description::name" title='fs_parameter_description::name' data-ref="fs_parameter_description::name" data-ref-filename="fs_parameter_description..name">name</a>, <a class="local col1 ref" href="#11param" title='param' data-ref="11param" data-ref-filename="11param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::key" title='fs_parameter::key' data-ref="fs_parameter::key" data-ref-filename="fs_parameter..key">key</a>);</td></tr>
+<tr><th id="227">227</th><td><dfn class="lbl" id="17unknown_parameter" data-ref="17unknown_parameter" data-ref-filename="17unknown_parameter">unknown_parameter</dfn>:</td></tr>
+<tr><th id="228">228</th><td>	<b>return</b> -<a class="macro" href="../include/linux/errno.h.html#21" title="519" data-ref="_M/ENOPARAM">ENOPARAM</a>;</td></tr>
+<tr><th id="229">229</th><td>}</td></tr>
+<tr><th id="230">230</th><td><a class="macro" href="../include/linux/export.h.html#123" title="extern typeof(fs_parse) fs_parse; static const char __kstrtab_fs_parse[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;fs_parse&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_fs_parse230 = (void *)&amp;fs_parse; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;&quot; &quot;+&quot; &quot;fs_parse&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;fs_parse&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;fs_parse&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;fs_parse&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL">EXPORT_SYMBOL</a>(<a class="decl fn" href="#fs_parse" title='fs_parse' data-ref="fs_parse" data-ref-filename="fs_parse"><a class="ref fn" href="#fs_parse" title='fs_parse' data-ref="fs_parse" data-ref-filename="fs_parse"><a class="ref fn" href="#fs_parse" title='fs_parse' data-ref="fs_parse" data-ref-filename="fs_parse">fs_parse</a></a></a>);</td></tr>
+<tr><th id="231">231</th><td></td></tr>
+<tr><th id="232">232</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="233">233</th><td><i class="doc"> * fs_lookup_param - Look up a path referred to by a parameter</i></td></tr>
+<tr><th id="234">234</th><td><i class="doc"> *<span class="command"> @fc</span>: The filesystem context to log errors through.</i></td></tr>
+<tr><th id="235">235</th><td><i class="doc"> * <span class="command">@param</span><span class="arg">:</span> The parameter.</i></td></tr>
+<tr><th id="236">236</th><td><i class="doc"> *<span class="command"> @want</span>_bdev: T if want a blockdev</i></td></tr>
+<tr><th id="237">237</th><td><i class="doc"> * @_path: The result of the lookup</i></td></tr>
+<tr><th id="238">238</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="239">239</th><td><em>int</em> <dfn class="decl def fn" id="fs_lookup_param" title='fs_lookup_param' data-ref="fs_lookup_param" data-ref-filename="fs_lookup_param">fs_lookup_param</dfn>(<b>struct</b> <a class="type" href="../include/linux/fs_context.h.html#fs_context" title='fs_context' data-ref="fs_context" data-ref-filename="fs_context">fs_context</a> *<dfn class="local col1 decl" id="21fc" title='fc' data-type='struct fs_context *' data-ref="21fc" data-ref-filename="21fc">fc</dfn>,</td></tr>
+<tr><th id="240">240</th><td>		    <b>struct</b> <a class="type" href="../include/linux/fs_context.h.html#fs_parameter" title='fs_parameter' data-ref="fs_parameter" data-ref-filename="fs_parameter">fs_parameter</a> *<dfn class="local col2 decl" id="22param" title='param' data-type='struct fs_parameter *' data-ref="22param" data-ref-filename="22param">param</dfn>,</td></tr>
+<tr><th id="241">241</th><td>		    <a class="typedef" href="../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col3 decl" id="23want_bdev" title='want_bdev' data-type='bool' data-ref="23want_bdev" data-ref-filename="23want_bdev">want_bdev</dfn>,</td></tr>
+<tr><th id="242">242</th><td>		    <b>struct</b> <a class="type" href="../include/linux/path.h.html#path" title='path' data-ref="path" data-ref-filename="path">path</a> *<dfn class="local col4 decl" id="24_path" title='_path' data-type='struct path *' data-ref="24_path" data-ref-filename="24_path">_path</dfn>)</td></tr>
+<tr><th id="243">243</th><td>{</td></tr>
+<tr><th id="244">244</th><td>	<b>struct</b> <a class="type" href="../include/linux/fs.h.html#filename" title='filename' data-ref="filename" data-ref-filename="filename">filename</a> *<dfn class="local col5 decl" id="25f" title='f' data-type='struct filename *' data-ref="25f" data-ref-filename="25f">f</dfn>;</td></tr>
+<tr><th id="245">245</th><td>	<em>unsigned</em> <em>int</em> <dfn class="local col6 decl" id="26flags" title='flags' data-type='unsigned int' data-ref="26flags" data-ref-filename="26flags">flags</dfn> = <var>0</var>;</td></tr>
+<tr><th id="246">246</th><td>	<a class="typedef" href="../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col7 decl" id="27put_f" title='put_f' data-type='bool' data-ref="27put_f" data-ref-filename="27put_f">put_f</dfn>;</td></tr>
+<tr><th id="247">247</th><td>	<em>int</em> <dfn class="local col8 decl" id="28ret" title='ret' data-type='int' data-ref="28ret" data-ref-filename="28ret">ret</dfn>;</td></tr>
+<tr><th id="248">248</th><td></td></tr>
+<tr><th id="249">249</th><td>	<b>switch</b> (<a class="local col2 ref" href="#22param" title='param' data-ref="22param" data-ref-filename="22param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::type" title='fs_parameter::type' data-ref="fs_parameter::type" data-ref-filename="fs_parameter..type">type</a>) {</td></tr>
+<tr><th id="250">250</th><td>	<b>case</b> <a class="enum" href="../include/linux/fs_context.h.html#fs_value_is_string" title='fs_value_is_string' data-ref="fs_value_is_string" data-ref-filename="fs_value_is_string">fs_value_is_string</a>:</td></tr>
+<tr><th id="251">251</th><td>		<a class="local col5 ref" href="#25f" title='f' data-ref="25f" data-ref-filename="25f">f</a> = <a class="ref fn" href="../include/linux/fs.h.html#getname_kernel" title='getname_kernel' data-ref="getname_kernel" data-ref-filename="getname_kernel">getname_kernel</a>(<a class="local col2 ref" href="#22param" title='param' data-ref="22param" data-ref-filename="22param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::(anonymous)::string" title='fs_parameter::(anonymous union)::string' data-ref="fs_parameter::(anonymous)::string" data-ref-filename="fs_parameter..(anonymous)..string">string</a>);</td></tr>
+<tr><th id="252">252</th><td>		<b>if</b> (<a class="ref fn" href="../include/linux/err.h.html#IS_ERR" title='IS_ERR' data-ref="IS_ERR" data-ref-filename="IS_ERR">IS_ERR</a>(<a class="local col5 ref" href="#25f" title='f' data-ref="25f" data-ref-filename="25f">f</a>))</td></tr>
+<tr><th id="253">253</th><td>			<b>return</b> <a class="ref fn" href="../include/linux/err.h.html#PTR_ERR" title='PTR_ERR' data-ref="PTR_ERR" data-ref-filename="PTR_ERR">PTR_ERR</a>(<a class="local col5 ref" href="#25f" title='f' data-ref="25f" data-ref-filename="25f">f</a>);</td></tr>
+<tr><th id="254">254</th><td>		<a class="local col7 ref" href="#27put_f" title='put_f' data-ref="27put_f" data-ref-filename="27put_f">put_f</a> = <a class="enum" href="../include/linux/stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>;</td></tr>
+<tr><th id="255">255</th><td>		<b>break</b>;</td></tr>
+<tr><th id="256">256</th><td>	<b>case</b> <a class="enum" href="../include/linux/fs_context.h.html#fs_value_is_filename_empty" title='fs_value_is_filename_empty' data-ref="fs_value_is_filename_empty" data-ref-filename="fs_value_is_filename_empty">fs_value_is_filename_empty</a>:</td></tr>
+<tr><th id="257">257</th><td>		<a class="local col6 ref" href="#26flags" title='flags' data-ref="26flags" data-ref-filename="26flags">flags</a> = <a class="macro" href="../include/linux/namei.h.html#50" title="0x4000" data-ref="_M/LOOKUP_EMPTY">LOOKUP_EMPTY</a>;</td></tr>
+<tr><th id="258">258</th><td>		<i>/* Fall through */</i></td></tr>
+<tr><th id="259">259</th><td>	<b>case</b> <a class="enum" href="../include/linux/fs_context.h.html#fs_value_is_filename" title='fs_value_is_filename' data-ref="fs_value_is_filename" data-ref-filename="fs_value_is_filename">fs_value_is_filename</a>:</td></tr>
+<tr><th id="260">260</th><td>		<a class="local col5 ref" href="#25f" title='f' data-ref="25f" data-ref-filename="25f">f</a> = <a class="local col2 ref" href="#22param" title='param' data-ref="22param" data-ref-filename="22param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::(anonymous)::name" title='fs_parameter::(anonymous union)::name' data-ref="fs_parameter::(anonymous)::name" data-ref-filename="fs_parameter..(anonymous)..name">name</a>;</td></tr>
+<tr><th id="261">261</th><td>		<a class="local col7 ref" href="#27put_f" title='put_f' data-ref="27put_f" data-ref-filename="27put_f">put_f</a> = <a class="enum" href="../include/linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="262">262</th><td>		<b>break</b>;</td></tr>
+<tr><th id="263">263</th><td>	<b>default</b>:</td></tr>
+<tr><th id="264">264</th><td>		<b>return</b> <a class="macro" href="../include/linux/fs_context.h.html#213" title="({ ({ logfc(fc, &quot;e &quot;&quot;%s: not usable as path&quot;, param-&gt;key); }); -22; })" data-ref="_M/invalf">invalf</a>(<a class="local col1 ref" href="#21fc" title='fc' data-ref="21fc" data-ref-filename="21fc">fc</a>, <q>"%s: not usable as path"</q>, <a class="local col2 ref" href="#22param" title='param' data-ref="22param" data-ref-filename="22param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::key" title='fs_parameter::key' data-ref="fs_parameter::key" data-ref-filename="fs_parameter..key">key</a>);</td></tr>
+<tr><th id="265">265</th><td>	}</td></tr>
+<tr><th id="266">266</th><td></td></tr>
+<tr><th id="267">267</th><td>	<a class="local col5 ref" href="#25f" title='f' data-ref="25f" data-ref-filename="25f">f</a>-&gt;<a class="ref field" href="../include/linux/fs.h.html#filename::refcnt" title='filename::refcnt' data-ref="filename::refcnt" data-ref-filename="filename..refcnt">refcnt</a>++; <i>/* filename_lookup() drops our ref. */</i></td></tr>
+<tr><th id="268">268</th><td>	<a class="local col8 ref" href="#28ret" title='ret' data-ref="28ret" data-ref-filename="28ret">ret</a> = <a class="ref fn" href="internal.h.html#filename_lookup" title='filename_lookup' data-ref="filename_lookup" data-ref-filename="filename_lookup">filename_lookup</a>(<a class="local col2 ref" href="#22param" title='param' data-ref="22param" data-ref-filename="22param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::dirfd" title='fs_parameter::dirfd' data-ref="fs_parameter::dirfd" data-ref-filename="fs_parameter..dirfd">dirfd</a>, <a class="local col5 ref" href="#25f" title='f' data-ref="25f" data-ref-filename="25f">f</a>, <a class="local col6 ref" href="#26flags" title='flags' data-ref="26flags" data-ref-filename="26flags">flags</a>, <a class="local col4 ref" href="#24_path" title='_path' data-ref="24_path" data-ref-filename="24_path">_path</a>, <a class="macro" href="../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>);</td></tr>
+<tr><th id="269">269</th><td>	<b>if</b> (<a class="local col8 ref" href="#28ret" title='ret' data-ref="28ret" data-ref-filename="28ret">ret</a> &lt; <var>0</var>) {</td></tr>
+<tr><th id="270">270</th><td>		<a class="macro" href="../include/linux/fs_context.h.html#203" title="({ logfc(fc, &quot;e &quot;&quot;%s: Lookup failure for &apos;%s&apos;&quot;, param-&gt;key, f-&gt;name); })" data-ref="_M/errorf">errorf</a>(<a class="local col1 ref" href="#21fc" title='fc' data-ref="21fc" data-ref-filename="21fc">fc</a>, <q>"%s: Lookup failure for '%s'"</q>, <a class="local col2 ref" href="#22param" title='param' data-ref="22param" data-ref-filename="22param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::key" title='fs_parameter::key' data-ref="fs_parameter::key" data-ref-filename="fs_parameter..key">key</a>, <a class="local col5 ref" href="#25f" title='f' data-ref="25f" data-ref-filename="25f">f</a>-&gt;<a class="ref field" href="../include/linux/fs.h.html#filename::name" title='filename::name' data-ref="filename::name" data-ref-filename="filename..name">name</a>);</td></tr>
+<tr><th id="271">271</th><td>		<b>goto</b> <a class="lbl" href="#29out" data-ref="29out" data-ref-filename="29out">out</a>;</td></tr>
+<tr><th id="272">272</th><td>	}</td></tr>
+<tr><th id="273">273</th><td></td></tr>
+<tr><th id="274">274</th><td>	<b>if</b> (<a class="local col3 ref" href="#23want_bdev" title='want_bdev' data-ref="23want_bdev" data-ref-filename="23want_bdev">want_bdev</a> &amp;&amp;</td></tr>
+<tr><th id="275">275</th><td>	    !<a class="macro" href="../include/uapi/linux/stat.h.html#25" title="(((d_backing_inode(_path-&gt;dentry)-&gt;i_mode) &amp; 00170000) == 0060000)" data-ref="_M/S_ISBLK">S_ISBLK</a>(<a class="ref fn" href="../include/linux/dcache.h.html#d_backing_inode" title='d_backing_inode' data-ref="d_backing_inode" data-ref-filename="d_backing_inode">d_backing_inode</a>(<a class="local col4 ref" href="#24_path" title='_path' data-ref="24_path" data-ref-filename="24_path">_path</a>-&gt;<a class="ref field" href="../include/linux/path.h.html#path::dentry" title='path::dentry' data-ref="path::dentry" data-ref-filename="path..dentry">dentry</a>)-&gt;<a class="ref field" href="../include/linux/fs.h.html#inode::i_mode" title='inode::i_mode' data-ref="inode::i_mode" data-ref-filename="inode..i_mode">i_mode</a>)) {</td></tr>
+<tr><th id="276">276</th><td>		<a class="ref fn" href="../include/linux/path.h.html#path_put" title='path_put' data-ref="path_put" data-ref-filename="path_put">path_put</a>(<a class="local col4 ref" href="#24_path" title='_path' data-ref="24_path" data-ref-filename="24_path">_path</a>);</td></tr>
+<tr><th id="277">277</th><td>		<a class="local col4 ref" href="#24_path" title='_path' data-ref="24_path" data-ref-filename="24_path">_path</a>-&gt;<a class="ref field" href="../include/linux/path.h.html#path::dentry" title='path::dentry' data-ref="path::dentry" data-ref-filename="path..dentry">dentry</a> = <a class="macro" href="../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="278">278</th><td>		<a class="local col4 ref" href="#24_path" title='_path' data-ref="24_path" data-ref-filename="24_path">_path</a>-&gt;<a class="ref field" href="../include/linux/path.h.html#path::mnt" title='path::mnt' data-ref="path::mnt" data-ref-filename="path..mnt">mnt</a> = <a class="macro" href="../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="279">279</th><td>		<a class="macro" href="../include/linux/fs_context.h.html#203" title="({ logfc(fc, &quot;e &quot;&quot;%s: Non-blockdev passed as &apos;%s&apos;&quot;, param-&gt;key, f-&gt;name); })" data-ref="_M/errorf">errorf</a>(<a class="local col1 ref" href="#21fc" title='fc' data-ref="21fc" data-ref-filename="21fc">fc</a>, <q>"%s: Non-blockdev passed as '%s'"</q>,</td></tr>
+<tr><th id="280">280</th><td>		       <a class="local col2 ref" href="#22param" title='param' data-ref="22param" data-ref-filename="22param">param</a>-&gt;<a class="ref field" href="../include/linux/fs_context.h.html#fs_parameter::key" title='fs_parameter::key' data-ref="fs_parameter::key" data-ref-filename="fs_parameter..key">key</a>, <a class="local col5 ref" href="#25f" title='f' data-ref="25f" data-ref-filename="25f">f</a>-&gt;<a class="ref field" href="../include/linux/fs.h.html#filename::name" title='filename::name' data-ref="filename::name" data-ref-filename="filename..name">name</a>);</td></tr>
+<tr><th id="281">281</th><td>		<a class="local col8 ref" href="#28ret" title='ret' data-ref="28ret" data-ref-filename="28ret">ret</a> = -<a class="macro" href="../include/uapi/asm-generic/errno-base.h.html#19" title="15" data-ref="_M/ENOTBLK">ENOTBLK</a>;</td></tr>
+<tr><th id="282">282</th><td>	}</td></tr>
+<tr><th id="283">283</th><td></td></tr>
+<tr><th id="284">284</th><td><dfn class="lbl" id="29out" data-ref="29out" data-ref-filename="29out">out</dfn>:</td></tr>
+<tr><th id="285">285</th><td>	<b>if</b> (<a class="local col7 ref" href="#27put_f" title='put_f' data-ref="27put_f" data-ref-filename="27put_f">put_f</a>)</td></tr>
+<tr><th id="286">286</th><td>		<a class="ref fn" href="../include/linux/fs.h.html#putname" title='putname' data-ref="putname" data-ref-filename="putname">putname</a>(<a class="local col5 ref" href="#25f" title='f' data-ref="25f" data-ref-filename="25f">f</a>);</td></tr>
+<tr><th id="287">287</th><td>	<b>return</b> <a class="local col8 ref" href="#28ret" title='ret' data-ref="28ret" data-ref-filename="28ret">ret</a>;</td></tr>
+<tr><th id="288">288</th><td>}</td></tr>
+<tr><th id="289">289</th><td><a class="macro" href="../include/linux/export.h.html#123" title="extern typeof(fs_lookup_param) fs_lookup_param; static const char __kstrtab_fs_lookup_param[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;fs_lookup_param&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_fs_lookup_param289 = (void *)&amp;fs_lookup_param; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;&quot; &quot;+&quot; &quot;fs_lookup_param&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;fs_lookup_param&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;fs_lookup_param&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;fs_lookup_param&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL">EXPORT_SYMBOL</a>(<a class="decl fn" href="#fs_lookup_param" title='fs_lookup_param' data-ref="fs_lookup_param" data-ref-filename="fs_lookup_param"><a class="ref fn" href="#fs_lookup_param" title='fs_lookup_param' data-ref="fs_lookup_param" data-ref-filename="fs_lookup_param"><a class="ref fn" href="#fs_lookup_param" title='fs_lookup_param' data-ref="fs_lookup_param" data-ref-filename="fs_lookup_param">fs_lookup_param</a></a></a>);</td></tr>
+<tr><th id="290">290</th><td></td></tr>
+<tr><th id="291">291</th><td><u>#<span data-ppcond="291">ifdef</span> <span class="macro" data-ref="_M/CONFIG_VALIDATE_FS_PARSER">CONFIG_VALIDATE_FS_PARSER</span></u></td></tr>
+<tr><th id="292">292</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="293">293</th><td><i class="doc"> * validate_constant_table - Validate a constant table</i></td></tr>
+<tr><th id="294">294</th><td><i class="doc"> * <span class="command">@name</span>:<span class="verb"> Name to use in reporting</span></i></td></tr>
+<tr><th id="295">295</th><td><i class="doc"> *<span class="command"> @tbl</span>: The constant table to validate.</i></td></tr>
+<tr><th id="296">296</th><td><i class="doc"> *<span class="command"> @tbl</span>_size: The size of the table.</i></td></tr>
+<tr><th id="297">297</th><td><i class="doc"> *<span class="command"> @low</span>: The lowest permissible value.</i></td></tr>
+<tr><th id="298">298</th><td><i class="doc"> *<span class="command"> @high</span>: The highest permissible value.</i></td></tr>
+<tr><th id="299">299</th><td><i class="doc"> *<span class="command"> @special</span>: One special permissible value outside of the range.</i></td></tr>
+<tr><th id="300">300</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="301">301</th><td>bool validate_constant_table(<em>const</em> <b>struct</b> constant_table *tbl, size_t tbl_size,</td></tr>
+<tr><th id="302">302</th><td>			     <em>int</em> low, <em>int</em> high, <em>int</em> special)</td></tr>
+<tr><th id="303">303</th><td>{</td></tr>
+<tr><th id="304">304</th><td>	size_t i;</td></tr>
+<tr><th id="305">305</th><td>	bool good = true;</td></tr>
+<tr><th id="306">306</th><td></td></tr>
+<tr><th id="307">307</th><td>	<b>if</b> (tbl_size == <var>0</var>) {</td></tr>
+<tr><th id="308">308</th><td>		pr_warn(<q>"VALIDATE C-TBL: Empty\n"</q>);</td></tr>
+<tr><th id="309">309</th><td>		<b>return</b> true;</td></tr>
+<tr><th id="310">310</th><td>	}</td></tr>
+<tr><th id="311">311</th><td></td></tr>
+<tr><th id="312">312</th><td>	<b>for</b> (i = <var>0</var>; i &lt; tbl_size; i++) {</td></tr>
+<tr><th id="313">313</th><td>		<b>if</b> (!tbl[i].name) {</td></tr>
+<tr><th id="314">314</th><td>			pr_err(<q>"VALIDATE C-TBL[%zu]: Null\n"</q>, i);</td></tr>
+<tr><th id="315">315</th><td>			good = false;</td></tr>
+<tr><th id="316">316</th><td>		} <b>else</b> <b>if</b> (i &gt; <var>0</var> &amp;&amp; tbl[i - <var>1</var>].name) {</td></tr>
+<tr><th id="317">317</th><td>			<em>int</em> c = strcmp(tbl[i-<var>1</var>].name, tbl[i].name);</td></tr>
+<tr><th id="318">318</th><td></td></tr>
+<tr><th id="319">319</th><td>			<b>if</b> (c == <var>0</var>) {</td></tr>
+<tr><th id="320">320</th><td>				pr_err(<q>"VALIDATE C-TBL[%zu]: Duplicate %s\n"</q>,</td></tr>
+<tr><th id="321">321</th><td>				       i, tbl[i].name);</td></tr>
+<tr><th id="322">322</th><td>				good = false;</td></tr>
+<tr><th id="323">323</th><td>			}</td></tr>
+<tr><th id="324">324</th><td>			<b>if</b> (c &gt; <var>0</var>) {</td></tr>
+<tr><th id="325">325</th><td>				pr_err(<q>"VALIDATE C-TBL[%zu]: Missorted %s&gt;=%s\n"</q>,</td></tr>
+<tr><th id="326">326</th><td>				       i, tbl[i-<var>1</var>].name, tbl[i].name);</td></tr>
+<tr><th id="327">327</th><td>				good = false;</td></tr>
+<tr><th id="328">328</th><td>			}</td></tr>
+<tr><th id="329">329</th><td>		}</td></tr>
+<tr><th id="330">330</th><td></td></tr>
+<tr><th id="331">331</th><td>		<b>if</b> (tbl[i].value != special &amp;&amp;</td></tr>
+<tr><th id="332">332</th><td>		    (tbl[i].value &lt; low || tbl[i].value &gt; high)) {</td></tr>
+<tr><th id="333">333</th><td>			pr_err(<q>"VALIDATE C-TBL[%zu]: %s-&gt;%d const out of range (%d-%d)\n"</q>,</td></tr>
+<tr><th id="334">334</th><td>			       i, tbl[i].name, tbl[i].value, low, high);</td></tr>
+<tr><th id="335">335</th><td>			good = false;</td></tr>
+<tr><th id="336">336</th><td>		}</td></tr>
+<tr><th id="337">337</th><td>	}</td></tr>
+<tr><th id="338">338</th><td></td></tr>
+<tr><th id="339">339</th><td>	<b>return</b> good;</td></tr>
+<tr><th id="340">340</th><td>}</td></tr>
+<tr><th id="341">341</th><td></td></tr>
+<tr><th id="342">342</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="343">343</th><td><i class="doc"> * fs_validate_description - Validate a parameter description</i></td></tr>
+<tr><th id="344">344</th><td><i class="doc"> *<span class="command"> @desc</span>: The parameter description to validate.</i></td></tr>
+<tr><th id="345">345</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="346">346</th><td>bool fs_validate_description(<em>const</em> <b>struct</b> fs_parameter_description *desc)</td></tr>
+<tr><th id="347">347</th><td>{</td></tr>
+<tr><th id="348">348</th><td>	<em>const</em> <b>struct</b> fs_parameter_spec *param, *p2;</td></tr>
+<tr><th id="349">349</th><td>	<em>const</em> <b>struct</b> fs_parameter_enum *e;</td></tr>
+<tr><th id="350">350</th><td>	<em>const</em> <em>char</em> *name = desc-&gt;name;</td></tr>
+<tr><th id="351">351</th><td>	<em>unsigned</em> <em>int</em> nr_params = <var>0</var>;</td></tr>
+<tr><th id="352">352</th><td>	bool good = true, enums = false;</td></tr>
+<tr><th id="353">353</th><td></td></tr>
+<tr><th id="354">354</th><td>	pr_notice(<q>"*** VALIDATE %s ***\n"</q>, name);</td></tr>
+<tr><th id="355">355</th><td></td></tr>
+<tr><th id="356">356</th><td>	<b>if</b> (!name[<var>0</var>]) {</td></tr>
+<tr><th id="357">357</th><td>		pr_err(<q>"VALIDATE Parser: No name\n"</q>);</td></tr>
+<tr><th id="358">358</th><td>		name = <q>"Unknown"</q>;</td></tr>
+<tr><th id="359">359</th><td>		good = false;</td></tr>
+<tr><th id="360">360</th><td>	}</td></tr>
+<tr><th id="361">361</th><td></td></tr>
+<tr><th id="362">362</th><td>	<b>if</b> (desc-&gt;specs) {</td></tr>
+<tr><th id="363">363</th><td>		<b>for</b> (param = desc-&gt;specs; param-&gt;name; param++) {</td></tr>
+<tr><th id="364">364</th><td>			<b>enum</b> fs_parameter_type t = param-&gt;type;</td></tr>
+<tr><th id="365">365</th><td></td></tr>
+<tr><th id="366">366</th><td>			<i>/* Check that the type is in range */</i></td></tr>
+<tr><th id="367">367</th><td>			<b>if</b> (t == __fs_param_wasnt_defined ||</td></tr>
+<tr><th id="368">368</th><td>			    t &gt;= nr__fs_parameter_type) {</td></tr>
+<tr><th id="369">369</th><td>				pr_err(<q>"VALIDATE %s: PARAM[%s] Bad type %u\n"</q>,</td></tr>
+<tr><th id="370">370</th><td>				       name, param-&gt;name, t);</td></tr>
+<tr><th id="371">371</th><td>				good = false;</td></tr>
+<tr><th id="372">372</th><td>			} <b>else</b> <b>if</b> (t == fs_param_is_enum) {</td></tr>
+<tr><th id="373">373</th><td>				enums = true;</td></tr>
+<tr><th id="374">374</th><td>			}</td></tr>
+<tr><th id="375">375</th><td></td></tr>
+<tr><th id="376">376</th><td>			<i>/* Check for duplicate parameter names */</i></td></tr>
+<tr><th id="377">377</th><td>			<b>for</b> (p2 = desc-&gt;specs; p2 &lt; param; p2++) {</td></tr>
+<tr><th id="378">378</th><td>				<b>if</b> (strcmp(param-&gt;name, p2-&gt;name) == <var>0</var>) {</td></tr>
+<tr><th id="379">379</th><td>					pr_err(<q>"VALIDATE %s: PARAM[%s]: Duplicate\n"</q>,</td></tr>
+<tr><th id="380">380</th><td>					       name, param-&gt;name);</td></tr>
+<tr><th id="381">381</th><td>					good = false;</td></tr>
+<tr><th id="382">382</th><td>				}</td></tr>
+<tr><th id="383">383</th><td>			}</td></tr>
+<tr><th id="384">384</th><td>		}</td></tr>
+<tr><th id="385">385</th><td></td></tr>
+<tr><th id="386">386</th><td>		nr_params = param - desc-&gt;specs;</td></tr>
+<tr><th id="387">387</th><td>	}</td></tr>
+<tr><th id="388">388</th><td></td></tr>
+<tr><th id="389">389</th><td>	<b>if</b> (desc-&gt;enums) {</td></tr>
+<tr><th id="390">390</th><td>		<b>if</b> (!nr_params) {</td></tr>
+<tr><th id="391">391</th><td>			pr_err(<q>"VALIDATE %s: Enum table but no parameters\n"</q>,</td></tr>
+<tr><th id="392">392</th><td>			       name);</td></tr>
+<tr><th id="393">393</th><td>			good = false;</td></tr>
+<tr><th id="394">394</th><td>			<b>goto</b> no_enums;</td></tr>
+<tr><th id="395">395</th><td>		}</td></tr>
+<tr><th id="396">396</th><td>		<b>if</b> (!enums) {</td></tr>
+<tr><th id="397">397</th><td>			pr_err(<q>"VALIDATE %s: Enum table but no enum-type values\n"</q>,</td></tr>
+<tr><th id="398">398</th><td>			       name);</td></tr>
+<tr><th id="399">399</th><td>			good = false;</td></tr>
+<tr><th id="400">400</th><td>			<b>goto</b> no_enums;</td></tr>
+<tr><th id="401">401</th><td>		}</td></tr>
+<tr><th id="402">402</th><td></td></tr>
+<tr><th id="403">403</th><td>		<b>for</b> (e = desc-&gt;enums; e-&gt;name[<var>0</var>]; e++) {</td></tr>
+<tr><th id="404">404</th><td>			<i>/* Check that all entries in the enum table have at</i></td></tr>
+<tr><th id="405">405</th><td><i>			 * least one parameter that uses them.</i></td></tr>
+<tr><th id="406">406</th><td><i>			 */</i></td></tr>
+<tr><th id="407">407</th><td>			<b>for</b> (param = desc-&gt;specs; param-&gt;name; param++) {</td></tr>
+<tr><th id="408">408</th><td>				<b>if</b> (param-&gt;opt == e-&gt;opt &amp;&amp;</td></tr>
+<tr><th id="409">409</th><td>				    param-&gt;type != fs_param_is_enum) {</td></tr>
+<tr><th id="410">410</th><td>					pr_err(<q>"VALIDATE %s: e[%tu] enum val for %s\n"</q>,</td></tr>
+<tr><th id="411">411</th><td>					       name, e - desc-&gt;enums, param-&gt;name);</td></tr>
+<tr><th id="412">412</th><td>					good = false;</td></tr>
+<tr><th id="413">413</th><td>				}</td></tr>
+<tr><th id="414">414</th><td>			}</td></tr>
+<tr><th id="415">415</th><td>		}</td></tr>
+<tr><th id="416">416</th><td></td></tr>
+<tr><th id="417">417</th><td>		<i>/* Check that all enum-type parameters have at least one enum</i></td></tr>
+<tr><th id="418">418</th><td><i>		 * value in the enum table.</i></td></tr>
+<tr><th id="419">419</th><td><i>		 */</i></td></tr>
+<tr><th id="420">420</th><td>		<b>for</b> (param = desc-&gt;specs; param-&gt;name; param++) {</td></tr>
+<tr><th id="421">421</th><td>			<b>if</b> (param-&gt;type != fs_param_is_enum)</td></tr>
+<tr><th id="422">422</th><td>				<b>continue</b>;</td></tr>
+<tr><th id="423">423</th><td>			<b>for</b> (e = desc-&gt;enums; e-&gt;name[<var>0</var>]; e++)</td></tr>
+<tr><th id="424">424</th><td>				<b>if</b> (e-&gt;opt == param-&gt;opt)</td></tr>
+<tr><th id="425">425</th><td>					<b>break</b>;</td></tr>
+<tr><th id="426">426</th><td>			<b>if</b> (!e-&gt;name[<var>0</var>]) {</td></tr>
+<tr><th id="427">427</th><td>				pr_err(<q>"VALIDATE %s: PARAM[%s] enum with no values\n"</q>,</td></tr>
+<tr><th id="428">428</th><td>				       name, param-&gt;name);</td></tr>
+<tr><th id="429">429</th><td>				good = false;</td></tr>
+<tr><th id="430">430</th><td>			}</td></tr>
+<tr><th id="431">431</th><td>		}</td></tr>
+<tr><th id="432">432</th><td>	} <b>else</b> {</td></tr>
+<tr><th id="433">433</th><td>		<b>if</b> (enums) {</td></tr>
+<tr><th id="434">434</th><td>			pr_err(<q>"VALIDATE %s: enum-type values, but no enum table\n"</q>,</td></tr>
+<tr><th id="435">435</th><td>			       name);</td></tr>
+<tr><th id="436">436</th><td>			good = false;</td></tr>
+<tr><th id="437">437</th><td>			<b>goto</b> no_enums;</td></tr>
+<tr><th id="438">438</th><td>		}</td></tr>
+<tr><th id="439">439</th><td>	}</td></tr>
+<tr><th id="440">440</th><td></td></tr>
+<tr><th id="441">441</th><td>no_enums:</td></tr>
+<tr><th id="442">442</th><td>	<b>return</b> good;</td></tr>
+<tr><th id="443">443</th><td>}</td></tr>
+<tr><th id="444">444</th><td><u>#<span data-ppcond="291">endif</span> /* CONFIG_VALIDATE_FS_PARSER */</u></td></tr>
+<tr><th id="445">445</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

@@ -1,0 +1,34 @@
+<dec f='linux-5.3.1/sound/core/pcm_compat.c' l='463' type='union (anonymous union at /home/woboq/linux-5.3.1/sound/core/pcm_compat.c:460:2)'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='482' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='482' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='482' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='482' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='483' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='483' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='483' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='483' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='517' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='517' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='517' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='517' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='517' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='517' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='517' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='517' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='517' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='517' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='517' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='517' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='518' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='518' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='518' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='518' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='518' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='518' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='518' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='518' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='518' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='518' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='518' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<use f='linux-5.3.1/sound/core/pcm_compat.c' l='518' u='m' c='snd_pcm_ioctl_sync_ptr_compat'/>
+<offset>544</offset>

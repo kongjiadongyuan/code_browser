@@ -1,0 +1,47 @@
+<def f='linux-5.3.1/arch/x86/kernel/nmi.c' l='469' ll='473'/>
+<use f='linux-5.3.1/arch/x86/kernel/nmi.c' l='474'/>
+<doc f='linux-5.3.1/arch/x86/kernel/nmi.c' l='424'>/*
+ * NMIs can page fault or hit breakpoints which will cause it to lose
+ * its NMI context with the CPU when the breakpoint or page fault does an IRET.
+ *
+ * As a result, NMIs can nest if NMIs get unmasked due an IRET during
+ * NMI processing.  On x86_64, the asm glue protects us from nested NMIs
+ * if the outer NMI came from kernel mode, but we can still nest if the
+ * outer NMI came from user mode.
+ *
+ * To handle these nested NMIs, we have three states:
+ *
+ *  1) not running
+ *  2) executing
+ *  3) latched
+ *
+ * When no NMI is in progress, it is in the &quot;not running&quot; state.
+ * When an NMI comes in, it goes into the &quot;executing&quot; state.
+ * Normally, if another NMI is triggered, it does not interrupt
+ * the running NMI and the HW will simply latch it so that when
+ * the first NMI finishes, it will restart the second NMI.
+ * (Note, the latch is binary, thus multiple NMIs triggering,
+ *  when one is running, are ignored. Only one NMI is restarted.)
+ *
+ * If an NMI executes an iret, another NMI can preempt it. We do not
+ * want to allow this new NMI to run, but we want to execute it when the
+ * first one finishes.  We set the state to &quot;latched&quot;, and the exit of
+ * the first NMI will perform a dec_return, if the result is zero
+ * (NOT_RUNNING), then it will simply exit the NMI handler. If not, the
+ * dec_return would have set the state to NMI_EXECUTING (what we want it
+ * to be when we are running). In this case, we simply jump back to
+ * rerun the NMI handler again, and restart the &apos;latched&apos; NMI.
+ *
+ * No trap (breakpoint or page fault) should be hit before nmi_restart,
+ * thus there is no race between the first check of state for NOT_RUNNING
+ * and setting it to NMI_EXECUTING. The HW will prevent nested NMIs
+ * at this point.
+ *
+ * In case the NMI takes a page fault, we need to save off the CR2
+ * because the NMI could have preempted another page fault and corrupt
+ * the CR2 that is about to be read. As nested NMIs must be restarted
+ * and they can not take breakpoints or page faults, the update of the
+ * CR2 must be done before converting the nmi state back to NOT_RUNNING.
+ * Otherwise, there would be a race of another nested NMI coming in
+ * after setting state to NOT_RUNNING but before updating the nmi_cr2.
+ */</doc>

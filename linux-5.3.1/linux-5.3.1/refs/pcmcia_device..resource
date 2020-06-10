@@ -1,0 +1,32 @@
+<dec f='linux-5.3.1/include/pcmcia/ds.h' l='106' type='struct resource *[6]'/>
+<offset>448</offset>
+<use f='linux-5.3.1/drivers/pcmcia/ds.c' l='299' u='r' c='pcmcia_device_probe'/>
+<use f='linux-5.3.1/drivers/pcmcia/ds.c' l='299' u='r' c='pcmcia_device_probe'/>
+<use f='linux-5.3.1/drivers/pcmcia/ds.c' l='299' u='r' c='pcmcia_device_probe'/>
+<use f='linux-5.3.1/drivers/pcmcia/ds.c' l='300' u='r' c='pcmcia_device_probe'/>
+<use f='linux-5.3.1/drivers/pcmcia/ds.c' l='300' u='r' c='pcmcia_device_probe'/>
+<use f='linux-5.3.1/drivers/pcmcia/ds.c' l='570' u='w' c='pcmcia_device_add'/>
+<use f='linux-5.3.1/drivers/pcmcia/ds.c' l='572' u='w' c='pcmcia_device_add'/>
+<use f='linux-5.3.1/drivers/pcmcia/ds.c' l='1042' u='r' c='resources_show'/>
+<use f='linux-5.3.1/drivers/pcmcia/pcmcia_cis.c' l='200' u='r' c='pcmcia_do_loop_config'/>
+<use f='linux-5.3.1/drivers/pcmcia/pcmcia_cis.c' l='200' u='r' c='pcmcia_do_loop_config'/>
+<use f='linux-5.3.1/drivers/pcmcia/pcmcia_cis.c' l='201' u='r' c='pcmcia_do_loop_config'/>
+<use f='linux-5.3.1/drivers/pcmcia/pcmcia_cis.c' l='201' u='r' c='pcmcia_do_loop_config'/>
+<use f='linux-5.3.1/drivers/pcmcia/pcmcia_cis.c' l='205' u='r' c='pcmcia_do_loop_config'/>
+<use f='linux-5.3.1/drivers/pcmcia/pcmcia_cis.c' l='206' u='r' c='pcmcia_do_loop_config'/>
+<use f='linux-5.3.1/drivers/pcmcia/pcmcia_cis.c' l='213' u='r' c='pcmcia_do_loop_config'/>
+<use f='linux-5.3.1/drivers/pcmcia/pcmcia_cis.c' l='213' u='r' c='pcmcia_do_loop_config'/>
+<use f='linux-5.3.1/drivers/pcmcia/pcmcia_cis.c' l='214' u='r' c='pcmcia_do_loop_config'/>
+<use f='linux-5.3.1/drivers/pcmcia/pcmcia_cis.c' l='215' u='r' c='pcmcia_do_loop_config'/>
+<use f='linux-5.3.1/drivers/pcmcia/pcmcia_cis.c' l='217' u='r' c='pcmcia_do_loop_config'/>
+<use f='linux-5.3.1/drivers/pcmcia/pcmcia_cis.c' l='218' u='r' c='pcmcia_do_loop_config'/>
+<use f='linux-5.3.1/drivers/pcmcia/pcmcia_cis.c' l='227' u='r' c='pcmcia_do_loop_config'/>
+<use f='linux-5.3.1/drivers/pcmcia/pcmcia_cis.c' l='227' u='r' c='pcmcia_do_loop_config'/>
+<use f='linux-5.3.1/drivers/pcmcia/pcmcia_cis.c' l='231' u='r' c='pcmcia_do_loop_config'/>
+<use f='linux-5.3.1/drivers/pcmcia/pcmcia_cis.c' l='232' u='r' c='pcmcia_do_loop_config'/>
+<use f='linux-5.3.1/drivers/pcmcia/pcmcia_cis.c' l='233' u='r' c='pcmcia_do_loop_config'/>
+<use f='linux-5.3.1/drivers/pcmcia/pcmcia_cis.c' l='234' u='r' c='pcmcia_do_loop_config'/>
+<use f='linux-5.3.1/drivers/pcmcia/pcmcia_cis.c' l='240' u='r' c='pcmcia_do_loop_config'/>
+<use f='linux-5.3.1/drivers/pcmcia/pcmcia_cis.c' l='240' u='r' c='pcmcia_do_loop_config'/>
+<use f='linux-5.3.1/drivers/pcmcia/pcmcia_cis.c' l='241' u='r' c='pcmcia_do_loop_config'/>
+<use f='linux-5.3.1/drivers/pcmcia/pcmcia_resource.c' l='945' u='r' c='pcmcia_disable_device'/>

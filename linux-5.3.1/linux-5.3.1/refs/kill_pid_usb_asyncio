@@ -1,0 +1,32 @@
+<dec f='linux-5.3.1/include/linux/sched/signal.h' l='335' type='int kill_pid_usb_asyncio(int sig, int errno, sigval_t addr, struct pid * , const struct cred * )'/>
+<use f='linux-5.3.1/drivers/usb/core/devio.c' l='613' u='c' c='async_completed'/>
+<use f='linux-5.3.1/drivers/usb/core/devio.c' l='2658' u='c' c='usbdev_remove'/>
+<def f='linux-5.3.1/kernel/signal.c' l='1500' ll='1541' type='int kill_pid_usb_asyncio(int sig, int errno, sigval_t addr, struct pid * pid, const struct cred * cred)'/>
+<dec f='linux-5.3.1/kernel/signal.c' l='1542' type='int kill_pid_usb_asyncio(int , int , sigval_t , struct pid * , const struct cred * )'/>
+<use f='linux-5.3.1/kernel/signal.c' l='1542' c='kill_pid_usb_asyncio'/>
+<use f='linux-5.3.1/kernel/signal.c' l='1542' u='a'/>
+<doc f='linux-5.3.1/kernel/signal.c' l='1475'>/*
+ * The usb asyncio usage of siginfo is wrong.  The glibc support
+ * for asyncio which uses SI_ASYNCIO assumes the layout is SIL_RT.
+ * AKA after the generic fields:
+ *	kernel_pid_t	si_pid;
+ *	kernel_uid32_t	si_uid;
+ *	sigval_t	si_value;
+ *
+ * Unfortunately when usb generates SI_ASYNCIO it assumes the layout
+ * after the generic fields is:
+ *	void __user 	*si_addr;
+ *
+ * This is a practical problem when there is a 64bit big endian kernel
+ * and a 32bit userspace.  As the 32bit address will encoded in the low
+ * 32bits of the pointer.  Those low 32bits will be stored at higher
+ * address than appear in a 32 bit pointer.  So userspace will not
+ * see the address it was expecting for it&apos;s completions.
+ *
+ * There is nothing in the encoding that can allow
+ * copy_siginfo_to_user32 to detect this confusion of formats, so
+ * handle this by requiring the caller of kill_pid_usb_asyncio to
+ * notice when this situration takes place and to store the 32bit
+ * pointer in sival_int, instead of sival_addr of the sigval_t addr
+ * parameter.
+ */</doc>

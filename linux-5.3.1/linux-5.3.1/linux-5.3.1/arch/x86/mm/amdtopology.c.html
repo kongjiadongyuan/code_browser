@@ -1,0 +1,201 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>amdtopology.c source code [linux-5.3.1/arch/x86/mm/amdtopology.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/arch/x86/mm/amdtopology.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>linux-5.3.1</a>/<a href='../..'>arch</a>/<a href='..'>x86</a>/<a href='./'>mm</a>/<a href='amdtopology.c.html'>amdtopology.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * AMD NUMA support.</i></td></tr>
+<tr><th id="4">4</th><td><i> * Discover the memory map and associated nodes.</i></td></tr>
+<tr><th id="5">5</th><td><i> *</i></td></tr>
+<tr><th id="6">6</th><td><i> * This version reads it directly from the AMD northbridge.</i></td></tr>
+<tr><th id="7">7</th><td><i> *</i></td></tr>
+<tr><th id="8">8</th><td><i> * Copyright 2002,2003 Andi Kleen, SuSE Labs.</i></td></tr>
+<tr><th id="9">9</th><td><i> */</i></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="../../../include/linux/kernel.h.html">&lt;linux/kernel.h&gt;</a></u></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../../../include/linux/init.h.html">&lt;linux/init.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="../../../include/linux/string.h.html">&lt;linux/string.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="../../../include/linux/nodemask.h.html">&lt;linux/nodemask.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="../../../include/linux/memblock.h.html">&lt;linux/memblock.h&gt;</a></u></td></tr>
+<tr><th id="15">15</th><td></td></tr>
+<tr><th id="16">16</th><td><u>#include <a href="../include/asm/io.h.html">&lt;asm/io.h&gt;</a></u></td></tr>
+<tr><th id="17">17</th><td><u>#include <a href="../../../include/linux/pci_ids.h.html">&lt;linux/pci_ids.h&gt;</a></u></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../../../include/linux/acpi.h.html">&lt;linux/acpi.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../include/uapi/asm/types.h.html">&lt;asm/types.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../include/asm/mmzone.h.html">&lt;asm/mmzone.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../include/asm/proto.h.html">&lt;asm/proto.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../include/asm/e820/api.h.html">&lt;asm/e820/api.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/asm/pci-direct.h.html">&lt;asm/pci-direct.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../include/asm/numa.h.html">&lt;asm/numa.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../include/asm/mpspec.h.html">&lt;asm/mpspec.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../include/asm/apic.h.html">&lt;asm/apic.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../include/asm/amd_nb.h.html">&lt;asm/amd_nb.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td></td></tr>
+<tr><th id="29">29</th><td><em>static</em> <em>unsigned</em> <em>char</em> <a class="macro" href="../../../include/linux/init.h.html#51" title="__attribute__((__section__(&quot;.init.data&quot;)))" data-ref="_M/__initdata">__initdata</a> <dfn class="tu decl def" id="nodeids" title='nodeids' data-type='unsigned char [8]' data-ref="nodeids" data-ref-filename="nodeids">nodeids</dfn>[<var>8</var>];</td></tr>
+<tr><th id="30">30</th><td></td></tr>
+<tr><th id="31">31</th><td><em>static</em> <a class="macro" href="../../../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <em>int</em> <dfn class="tu decl def fn" id="find_northbridge" title='find_northbridge' data-type='int find_northbridge()' data-ref="find_northbridge" data-ref-filename="find_northbridge">find_northbridge</dfn>(<em>void</em>)</td></tr>
+<tr><th id="32">32</th><td>{</td></tr>
+<tr><th id="33">33</th><td>	<em>int</em> <dfn class="local col1 decl" id="1num" title='num' data-type='int' data-ref="1num" data-ref-filename="1num">num</dfn>;</td></tr>
+<tr><th id="34">34</th><td></td></tr>
+<tr><th id="35">35</th><td>	<b>for</b> (<a class="local col1 ref" href="#1num" title='num' data-ref="1num" data-ref-filename="1num">num</a> = <var>0</var>; <a class="local col1 ref" href="#1num" title='num' data-ref="1num" data-ref-filename="1num">num</a> &lt; <var>32</var>; <a class="local col1 ref" href="#1num" title='num' data-ref="1num" data-ref-filename="1num">num</a>++) {</td></tr>
+<tr><th id="36">36</th><td>		<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col2 decl" id="2header" title='header' data-type='u32' data-ref="2header" data-ref-filename="2header">header</dfn>;</td></tr>
+<tr><th id="37">37</th><td></td></tr>
+<tr><th id="38">38</th><td>		<a class="local col2 ref" href="#2header" title='header' data-ref="2header" data-ref-filename="2header">header</a> = <a class="ref fn" href="../include/asm/pci-direct.h.html#read_pci_config" title='read_pci_config' data-ref="read_pci_config" data-ref-filename="read_pci_config">read_pci_config</a>(<var>0</var>, <a class="local col1 ref" href="#1num" title='num' data-ref="1num" data-ref-filename="1num">num</a>, <var>0</var>, <var>0x00</var>);</td></tr>
+<tr><th id="39">39</th><td>		<b>if</b> (<a class="local col2 ref" href="#2header" title='header' data-ref="2header" data-ref-filename="2header">header</a> != (<a class="macro" href="../../../include/linux/pci_ids.h.html#518" title="0x1022" data-ref="_M/PCI_VENDOR_ID_AMD">PCI_VENDOR_ID_AMD</a> | (<var>0x1100</var>&lt;&lt;<var>16</var>)) &amp;&amp;</td></tr>
+<tr><th id="40">40</th><td>			<a class="local col2 ref" href="#2header" title='header' data-ref="2header" data-ref-filename="2header">header</a> != (<a class="macro" href="../../../include/linux/pci_ids.h.html#518" title="0x1022" data-ref="_M/PCI_VENDOR_ID_AMD">PCI_VENDOR_ID_AMD</a> | (<var>0x1200</var>&lt;&lt;<var>16</var>)) &amp;&amp;</td></tr>
+<tr><th id="41">41</th><td>			<a class="local col2 ref" href="#2header" title='header' data-ref="2header" data-ref-filename="2header">header</a> != (<a class="macro" href="../../../include/linux/pci_ids.h.html#518" title="0x1022" data-ref="_M/PCI_VENDOR_ID_AMD">PCI_VENDOR_ID_AMD</a> | (<var>0x1300</var>&lt;&lt;<var>16</var>)))</td></tr>
+<tr><th id="42">42</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="43">43</th><td></td></tr>
+<tr><th id="44">44</th><td>		<a class="local col2 ref" href="#2header" title='header' data-ref="2header" data-ref-filename="2header">header</a> = <a class="ref fn" href="../include/asm/pci-direct.h.html#read_pci_config" title='read_pci_config' data-ref="read_pci_config" data-ref-filename="read_pci_config">read_pci_config</a>(<var>0</var>, <a class="local col1 ref" href="#1num" title='num' data-ref="1num" data-ref-filename="1num">num</a>, <var>1</var>, <var>0x00</var>);</td></tr>
+<tr><th id="45">45</th><td>		<b>if</b> (<a class="local col2 ref" href="#2header" title='header' data-ref="2header" data-ref-filename="2header">header</a> != (<a class="macro" href="../../../include/linux/pci_ids.h.html#518" title="0x1022" data-ref="_M/PCI_VENDOR_ID_AMD">PCI_VENDOR_ID_AMD</a> | (<var>0x1101</var>&lt;&lt;<var>16</var>)) &amp;&amp;</td></tr>
+<tr><th id="46">46</th><td>			<a class="local col2 ref" href="#2header" title='header' data-ref="2header" data-ref-filename="2header">header</a> != (<a class="macro" href="../../../include/linux/pci_ids.h.html#518" title="0x1022" data-ref="_M/PCI_VENDOR_ID_AMD">PCI_VENDOR_ID_AMD</a> | (<var>0x1201</var>&lt;&lt;<var>16</var>)) &amp;&amp;</td></tr>
+<tr><th id="47">47</th><td>			<a class="local col2 ref" href="#2header" title='header' data-ref="2header" data-ref-filename="2header">header</a> != (<a class="macro" href="../../../include/linux/pci_ids.h.html#518" title="0x1022" data-ref="_M/PCI_VENDOR_ID_AMD">PCI_VENDOR_ID_AMD</a> | (<var>0x1301</var>&lt;&lt;<var>16</var>)))</td></tr>
+<tr><th id="48">48</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="49">49</th><td>		<b>return</b> <a class="local col1 ref" href="#1num" title='num' data-ref="1num" data-ref-filename="1num">num</a>;</td></tr>
+<tr><th id="50">50</th><td>	}</td></tr>
+<tr><th id="51">51</th><td></td></tr>
+<tr><th id="52">52</th><td>	<b>return</b> -<a class="macro" href="../../../include/uapi/asm-generic/errno-base.h.html#6" title="2" data-ref="_M/ENOENT">ENOENT</a>;</td></tr>
+<tr><th id="53">53</th><td>}</td></tr>
+<tr><th id="54">54</th><td></td></tr>
+<tr><th id="55">55</th><td><em>int</em> <a class="macro" href="../../../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="decl def fn" id="amd_numa_init" title='amd_numa_init' data-ref="amd_numa_init" data-ref-filename="amd_numa_init">amd_numa_init</dfn>(<em>void</em>)</td></tr>
+<tr><th id="56">56</th><td>{</td></tr>
+<tr><th id="57">57</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col3 decl" id="3start" title='start' data-type='u64' data-ref="3start" data-ref-filename="3start">start</dfn> = <a class="macro" href="../../../include/linux/pfn.h.html#21" title="((phys_addr_t)(0) &lt;&lt; 12)" data-ref="_M/PFN_PHYS">PFN_PHYS</a>(<var>0</var>);</td></tr>
+<tr><th id="58">58</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col4 decl" id="4end" title='end' data-type='u64' data-ref="4end" data-ref-filename="4end">end</dfn> = <a class="macro" href="../../../include/linux/pfn.h.html#21" title="((phys_addr_t)(max_pfn) &lt;&lt; 12)" data-ref="_M/PFN_PHYS">PFN_PHYS</a>(<a class="ref" href="../include/asm/page_64.h.html#max_pfn" title='max_pfn' data-ref="max_pfn" data-ref-filename="max_pfn">max_pfn</a>);</td></tr>
+<tr><th id="59">59</th><td>	<em>unsigned</em> <dfn class="local col5 decl" id="5numnodes" title='numnodes' data-type='unsigned int' data-ref="5numnodes" data-ref-filename="5numnodes">numnodes</dfn>;</td></tr>
+<tr><th id="60">60</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col6 decl" id="6prevbase" title='prevbase' data-type='u64' data-ref="6prevbase" data-ref-filename="6prevbase">prevbase</dfn>;</td></tr>
+<tr><th id="61">61</th><td>	<em>int</em> <dfn class="local col7 decl" id="7i" title='i' data-type='int' data-ref="7i" data-ref-filename="7i">i</dfn>, <dfn class="local col8 decl" id="8j" title='j' data-type='int' data-ref="8j" data-ref-filename="8j">j</dfn>, <dfn class="local col9 decl" id="9nb" title='nb' data-type='int' data-ref="9nb" data-ref-filename="9nb">nb</dfn>;</td></tr>
+<tr><th id="62">62</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col0 decl" id="10nodeid" title='nodeid' data-type='u32' data-ref="10nodeid" data-ref-filename="10nodeid">nodeid</dfn>, <dfn class="local col1 decl" id="11reg" title='reg' data-type='u32' data-ref="11reg" data-ref-filename="11reg">reg</dfn>;</td></tr>
+<tr><th id="63">63</th><td>	<em>unsigned</em> <em>int</em> <dfn class="local col2 decl" id="12bits" title='bits' data-type='unsigned int' data-ref="12bits" data-ref-filename="12bits">bits</dfn>, <dfn class="local col3 decl" id="13cores" title='cores' data-type='unsigned int' data-ref="13cores" data-ref-filename="13cores">cores</dfn>, <dfn class="local col4 decl" id="14apicid_base" title='apicid_base' data-type='unsigned int' data-ref="14apicid_base" data-ref-filename="14apicid_base">apicid_base</dfn>;</td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td>	<b>if</b> (!<a class="ref fn" href="../include/asm/pci-direct.h.html#early_pci_allowed" title='early_pci_allowed' data-ref="early_pci_allowed" data-ref-filename="early_pci_allowed">early_pci_allowed</a>())</td></tr>
+<tr><th id="66">66</th><td>		<b>return</b> -<a class="macro" href="../../../include/uapi/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="67">67</th><td></td></tr>
+<tr><th id="68">68</th><td>	<a class="local col9 ref" href="#9nb" title='nb' data-ref="9nb" data-ref-filename="9nb">nb</a> = <a class="tu ref fn" href="#find_northbridge" title='find_northbridge' data-use='c' data-ref="find_northbridge" data-ref-filename="find_northbridge">find_northbridge</a>();</td></tr>
+<tr><th id="69">69</th><td>	<b>if</b> (<a class="local col9 ref" href="#9nb" title='nb' data-ref="9nb" data-ref-filename="9nb">nb</a> &lt; <var>0</var>)</td></tr>
+<tr><th id="70">70</th><td>		<b>return</b> <a class="local col9 ref" href="#9nb" title='nb' data-ref="9nb" data-ref-filename="9nb">nb</a>;</td></tr>
+<tr><th id="71">71</th><td></td></tr>
+<tr><th id="72">72</th><td>	<a class="macro" href="../../../include/linux/printk.h.html#310" title="printk(&quot;\001&quot; &quot;6&quot; &quot;Scanning NUMA topology in Northbridge %d\n&quot;, nb)" data-ref="_M/pr_info">pr_info</a>(<q>"Scanning NUMA topology in Northbridge %d\n"</q>, <a class="local col9 ref" href="#9nb" title='nb' data-ref="9nb" data-ref-filename="9nb">nb</a>);</td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td>	<a class="local col1 ref" href="#11reg" title='reg' data-ref="11reg" data-ref-filename="11reg">reg</a> = <a class="ref fn" href="../include/asm/pci-direct.h.html#read_pci_config" title='read_pci_config' data-ref="read_pci_config" data-ref-filename="read_pci_config">read_pci_config</a>(<var>0</var>, <a class="local col9 ref" href="#9nb" title='nb' data-ref="9nb" data-ref-filename="9nb">nb</a>, <var>0</var>, <var>0x60</var>);</td></tr>
+<tr><th id="75">75</th><td>	<a class="local col5 ref" href="#5numnodes" title='numnodes' data-ref="5numnodes" data-ref-filename="5numnodes">numnodes</a> = ((<a class="local col1 ref" href="#11reg" title='reg' data-ref="11reg" data-ref-filename="11reg">reg</a> &gt;&gt; <var>4</var>) &amp; <var>0xF</var>) + <var>1</var>;</td></tr>
+<tr><th id="76">76</th><td>	<b>if</b> (<a class="local col5 ref" href="#5numnodes" title='numnodes' data-ref="5numnodes" data-ref-filename="5numnodes">numnodes</a> &lt;= <var>1</var>)</td></tr>
+<tr><th id="77">77</th><td>		<b>return</b> -<a class="macro" href="../../../include/uapi/asm-generic/errno-base.h.html#6" title="2" data-ref="_M/ENOENT">ENOENT</a>;</td></tr>
+<tr><th id="78">78</th><td></td></tr>
+<tr><th id="79">79</th><td>	<a class="macro" href="../../../include/linux/printk.h.html#310" title="printk(&quot;\001&quot; &quot;6&quot; &quot;Number of physical nodes %d\n&quot;, numnodes)" data-ref="_M/pr_info">pr_info</a>(<q>"Number of physical nodes %d\n"</q>, <a class="local col5 ref" href="#5numnodes" title='numnodes' data-ref="5numnodes" data-ref-filename="5numnodes">numnodes</a>);</td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td>	<a class="local col6 ref" href="#6prevbase" title='prevbase' data-ref="6prevbase" data-ref-filename="6prevbase">prevbase</a> = <var>0</var>;</td></tr>
+<tr><th id="82">82</th><td>	<b>for</b> (<a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a> = <var>0</var>; <a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a> &lt; <var>8</var>; <a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a>++) {</td></tr>
+<tr><th id="83">83</th><td>		<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col5 decl" id="15base" title='base' data-type='u64' data-ref="15base" data-ref-filename="15base">base</dfn>, <dfn class="local col6 decl" id="16limit" title='limit' data-type='u64' data-ref="16limit" data-ref-filename="16limit">limit</dfn>;</td></tr>
+<tr><th id="84">84</th><td></td></tr>
+<tr><th id="85">85</th><td>		<a class="local col5 ref" href="#15base" title='base' data-ref="15base" data-ref-filename="15base">base</a> = <a class="ref fn" href="../include/asm/pci-direct.h.html#read_pci_config" title='read_pci_config' data-ref="read_pci_config" data-ref-filename="read_pci_config">read_pci_config</a>(<var>0</var>, <a class="local col9 ref" href="#9nb" title='nb' data-ref="9nb" data-ref-filename="9nb">nb</a>, <var>1</var>, <var>0x40</var> + <a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a>*<var>8</var>);</td></tr>
+<tr><th id="86">86</th><td>		<a class="local col6 ref" href="#16limit" title='limit' data-ref="16limit" data-ref-filename="16limit">limit</a> = <a class="ref fn" href="../include/asm/pci-direct.h.html#read_pci_config" title='read_pci_config' data-ref="read_pci_config" data-ref-filename="read_pci_config">read_pci_config</a>(<var>0</var>, <a class="local col9 ref" href="#9nb" title='nb' data-ref="9nb" data-ref-filename="9nb">nb</a>, <var>1</var>, <var>0x44</var> + <a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a>*<var>8</var>);</td></tr>
+<tr><th id="87">87</th><td></td></tr>
+<tr><th id="88">88</th><td>		<a class="tu ref" href="#nodeids" title='nodeids' data-use='w' data-ref="nodeids" data-ref-filename="nodeids">nodeids</a>[<a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a>] = <a class="local col0 ref" href="#10nodeid" title='nodeid' data-ref="10nodeid" data-ref-filename="10nodeid">nodeid</a> = <a class="local col6 ref" href="#16limit" title='limit' data-ref="16limit" data-ref-filename="16limit">limit</a> &amp; <var>7</var>;</td></tr>
+<tr><th id="89">89</th><td>		<b>if</b> ((<a class="local col5 ref" href="#15base" title='base' data-ref="15base" data-ref-filename="15base">base</a> &amp; <var>3</var>) == <var>0</var>) {</td></tr>
+<tr><th id="90">90</th><td>			<b>if</b> (<a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a> &lt; <a class="local col5 ref" href="#5numnodes" title='numnodes' data-ref="5numnodes" data-ref-filename="5numnodes">numnodes</a>)</td></tr>
+<tr><th id="91">91</th><td>				<a class="macro" href="../../../include/linux/printk.h.html#310" title="printk(&quot;\001&quot; &quot;6&quot; &quot;Skipping disabled node %d\n&quot;, i)" data-ref="_M/pr_info">pr_info</a>(<q>"Skipping disabled node %d\n"</q>, <a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a>);</td></tr>
+<tr><th id="92">92</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="93">93</th><td>		}</td></tr>
+<tr><th id="94">94</th><td>		<b>if</b> (<a class="local col0 ref" href="#10nodeid" title='nodeid' data-ref="10nodeid" data-ref-filename="10nodeid">nodeid</a> &gt;= <a class="local col5 ref" href="#5numnodes" title='numnodes' data-ref="5numnodes" data-ref-filename="5numnodes">numnodes</a>) {</td></tr>
+<tr><th id="95">95</th><td>			<a class="macro" href="../../../include/linux/printk.h.html#310" title="printk(&quot;\001&quot; &quot;6&quot; &quot;Ignoring excess node %d (%Lx:%Lx)\n&quot;, nodeid, base, limit)" data-ref="_M/pr_info">pr_info</a>(<q>"Ignoring excess node %d (%Lx:%Lx)\n"</q>, <a class="local col0 ref" href="#10nodeid" title='nodeid' data-ref="10nodeid" data-ref-filename="10nodeid">nodeid</a>,</td></tr>
+<tr><th id="96">96</th><td>				<a class="local col5 ref" href="#15base" title='base' data-ref="15base" data-ref-filename="15base">base</a>, <a class="local col6 ref" href="#16limit" title='limit' data-ref="16limit" data-ref-filename="16limit">limit</a>);</td></tr>
+<tr><th id="97">97</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="98">98</th><td>		}</td></tr>
+<tr><th id="99">99</th><td></td></tr>
+<tr><th id="100">100</th><td>		<b>if</b> (!<a class="local col6 ref" href="#16limit" title='limit' data-ref="16limit" data-ref-filename="16limit">limit</a>) {</td></tr>
+<tr><th id="101">101</th><td>			<a class="macro" href="../../../include/linux/printk.h.html#310" title="printk(&quot;\001&quot; &quot;6&quot; &quot;Skipping node entry %d (base %Lx)\n&quot;, i, base)" data-ref="_M/pr_info">pr_info</a>(<q>"Skipping node entry %d (base %Lx)\n"</q>,</td></tr>
+<tr><th id="102">102</th><td>				<a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a>, <a class="local col5 ref" href="#15base" title='base' data-ref="15base" data-ref-filename="15base">base</a>);</td></tr>
+<tr><th id="103">103</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="104">104</th><td>		}</td></tr>
+<tr><th id="105">105</th><td>		<b>if</b> ((<a class="local col5 ref" href="#15base" title='base' data-ref="15base" data-ref-filename="15base">base</a> &gt;&gt; <var>8</var>) &amp; <var>3</var> || (<a class="local col6 ref" href="#16limit" title='limit' data-ref="16limit" data-ref-filename="16limit">limit</a> &gt;&gt; <var>8</var>) &amp; <var>3</var>) {</td></tr>
+<tr><th id="106">106</th><td>			<a class="macro" href="../../../include/linux/printk.h.html#303" title="printk(&quot;\001&quot; &quot;3&quot; &quot;Node %d using interleaving mode %Lx/%Lx\n&quot;, nodeid, (base &gt;&gt; 8) &amp; 3, (limit &gt;&gt; 8) &amp; 3)" data-ref="_M/pr_err">pr_err</a>(<q>"Node %d using interleaving mode %Lx/%Lx\n"</q>,</td></tr>
+<tr><th id="107">107</th><td>			       <a class="local col0 ref" href="#10nodeid" title='nodeid' data-ref="10nodeid" data-ref-filename="10nodeid">nodeid</a>, (<a class="local col5 ref" href="#15base" title='base' data-ref="15base" data-ref-filename="15base">base</a> &gt;&gt; <var>8</var>) &amp; <var>3</var>, (<a class="local col6 ref" href="#16limit" title='limit' data-ref="16limit" data-ref-filename="16limit">limit</a> &gt;&gt; <var>8</var>) &amp; <var>3</var>);</td></tr>
+<tr><th id="108">108</th><td>			<b>return</b> -<a class="macro" href="../../../include/uapi/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="109">109</th><td>		}</td></tr>
+<tr><th id="110">110</th><td>		<b>if</b> (<a class="macro" href="../../../include/linux/nodemask.h.html#152" title="test_bit((nodeid), (numa_nodes_parsed).bits)" data-ref="_M/node_isset">node_isset</a>(<a class="local col0 ref" href="#10nodeid" title='nodeid' data-ref="10nodeid" data-ref-filename="10nodeid">nodeid</a>, <a class="ref" href="../include/asm/numa.h.html#numa_nodes_parsed" title='numa_nodes_parsed' data-ref="numa_nodes_parsed" data-ref-filename="numa_nodes_parsed">numa_nodes_parsed</a>)) {</td></tr>
+<tr><th id="111">111</th><td>			<a class="macro" href="../../../include/linux/printk.h.html#310" title="printk(&quot;\001&quot; &quot;6&quot; &quot;Node %d already present, skipping\n&quot;, nodeid)" data-ref="_M/pr_info">pr_info</a>(<q>"Node %d already present, skipping\n"</q>,</td></tr>
+<tr><th id="112">112</th><td>				<a class="local col0 ref" href="#10nodeid" title='nodeid' data-ref="10nodeid" data-ref-filename="10nodeid">nodeid</a>);</td></tr>
+<tr><th id="113">113</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="114">114</th><td>		}</td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td>		<a class="local col6 ref" href="#16limit" title='limit' data-ref="16limit" data-ref-filename="16limit">limit</a> &gt;&gt;= <var>16</var>;</td></tr>
+<tr><th id="117">117</th><td>		<a class="local col6 ref" href="#16limit" title='limit' data-ref="16limit" data-ref-filename="16limit">limit</a>++;</td></tr>
+<tr><th id="118">118</th><td>		<a class="local col6 ref" href="#16limit" title='limit' data-ref="16limit" data-ref-filename="16limit">limit</a> &lt;&lt;= <var>24</var>;</td></tr>
+<tr><th id="119">119</th><td></td></tr>
+<tr><th id="120">120</th><td>		<b>if</b> (<a class="local col6 ref" href="#16limit" title='limit' data-ref="16limit" data-ref-filename="16limit">limit</a> &gt; <a class="local col4 ref" href="#4end" title='end' data-ref="4end" data-ref-filename="4end">end</a>)</td></tr>
+<tr><th id="121">121</th><td>			<a class="local col6 ref" href="#16limit" title='limit' data-ref="16limit" data-ref-filename="16limit">limit</a> = <a class="local col4 ref" href="#4end" title='end' data-ref="4end" data-ref-filename="4end">end</a>;</td></tr>
+<tr><th id="122">122</th><td>		<b>if</b> (<a class="local col6 ref" href="#16limit" title='limit' data-ref="16limit" data-ref-filename="16limit">limit</a> &lt;= <a class="local col5 ref" href="#15base" title='base' data-ref="15base" data-ref-filename="15base">base</a>)</td></tr>
+<tr><th id="123">123</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="124">124</th><td></td></tr>
+<tr><th id="125">125</th><td>		<a class="local col5 ref" href="#15base" title='base' data-ref="15base" data-ref-filename="15base">base</a> &gt;&gt;= <var>16</var>;</td></tr>
+<tr><th id="126">126</th><td>		<a class="local col5 ref" href="#15base" title='base' data-ref="15base" data-ref-filename="15base">base</a> &lt;&lt;= <var>24</var>;</td></tr>
+<tr><th id="127">127</th><td></td></tr>
+<tr><th id="128">128</th><td>		<b>if</b> (<a class="local col5 ref" href="#15base" title='base' data-ref="15base" data-ref-filename="15base">base</a> &lt; <a class="local col3 ref" href="#3start" title='start' data-ref="3start" data-ref-filename="3start">start</a>)</td></tr>
+<tr><th id="129">129</th><td>			<a class="local col5 ref" href="#15base" title='base' data-ref="15base" data-ref-filename="15base">base</a> = <a class="local col3 ref" href="#3start" title='start' data-ref="3start" data-ref-filename="3start">start</a>;</td></tr>
+<tr><th id="130">130</th><td>		<b>if</b> (<a class="local col6 ref" href="#16limit" title='limit' data-ref="16limit" data-ref-filename="16limit">limit</a> &gt; <a class="local col4 ref" href="#4end" title='end' data-ref="4end" data-ref-filename="4end">end</a>)</td></tr>
+<tr><th id="131">131</th><td>			<a class="local col6 ref" href="#16limit" title='limit' data-ref="16limit" data-ref-filename="16limit">limit</a> = <a class="local col4 ref" href="#4end" title='end' data-ref="4end" data-ref-filename="4end">end</a>;</td></tr>
+<tr><th id="132">132</th><td>		<b>if</b> (<a class="local col6 ref" href="#16limit" title='limit' data-ref="16limit" data-ref-filename="16limit">limit</a> == <a class="local col5 ref" href="#15base" title='base' data-ref="15base" data-ref-filename="15base">base</a>) {</td></tr>
+<tr><th id="133">133</th><td>			<a class="macro" href="../../../include/linux/printk.h.html#303" title="printk(&quot;\001&quot; &quot;3&quot; &quot;Empty node %d\n&quot;, nodeid)" data-ref="_M/pr_err">pr_err</a>(<q>"Empty node %d\n"</q>, <a class="local col0 ref" href="#10nodeid" title='nodeid' data-ref="10nodeid" data-ref-filename="10nodeid">nodeid</a>);</td></tr>
+<tr><th id="134">134</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="135">135</th><td>		}</td></tr>
+<tr><th id="136">136</th><td>		<b>if</b> (<a class="local col6 ref" href="#16limit" title='limit' data-ref="16limit" data-ref-filename="16limit">limit</a> &lt; <a class="local col5 ref" href="#15base" title='base' data-ref="15base" data-ref-filename="15base">base</a>) {</td></tr>
+<tr><th id="137">137</th><td>			<a class="macro" href="../../../include/linux/printk.h.html#303" title="printk(&quot;\001&quot; &quot;3&quot; &quot;Node %d bogus settings %Lx-%Lx.\n&quot;, nodeid, base, limit)" data-ref="_M/pr_err">pr_err</a>(<q>"Node %d bogus settings %Lx-%Lx.\n"</q>,</td></tr>
+<tr><th id="138">138</th><td>			       <a class="local col0 ref" href="#10nodeid" title='nodeid' data-ref="10nodeid" data-ref-filename="10nodeid">nodeid</a>, <a class="local col5 ref" href="#15base" title='base' data-ref="15base" data-ref-filename="15base">base</a>, <a class="local col6 ref" href="#16limit" title='limit' data-ref="16limit" data-ref-filename="16limit">limit</a>);</td></tr>
+<tr><th id="139">139</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="140">140</th><td>		}</td></tr>
+<tr><th id="141">141</th><td></td></tr>
+<tr><th id="142">142</th><td>		<i>/* Could sort here, but pun for now. Should not happen anyroads. */</i></td></tr>
+<tr><th id="143">143</th><td>		<b>if</b> (<a class="local col6 ref" href="#6prevbase" title='prevbase' data-ref="6prevbase" data-ref-filename="6prevbase">prevbase</a> &gt; <a class="local col5 ref" href="#15base" title='base' data-ref="15base" data-ref-filename="15base">base</a>) {</td></tr>
+<tr><th id="144">144</th><td>			<a class="macro" href="../../../include/linux/printk.h.html#303" title="printk(&quot;\001&quot; &quot;3&quot; &quot;Node map not sorted %Lx,%Lx\n&quot;, prevbase, base)" data-ref="_M/pr_err">pr_err</a>(<q>"Node map not sorted %Lx,%Lx\n"</q>,</td></tr>
+<tr><th id="145">145</th><td>			       <a class="local col6 ref" href="#6prevbase" title='prevbase' data-ref="6prevbase" data-ref-filename="6prevbase">prevbase</a>, <a class="local col5 ref" href="#15base" title='base' data-ref="15base" data-ref-filename="15base">base</a>);</td></tr>
+<tr><th id="146">146</th><td>			<b>return</b> -<a class="macro" href="../../../include/uapi/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="147">147</th><td>		}</td></tr>
+<tr><th id="148">148</th><td></td></tr>
+<tr><th id="149">149</th><td>		<a class="macro" href="../../../include/linux/printk.h.html#310" title="printk(&quot;\001&quot; &quot;6&quot; &quot;Node %d MemBase %016Lx Limit %016Lx\n&quot;, nodeid, base, limit)" data-ref="_M/pr_info">pr_info</a>(<q>"Node %d MemBase %016Lx Limit %016Lx\n"</q>,</td></tr>
+<tr><th id="150">150</th><td>			<a class="local col0 ref" href="#10nodeid" title='nodeid' data-ref="10nodeid" data-ref-filename="10nodeid">nodeid</a>, <a class="local col5 ref" href="#15base" title='base' data-ref="15base" data-ref-filename="15base">base</a>, <a class="local col6 ref" href="#16limit" title='limit' data-ref="16limit" data-ref-filename="16limit">limit</a>);</td></tr>
+<tr><th id="151">151</th><td></td></tr>
+<tr><th id="152">152</th><td>		<a class="local col6 ref" href="#6prevbase" title='prevbase' data-ref="6prevbase" data-ref-filename="6prevbase">prevbase</a> = <a class="local col5 ref" href="#15base" title='base' data-ref="15base" data-ref-filename="15base">base</a>;</td></tr>
+<tr><th id="153">153</th><td>		<a class="ref fn" href="../include/asm/numa.h.html#numa_add_memblk" title='numa_add_memblk' data-ref="numa_add_memblk" data-ref-filename="numa_add_memblk">numa_add_memblk</a>(<a class="local col0 ref" href="#10nodeid" title='nodeid' data-ref="10nodeid" data-ref-filename="10nodeid">nodeid</a>, <a class="local col5 ref" href="#15base" title='base' data-ref="15base" data-ref-filename="15base">base</a>, <a class="local col6 ref" href="#16limit" title='limit' data-ref="16limit" data-ref-filename="16limit">limit</a>);</td></tr>
+<tr><th id="154">154</th><td>		<a class="macro" href="../../../include/linux/nodemask.h.html#127" title="__node_set((nodeid), &amp;(numa_nodes_parsed))" data-ref="_M/node_set">node_set</a>(<a class="local col0 ref" href="#10nodeid" title='nodeid' data-ref="10nodeid" data-ref-filename="10nodeid">nodeid</a>, <a class="ref" href="../include/asm/numa.h.html#numa_nodes_parsed" title='numa_nodes_parsed' data-ref="numa_nodes_parsed" data-ref-filename="numa_nodes_parsed">numa_nodes_parsed</a>);</td></tr>
+<tr><th id="155">155</th><td>	}</td></tr>
+<tr><th id="156">156</th><td></td></tr>
+<tr><th id="157">157</th><td>	<b>if</b> (!<a class="macro" href="../../../include/linux/nodemask.h.html#237" title="__nodes_weight(&amp;(numa_nodes_parsed), (1 &lt;&lt; 6))" data-ref="_M/nodes_weight">nodes_weight</a>(<a class="ref" href="../include/asm/numa.h.html#numa_nodes_parsed" title='numa_nodes_parsed' data-ref="numa_nodes_parsed" data-ref-filename="numa_nodes_parsed">numa_nodes_parsed</a>))</td></tr>
+<tr><th id="158">158</th><td>		<b>return</b> -<a class="macro" href="../../../include/uapi/asm-generic/errno-base.h.html#6" title="2" data-ref="_M/ENOENT">ENOENT</a>;</td></tr>
+<tr><th id="159">159</th><td></td></tr>
+<tr><th id="160">160</th><td>	<i>/*</i></td></tr>
+<tr><th id="161">161</th><td><i>	 * We seem to have valid NUMA configuration.  Map apicids to nodes</i></td></tr>
+<tr><th id="162">162</th><td><i>	 * using the coreid bits from early_identify_cpu.</i></td></tr>
+<tr><th id="163">163</th><td><i>	 */</i></td></tr>
+<tr><th id="164">164</th><td>	<a class="local col2 ref" href="#12bits" title='bits' data-ref="12bits" data-ref-filename="12bits">bits</a> = <a class="ref" href="../include/asm/processor.h.html#boot_cpu_data" title='boot_cpu_data' data-ref="boot_cpu_data" data-ref-filename="boot_cpu_data">boot_cpu_data</a>.<a class="ref field" href="../include/asm/processor.h.html#cpuinfo_x86::x86_coreid_bits" title='cpuinfo_x86::x86_coreid_bits' data-ref="cpuinfo_x86::x86_coreid_bits" data-ref-filename="cpuinfo_x86..x86_coreid_bits">x86_coreid_bits</a>;</td></tr>
+<tr><th id="165">165</th><td>	<a class="local col3 ref" href="#13cores" title='cores' data-ref="13cores" data-ref-filename="13cores">cores</a> = <var>1</var> &lt;&lt; <a class="local col2 ref" href="#12bits" title='bits' data-ref="12bits" data-ref-filename="12bits">bits</a>;</td></tr>
+<tr><th id="166">166</th><td>	<a class="local col4 ref" href="#14apicid_base" title='apicid_base' data-ref="14apicid_base" data-ref-filename="14apicid_base">apicid_base</a> = <var>0</var>;</td></tr>
+<tr><th id="167">167</th><td></td></tr>
+<tr><th id="168">168</th><td>	<i>/*</i></td></tr>
+<tr><th id="169">169</th><td><i>	 * get boot-time SMP configuration:</i></td></tr>
+<tr><th id="170">170</th><td><i>	 */</i></td></tr>
+<tr><th id="171">171</th><td>	<a class="ref fn" href="../include/asm/mpspec.h.html#early_get_smp_config" title='early_get_smp_config' data-ref="early_get_smp_config" data-ref-filename="early_get_smp_config">early_get_smp_config</a>();</td></tr>
+<tr><th id="172">172</th><td></td></tr>
+<tr><th id="173">173</th><td>	<b>if</b> (<a class="ref" href="../include/asm/mpspec.h.html#boot_cpu_physical_apicid" title='boot_cpu_physical_apicid' data-ref="boot_cpu_physical_apicid" data-ref-filename="boot_cpu_physical_apicid">boot_cpu_physical_apicid</a> &gt; <var>0</var>) {</td></tr>
+<tr><th id="174">174</th><td>		<a class="macro" href="../../../include/linux/printk.h.html#310" title="printk(&quot;\001&quot; &quot;6&quot; &quot;BSP APIC ID: %02x\n&quot;, boot_cpu_physical_apicid)" data-ref="_M/pr_info">pr_info</a>(<q>"BSP APIC ID: %02x\n"</q>, <a class="ref" href="../include/asm/mpspec.h.html#boot_cpu_physical_apicid" title='boot_cpu_physical_apicid' data-ref="boot_cpu_physical_apicid" data-ref-filename="boot_cpu_physical_apicid">boot_cpu_physical_apicid</a>);</td></tr>
+<tr><th id="175">175</th><td>		<a class="local col4 ref" href="#14apicid_base" title='apicid_base' data-ref="14apicid_base" data-ref-filename="14apicid_base">apicid_base</a> = <a class="ref" href="../include/asm/mpspec.h.html#boot_cpu_physical_apicid" title='boot_cpu_physical_apicid' data-ref="boot_cpu_physical_apicid" data-ref-filename="boot_cpu_physical_apicid">boot_cpu_physical_apicid</a>;</td></tr>
+<tr><th id="176">176</th><td>	}</td></tr>
+<tr><th id="177">177</th><td></td></tr>
+<tr><th id="178">178</th><td>	<a class="macro" href="../../../include/linux/nodemask.h.html#378" title="for ((i) = __first_node(&amp;(numa_nodes_parsed)); (i) &lt; (1 &lt;&lt; 6); (i) = __next_node(((i)), &amp;((numa_nodes_parsed))))" data-ref="_M/for_each_node_mask">for_each_node_mask</a>(<a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a>, <a class="ref" href="../include/asm/numa.h.html#numa_nodes_parsed" title='numa_nodes_parsed' data-ref="numa_nodes_parsed" data-ref-filename="numa_nodes_parsed">numa_nodes_parsed</a>)</td></tr>
+<tr><th id="179">179</th><td>		<b>for</b> (<a class="local col8 ref" href="#8j" title='j' data-ref="8j" data-ref-filename="8j">j</a> = <a class="local col4 ref" href="#14apicid_base" title='apicid_base' data-ref="14apicid_base" data-ref-filename="14apicid_base">apicid_base</a>; <a class="local col8 ref" href="#8j" title='j' data-ref="8j" data-ref-filename="8j">j</a> &lt; <a class="local col3 ref" href="#13cores" title='cores' data-ref="13cores" data-ref-filename="13cores">cores</a> + <a class="local col4 ref" href="#14apicid_base" title='apicid_base' data-ref="14apicid_base" data-ref-filename="14apicid_base">apicid_base</a>; <a class="local col8 ref" href="#8j" title='j' data-ref="8j" data-ref-filename="8j">j</a>++)</td></tr>
+<tr><th id="180">180</th><td>			<a class="ref fn" href="../include/asm/numa.h.html#set_apicid_to_node" title='set_apicid_to_node' data-ref="set_apicid_to_node" data-ref-filename="set_apicid_to_node">set_apicid_to_node</a>((<a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a> &lt;&lt; <a class="local col2 ref" href="#12bits" title='bits' data-ref="12bits" data-ref-filename="12bits">bits</a>) + <a class="local col8 ref" href="#8j" title='j' data-ref="8j" data-ref-filename="8j">j</a>, <a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a>);</td></tr>
+<tr><th id="181">181</th><td></td></tr>
+<tr><th id="182">182</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="183">183</th><td>}</td></tr>
+<tr><th id="184">184</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

@@ -1,0 +1,324 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>nseval.c source code [linux-5.3.1/drivers/acpi/acpica/nseval.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/drivers/acpi/acpica/nseval.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>linux-5.3.1</a>/<a href='../..'>drivers</a>/<a href='..'>acpi</a>/<a href='./'>acpica</a>/<a href='nseval.c.html'>nseval.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><i>/*******************************************************************************</i></td></tr>
+<tr><th id="3">3</th><td><i> *</i></td></tr>
+<tr><th id="4">4</th><td><i> * Module Name: nseval - Object evaluation, includes control method execution</i></td></tr>
+<tr><th id="5">5</th><td><i> *</i></td></tr>
+<tr><th id="6">6</th><td><i> ******************************************************************************/</i></td></tr>
+<tr><th id="7">7</th><td></td></tr>
+<tr><th id="8">8</th><td><u>#include <a href="../../../include/acpi/acpi.h.html">&lt;acpi/acpi.h&gt;</a></u></td></tr>
+<tr><th id="9">9</th><td><u>#include <a href="accommon.h.html">"accommon.h"</a></u></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="acparser.h.html">"acparser.h"</a></u></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="acinterp.h.html">"acinterp.h"</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="acnamesp.h.html">"acnamesp.h"</a></u></td></tr>
+<tr><th id="13">13</th><td></td></tr>
+<tr><th id="14">14</th><td><u>#define <dfn class="macro" id="_M/_COMPONENT" data-ref="_M/_COMPONENT">_COMPONENT</dfn>          ACPI_NAMESPACE</u></td></tr>
+<tr><th id="15">15</th><td><a class="macro" href="../../../include/acpi/acoutput.h.html#181" title="static const char __attribute__ ((unused)) _acpi_module_name[] = &quot;nseval&quot;;" data-ref="_M/ACPI_MODULE_NAME">ACPI_MODULE_NAME</a>(<q>"nseval"</q>)</td></tr>
+<tr><th id="16">16</th><td></td></tr>
+<tr><th id="17">17</th><td><i>/*******************************************************************************</i></td></tr>
+<tr><th id="18">18</th><td><i> *</i></td></tr>
+<tr><th id="19">19</th><td><i> * FUNCTION:    acpi_ns_evaluate</i></td></tr>
+<tr><th id="20">20</th><td><i> *</i></td></tr>
+<tr><th id="21">21</th><td><i> * PARAMETERS:  info            - Evaluation info block, contains these fields</i></td></tr>
+<tr><th id="22">22</th><td><i> *                                and more:</i></td></tr>
+<tr><th id="23">23</th><td><i> *                  prefix_node     - Prefix or Method/Object Node to execute</i></td></tr>
+<tr><th id="24">24</th><td><i> *                  relative_path   - Name of method to execute, If NULL, the</i></td></tr>
+<tr><th id="25">25</th><td><i> *                                    Node is the object to execute</i></td></tr>
+<tr><th id="26">26</th><td><i> *                  parameters      - List of parameters to pass to the method,</i></td></tr>
+<tr><th id="27">27</th><td><i> *                                    terminated by NULL. Params itself may be</i></td></tr>
+<tr><th id="28">28</th><td><i> *                                    NULL if no parameters are being passed.</i></td></tr>
+<tr><th id="29">29</th><td><i> *                  parameter_type  - Type of Parameter list</i></td></tr>
+<tr><th id="30">30</th><td><i> *                  return_object   - Where to put method's return value (if</i></td></tr>
+<tr><th id="31">31</th><td><i> *                                    any). If NULL, no value is returned.</i></td></tr>
+<tr><th id="32">32</th><td><i> *                  flags           - ACPI_IGNORE_RETURN_VALUE to delete return</i></td></tr>
+<tr><th id="33">33</th><td><i> *</i></td></tr>
+<tr><th id="34">34</th><td><i> * RETURN:      Status</i></td></tr>
+<tr><th id="35">35</th><td><i> *</i></td></tr>
+<tr><th id="36">36</th><td><i> * DESCRIPTION: Execute a control method or return the current value of an</i></td></tr>
+<tr><th id="37">37</th><td><i> *              ACPI namespace object.</i></td></tr>
+<tr><th id="38">38</th><td><i> *</i></td></tr>
+<tr><th id="39">39</th><td><i> * MUTEX:       Locks interpreter</i></td></tr>
+<tr><th id="40">40</th><td><i> *</i></td></tr>
+<tr><th id="41">41</th><td><i> ******************************************************************************/</i></td></tr>
+<tr><th id="42">42</th><td><a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_status" title='acpi_status' data-type='u32' data-ref="acpi_status" data-ref-filename="acpi_status">acpi_status</a> <dfn class="decl def fn" id="acpi_ns_evaluate" title='acpi_ns_evaluate' data-ref="acpi_ns_evaluate" data-ref-filename="acpi_ns_evaluate">acpi_ns_evaluate</dfn>(<b>struct</b> <a class="type" href="acstruct.h.html#acpi_evaluate_info" title='acpi_evaluate_info' data-ref="acpi_evaluate_info" data-ref-filename="acpi_evaluate_info">acpi_evaluate_info</a> *<dfn class="local col1 decl" id="1info" title='info' data-type='struct acpi_evaluate_info *' data-ref="1info" data-ref-filename="1info">info</dfn>)</td></tr>
+<tr><th id="43">43</th><td>{</td></tr>
+<tr><th id="44">44</th><td>	<a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_status" title='acpi_status' data-type='u32' data-ref="acpi_status" data-ref-filename="acpi_status">acpi_status</a> <dfn class="local col2 decl" id="2status" title='status' data-type='acpi_status' data-ref="2status" data-ref-filename="2status">status</dfn>;</td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#441" title="" data-ref="_M/ACPI_FUNCTION_TRACE">ACPI_FUNCTION_TRACE</a>(ns_evaluate);</td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td>	<b>if</b> (!<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>) {</td></tr>
+<tr><th id="49">49</th><td>		<a class="macro" href="../../../include/acpi/acoutput.h.html#457" title="return(((acpi_status) (0x0001 | 0x1000)))" data-ref="_M/return_ACPI_STATUS">return_ACPI_STATUS</a>(<a class="macro" href="../../../include/acpi/acexcep.h.html#112" title="((acpi_status) (0x0001 | 0x1000))" data-ref="_M/AE_BAD_PARAMETER">AE_BAD_PARAMETER</a>);</td></tr>
+<tr><th id="50">50</th><td>	}</td></tr>
+<tr><th id="51">51</th><td></td></tr>
+<tr><th id="52">52</th><td>	<b>if</b> (!<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::node" title='acpi_evaluate_info::node' data-ref="acpi_evaluate_info::node" data-ref-filename="acpi_evaluate_info..node">node</a>) {</td></tr>
+<tr><th id="53">53</th><td>		<i>/*</i></td></tr>
+<tr><th id="54">54</th><td><i>		 * Get the actual namespace node for the target object if we</i></td></tr>
+<tr><th id="55">55</th><td><i>		 * need to. Handles these cases:</i></td></tr>
+<tr><th id="56">56</th><td><i>		 *</i></td></tr>
+<tr><th id="57">57</th><td><i>		 * 1) Null node, valid pathname from root (absolute path)</i></td></tr>
+<tr><th id="58">58</th><td><i>		 * 2) Node and valid pathname (path relative to Node)</i></td></tr>
+<tr><th id="59">59</th><td><i>		 * 3) Node, Null pathname</i></td></tr>
+<tr><th id="60">60</th><td><i>		 */</i></td></tr>
+<tr><th id="61">61</th><td>		<a class="local col2 ref" href="#2status" title='status' data-ref="2status" data-ref-filename="2status">status</a> =</td></tr>
+<tr><th id="62">62</th><td>		    <a class="ref fn" href="acnamesp.h.html#acpi_ns_get_node" title='acpi_ns_get_node' data-ref="acpi_ns_get_node" data-ref-filename="acpi_ns_get_node">acpi_ns_get_node</a>(<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::prefix_node" title='acpi_evaluate_info::prefix_node' data-ref="acpi_evaluate_info::prefix_node" data-ref-filename="acpi_evaluate_info..prefix_node">prefix_node</a>, <a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::relative_pathname" title='acpi_evaluate_info::relative_pathname' data-ref="acpi_evaluate_info::relative_pathname" data-ref-filename="acpi_evaluate_info..relative_pathname">relative_pathname</a>,</td></tr>
+<tr><th id="63">63</th><td>				     <a class="macro" href="acnamesp.h.html#27" title="0" data-ref="_M/ACPI_NS_NO_UPSEARCH">ACPI_NS_NO_UPSEARCH</a>, &amp;<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::node" title='acpi_evaluate_info::node' data-ref="acpi_evaluate_info::node" data-ref-filename="acpi_evaluate_info..node">node</a>);</td></tr>
+<tr><th id="64">64</th><td>		<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#58" title="(status)" data-ref="_M/ACPI_FAILURE">ACPI_FAILURE</a>(<a class="local col2 ref" href="#2status" title='status' data-ref="2status" data-ref-filename="2status">status</a>)) {</td></tr>
+<tr><th id="65">65</th><td>			<a class="macro" href="../../../include/acpi/acoutput.h.html#457" title="return(status)" data-ref="_M/return_ACPI_STATUS">return_ACPI_STATUS</a>(<a class="local col2 ref" href="#2status" title='status' data-ref="2status" data-ref-filename="2status">status</a>);</td></tr>
+<tr><th id="66">66</th><td>		}</td></tr>
+<tr><th id="67">67</th><td>	}</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td>	<i>/*</i></td></tr>
+<tr><th id="70">70</th><td><i>	 * For a method alias, we must grab the actual method node so that</i></td></tr>
+<tr><th id="71">71</th><td><i>	 * proper scoping context will be established before execution.</i></td></tr>
+<tr><th id="72">72</th><td><i>	 */</i></td></tr>
+<tr><th id="73">73</th><td>	<b>if</b> (<a class="ref fn" href="acnamesp.h.html#acpi_ns_get_type" title='acpi_ns_get_type' data-ref="acpi_ns_get_type" data-ref-filename="acpi_ns_get_type">acpi_ns_get_type</a>(<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::node" title='acpi_evaluate_info::node' data-ref="acpi_evaluate_info::node" data-ref-filename="acpi_evaluate_info..node">node</a>) == <a class="macro" href="../../../include/acpi/actypes.h.html#670" title="0x16" data-ref="_M/ACPI_TYPE_LOCAL_METHOD_ALIAS">ACPI_TYPE_LOCAL_METHOD_ALIAS</a>) {</td></tr>
+<tr><th id="74">74</th><td>		<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::node" title='acpi_evaluate_info::node' data-ref="acpi_evaluate_info::node" data-ref-filename="acpi_evaluate_info..node">node</a> =</td></tr>
+<tr><th id="75">75</th><td>		    <a class="macro" href="../../../include/acpi/actypes.h.html#501" title="((struct acpi_namespace_node *) (void *) (info-&gt;node-&gt;object))" data-ref="_M/ACPI_CAST_PTR">ACPI_CAST_PTR</a>(<b>struct</b> <a class="type" href="aclocal.h.html#acpi_namespace_node" title='acpi_namespace_node' data-ref="acpi_namespace_node" data-ref-filename="acpi_namespace_node">acpi_namespace_node</a>,</td></tr>
+<tr><th id="76">76</th><td>				  <a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::node" title='acpi_evaluate_info::node' data-ref="acpi_evaluate_info::node" data-ref-filename="acpi_evaluate_info..node">node</a>-&gt;<a class="ref field" href="aclocal.h.html#acpi_namespace_node::object" title='acpi_namespace_node::object' data-ref="acpi_namespace_node::object" data-ref-filename="acpi_namespace_node..object">object</a>);</td></tr>
+<tr><th id="77">77</th><td>	}</td></tr>
+<tr><th id="78">78</th><td></td></tr>
+<tr><th id="79">79</th><td>	<i>/* Complete the info block initialization */</i></td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td>	<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::return_object" title='acpi_evaluate_info::return_object' data-ref="acpi_evaluate_info::return_object" data-ref-filename="acpi_evaluate_info..return_object">return_object</a> = <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="82">82</th><td>	<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::node_flags" title='acpi_evaluate_info::node_flags' data-ref="acpi_evaluate_info::node_flags" data-ref-filename="acpi_evaluate_info..node_flags">node_flags</a> = <a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::node" title='acpi_evaluate_info::node' data-ref="acpi_evaluate_info::node" data-ref-filename="acpi_evaluate_info..node">node</a>-&gt;<a class="ref field" href="aclocal.h.html#acpi_namespace_node::flags" title='acpi_namespace_node::flags' data-ref="acpi_namespace_node::flags" data-ref-filename="acpi_namespace_node..flags">flags</a>;</td></tr>
+<tr><th id="83">83</th><td>	<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::obj_desc" title='acpi_evaluate_info::obj_desc' data-ref="acpi_evaluate_info::obj_desc" data-ref-filename="acpi_evaluate_info..obj_desc">obj_desc</a> = <a class="ref fn" href="acnamesp.h.html#acpi_ns_get_attached_object" title='acpi_ns_get_attached_object' data-ref="acpi_ns_get_attached_object" data-ref-filename="acpi_ns_get_attached_object">acpi_ns_get_attached_object</a>(<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::node" title='acpi_evaluate_info::node' data-ref="acpi_evaluate_info::node" data-ref-filename="acpi_evaluate_info..node">node</a>);</td></tr>
+<tr><th id="84">84</th><td></td></tr>
+<tr><th id="85">85</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#436" title="" data-ref="_M/ACPI_DEBUG_PRINT">ACPI_DEBUG_PRINT</a>((ACPI_DB_NAMES, <q>"%s [%p] Value %p\n"</q>,</td></tr>
+<tr><th id="86">86</th><td>			  info-&gt;relative_pathname, info-&gt;node,</td></tr>
+<tr><th id="87">87</th><td>			  acpi_ns_get_attached_object(info-&gt;node)));</td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td>	<i>/* Get info if we have a predefined name (_HID, etc.) */</i></td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td>	<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::predefined" title='acpi_evaluate_info::predefined' data-ref="acpi_evaluate_info::predefined" data-ref-filename="acpi_evaluate_info..predefined">predefined</a> =</td></tr>
+<tr><th id="92">92</th><td>	    <a class="ref fn" href="acutils.h.html#acpi_ut_match_predefined_method" title='acpi_ut_match_predefined_method' data-ref="acpi_ut_match_predefined_method" data-ref-filename="acpi_ut_match_predefined_method">acpi_ut_match_predefined_method</a>(<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::node" title='acpi_evaluate_info::node' data-ref="acpi_evaluate_info::node" data-ref-filename="acpi_evaluate_info..node">node</a>-&gt;<a class="ref field" href="aclocal.h.html#acpi_namespace_node::name" title='acpi_namespace_node::name' data-ref="acpi_namespace_node::name" data-ref-filename="acpi_namespace_node..name">name</a>.<a class="ref field" href="../../../include/acpi/actbl.h.html#acpi_name_union::ascii" title='acpi_name_union::ascii' data-ref="acpi_name_union::ascii" data-ref-filename="acpi_name_union..ascii">ascii</a>);</td></tr>
+<tr><th id="93">93</th><td></td></tr>
+<tr><th id="94">94</th><td>	<i>/* Get the full pathname to the object, for use in warning messages */</i></td></tr>
+<tr><th id="95">95</th><td></td></tr>
+<tr><th id="96">96</th><td>	<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::full_pathname" title='acpi_evaluate_info::full_pathname' data-ref="acpi_evaluate_info::full_pathname" data-ref-filename="acpi_evaluate_info..full_pathname">full_pathname</a> = <a class="ref fn" href="acnamesp.h.html#acpi_ns_get_normalized_pathname" title='acpi_ns_get_normalized_pathname' data-ref="acpi_ns_get_normalized_pathname" data-ref-filename="acpi_ns_get_normalized_pathname">acpi_ns_get_normalized_pathname</a>(<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::node" title='acpi_evaluate_info::node' data-ref="acpi_evaluate_info::node" data-ref-filename="acpi_evaluate_info..node">node</a>, <a class="macro" href="../../../include/acpi/actypes.h.html#412" title="(1 == 1)" data-ref="_M/TRUE">TRUE</a>);</td></tr>
+<tr><th id="97">97</th><td>	<b>if</b> (!<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::full_pathname" title='acpi_evaluate_info::full_pathname' data-ref="acpi_evaluate_info::full_pathname" data-ref-filename="acpi_evaluate_info..full_pathname">full_pathname</a>) {</td></tr>
+<tr><th id="98">98</th><td>		<a class="macro" href="../../../include/acpi/acoutput.h.html#457" title="return(((acpi_status) (0x0004 | 0x0000)))" data-ref="_M/return_ACPI_STATUS">return_ACPI_STATUS</a>(<a class="macro" href="../../../include/acpi/acexcep.h.html#74" title="((acpi_status) (0x0004 | 0x0000))" data-ref="_M/AE_NO_MEMORY">AE_NO_MEMORY</a>);</td></tr>
+<tr><th id="99">99</th><td>	}</td></tr>
+<tr><th id="100">100</th><td></td></tr>
+<tr><th id="101">101</th><td>	<i>/* Optional object evaluation log */</i></td></tr>
+<tr><th id="102">102</th><td></td></tr>
+<tr><th id="103">103</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#437" title="" data-ref="_M/ACPI_DEBUG_PRINT_RAW">ACPI_DEBUG_PRINT_RAW</a>((ACPI_DB_EVALUATION,</td></tr>
+<tr><th id="104">104</th><td>			      <q>"%-26s:  %s (%s)\n"</q>, <q>"   Enter evaluation"</q>,</td></tr>
+<tr><th id="105">105</th><td>			      &amp;info-&gt;full_pathname[<var>1</var>],</td></tr>
+<tr><th id="106">106</th><td>			      acpi_ut_get_type_name(info-&gt;node-&gt;type)));</td></tr>
+<tr><th id="107">107</th><td></td></tr>
+<tr><th id="108">108</th><td>	<i>/* Count the number of arguments being passed in */</i></td></tr>
+<tr><th id="109">109</th><td></td></tr>
+<tr><th id="110">110</th><td>	<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::param_count" title='acpi_evaluate_info::param_count' data-ref="acpi_evaluate_info::param_count" data-ref-filename="acpi_evaluate_info..param_count">param_count</a> = <var>0</var>;</td></tr>
+<tr><th id="111">111</th><td>	<b>if</b> (<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::parameters" title='acpi_evaluate_info::parameters' data-ref="acpi_evaluate_info::parameters" data-ref-filename="acpi_evaluate_info..parameters">parameters</a>) {</td></tr>
+<tr><th id="112">112</th><td>		<b>while</b> (<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::parameters" title='acpi_evaluate_info::parameters' data-ref="acpi_evaluate_info::parameters" data-ref-filename="acpi_evaluate_info..parameters">parameters</a>[<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::param_count" title='acpi_evaluate_info::param_count' data-ref="acpi_evaluate_info::param_count" data-ref-filename="acpi_evaluate_info..param_count">param_count</a>]) {</td></tr>
+<tr><th id="113">113</th><td>			<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::param_count" title='acpi_evaluate_info::param_count' data-ref="acpi_evaluate_info::param_count" data-ref-filename="acpi_evaluate_info..param_count">param_count</a>++;</td></tr>
+<tr><th id="114">114</th><td>		}</td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td>		<i>/* Warn on impossible argument count */</i></td></tr>
+<tr><th id="117">117</th><td></td></tr>
+<tr><th id="118">118</th><td>		<b>if</b> (<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::param_count" title='acpi_evaluate_info::param_count' data-ref="acpi_evaluate_info::param_count" data-ref-filename="acpi_evaluate_info..param_count">param_count</a> &gt; <a class="macro" href="../../../include/acpi/acconfig.h.html#129" title="7" data-ref="_M/ACPI_METHOD_NUM_ARGS">ACPI_METHOD_NUM_ARGS</a>) {</td></tr>
+<tr><th id="119">119</th><td>			<a class="macro" href="acmacros.h.html#426" title="acpi_ut_predefined_warning (_acpi_module_name, 119, info-&gt;full_pathname, 0, &quot;Excess arguments (%u) - using only %u&quot;, info-&gt;param_count, 7)" data-ref="_M/ACPI_WARN_PREDEFINED">ACPI_WARN_PREDEFINED</a>((<a class="macro" href="../../../include/acpi/acoutput.h.html#195" title="_acpi_module_name, 119" data-ref="_M/AE_INFO">AE_INFO</a>, <a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::full_pathname" title='acpi_evaluate_info::full_pathname' data-ref="acpi_evaluate_info::full_pathname" data-ref-filename="acpi_evaluate_info..full_pathname">full_pathname</a>,</td></tr>
+<tr><th id="120">120</th><td>					      <a class="macro" href="acnamesp.h.html#52" title="0" data-ref="_M/ACPI_WARN_ALWAYS">ACPI_WARN_ALWAYS</a>,</td></tr>
+<tr><th id="121">121</th><td>					      <q>"Excess arguments (%u) - using only %u"</q>,</td></tr>
+<tr><th id="122">122</th><td>					      <a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::param_count" title='acpi_evaluate_info::param_count' data-ref="acpi_evaluate_info::param_count" data-ref-filename="acpi_evaluate_info..param_count">param_count</a>,</td></tr>
+<tr><th id="123">123</th><td>					      <a class="macro" href="../../../include/acpi/acconfig.h.html#129" title="7" data-ref="_M/ACPI_METHOD_NUM_ARGS">ACPI_METHOD_NUM_ARGS</a>));</td></tr>
+<tr><th id="124">124</th><td></td></tr>
+<tr><th id="125">125</th><td>			<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::param_count" title='acpi_evaluate_info::param_count' data-ref="acpi_evaluate_info::param_count" data-ref-filename="acpi_evaluate_info..param_count">param_count</a> = <a class="macro" href="../../../include/acpi/acconfig.h.html#129" title="7" data-ref="_M/ACPI_METHOD_NUM_ARGS">ACPI_METHOD_NUM_ARGS</a>;</td></tr>
+<tr><th id="126">126</th><td>		}</td></tr>
+<tr><th id="127">127</th><td>	}</td></tr>
+<tr><th id="128">128</th><td></td></tr>
+<tr><th id="129">129</th><td>	<i>/*</i></td></tr>
+<tr><th id="130">130</th><td><i>	 * For predefined names: Check that the declared argument count</i></td></tr>
+<tr><th id="131">131</th><td><i>	 * matches the ACPI spec -- otherwise this is a BIOS error.</i></td></tr>
+<tr><th id="132">132</th><td><i>	 */</i></td></tr>
+<tr><th id="133">133</th><td>	<a class="ref fn" href="acnamesp.h.html#acpi_ns_check_acpi_compliance" title='acpi_ns_check_acpi_compliance' data-ref="acpi_ns_check_acpi_compliance" data-ref-filename="acpi_ns_check_acpi_compliance">acpi_ns_check_acpi_compliance</a>(<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::full_pathname" title='acpi_evaluate_info::full_pathname' data-ref="acpi_evaluate_info::full_pathname" data-ref-filename="acpi_evaluate_info..full_pathname">full_pathname</a>, <a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::node" title='acpi_evaluate_info::node' data-ref="acpi_evaluate_info::node" data-ref-filename="acpi_evaluate_info..node">node</a>,</td></tr>
+<tr><th id="134">134</th><td>				      <a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::predefined" title='acpi_evaluate_info::predefined' data-ref="acpi_evaluate_info::predefined" data-ref-filename="acpi_evaluate_info..predefined">predefined</a>);</td></tr>
+<tr><th id="135">135</th><td></td></tr>
+<tr><th id="136">136</th><td>	<i>/*</i></td></tr>
+<tr><th id="137">137</th><td><i>	 * For all names: Check that the incoming argument count for</i></td></tr>
+<tr><th id="138">138</th><td><i>	 * this method/object matches the actual ASL/AML definition.</i></td></tr>
+<tr><th id="139">139</th><td><i>	 */</i></td></tr>
+<tr><th id="140">140</th><td>	<a class="ref fn" href="acnamesp.h.html#acpi_ns_check_argument_count" title='acpi_ns_check_argument_count' data-ref="acpi_ns_check_argument_count" data-ref-filename="acpi_ns_check_argument_count">acpi_ns_check_argument_count</a>(<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::full_pathname" title='acpi_evaluate_info::full_pathname' data-ref="acpi_evaluate_info::full_pathname" data-ref-filename="acpi_evaluate_info..full_pathname">full_pathname</a>, <a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::node" title='acpi_evaluate_info::node' data-ref="acpi_evaluate_info::node" data-ref-filename="acpi_evaluate_info..node">node</a>,</td></tr>
+<tr><th id="141">141</th><td>				     <a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::param_count" title='acpi_evaluate_info::param_count' data-ref="acpi_evaluate_info::param_count" data-ref-filename="acpi_evaluate_info..param_count">param_count</a>, <a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::predefined" title='acpi_evaluate_info::predefined' data-ref="acpi_evaluate_info::predefined" data-ref-filename="acpi_evaluate_info..predefined">predefined</a>);</td></tr>
+<tr><th id="142">142</th><td></td></tr>
+<tr><th id="143">143</th><td>	<i>/* For predefined names: Typecheck all incoming arguments */</i></td></tr>
+<tr><th id="144">144</th><td></td></tr>
+<tr><th id="145">145</th><td>	<a class="ref fn" href="acnamesp.h.html#acpi_ns_check_argument_types" title='acpi_ns_check_argument_types' data-ref="acpi_ns_check_argument_types" data-ref-filename="acpi_ns_check_argument_types">acpi_ns_check_argument_types</a>(<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>);</td></tr>
+<tr><th id="146">146</th><td></td></tr>
+<tr><th id="147">147</th><td>	<i>/*</i></td></tr>
+<tr><th id="148">148</th><td><i>	 * Three major evaluation cases:</i></td></tr>
+<tr><th id="149">149</th><td><i>	 *</i></td></tr>
+<tr><th id="150">150</th><td><i>	 * 1) Object types that cannot be evaluated by definition</i></td></tr>
+<tr><th id="151">151</th><td><i>	 * 2) The object is a control method -- execute it</i></td></tr>
+<tr><th id="152">152</th><td><i>	 * 3) The object is not a method -- just return it's current value</i></td></tr>
+<tr><th id="153">153</th><td><i>	 */</i></td></tr>
+<tr><th id="154">154</th><td>	<b>switch</b> (<a class="ref fn" href="acnamesp.h.html#acpi_ns_get_type" title='acpi_ns_get_type' data-ref="acpi_ns_get_type" data-ref-filename="acpi_ns_get_type">acpi_ns_get_type</a>(<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::node" title='acpi_evaluate_info::node' data-ref="acpi_evaluate_info::node" data-ref-filename="acpi_evaluate_info..node">node</a>)) {</td></tr>
+<tr><th id="155">155</th><td>	<b>case</b> <a class="macro" href="../../../include/acpi/actypes.h.html#636" title="0x00" data-ref="_M/ACPI_TYPE_ANY">ACPI_TYPE_ANY</a>:</td></tr>
+<tr><th id="156">156</th><td>	<b>case</b> <a class="macro" href="../../../include/acpi/actypes.h.html#642" title="0x06" data-ref="_M/ACPI_TYPE_DEVICE">ACPI_TYPE_DEVICE</a>:</td></tr>
+<tr><th id="157">157</th><td>	<b>case</b> <a class="macro" href="../../../include/acpi/actypes.h.html#643" title="0x07" data-ref="_M/ACPI_TYPE_EVENT">ACPI_TYPE_EVENT</a>:</td></tr>
+<tr><th id="158">158</th><td>	<b>case</b> <a class="macro" href="../../../include/acpi/actypes.h.html#645" title="0x09" data-ref="_M/ACPI_TYPE_MUTEX">ACPI_TYPE_MUTEX</a>:</td></tr>
+<tr><th id="159">159</th><td>	<b>case</b> <a class="macro" href="../../../include/acpi/actypes.h.html#646" title="0x0A" data-ref="_M/ACPI_TYPE_REGION">ACPI_TYPE_REGION</a>:</td></tr>
+<tr><th id="160">160</th><td>	<b>case</b> <a class="macro" href="../../../include/acpi/actypes.h.html#649" title="0x0D" data-ref="_M/ACPI_TYPE_THERMAL">ACPI_TYPE_THERMAL</a>:</td></tr>
+<tr><th id="161">161</th><td>	<b>case</b> <a class="macro" href="../../../include/acpi/actypes.h.html#675" title="0x1B" data-ref="_M/ACPI_TYPE_LOCAL_SCOPE">ACPI_TYPE_LOCAL_SCOPE</a>:</td></tr>
+<tr><th id="162">162</th><td>		<i>/*</i></td></tr>
+<tr><th id="163">163</th><td><i>		 * 1) Disallow evaluation of these object types. For these,</i></td></tr>
+<tr><th id="164">164</th><td><i>		 *    object evaluation is undefined.</i></td></tr>
+<tr><th id="165">165</th><td><i>		 */</i></td></tr>
+<tr><th id="166">166</th><td>		<a class="macro" href="../../../include/acpi/acoutput.h.html#205" title="acpi_error (_acpi_module_name, 166, &quot;%s: This object type [%s] &quot; &quot;never contains data and cannot be evaluated&quot;, info-&gt;full_pathname, acpi_ut_get_type_name(info-&gt;node-&gt;type))" data-ref="_M/ACPI_ERROR">ACPI_ERROR</a>((<a class="macro" href="../../../include/acpi/acoutput.h.html#195" title="_acpi_module_name, 166" data-ref="_M/AE_INFO">AE_INFO</a>,</td></tr>
+<tr><th id="167">167</th><td>			    <q>"%s: This object type [%s] "</q></td></tr>
+<tr><th id="168">168</th><td>			    <q>"never contains data and cannot be evaluated"</q>,</td></tr>
+<tr><th id="169">169</th><td>			    <a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::full_pathname" title='acpi_evaluate_info::full_pathname' data-ref="acpi_evaluate_info::full_pathname" data-ref-filename="acpi_evaluate_info..full_pathname">full_pathname</a>,</td></tr>
+<tr><th id="170">170</th><td>			    <a class="ref fn" href="acutils.h.html#acpi_ut_get_type_name" title='acpi_ut_get_type_name' data-ref="acpi_ut_get_type_name" data-ref-filename="acpi_ut_get_type_name">acpi_ut_get_type_name</a>(<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::node" title='acpi_evaluate_info::node' data-ref="acpi_evaluate_info::node" data-ref-filename="acpi_evaluate_info..node">node</a>-&gt;<a class="ref field" href="aclocal.h.html#acpi_namespace_node::type" title='acpi_namespace_node::type' data-ref="acpi_namespace_node::type" data-ref-filename="acpi_namespace_node..type">type</a>)));</td></tr>
+<tr><th id="171">171</th><td></td></tr>
+<tr><th id="172">172</th><td>		<a class="local col2 ref" href="#2status" title='status' data-ref="2status" data-ref-filename="2status">status</a> = <a class="macro" href="../../../include/acpi/acexcep.h.html#78" title="((acpi_status) (0x0008 | 0x0000))" data-ref="_M/AE_TYPE">AE_TYPE</a>;</td></tr>
+<tr><th id="173">173</th><td>		<b>goto</b> <a class="lbl" href="#3cleanup" data-ref="3cleanup" data-ref-filename="3cleanup">cleanup</a>;</td></tr>
+<tr><th id="174">174</th><td></td></tr>
+<tr><th id="175">175</th><td>	<b>case</b> <a class="macro" href="../../../include/acpi/actypes.h.html#644" title="0x08" data-ref="_M/ACPI_TYPE_METHOD">ACPI_TYPE_METHOD</a>:</td></tr>
+<tr><th id="176">176</th><td>		<i>/*</i></td></tr>
+<tr><th id="177">177</th><td><i>		 * 2) Object is a control method - execute it</i></td></tr>
+<tr><th id="178">178</th><td><i>		 */</i></td></tr>
+<tr><th id="179">179</th><td></td></tr>
+<tr><th id="180">180</th><td>		<i>/* Verify that there is a method object associated with this node */</i></td></tr>
+<tr><th id="181">181</th><td></td></tr>
+<tr><th id="182">182</th><td>		<b>if</b> (!<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::obj_desc" title='acpi_evaluate_info::obj_desc' data-ref="acpi_evaluate_info::obj_desc" data-ref-filename="acpi_evaluate_info..obj_desc">obj_desc</a>) {</td></tr>
+<tr><th id="183">183</th><td>			<a class="macro" href="../../../include/acpi/acoutput.h.html#205" title="acpi_error (_acpi_module_name, 183, &quot;%s: Method has no attached sub-object&quot;, info-&gt;full_pathname)" data-ref="_M/ACPI_ERROR">ACPI_ERROR</a>((<a class="macro" href="../../../include/acpi/acoutput.h.html#195" title="_acpi_module_name, 183" data-ref="_M/AE_INFO">AE_INFO</a>,</td></tr>
+<tr><th id="184">184</th><td>				    <q>"%s: Method has no attached sub-object"</q>,</td></tr>
+<tr><th id="185">185</th><td>				    <a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::full_pathname" title='acpi_evaluate_info::full_pathname' data-ref="acpi_evaluate_info::full_pathname" data-ref-filename="acpi_evaluate_info..full_pathname">full_pathname</a>));</td></tr>
+<tr><th id="186">186</th><td>			<a class="local col2 ref" href="#2status" title='status' data-ref="2status" data-ref-filename="2status">status</a> = <a class="macro" href="../../../include/acpi/acexcep.h.html#79" title="((acpi_status) (0x0009 | 0x0000))" data-ref="_M/AE_NULL_OBJECT">AE_NULL_OBJECT</a>;</td></tr>
+<tr><th id="187">187</th><td>			<b>goto</b> <a class="lbl" href="#3cleanup" data-ref="3cleanup" data-ref-filename="3cleanup">cleanup</a>;</td></tr>
+<tr><th id="188">188</th><td>		}</td></tr>
+<tr><th id="189">189</th><td></td></tr>
+<tr><th id="190">190</th><td>		<a class="macro" href="../../../include/acpi/acoutput.h.html#436" title="" data-ref="_M/ACPI_DEBUG_PRINT">ACPI_DEBUG_PRINT</a>((ACPI_DB_EXEC,</td></tr>
+<tr><th id="191">191</th><td>				  <q>"**** Execute method [%s] at AML address %p length %X\n"</q>,</td></tr>
+<tr><th id="192">192</th><td>				  info-&gt;full_pathname,</td></tr>
+<tr><th id="193">193</th><td>				  info-&gt;obj_desc-&gt;method.aml_start + <var>1</var>,</td></tr>
+<tr><th id="194">194</th><td>				  info-&gt;obj_desc-&gt;method.aml_length - <var>1</var>));</td></tr>
+<tr><th id="195">195</th><td></td></tr>
+<tr><th id="196">196</th><td>		<i>/*</i></td></tr>
+<tr><th id="197">197</th><td><i>		 * Any namespace deletion must acquire both the namespace and</i></td></tr>
+<tr><th id="198">198</th><td><i>		 * interpreter locks to ensure that no thread is using the portion of</i></td></tr>
+<tr><th id="199">199</th><td><i>		 * the namespace that is being deleted.</i></td></tr>
+<tr><th id="200">200</th><td><i>		 *</i></td></tr>
+<tr><th id="201">201</th><td><i>		 * Execute the method via the interpreter. The interpreter is locked</i></td></tr>
+<tr><th id="202">202</th><td><i>		 * here before calling into the AML parser</i></td></tr>
+<tr><th id="203">203</th><td><i>		 */</i></td></tr>
+<tr><th id="204">204</th><td>		<a class="ref fn" href="acinterp.h.html#acpi_ex_enter_interpreter" title='acpi_ex_enter_interpreter' data-ref="acpi_ex_enter_interpreter" data-ref-filename="acpi_ex_enter_interpreter">acpi_ex_enter_interpreter</a>();</td></tr>
+<tr><th id="205">205</th><td>		<a class="local col2 ref" href="#2status" title='status' data-ref="2status" data-ref-filename="2status">status</a> = <a class="ref fn" href="acparser.h.html#acpi_ps_execute_method" title='acpi_ps_execute_method' data-ref="acpi_ps_execute_method" data-ref-filename="acpi_ps_execute_method">acpi_ps_execute_method</a>(<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>);</td></tr>
+<tr><th id="206">206</th><td>		<a class="ref fn" href="acinterp.h.html#acpi_ex_exit_interpreter" title='acpi_ex_exit_interpreter' data-ref="acpi_ex_exit_interpreter" data-ref-filename="acpi_ex_exit_interpreter">acpi_ex_exit_interpreter</a>();</td></tr>
+<tr><th id="207">207</th><td>		<b>break</b>;</td></tr>
+<tr><th id="208">208</th><td></td></tr>
+<tr><th id="209">209</th><td>	<b>default</b>:</td></tr>
+<tr><th id="210">210</th><td>		<i>/*</i></td></tr>
+<tr><th id="211">211</th><td><i>		 * 3) All other non-method objects -- get the current object value</i></td></tr>
+<tr><th id="212">212</th><td><i>		 */</i></td></tr>
+<tr><th id="213">213</th><td></td></tr>
+<tr><th id="214">214</th><td>		<i>/*</i></td></tr>
+<tr><th id="215">215</th><td><i>		 * Some objects require additional resolution steps (e.g., the Node</i></td></tr>
+<tr><th id="216">216</th><td><i>		 * may be a field that must be read, etc.) -- we can't just grab</i></td></tr>
+<tr><th id="217">217</th><td><i>		 * the object out of the node.</i></td></tr>
+<tr><th id="218">218</th><td><i>		 *</i></td></tr>
+<tr><th id="219">219</th><td><i>		 * Use resolve_node_to_value() to get the associated value.</i></td></tr>
+<tr><th id="220">220</th><td><i>		 *</i></td></tr>
+<tr><th id="221">221</th><td><i>		 * NOTE: we can get away with passing in NULL for a walk state because</i></td></tr>
+<tr><th id="222">222</th><td><i>		 * the Node is guaranteed to not be a reference to either a method</i></td></tr>
+<tr><th id="223">223</th><td><i>		 * local or a method argument (because this interface is never called</i></td></tr>
+<tr><th id="224">224</th><td><i>		 * from a running method.)</i></td></tr>
+<tr><th id="225">225</th><td><i>		 *</i></td></tr>
+<tr><th id="226">226</th><td><i>		 * Even though we do not directly invoke the interpreter for object</i></td></tr>
+<tr><th id="227">227</th><td><i>		 * resolution, we must lock it because we could access an op_region.</i></td></tr>
+<tr><th id="228">228</th><td><i>		 * The op_region access code assumes that the interpreter is locked.</i></td></tr>
+<tr><th id="229">229</th><td><i>		 */</i></td></tr>
+<tr><th id="230">230</th><td>		<a class="ref fn" href="acinterp.h.html#acpi_ex_enter_interpreter" title='acpi_ex_enter_interpreter' data-ref="acpi_ex_enter_interpreter" data-ref-filename="acpi_ex_enter_interpreter">acpi_ex_enter_interpreter</a>();</td></tr>
+<tr><th id="231">231</th><td></td></tr>
+<tr><th id="232">232</th><td>		<i>/* TBD: resolve_node_to_value has a strange interface, fix */</i></td></tr>
+<tr><th id="233">233</th><td></td></tr>
+<tr><th id="234">234</th><td>		<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::return_object" title='acpi_evaluate_info::return_object' data-ref="acpi_evaluate_info::return_object" data-ref-filename="acpi_evaluate_info..return_object">return_object</a> =</td></tr>
+<tr><th id="235">235</th><td>		    <a class="macro" href="../../../include/acpi/actypes.h.html#501" title="((union acpi_operand_object *) (void *) (info-&gt;node))" data-ref="_M/ACPI_CAST_PTR">ACPI_CAST_PTR</a>(<b>union</b> <a class="type" href="acobject.h.html#acpi_operand_object" title='acpi_operand_object' data-ref="acpi_operand_object" data-ref-filename="acpi_operand_object">acpi_operand_object</a>, <a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::node" title='acpi_evaluate_info::node' data-ref="acpi_evaluate_info::node" data-ref-filename="acpi_evaluate_info..node">node</a>);</td></tr>
+<tr><th id="236">236</th><td></td></tr>
+<tr><th id="237">237</th><td>		<a class="local col2 ref" href="#2status" title='status' data-ref="2status" data-ref-filename="2status">status</a> =</td></tr>
+<tr><th id="238">238</th><td>		    <a class="ref fn" href="acinterp.h.html#acpi_ex_resolve_node_to_value" title='acpi_ex_resolve_node_to_value' data-ref="acpi_ex_resolve_node_to_value" data-ref-filename="acpi_ex_resolve_node_to_value">acpi_ex_resolve_node_to_value</a>(<a class="macro" href="../../../include/acpi/actypes.h.html#502" title="((struct acpi_namespace_node **) (void *) (&amp;info-&gt;return_object))" data-ref="_M/ACPI_CAST_INDIRECT_PTR">ACPI_CAST_INDIRECT_PTR</a></td></tr>
+<tr><th id="239">239</th><td>						  (<b>struct</b> <a class="type" href="aclocal.h.html#acpi_namespace_node" title='acpi_namespace_node' data-ref="acpi_namespace_node" data-ref-filename="acpi_namespace_node">acpi_namespace_node</a>,</td></tr>
+<tr><th id="240">240</th><td>						   &amp;<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::return_object" title='acpi_evaluate_info::return_object' data-ref="acpi_evaluate_info::return_object" data-ref-filename="acpi_evaluate_info..return_object">return_object</a>), <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>);</td></tr>
+<tr><th id="241">241</th><td>		<a class="ref fn" href="acinterp.h.html#acpi_ex_exit_interpreter" title='acpi_ex_exit_interpreter' data-ref="acpi_ex_exit_interpreter" data-ref-filename="acpi_ex_exit_interpreter">acpi_ex_exit_interpreter</a>();</td></tr>
+<tr><th id="242">242</th><td></td></tr>
+<tr><th id="243">243</th><td>		<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#58" title="(status)" data-ref="_M/ACPI_FAILURE">ACPI_FAILURE</a>(<a class="local col2 ref" href="#2status" title='status' data-ref="2status" data-ref-filename="2status">status</a>)) {</td></tr>
+<tr><th id="244">244</th><td>			<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::return_object" title='acpi_evaluate_info::return_object' data-ref="acpi_evaluate_info::return_object" data-ref-filename="acpi_evaluate_info..return_object">return_object</a> = <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="245">245</th><td>			<b>goto</b> <a class="lbl" href="#3cleanup" data-ref="3cleanup" data-ref-filename="3cleanup">cleanup</a>;</td></tr>
+<tr><th id="246">246</th><td>		}</td></tr>
+<tr><th id="247">247</th><td></td></tr>
+<tr><th id="248">248</th><td>		<a class="macro" href="../../../include/acpi/acoutput.h.html#436" title="" data-ref="_M/ACPI_DEBUG_PRINT">ACPI_DEBUG_PRINT</a>((ACPI_DB_NAMES, <q>"Returned object %p [%s]\n"</q>,</td></tr>
+<tr><th id="249">249</th><td>				  info-&gt;return_object,</td></tr>
+<tr><th id="250">250</th><td>				  acpi_ut_get_object_type_name(info-&gt;</td></tr>
+<tr><th id="251">251</th><td>							       return_object)));</td></tr>
+<tr><th id="252">252</th><td></td></tr>
+<tr><th id="253">253</th><td>		<a class="local col2 ref" href="#2status" title='status' data-ref="2status" data-ref-filename="2status">status</a> = <a class="macro" href="../../../include/acpi/acexcep.h.html#182" title="((acpi_status) (0x0001 | 0x4000))" data-ref="_M/AE_CTRL_RETURN_VALUE">AE_CTRL_RETURN_VALUE</a>;	<i>/* Always has a "return value" */</i></td></tr>
+<tr><th id="254">254</th><td>		<b>break</b>;</td></tr>
+<tr><th id="255">255</th><td>	}</td></tr>
+<tr><th id="256">256</th><td></td></tr>
+<tr><th id="257">257</th><td>	<i>/*</i></td></tr>
+<tr><th id="258">258</th><td><i>	 * For predefined names, check the return value against the ACPI</i></td></tr>
+<tr><th id="259">259</th><td><i>	 * specification. Some incorrect return value types are repaired.</i></td></tr>
+<tr><th id="260">260</th><td><i>	 */</i></td></tr>
+<tr><th id="261">261</th><td>	(<em>void</em>)<a class="ref fn" href="acnamesp.h.html#acpi_ns_check_return_value" title='acpi_ns_check_return_value' data-ref="acpi_ns_check_return_value" data-ref-filename="acpi_ns_check_return_value">acpi_ns_check_return_value</a>(<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::node" title='acpi_evaluate_info::node' data-ref="acpi_evaluate_info::node" data-ref-filename="acpi_evaluate_info..node">node</a>, <a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>, <a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::param_count" title='acpi_evaluate_info::param_count' data-ref="acpi_evaluate_info::param_count" data-ref-filename="acpi_evaluate_info..param_count">param_count</a>,</td></tr>
+<tr><th id="262">262</th><td>					 <a class="local col2 ref" href="#2status" title='status' data-ref="2status" data-ref-filename="2status">status</a>, &amp;<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::return_object" title='acpi_evaluate_info::return_object' data-ref="acpi_evaluate_info::return_object" data-ref-filename="acpi_evaluate_info..return_object">return_object</a>);</td></tr>
+<tr><th id="263">263</th><td></td></tr>
+<tr><th id="264">264</th><td>	<i>/* Check if there is a return value that must be dealt with */</i></td></tr>
+<tr><th id="265">265</th><td></td></tr>
+<tr><th id="266">266</th><td>	<b>if</b> (<a class="local col2 ref" href="#2status" title='status' data-ref="2status" data-ref-filename="2status">status</a> == <a class="macro" href="../../../include/acpi/acexcep.h.html#182" title="((acpi_status) (0x0001 | 0x4000))" data-ref="_M/AE_CTRL_RETURN_VALUE">AE_CTRL_RETURN_VALUE</a>) {</td></tr>
+<tr><th id="267">267</th><td></td></tr>
+<tr><th id="268">268</th><td>		<i>/* If caller does not want the return value, delete it */</i></td></tr>
+<tr><th id="269">269</th><td></td></tr>
+<tr><th id="270">270</th><td>		<b>if</b> (<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::flags" title='acpi_evaluate_info::flags' data-ref="acpi_evaluate_info::flags" data-ref-filename="acpi_evaluate_info..flags">flags</a> &amp; <a class="macro" href="acstruct.h.html#178" title="1" data-ref="_M/ACPI_IGNORE_RETURN_VALUE">ACPI_IGNORE_RETURN_VALUE</a>) {</td></tr>
+<tr><th id="271">271</th><td>			<a class="ref fn" href="acutils.h.html#acpi_ut_remove_reference" title='acpi_ut_remove_reference' data-ref="acpi_ut_remove_reference" data-ref-filename="acpi_ut_remove_reference">acpi_ut_remove_reference</a>(<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::return_object" title='acpi_evaluate_info::return_object' data-ref="acpi_evaluate_info::return_object" data-ref-filename="acpi_evaluate_info..return_object">return_object</a>);</td></tr>
+<tr><th id="272">272</th><td>			<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::return_object" title='acpi_evaluate_info::return_object' data-ref="acpi_evaluate_info::return_object" data-ref-filename="acpi_evaluate_info..return_object">return_object</a> = <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="273">273</th><td>		}</td></tr>
+<tr><th id="274">274</th><td></td></tr>
+<tr><th id="275">275</th><td>		<i>/* Map AE_CTRL_RETURN_VALUE to AE_OK, we are done with it */</i></td></tr>
+<tr><th id="276">276</th><td></td></tr>
+<tr><th id="277">277</th><td>		<a class="local col2 ref" href="#2status" title='status' data-ref="2status" data-ref-filename="2status">status</a> = <a class="macro" href="../../../include/acpi/acexcep.h.html#60" title="(acpi_status) 0x0000" data-ref="_M/AE_OK">AE_OK</a>;</td></tr>
+<tr><th id="278">278</th><td>	} <b>else</b> <b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#58" title="(status)" data-ref="_M/ACPI_FAILURE">ACPI_FAILURE</a>(<a class="local col2 ref" href="#2status" title='status' data-ref="2status" data-ref-filename="2status">status</a>)) {</td></tr>
+<tr><th id="279">279</th><td></td></tr>
+<tr><th id="280">280</th><td>		<i>/* If return_object exists, delete it */</i></td></tr>
+<tr><th id="281">281</th><td></td></tr>
+<tr><th id="282">282</th><td>		<b>if</b> (<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::return_object" title='acpi_evaluate_info::return_object' data-ref="acpi_evaluate_info::return_object" data-ref-filename="acpi_evaluate_info..return_object">return_object</a>) {</td></tr>
+<tr><th id="283">283</th><td>			<a class="ref fn" href="acutils.h.html#acpi_ut_remove_reference" title='acpi_ut_remove_reference' data-ref="acpi_ut_remove_reference" data-ref-filename="acpi_ut_remove_reference">acpi_ut_remove_reference</a>(<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::return_object" title='acpi_evaluate_info::return_object' data-ref="acpi_evaluate_info::return_object" data-ref-filename="acpi_evaluate_info..return_object">return_object</a>);</td></tr>
+<tr><th id="284">284</th><td>			<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::return_object" title='acpi_evaluate_info::return_object' data-ref="acpi_evaluate_info::return_object" data-ref-filename="acpi_evaluate_info..return_object">return_object</a> = <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="285">285</th><td>		}</td></tr>
+<tr><th id="286">286</th><td>	}</td></tr>
+<tr><th id="287">287</th><td></td></tr>
+<tr><th id="288">288</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#436" title="" data-ref="_M/ACPI_DEBUG_PRINT">ACPI_DEBUG_PRINT</a>((ACPI_DB_NAMES,</td></tr>
+<tr><th id="289">289</th><td>			  <q>"*** Completed evaluation of object %s ***\n"</q>,</td></tr>
+<tr><th id="290">290</th><td>			  info-&gt;relative_pathname));</td></tr>
+<tr><th id="291">291</th><td></td></tr>
+<tr><th id="292">292</th><td><dfn class="lbl" id="3cleanup" data-ref="3cleanup" data-ref-filename="3cleanup">cleanup</dfn>:</td></tr>
+<tr><th id="293">293</th><td>	<i>/* Optional object evaluation log */</i></td></tr>
+<tr><th id="294">294</th><td></td></tr>
+<tr><th id="295">295</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#437" title="" data-ref="_M/ACPI_DEBUG_PRINT_RAW">ACPI_DEBUG_PRINT_RAW</a>((ACPI_DB_EVALUATION,</td></tr>
+<tr><th id="296">296</th><td>			      <q>"%-26s:  %s\n"</q>, <q>"   Exit evaluation"</q>,</td></tr>
+<tr><th id="297">297</th><td>			      &amp;info-&gt;full_pathname[<var>1</var>]));</td></tr>
+<tr><th id="298">298</th><td></td></tr>
+<tr><th id="299">299</th><td>	<i>/*</i></td></tr>
+<tr><th id="300">300</th><td><i>	 * Namespace was unlocked by the handling acpi_ns* function, so we</i></td></tr>
+<tr><th id="301">301</th><td><i>	 * just free the pathname and return</i></td></tr>
+<tr><th id="302">302</th><td><i>	 */</i></td></tr>
+<tr><th id="303">303</th><td>	<a class="macro" href="../../../include/acpi/actypes.h.html#350" title="acpi_os_free (info-&gt;full_pathname)" data-ref="_M/ACPI_FREE">ACPI_FREE</a>(<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::full_pathname" title='acpi_evaluate_info::full_pathname' data-ref="acpi_evaluate_info::full_pathname" data-ref-filename="acpi_evaluate_info..full_pathname">full_pathname</a>);</td></tr>
+<tr><th id="304">304</th><td>	<a class="local col1 ref" href="#1info" title='info' data-ref="1info" data-ref-filename="1info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::full_pathname" title='acpi_evaluate_info::full_pathname' data-ref="acpi_evaluate_info::full_pathname" data-ref-filename="acpi_evaluate_info..full_pathname">full_pathname</a> = <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="305">305</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#457" title="return(status)" data-ref="_M/return_ACPI_STATUS">return_ACPI_STATUS</a>(<a class="local col2 ref" href="#2status" title='status' data-ref="2status" data-ref-filename="2status">status</a>);</td></tr>
+<tr><th id="306">306</th><td>}</td></tr>
+<tr><th id="307">307</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

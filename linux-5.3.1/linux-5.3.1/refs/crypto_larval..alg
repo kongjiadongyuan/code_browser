@@ -1,0 +1,23 @@
+<dec f='linux-5.3.1/crypto/internal.h' l='28' type='struct crypto_alg'/>
+<offset>0</offset>
+<use f='linux-5.3.1/crypto/algapi.c' l='234' u='m' c='__crypto_register_alg'/>
+<use f='linux-5.3.1/crypto/algapi.c' l='235' u='m' c='__crypto_register_alg'/>
+<use f='linux-5.3.1/crypto/algapi.c' l='237' u='m' c='__crypto_register_alg'/>
+<use f='linux-5.3.1/crypto/algapi.c' l='240' u='m' c='__crypto_register_alg'/>
+<use f='linux-5.3.1/crypto/algapi.c' l='353' u='m' c='crypto_wait_for_test'/>
+<use f='linux-5.3.1/crypto/algapi.c' l='362' u='a' c='crypto_wait_for_test'/>
+<use f='linux-5.3.1/crypto/algboss.c' l='85' u='a' c='cryptomgr_probe'/>
+<use f='linux-5.3.1/crypto/algboss.c' l='94' u='m' c='cryptomgr_schedule_probe'/>
+<use f='linux-5.3.1/crypto/algboss.c' l='177' u='m' c='cryptomgr_schedule_probe'/>
+<use f='linux-5.3.1/crypto/algboss.c' l='181' u='m' c='cryptomgr_schedule_probe'/>
+<use f='linux-5.3.1/crypto/algboss.c' l='184' u='a' c='cryptomgr_schedule_probe'/>
+<use f='linux-5.3.1/crypto/algboss.c' l='196' u='a' c='cryptomgr_schedule_probe'/>
+<use f='linux-5.3.1/crypto/api.c' l='52' u='m' c='crypto_is_test_larval'/>
+<use f='linux-5.3.1/crypto/api.c' l='114' u='m' c='crypto_larval_alloc'/>
+<use f='linux-5.3.1/crypto/api.c' l='115' u='m' c='crypto_larval_alloc'/>
+<use f='linux-5.3.1/crypto/api.c' l='116' u='m' c='crypto_larval_alloc'/>
+<use f='linux-5.3.1/crypto/api.c' l='118' u='m' c='crypto_larval_alloc'/>
+<use f='linux-5.3.1/crypto/api.c' l='135' u='m' c='crypto_larval_add'/>
+<use f='linux-5.3.1/crypto/api.c' l='140' u='a' c='crypto_larval_add'/>
+<use f='linux-5.3.1/crypto/api.c' l='145' u='a' c='crypto_larval_add'/>
+<use f='linux-5.3.1/crypto/api.c' l='186' u='a' c='crypto_larval_wait'/>

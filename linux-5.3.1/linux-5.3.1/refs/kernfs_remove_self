@@ -1,0 +1,29 @@
+<dec f='linux-5.3.1/include/linux/kernfs.h' l='363' type='bool kernfs_remove_self(struct kernfs_node * kn)'/>
+<def f='linux-5.3.1/fs/kernfs/dir.c' l='1437' ll='1486' type='bool kernfs_remove_self(struct kernfs_node * kn)'/>
+<doc f='linux-5.3.1/fs/kernfs/dir.c' l='1411'>/**
+ * kernfs_remove_self - remove a kernfs_node from its own method
+ * @kn: the self kernfs_node to remove
+ *
+ * The caller must be running off of a kernfs operation which is invoked
+ * with an active reference - e.g. one of kernfs_ops.  This can be used to
+ * implement a file operation which deletes itself.
+ *
+ * For example, the &quot;delete&quot; file for a sysfs device directory can be
+ * implemented by invoking kernfs_remove_self() on the &quot;delete&quot; file
+ * itself.  This function breaks the circular dependency of trying to
+ * deactivate self while holding an active ref itself.  It isn&apos;t necessary
+ * to modify the usual removal path to use kernfs_remove_self().  The
+ * &quot;delete&quot; implementation can simply invoke kernfs_remove_self() on self
+ * before proceeding with the usual removal path.  kernfs will ignore later
+ * kernfs_remove() on self.
+ *
+ * kernfs_remove_self() can be called multiple times concurrently on the
+ * same kernfs_node.  Only the first one actually performs removal and
+ * returns %true.  All others will wait until the kernfs operation which
+ * won self-removal finishes and return %false.  Note that the losers wait
+ * for the completion of not only the winning kernfs_remove_self() but also
+ * the whole kernfs_ops which won the arbitration.  This can be used to
+ * guarantee, for example, all concurrent writes to a &quot;delete&quot; file to
+ * finish only after the whole operation is complete.
+ */</doc>
+<use f='linux-5.3.1/fs/sysfs/file.c' l='490' u='c' c='sysfs_remove_file_self'/>

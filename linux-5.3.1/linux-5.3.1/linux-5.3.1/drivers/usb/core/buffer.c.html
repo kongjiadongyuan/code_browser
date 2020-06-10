@@ -1,0 +1,190 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>buffer.c source code [linux-5.3.1/drivers/usb/core/buffer.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/drivers/usb/core/buffer.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>linux-5.3.1</a>/<a href='../..'>drivers</a>/<a href='..'>usb</a>/<a href='./'>core</a>/<a href='buffer.c.html'>buffer.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * DMA memory management for framework level HCD code (hc_driver)</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * This implementation plugs in through generic "usb_bus" level methods,</i></td></tr>
+<tr><th id="6">6</th><td><i> * and should work with all USB controllers, regardless of bus type.</i></td></tr>
+<tr><th id="7">7</th><td><i> *</i></td></tr>
+<tr><th id="8">8</th><td><i> * Released under the GPLv2 only.</i></td></tr>
+<tr><th id="9">9</th><td><i> */</i></td></tr>
+<tr><th id="10">10</th><td></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../../../include/linux/module.h.html">&lt;linux/module.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="../../../include/linux/kernel.h.html">&lt;linux/kernel.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="../../../include/linux/slab.h.html">&lt;linux/slab.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="../../../include/linux/device.h.html">&lt;linux/device.h&gt;</a></u></td></tr>
+<tr><th id="15">15</th><td><u>#include <a href="../../../include/linux/mm.h.html">&lt;linux/mm.h&gt;</a></u></td></tr>
+<tr><th id="16">16</th><td><u>#include <a href="../../../include/linux/io.h.html">&lt;linux/io.h&gt;</a></u></td></tr>
+<tr><th id="17">17</th><td><u>#include <a href="../../../include/linux/dma-mapping.h.html">&lt;linux/dma-mapping.h&gt;</a></u></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../../../include/linux/dmapool.h.html">&lt;linux/dmapool.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../../include/linux/genalloc.h.html">&lt;linux/genalloc.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../../include/linux/usb.h.html">&lt;linux/usb.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../../include/linux/usb/hcd.h.html">&lt;linux/usb/hcd.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td></td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td><i>/*</i></td></tr>
+<tr><th id="25">25</th><td><i> * DMA-Coherent Buffers</i></td></tr>
+<tr><th id="26">26</th><td><i> */</i></td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td><i  data-doc="pool_max">/* FIXME tune these based on pool statistics ... */</i></td></tr>
+<tr><th id="29">29</th><td><em>static</em> <a class="typedef" href="../../../include/linux/types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="tu decl def" id="pool_max" title='pool_max' data-type='size_t [4]' data-ref="pool_max" data-ref-filename="pool_max">pool_max</dfn>[<a class="macro" href="../../../include/linux/usb/hcd.h.html#202" title="4" data-ref="_M/HCD_BUFFER_POOLS">HCD_BUFFER_POOLS</a>] = {</td></tr>
+<tr><th id="30">30</th><td>	<var>32</var>, <var>128</var>, <var>512</var>, <var>2048</var>,</td></tr>
+<tr><th id="31">31</th><td>};</td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td><em>void</em> <a class="macro" href="../../../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="decl def fn" id="usb_init_pool_max" title='usb_init_pool_max' data-ref="usb_init_pool_max" data-ref-filename="usb_init_pool_max">usb_init_pool_max</dfn>(<em>void</em>)</td></tr>
+<tr><th id="34">34</th><td>{</td></tr>
+<tr><th id="35">35</th><td>	<i>/*</i></td></tr>
+<tr><th id="36">36</th><td><i>	 * The pool_max values must never be smaller than</i></td></tr>
+<tr><th id="37">37</th><td><i>	 * ARCH_KMALLOC_MINALIGN.</i></td></tr>
+<tr><th id="38">38</th><td><i>	 */</i></td></tr>
+<tr><th id="39">39</th><td>	<b>if</b> (<a class="macro" href="../../../include/linux/slab.h.html#212" title="__alignof__(unsigned long long)" data-ref="_M/ARCH_KMALLOC_MINALIGN">ARCH_KMALLOC_MINALIGN</a> &lt;= <var>32</var>)</td></tr>
+<tr><th id="40">40</th><td>		;			<i>/* Original value is okay */</i></td></tr>
+<tr><th id="41">41</th><td>	<b>else</b> <b>if</b> (<a class="macro" href="../../../include/linux/slab.h.html#212" title="__alignof__(unsigned long long)" data-ref="_M/ARCH_KMALLOC_MINALIGN">ARCH_KMALLOC_MINALIGN</a> &lt;= <var>64</var>)</td></tr>
+<tr><th id="42">42</th><td>		<a class="tu ref" href="#pool_max" title='pool_max' data-use='w' data-ref="pool_max" data-ref-filename="pool_max">pool_max</a>[<var>0</var>] = <var>64</var>;</td></tr>
+<tr><th id="43">43</th><td>	<b>else</b> <b>if</b> (<a class="macro" href="../../../include/linux/slab.h.html#212" title="__alignof__(unsigned long long)" data-ref="_M/ARCH_KMALLOC_MINALIGN">ARCH_KMALLOC_MINALIGN</a> &lt;= <var>128</var>)</td></tr>
+<tr><th id="44">44</th><td>		<a class="tu ref" href="#pool_max" title='pool_max' data-use='w' data-ref="pool_max" data-ref-filename="pool_max">pool_max</a>[<var>0</var>] = <var>0</var>;	<i>/* Don't use this pool */</i></td></tr>
+<tr><th id="45">45</th><td>	<b>else</b></td></tr>
+<tr><th id="46">46</th><td>		<a class="macro" href="../../../include/linux/build_bug.h.html#59" title="do { extern void __compiletime_assert_46(void) ; if (!(!(1))) __compiletime_assert_46(); } while (0)" data-ref="_M/BUILD_BUG">BUILD_BUG</a>();		<i>/* We don't allow this */</i></td></tr>
+<tr><th id="47">47</th><td>}</td></tr>
+<tr><th id="48">48</th><td></td></tr>
+<tr><th id="49">49</th><td><i>/* SETUP primitives */</i></td></tr>
+<tr><th id="50">50</th><td></td></tr>
+<tr><th id="51">51</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="52">52</th><td><i class="doc"> * hcd_buffer_create - initialize buffer pools</i></td></tr>
+<tr><th id="53">53</th><td><i class="doc"> *<span class="command"> @hcd</span>: the bus whose buffer pools are to be initialized</i></td></tr>
+<tr><th id="54">54</th><td><i class="doc"> * Context: !in_interrupt()</i></td></tr>
+<tr><th id="55">55</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="56">56</th><td><i class="doc"> * Call this as part of initializing a host controller that uses the dma</i></td></tr>
+<tr><th id="57">57</th><td><i class="doc"> * memory allocators.  It initializes some pools of dma-coherent memory that</i></td></tr>
+<tr><th id="58">58</th><td><i class="doc"> * will be shared by all drivers using that controller.</i></td></tr>
+<tr><th id="59">59</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="60">60</th><td><i class="doc"> * Call hcd_buffer_destroy() to clean up after using those pools.</i></td></tr>
+<tr><th id="61">61</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="62">62</th><td><i class="doc"> * Return: 0 if successful. A negative errno value otherwise.</i></td></tr>
+<tr><th id="63">63</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="64">64</th><td><em>int</em> <dfn class="decl def fn" id="hcd_buffer_create" title='hcd_buffer_create' data-ref="hcd_buffer_create" data-ref-filename="hcd_buffer_create">hcd_buffer_create</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/usb/hcd.h.html#usb_hcd" title='usb_hcd' data-ref="usb_hcd" data-ref-filename="usb_hcd">usb_hcd</a> *<dfn class="local col7 decl" id="177hcd" title='hcd' data-type='struct usb_hcd *' data-ref="177hcd" data-ref-filename="177hcd">hcd</dfn>)</td></tr>
+<tr><th id="65">65</th><td>{</td></tr>
+<tr><th id="66">66</th><td>	<em>char</em>		<dfn class="local col8 decl" id="178name" title='name' data-type='char [16]' data-ref="178name" data-ref-filename="178name">name</dfn>[<var>16</var>];</td></tr>
+<tr><th id="67">67</th><td>	<em>int</em>		<dfn class="local col9 decl" id="179i" title='i' data-type='int' data-ref="179i" data-ref-filename="179i">i</dfn>, <dfn class="local col0 decl" id="180size" title='size' data-type='int' data-ref="180size" data-ref-filename="180size">size</dfn>;</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td>	<b>if</b> (<a class="local col7 ref" href="#177hcd" title='hcd' data-ref="177hcd" data-ref-filename="177hcd">hcd</a>-&gt;<a class="ref field" href="../../../include/linux/usb/hcd.h.html#usb_hcd::localmem_pool" title='usb_hcd::localmem_pool' data-ref="usb_hcd::localmem_pool" data-ref-filename="usb_hcd..localmem_pool">localmem_pool</a> || !<a class="macro" href="../../../include/linux/usb/hcd.h.html#425" title="(1 &amp;&amp; (hcd)-&gt;self.uses_dma)" data-ref="_M/hcd_uses_dma">hcd_uses_dma</a>(<a class="local col7 ref" href="#177hcd" title='hcd' data-ref="177hcd" data-ref-filename="177hcd">hcd</a>))</td></tr>
+<tr><th id="70">70</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="71">71</th><td></td></tr>
+<tr><th id="72">72</th><td>	<b>for</b> (<a class="local col9 ref" href="#179i" title='i' data-ref="179i" data-ref-filename="179i">i</a> = <var>0</var>; <a class="local col9 ref" href="#179i" title='i' data-ref="179i" data-ref-filename="179i">i</a> &lt; <a class="macro" href="../../../include/linux/usb/hcd.h.html#202" title="4" data-ref="_M/HCD_BUFFER_POOLS">HCD_BUFFER_POOLS</a>; <a class="local col9 ref" href="#179i" title='i' data-ref="179i" data-ref-filename="179i">i</a>++) {</td></tr>
+<tr><th id="73">73</th><td>		<a class="local col0 ref" href="#180size" title='size' data-ref="180size" data-ref-filename="180size">size</a> = <a class="tu ref" href="#pool_max" title='pool_max' data-use='r' data-ref="pool_max" data-ref-filename="pool_max">pool_max</a>[<a class="local col9 ref" href="#179i" title='i' data-ref="179i" data-ref-filename="179i">i</a>];</td></tr>
+<tr><th id="74">74</th><td>		<b>if</b> (!<a class="local col0 ref" href="#180size" title='size' data-ref="180size" data-ref-filename="180size">size</a>)</td></tr>
+<tr><th id="75">75</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="76">76</th><td>		<a class="ref fn" href="../../../include/linux/kernel.h.html#snprintf" title='snprintf' data-ref="snprintf" data-ref-filename="snprintf">snprintf</a>(<a class="local col8 ref" href="#178name" title='name' data-ref="178name" data-ref-filename="178name">name</a>, <b>sizeof</b>(<a class="local col8 ref" href="#178name" title='name' data-ref="178name" data-ref-filename="178name">name</a>), <q>"buffer-%d"</q>, <a class="local col0 ref" href="#180size" title='size' data-ref="180size" data-ref-filename="180size">size</a>);</td></tr>
+<tr><th id="77">77</th><td>		<a class="local col7 ref" href="#177hcd" title='hcd' data-ref="177hcd" data-ref-filename="177hcd">hcd</a>-&gt;<a class="ref field" href="../../../include/linux/usb/hcd.h.html#usb_hcd::pool" title='usb_hcd::pool' data-ref="usb_hcd::pool" data-ref-filename="usb_hcd..pool">pool</a>[<a class="local col9 ref" href="#179i" title='i' data-ref="179i" data-ref-filename="179i">i</a>] = <a class="ref fn" href="../../../include/linux/dmapool.h.html#dma_pool_create" title='dma_pool_create' data-ref="dma_pool_create" data-ref-filename="dma_pool_create">dma_pool_create</a>(<a class="local col8 ref" href="#178name" title='name' data-ref="178name" data-ref-filename="178name">name</a>, <a class="local col7 ref" href="#177hcd" title='hcd' data-ref="177hcd" data-ref-filename="177hcd">hcd</a>-&gt;<a class="ref field" href="../../../include/linux/usb/hcd.h.html#usb_hcd::self" title='usb_hcd::self' data-ref="usb_hcd::self" data-ref-filename="usb_hcd..self">self</a>.<a class="ref field" href="../../../include/linux/usb.h.html#usb_bus::sysdev" title='usb_bus::sysdev' data-ref="usb_bus::sysdev" data-ref-filename="usb_bus..sysdev">sysdev</a>,</td></tr>
+<tr><th id="78">78</th><td>				<a class="local col0 ref" href="#180size" title='size' data-ref="180size" data-ref-filename="180size">size</a>, <a class="local col0 ref" href="#180size" title='size' data-ref="180size" data-ref-filename="180size">size</a>, <var>0</var>);</td></tr>
+<tr><th id="79">79</th><td>		<b>if</b> (!<a class="local col7 ref" href="#177hcd" title='hcd' data-ref="177hcd" data-ref-filename="177hcd">hcd</a>-&gt;<a class="ref field" href="../../../include/linux/usb/hcd.h.html#usb_hcd::pool" title='usb_hcd::pool' data-ref="usb_hcd::pool" data-ref-filename="usb_hcd..pool">pool</a>[<a class="local col9 ref" href="#179i" title='i' data-ref="179i" data-ref-filename="179i">i</a>]) {</td></tr>
+<tr><th id="80">80</th><td>			<a class="ref fn" href="#hcd_buffer_destroy" title='hcd_buffer_destroy' data-ref="hcd_buffer_destroy" data-ref-filename="hcd_buffer_destroy">hcd_buffer_destroy</a>(<a class="local col7 ref" href="#177hcd" title='hcd' data-ref="177hcd" data-ref-filename="177hcd">hcd</a>);</td></tr>
+<tr><th id="81">81</th><td>			<b>return</b> -<a class="macro" href="../../../include/uapi/asm-generic/errno-base.h.html#16" title="12" data-ref="_M/ENOMEM">ENOMEM</a>;</td></tr>
+<tr><th id="82">82</th><td>		}</td></tr>
+<tr><th id="83">83</th><td>	}</td></tr>
+<tr><th id="84">84</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="85">85</th><td>}</td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td></td></tr>
+<tr><th id="88">88</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="89">89</th><td><i class="doc"> * hcd_buffer_destroy - deallocate buffer pools</i></td></tr>
+<tr><th id="90">90</th><td><i class="doc"> *<span class="command"> @hcd</span>: the bus whose buffer pools are to be destroyed</i></td></tr>
+<tr><th id="91">91</th><td><i class="doc"> * Context: !in_interrupt()</i></td></tr>
+<tr><th id="92">92</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="93">93</th><td><i class="doc"> * This frees the buffer pools created by hcd_buffer_create().</i></td></tr>
+<tr><th id="94">94</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="95">95</th><td><em>void</em> <dfn class="decl def fn" id="hcd_buffer_destroy" title='hcd_buffer_destroy' data-ref="hcd_buffer_destroy" data-ref-filename="hcd_buffer_destroy">hcd_buffer_destroy</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/usb/hcd.h.html#usb_hcd" title='usb_hcd' data-ref="usb_hcd" data-ref-filename="usb_hcd">usb_hcd</a> *<dfn class="local col1 decl" id="181hcd" title='hcd' data-type='struct usb_hcd *' data-ref="181hcd" data-ref-filename="181hcd">hcd</dfn>)</td></tr>
+<tr><th id="96">96</th><td>{</td></tr>
+<tr><th id="97">97</th><td>	<em>int</em> <dfn class="local col2 decl" id="182i" title='i' data-type='int' data-ref="182i" data-ref-filename="182i">i</dfn>;</td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td>	<b>if</b> (!<a class="macro" href="../../../include/linux/kconfig.h.html#71" title="1" data-ref="_M/IS_ENABLED">IS_ENABLED</a>(<a class="macro" href="../../../include/generated/autoconf.h.html#945" title="1" data-ref="_M/CONFIG_HAS_DMA">CONFIG_HAS_DMA</a>))</td></tr>
+<tr><th id="100">100</th><td>		<b>return</b>;</td></tr>
+<tr><th id="101">101</th><td></td></tr>
+<tr><th id="102">102</th><td>	<b>for</b> (<a class="local col2 ref" href="#182i" title='i' data-ref="182i" data-ref-filename="182i">i</a> = <var>0</var>; <a class="local col2 ref" href="#182i" title='i' data-ref="182i" data-ref-filename="182i">i</a> &lt; <a class="macro" href="../../../include/linux/usb/hcd.h.html#202" title="4" data-ref="_M/HCD_BUFFER_POOLS">HCD_BUFFER_POOLS</a>; <a class="local col2 ref" href="#182i" title='i' data-ref="182i" data-ref-filename="182i">i</a>++) {</td></tr>
+<tr><th id="103">103</th><td>		<a class="ref fn" href="../../../include/linux/dmapool.h.html#dma_pool_destroy" title='dma_pool_destroy' data-ref="dma_pool_destroy" data-ref-filename="dma_pool_destroy">dma_pool_destroy</a>(<a class="local col1 ref" href="#181hcd" title='hcd' data-ref="181hcd" data-ref-filename="181hcd">hcd</a>-&gt;<a class="ref field" href="../../../include/linux/usb/hcd.h.html#usb_hcd::pool" title='usb_hcd::pool' data-ref="usb_hcd::pool" data-ref-filename="usb_hcd..pool">pool</a>[<a class="local col2 ref" href="#182i" title='i' data-ref="182i" data-ref-filename="182i">i</a>]);</td></tr>
+<tr><th id="104">104</th><td>		<a class="local col1 ref" href="#181hcd" title='hcd' data-ref="181hcd" data-ref-filename="181hcd">hcd</a>-&gt;<a class="ref field" href="../../../include/linux/usb/hcd.h.html#usb_hcd::pool" title='usb_hcd::pool' data-ref="usb_hcd::pool" data-ref-filename="usb_hcd..pool">pool</a>[<a class="local col2 ref" href="#182i" title='i' data-ref="182i" data-ref-filename="182i">i</a>] = <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="105">105</th><td>	}</td></tr>
+<tr><th id="106">106</th><td>}</td></tr>
+<tr><th id="107">107</th><td></td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td><i>/* sometimes alloc/free could use kmalloc with GFP_DMA, for</i></td></tr>
+<tr><th id="110">110</th><td><i> * better sharing and to leverage mm/slab.c intelligence.</i></td></tr>
+<tr><th id="111">111</th><td><i> */</i></td></tr>
+<tr><th id="112">112</th><td></td></tr>
+<tr><th id="113">113</th><td><em>void</em> *<dfn class="decl def fn" id="hcd_buffer_alloc" title='hcd_buffer_alloc' data-ref="hcd_buffer_alloc" data-ref-filename="hcd_buffer_alloc">hcd_buffer_alloc</dfn>(</td></tr>
+<tr><th id="114">114</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/usb.h.html#usb_bus" title='usb_bus' data-ref="usb_bus" data-ref-filename="usb_bus">usb_bus</a>		*<dfn class="local col3 decl" id="183bus" title='bus' data-type='struct usb_bus *' data-ref="183bus" data-ref-filename="183bus">bus</dfn>,</td></tr>
+<tr><th id="115">115</th><td>	<a class="typedef" href="../../../include/linux/types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a>			<dfn class="local col4 decl" id="184size" title='size' data-type='size_t' data-ref="184size" data-ref-filename="184size">size</dfn>,</td></tr>
+<tr><th id="116">116</th><td>	<a class="typedef" href="../../../include/linux/types.h.html#gfp_t" title='gfp_t' data-type='unsigned int' data-ref="gfp_t" data-ref-filename="gfp_t">gfp_t</a>			<dfn class="local col5 decl" id="185mem_flags" title='mem_flags' data-type='gfp_t' data-ref="185mem_flags" data-ref-filename="185mem_flags">mem_flags</dfn>,</td></tr>
+<tr><th id="117">117</th><td>	<a class="typedef" href="../../../include/linux/types.h.html#dma_addr_t" title='dma_addr_t' data-type='u64' data-ref="dma_addr_t" data-ref-filename="dma_addr_t">dma_addr_t</a>		*<dfn class="local col6 decl" id="186dma" title='dma' data-type='dma_addr_t *' data-ref="186dma" data-ref-filename="186dma">dma</dfn></td></tr>
+<tr><th id="118">118</th><td>)</td></tr>
+<tr><th id="119">119</th><td>{</td></tr>
+<tr><th id="120">120</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/usb/hcd.h.html#usb_hcd" title='usb_hcd' data-ref="usb_hcd" data-ref-filename="usb_hcd">usb_hcd</a>		*<dfn class="local col7 decl" id="187hcd" title='hcd' data-type='struct usb_hcd *' data-ref="187hcd" data-ref-filename="187hcd">hcd</dfn> = <a class="ref fn" href="../../../include/linux/usb/hcd.h.html#bus_to_hcd" title='bus_to_hcd' data-ref="bus_to_hcd" data-ref-filename="bus_to_hcd">bus_to_hcd</a>(<a class="local col3 ref" href="#183bus" title='bus' data-ref="183bus" data-ref-filename="183bus">bus</a>);</td></tr>
+<tr><th id="121">121</th><td>	<em>int</em>			<dfn class="local col8 decl" id="188i" title='i' data-type='int' data-ref="188i" data-ref-filename="188i">i</dfn>;</td></tr>
+<tr><th id="122">122</th><td></td></tr>
+<tr><th id="123">123</th><td>	<b>if</b> (<a class="local col4 ref" href="#184size" title='size' data-ref="184size" data-ref-filename="184size">size</a> == <var>0</var>)</td></tr>
+<tr><th id="124">124</th><td>		<b>return</b> <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="125">125</th><td></td></tr>
+<tr><th id="126">126</th><td>	<b>if</b> (<a class="local col7 ref" href="#187hcd" title='hcd' data-ref="187hcd" data-ref-filename="187hcd">hcd</a>-&gt;<a class="ref field" href="../../../include/linux/usb/hcd.h.html#usb_hcd::localmem_pool" title='usb_hcd::localmem_pool' data-ref="usb_hcd::localmem_pool" data-ref-filename="usb_hcd..localmem_pool">localmem_pool</a>)</td></tr>
+<tr><th id="127">127</th><td>		<b>return</b> <a class="ref fn" href="../../../include/linux/genalloc.h.html#gen_pool_dma_alloc" title='gen_pool_dma_alloc' data-ref="gen_pool_dma_alloc" data-ref-filename="gen_pool_dma_alloc">gen_pool_dma_alloc</a>(<a class="local col7 ref" href="#187hcd" title='hcd' data-ref="187hcd" data-ref-filename="187hcd">hcd</a>-&gt;<a class="ref field" href="../../../include/linux/usb/hcd.h.html#usb_hcd::localmem_pool" title='usb_hcd::localmem_pool' data-ref="usb_hcd::localmem_pool" data-ref-filename="usb_hcd..localmem_pool">localmem_pool</a>, <a class="local col4 ref" href="#184size" title='size' data-ref="184size" data-ref-filename="184size">size</a>, <a class="local col6 ref" href="#186dma" title='dma' data-ref="186dma" data-ref-filename="186dma">dma</a>);</td></tr>
+<tr><th id="128">128</th><td></td></tr>
+<tr><th id="129">129</th><td>	<i>/* some USB hosts just use PIO */</i></td></tr>
+<tr><th id="130">130</th><td>	<b>if</b> (!<a class="macro" href="../../../include/linux/usb/hcd.h.html#425" title="(1 &amp;&amp; (hcd)-&gt;self.uses_dma)" data-ref="_M/hcd_uses_dma">hcd_uses_dma</a>(<a class="local col7 ref" href="#187hcd" title='hcd' data-ref="187hcd" data-ref-filename="187hcd">hcd</a>)) {</td></tr>
+<tr><th id="131">131</th><td>		*<a class="local col6 ref" href="#186dma" title='dma' data-ref="186dma" data-ref-filename="186dma">dma</a> = ~(<a class="typedef" href="../../../include/linux/types.h.html#dma_addr_t" title='dma_addr_t' data-type='u64' data-ref="dma_addr_t" data-ref-filename="dma_addr_t">dma_addr_t</a>) <var>0</var>;</td></tr>
+<tr><th id="132">132</th><td>		<b>return</b> <a class="ref fn" href="../../../include/linux/slab.h.html#kmalloc" title='kmalloc' data-ref="kmalloc" data-ref-filename="kmalloc">kmalloc</a>(<a class="local col4 ref" href="#184size" title='size' data-ref="184size" data-ref-filename="184size">size</a>, <a class="local col5 ref" href="#185mem_flags" title='mem_flags' data-ref="185mem_flags" data-ref-filename="185mem_flags">mem_flags</a>);</td></tr>
+<tr><th id="133">133</th><td>	}</td></tr>
+<tr><th id="134">134</th><td></td></tr>
+<tr><th id="135">135</th><td>	<b>for</b> (<a class="local col8 ref" href="#188i" title='i' data-ref="188i" data-ref-filename="188i">i</a> = <var>0</var>; <a class="local col8 ref" href="#188i" title='i' data-ref="188i" data-ref-filename="188i">i</a> &lt; <a class="macro" href="../../../include/linux/usb/hcd.h.html#202" title="4" data-ref="_M/HCD_BUFFER_POOLS">HCD_BUFFER_POOLS</a>; <a class="local col8 ref" href="#188i" title='i' data-ref="188i" data-ref-filename="188i">i</a>++) {</td></tr>
+<tr><th id="136">136</th><td>		<b>if</b> (<a class="local col4 ref" href="#184size" title='size' data-ref="184size" data-ref-filename="184size">size</a> &lt;= <a class="tu ref" href="#pool_max" title='pool_max' data-use='r' data-ref="pool_max" data-ref-filename="pool_max">pool_max</a>[<a class="local col8 ref" href="#188i" title='i' data-ref="188i" data-ref-filename="188i">i</a>])</td></tr>
+<tr><th id="137">137</th><td>			<b>return</b> <a class="ref fn" href="../../../include/linux/dmapool.h.html#dma_pool_alloc" title='dma_pool_alloc' data-ref="dma_pool_alloc" data-ref-filename="dma_pool_alloc">dma_pool_alloc</a>(<a class="local col7 ref" href="#187hcd" title='hcd' data-ref="187hcd" data-ref-filename="187hcd">hcd</a>-&gt;<a class="ref field" href="../../../include/linux/usb/hcd.h.html#usb_hcd::pool" title='usb_hcd::pool' data-ref="usb_hcd::pool" data-ref-filename="usb_hcd..pool">pool</a>[<a class="local col8 ref" href="#188i" title='i' data-ref="188i" data-ref-filename="188i">i</a>], <a class="local col5 ref" href="#185mem_flags" title='mem_flags' data-ref="185mem_flags" data-ref-filename="185mem_flags">mem_flags</a>, <a class="local col6 ref" href="#186dma" title='dma' data-ref="186dma" data-ref-filename="186dma">dma</a>);</td></tr>
+<tr><th id="138">138</th><td>	}</td></tr>
+<tr><th id="139">139</th><td>	<b>return</b> <a class="ref fn" href="../../../include/linux/dma-mapping.h.html#dma_alloc_coherent" title='dma_alloc_coherent' data-ref="dma_alloc_coherent" data-ref-filename="dma_alloc_coherent">dma_alloc_coherent</a>(<a class="local col7 ref" href="#187hcd" title='hcd' data-ref="187hcd" data-ref-filename="187hcd">hcd</a>-&gt;<a class="ref field" href="../../../include/linux/usb/hcd.h.html#usb_hcd::self" title='usb_hcd::self' data-ref="usb_hcd::self" data-ref-filename="usb_hcd..self">self</a>.<a class="ref field" href="../../../include/linux/usb.h.html#usb_bus::sysdev" title='usb_bus::sysdev' data-ref="usb_bus::sysdev" data-ref-filename="usb_bus..sysdev">sysdev</a>, <a class="local col4 ref" href="#184size" title='size' data-ref="184size" data-ref-filename="184size">size</a>, <a class="local col6 ref" href="#186dma" title='dma' data-ref="186dma" data-ref-filename="186dma">dma</a>, <a class="local col5 ref" href="#185mem_flags" title='mem_flags' data-ref="185mem_flags" data-ref-filename="185mem_flags">mem_flags</a>);</td></tr>
+<tr><th id="140">140</th><td>}</td></tr>
+<tr><th id="141">141</th><td></td></tr>
+<tr><th id="142">142</th><td><em>void</em> <dfn class="decl def fn" id="hcd_buffer_free" title='hcd_buffer_free' data-ref="hcd_buffer_free" data-ref-filename="hcd_buffer_free">hcd_buffer_free</dfn>(</td></tr>
+<tr><th id="143">143</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/usb.h.html#usb_bus" title='usb_bus' data-ref="usb_bus" data-ref-filename="usb_bus">usb_bus</a>		*<dfn class="local col9 decl" id="189bus" title='bus' data-type='struct usb_bus *' data-ref="189bus" data-ref-filename="189bus">bus</dfn>,</td></tr>
+<tr><th id="144">144</th><td>	<a class="typedef" href="../../../include/linux/types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a>			<dfn class="local col0 decl" id="190size" title='size' data-type='size_t' data-ref="190size" data-ref-filename="190size">size</dfn>,</td></tr>
+<tr><th id="145">145</th><td>	<em>void</em>			*<dfn class="local col1 decl" id="191addr" title='addr' data-type='void *' data-ref="191addr" data-ref-filename="191addr">addr</dfn>,</td></tr>
+<tr><th id="146">146</th><td>	<a class="typedef" href="../../../include/linux/types.h.html#dma_addr_t" title='dma_addr_t' data-type='u64' data-ref="dma_addr_t" data-ref-filename="dma_addr_t">dma_addr_t</a>		<dfn class="local col2 decl" id="192dma" title='dma' data-type='dma_addr_t' data-ref="192dma" data-ref-filename="192dma">dma</dfn></td></tr>
+<tr><th id="147">147</th><td>)</td></tr>
+<tr><th id="148">148</th><td>{</td></tr>
+<tr><th id="149">149</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/usb/hcd.h.html#usb_hcd" title='usb_hcd' data-ref="usb_hcd" data-ref-filename="usb_hcd">usb_hcd</a>		*<dfn class="local col3 decl" id="193hcd" title='hcd' data-type='struct usb_hcd *' data-ref="193hcd" data-ref-filename="193hcd">hcd</dfn> = <a class="ref fn" href="../../../include/linux/usb/hcd.h.html#bus_to_hcd" title='bus_to_hcd' data-ref="bus_to_hcd" data-ref-filename="bus_to_hcd">bus_to_hcd</a>(<a class="local col9 ref" href="#189bus" title='bus' data-ref="189bus" data-ref-filename="189bus">bus</a>);</td></tr>
+<tr><th id="150">150</th><td>	<em>int</em>			<dfn class="local col4 decl" id="194i" title='i' data-type='int' data-ref="194i" data-ref-filename="194i">i</dfn>;</td></tr>
+<tr><th id="151">151</th><td></td></tr>
+<tr><th id="152">152</th><td>	<b>if</b> (!<a class="local col1 ref" href="#191addr" title='addr' data-ref="191addr" data-ref-filename="191addr">addr</a>)</td></tr>
+<tr><th id="153">153</th><td>		<b>return</b>;</td></tr>
+<tr><th id="154">154</th><td></td></tr>
+<tr><th id="155">155</th><td>	<b>if</b> (<a class="local col3 ref" href="#193hcd" title='hcd' data-ref="193hcd" data-ref-filename="193hcd">hcd</a>-&gt;<a class="ref field" href="../../../include/linux/usb/hcd.h.html#usb_hcd::localmem_pool" title='usb_hcd::localmem_pool' data-ref="usb_hcd::localmem_pool" data-ref-filename="usb_hcd..localmem_pool">localmem_pool</a>) {</td></tr>
+<tr><th id="156">156</th><td>		<a class="ref fn" href="../../../include/linux/genalloc.h.html#gen_pool_free" title='gen_pool_free' data-ref="gen_pool_free" data-ref-filename="gen_pool_free">gen_pool_free</a>(<a class="local col3 ref" href="#193hcd" title='hcd' data-ref="193hcd" data-ref-filename="193hcd">hcd</a>-&gt;<a class="ref field" href="../../../include/linux/usb/hcd.h.html#usb_hcd::localmem_pool" title='usb_hcd::localmem_pool' data-ref="usb_hcd::localmem_pool" data-ref-filename="usb_hcd..localmem_pool">localmem_pool</a>, (<em>unsigned</em> <em>long</em>)<a class="local col1 ref" href="#191addr" title='addr' data-ref="191addr" data-ref-filename="191addr">addr</a>, <a class="local col0 ref" href="#190size" title='size' data-ref="190size" data-ref-filename="190size">size</a>);</td></tr>
+<tr><th id="157">157</th><td>		<b>return</b>;</td></tr>
+<tr><th id="158">158</th><td>	}</td></tr>
+<tr><th id="159">159</th><td></td></tr>
+<tr><th id="160">160</th><td>	<b>if</b> (!<a class="macro" href="../../../include/linux/usb/hcd.h.html#425" title="(1 &amp;&amp; (hcd)-&gt;self.uses_dma)" data-ref="_M/hcd_uses_dma">hcd_uses_dma</a>(<a class="local col3 ref" href="#193hcd" title='hcd' data-ref="193hcd" data-ref-filename="193hcd">hcd</a>)) {</td></tr>
+<tr><th id="161">161</th><td>		<a class="ref fn" href="../../../include/linux/slab.h.html#kfree" title='kfree' data-ref="kfree" data-ref-filename="kfree">kfree</a>(<a class="local col1 ref" href="#191addr" title='addr' data-ref="191addr" data-ref-filename="191addr">addr</a>);</td></tr>
+<tr><th id="162">162</th><td>		<b>return</b>;</td></tr>
+<tr><th id="163">163</th><td>	}</td></tr>
+<tr><th id="164">164</th><td></td></tr>
+<tr><th id="165">165</th><td>	<b>for</b> (<a class="local col4 ref" href="#194i" title='i' data-ref="194i" data-ref-filename="194i">i</a> = <var>0</var>; <a class="local col4 ref" href="#194i" title='i' data-ref="194i" data-ref-filename="194i">i</a> &lt; <a class="macro" href="../../../include/linux/usb/hcd.h.html#202" title="4" data-ref="_M/HCD_BUFFER_POOLS">HCD_BUFFER_POOLS</a>; <a class="local col4 ref" href="#194i" title='i' data-ref="194i" data-ref-filename="194i">i</a>++) {</td></tr>
+<tr><th id="166">166</th><td>		<b>if</b> (<a class="local col0 ref" href="#190size" title='size' data-ref="190size" data-ref-filename="190size">size</a> &lt;= <a class="tu ref" href="#pool_max" title='pool_max' data-use='r' data-ref="pool_max" data-ref-filename="pool_max">pool_max</a>[<a class="local col4 ref" href="#194i" title='i' data-ref="194i" data-ref-filename="194i">i</a>]) {</td></tr>
+<tr><th id="167">167</th><td>			<a class="ref fn" href="../../../include/linux/dmapool.h.html#dma_pool_free" title='dma_pool_free' data-ref="dma_pool_free" data-ref-filename="dma_pool_free">dma_pool_free</a>(<a class="local col3 ref" href="#193hcd" title='hcd' data-ref="193hcd" data-ref-filename="193hcd">hcd</a>-&gt;<a class="ref field" href="../../../include/linux/usb/hcd.h.html#usb_hcd::pool" title='usb_hcd::pool' data-ref="usb_hcd::pool" data-ref-filename="usb_hcd..pool">pool</a>[<a class="local col4 ref" href="#194i" title='i' data-ref="194i" data-ref-filename="194i">i</a>], <a class="local col1 ref" href="#191addr" title='addr' data-ref="191addr" data-ref-filename="191addr">addr</a>, <a class="local col2 ref" href="#192dma" title='dma' data-ref="192dma" data-ref-filename="192dma">dma</a>);</td></tr>
+<tr><th id="168">168</th><td>			<b>return</b>;</td></tr>
+<tr><th id="169">169</th><td>		}</td></tr>
+<tr><th id="170">170</th><td>	}</td></tr>
+<tr><th id="171">171</th><td>	<a class="ref fn" href="../../../include/linux/dma-mapping.h.html#dma_free_coherent" title='dma_free_coherent' data-ref="dma_free_coherent" data-ref-filename="dma_free_coherent">dma_free_coherent</a>(<a class="local col3 ref" href="#193hcd" title='hcd' data-ref="193hcd" data-ref-filename="193hcd">hcd</a>-&gt;<a class="ref field" href="../../../include/linux/usb/hcd.h.html#usb_hcd::self" title='usb_hcd::self' data-ref="usb_hcd::self" data-ref-filename="usb_hcd..self">self</a>.<a class="ref field" href="../../../include/linux/usb.h.html#usb_bus::sysdev" title='usb_bus::sysdev' data-ref="usb_bus::sysdev" data-ref-filename="usb_bus..sysdev">sysdev</a>, <a class="local col0 ref" href="#190size" title='size' data-ref="190size" data-ref-filename="190size">size</a>, <a class="local col1 ref" href="#191addr" title='addr' data-ref="191addr" data-ref-filename="191addr">addr</a>, <a class="local col2 ref" href="#192dma" title='dma' data-ref="192dma" data-ref-filename="192dma">dma</a>);</td></tr>
+<tr><th id="172">172</th><td>}</td></tr>
+<tr><th id="173">173</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

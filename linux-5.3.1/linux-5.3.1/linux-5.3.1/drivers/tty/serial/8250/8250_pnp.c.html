@@ -1,0 +1,562 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>8250_pnp.c source code [linux-5.3.1/drivers/tty/serial/8250/8250_pnp.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/drivers/tty/serial/8250/8250_pnp.c'; var root_path = '../../../../..'; var data_path = '../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../..'>linux-5.3.1</a>/<a href='../../..'>drivers</a>/<a href='../..'>tty</a>/<a href='..'>serial</a>/<a href='./'>8250</a>/<a href='8250_pnp.c.html'>8250_pnp.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> *  Probe for 8250/16550-type ISAPNP serial ports.</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> *  Based on drivers/char/serial.c, by Linus Torvalds, Theodore Ts'o.</i></td></tr>
+<tr><th id="6">6</th><td><i> *</i></td></tr>
+<tr><th id="7">7</th><td><i> *  Copyright (C) 2001 Russell King, All Rights Reserved.</i></td></tr>
+<tr><th id="8">8</th><td><i> *</i></td></tr>
+<tr><th id="9">9</th><td><i> *  Ported to the Linux PnP Layer - (C) Adam Belay.</i></td></tr>
+<tr><th id="10">10</th><td><i> */</i></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../../../../include/linux/module.h.html">&lt;linux/module.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="../../../../include/linux/pci.h.html">&lt;linux/pci.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="../../../../include/linux/pnp.h.html">&lt;linux/pnp.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="../../../../include/linux/string.h.html">&lt;linux/string.h&gt;</a></u></td></tr>
+<tr><th id="15">15</th><td><u>#include <a href="../../../../include/linux/kernel.h.html">&lt;linux/kernel.h&gt;</a></u></td></tr>
+<tr><th id="16">16</th><td><u>#include <a href="../../../../include/linux/serial_core.h.html">&lt;linux/serial_core.h&gt;</a></u></td></tr>
+<tr><th id="17">17</th><td><u>#include <a href="../../../../include/linux/bitops.h.html">&lt;linux/bitops.h&gt;</a></u></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../../../arch/x86/include/uapi/asm/byteorder.h.html">&lt;asm/byteorder.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="8250.h.html">"8250.h"</a></u></td></tr>
+<tr><th id="22">22</th><td></td></tr>
+<tr><th id="23">23</th><td><u>#define <dfn class="macro" id="_M/UNKNOWN_DEV" data-ref="_M/UNKNOWN_DEV">UNKNOWN_DEV</dfn> 0x3000</u></td></tr>
+<tr><th id="24">24</th><td><u>#define <dfn class="macro" id="_M/CIR_PORT" data-ref="_M/CIR_PORT">CIR_PORT</dfn>	0x0800</u></td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td><em>static</em> <em>const</em> <b>struct</b> <a class="type" href="../../../../include/linux/mod_devicetable.h.html#pnp_device_id" title='pnp_device_id' data-ref="pnp_device_id" data-ref-filename="pnp_device_id">pnp_device_id</a> <dfn class="tu decl def" id="pnp_dev_table" title='pnp_dev_table' data-type='const struct pnp_device_id [156]' data-ref="pnp_dev_table" data-ref-filename="pnp_dev_table">pnp_dev_table</dfn>[] = {</td></tr>
+<tr><th id="27">27</th><td>	<i>/* Archtek America Corp. */</i></td></tr>
+<tr><th id="28">28</th><td>	<i>/* Archtek SmartLink Modem 3334BT Plug &amp; Play */</i></td></tr>
+<tr><th id="29">29</th><td>	{	<q>"AAC000F"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="30">30</th><td>	<i>/* Anchor Datacomm BV */</i></td></tr>
+<tr><th id="31">31</th><td>	<i>/* SXPro 144 External Data Fax Modem Plug &amp; Play */</i></td></tr>
+<tr><th id="32">32</th><td>	{	<q>"ADC0001"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="33">33</th><td>	<i>/* SXPro 288 External Data Fax Modem Plug &amp; Play */</i></td></tr>
+<tr><th id="34">34</th><td>	{	<q>"ADC0002"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="35">35</th><td>	<i>/* PROLiNK 1456VH ISA PnP K56flex Fax Modem */</i></td></tr>
+<tr><th id="36">36</th><td>	{	<q>"AEI0250"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="37">37</th><td>	<i>/* Actiontec ISA PNP 56K X2 Fax Modem */</i></td></tr>
+<tr><th id="38">38</th><td>	{	<q>"AEI1240"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="39">39</th><td>	<i>/* Rockwell 56K ACF II Fax+Data+Voice Modem */</i></td></tr>
+<tr><th id="40">40</th><td>	{	<q>"AKY1021"</q>,		<var>0</var> <i>/*SPCI_FL_NO_SHIRQ*/</i>	},</td></tr>
+<tr><th id="41">41</th><td>	<i>/*</i></td></tr>
+<tr><th id="42">42</th><td><i>	 * ALi Fast Infrared Controller</i></td></tr>
+<tr><th id="43">43</th><td><i>	 * Native driver (ali-ircc) is broken so at least</i></td></tr>
+<tr><th id="44">44</th><td><i>	 * it can be used with irtty-sir.</i></td></tr>
+<tr><th id="45">45</th><td><i>	 */</i></td></tr>
+<tr><th id="46">46</th><td>	{	<q>"ALI5123"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="47">47</th><td>	<i>/* AZT3005 PnP SOUND DEVICE */</i></td></tr>
+<tr><th id="48">48</th><td>	{	<q>"AZT4001"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="49">49</th><td>	<i>/* Best Data Products Inc. Smart One 336F PnP Modem */</i></td></tr>
+<tr><th id="50">50</th><td>	{	<q>"BDP3336"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="51">51</th><td>	<i>/*  Boca Research */</i></td></tr>
+<tr><th id="52">52</th><td>	<i>/* Boca Complete Ofc Communicator 14.4 Data-FAX */</i></td></tr>
+<tr><th id="53">53</th><td>	{	<q>"BRI0A49"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="54">54</th><td>	<i>/* Boca Research 33,600 ACF Modem */</i></td></tr>
+<tr><th id="55">55</th><td>	{	<q>"BRI1400"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="56">56</th><td>	<i>/* Boca 33.6 Kbps Internal FD34FSVD */</i></td></tr>
+<tr><th id="57">57</th><td>	{	<q>"BRI3400"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="58">58</th><td>	<i>/* Boca 33.6 Kbps Internal FD34FSVD */</i></td></tr>
+<tr><th id="59">59</th><td>	{	<q>"BRI0A49"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="60">60</th><td>	<i>/* Best Data Products Inc. Smart One 336F PnP Modem */</i></td></tr>
+<tr><th id="61">61</th><td>	{	<q>"BDP3336"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="62">62</th><td>	<i>/* Computer Peripherals Inc */</i></td></tr>
+<tr><th id="63">63</th><td>	<i>/* EuroViVa CommCenter-33.6 SP PnP */</i></td></tr>
+<tr><th id="64">64</th><td>	{	<q>"CPI4050"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="65">65</th><td>	<i>/* Creative Labs */</i></td></tr>
+<tr><th id="66">66</th><td>	<i>/* Creative Labs Phone Blaster 28.8 DSVD PnP Voice */</i></td></tr>
+<tr><th id="67">67</th><td>	{	<q>"CTL3001"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="68">68</th><td>	<i>/* Creative Labs Modem Blaster 28.8 DSVD PnP Voice */</i></td></tr>
+<tr><th id="69">69</th><td>	{	<q>"CTL3011"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="70">70</th><td>	<i>/* Davicom ISA 33.6K Modem */</i></td></tr>
+<tr><th id="71">71</th><td>	{	<q>"DAV0336"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="72">72</th><td>	<i>/* Creative */</i></td></tr>
+<tr><th id="73">73</th><td>	<i>/* Creative Modem Blaster Flash56 DI5601-1 */</i></td></tr>
+<tr><th id="74">74</th><td>	{	<q>"DMB1032"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="75">75</th><td>	<i>/* Creative Modem Blaster V.90 DI5660 */</i></td></tr>
+<tr><th id="76">76</th><td>	{	<q>"DMB2001"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="77">77</th><td>	<i>/* E-Tech */</i></td></tr>
+<tr><th id="78">78</th><td>	<i>/* E-Tech CyberBULLET PC56RVP */</i></td></tr>
+<tr><th id="79">79</th><td>	{	<q>"ETT0002"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="80">80</th><td>	<i>/* FUJITSU */</i></td></tr>
+<tr><th id="81">81</th><td>	<i>/* Fujitsu 33600 PnP-I2 R Plug &amp; Play */</i></td></tr>
+<tr><th id="82">82</th><td>	{	<q>"FUJ0202"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="83">83</th><td>	<i>/* Fujitsu FMV-FX431 Plug &amp; Play */</i></td></tr>
+<tr><th id="84">84</th><td>	{	<q>"FUJ0205"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="85">85</th><td>	<i>/* Fujitsu 33600 PnP-I4 R Plug &amp; Play */</i></td></tr>
+<tr><th id="86">86</th><td>	{	<q>"FUJ0206"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="87">87</th><td>	<i>/* Fujitsu Fax Voice 33600 PNP-I5 R Plug &amp; Play */</i></td></tr>
+<tr><th id="88">88</th><td>	{	<q>"FUJ0209"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="89">89</th><td>	<i>/* Archtek America Corp. */</i></td></tr>
+<tr><th id="90">90</th><td>	<i>/* Archtek SmartLink Modem 3334BT Plug &amp; Play */</i></td></tr>
+<tr><th id="91">91</th><td>	{	<q>"GVC000F"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="92">92</th><td>	<i>/* Archtek SmartLink Modem 3334BRV 33.6K Data Fax Voice */</i></td></tr>
+<tr><th id="93">93</th><td>	{	<q>"GVC0303"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="94">94</th><td>	<i>/* Hayes */</i></td></tr>
+<tr><th id="95">95</th><td>	<i>/* Hayes Optima 288 V.34-V.FC + FAX + Voice Plug &amp; Play */</i></td></tr>
+<tr><th id="96">96</th><td>	{	<q>"HAY0001"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="97">97</th><td>	<i>/* Hayes Optima 336 V.34 + FAX + Voice PnP */</i></td></tr>
+<tr><th id="98">98</th><td>	{	<q>"HAY000C"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="99">99</th><td>	<i>/* Hayes Optima 336B V.34 + FAX + Voice PnP */</i></td></tr>
+<tr><th id="100">100</th><td>	{	<q>"HAY000D"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="101">101</th><td>	<i>/* Hayes Accura 56K Ext Fax Modem PnP */</i></td></tr>
+<tr><th id="102">102</th><td>	{	<q>"HAY5670"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="103">103</th><td>	<i>/* Hayes Accura 56K Ext Fax Modem PnP */</i></td></tr>
+<tr><th id="104">104</th><td>	{	<q>"HAY5674"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="105">105</th><td>	<i>/* Hayes Accura 56K Fax Modem PnP */</i></td></tr>
+<tr><th id="106">106</th><td>	{	<q>"HAY5675"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="107">107</th><td>	<i>/* Hayes 288, V.34 + FAX */</i></td></tr>
+<tr><th id="108">108</th><td>	{	<q>"HAYF000"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="109">109</th><td>	<i>/* Hayes Optima 288 V.34 + FAX + Voice, Plug &amp; Play */</i></td></tr>
+<tr><th id="110">110</th><td>	{	<q>"HAYF001"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="111">111</th><td>	<i>/* IBM */</i></td></tr>
+<tr><th id="112">112</th><td>	<i>/* IBM Thinkpad 701 Internal Modem Voice */</i></td></tr>
+<tr><th id="113">113</th><td>	{	<q>"IBM0033"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="114">114</th><td>	<i>/* Intermec */</i></td></tr>
+<tr><th id="115">115</th><td>	<i>/* Intermec CV60 touchscreen port */</i></td></tr>
+<tr><th id="116">116</th><td>	{	<q>"PNP4972"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="117">117</th><td>	<i>/* Intertex */</i></td></tr>
+<tr><th id="118">118</th><td>	<i>/* Intertex 28k8 33k6 Voice EXT PnP */</i></td></tr>
+<tr><th id="119">119</th><td>	{	<q>"IXDC801"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="120">120</th><td>	<i>/* Intertex 33k6 56k Voice EXT PnP */</i></td></tr>
+<tr><th id="121">121</th><td>	{	<q>"IXDC901"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="122">122</th><td>	<i>/* Intertex 28k8 33k6 Voice SP EXT PnP */</i></td></tr>
+<tr><th id="123">123</th><td>	{	<q>"IXDD801"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="124">124</th><td>	<i>/* Intertex 33k6 56k Voice SP EXT PnP */</i></td></tr>
+<tr><th id="125">125</th><td>	{	<q>"IXDD901"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="126">126</th><td>	<i>/* Intertex 28k8 33k6 Voice SP INT PnP */</i></td></tr>
+<tr><th id="127">127</th><td>	{	<q>"IXDF401"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="128">128</th><td>	<i>/* Intertex 28k8 33k6 Voice SP EXT PnP */</i></td></tr>
+<tr><th id="129">129</th><td>	{	<q>"IXDF801"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="130">130</th><td>	<i>/* Intertex 33k6 56k Voice SP EXT PnP */</i></td></tr>
+<tr><th id="131">131</th><td>	{	<q>"IXDF901"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="132">132</th><td>	<i>/* Kortex International */</i></td></tr>
+<tr><th id="133">133</th><td>	<i>/* KORTEX 28800 Externe PnP */</i></td></tr>
+<tr><th id="134">134</th><td>	{	<q>"KOR4522"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="135">135</th><td>	<i>/* KXPro 33.6 Vocal ASVD PnP */</i></td></tr>
+<tr><th id="136">136</th><td>	{	<q>"KORF661"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="137">137</th><td>	<i>/* Lasat */</i></td></tr>
+<tr><th id="138">138</th><td>	<i>/* LASAT Internet 33600 PnP */</i></td></tr>
+<tr><th id="139">139</th><td>	{	<q>"LAS4040"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="140">140</th><td>	<i>/* Lasat Safire 560 PnP */</i></td></tr>
+<tr><th id="141">141</th><td>	{	<q>"LAS4540"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="142">142</th><td>	<i>/* Lasat Safire 336  PnP */</i></td></tr>
+<tr><th id="143">143</th><td>	{	<q>"LAS5440"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="144">144</th><td>	<i>/* Microcom, Inc. */</i></td></tr>
+<tr><th id="145">145</th><td>	<i>/* Microcom TravelPorte FAST V.34 Plug &amp; Play */</i></td></tr>
+<tr><th id="146">146</th><td>	{	<q>"MNP0281"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="147">147</th><td>	<i>/* Microcom DeskPorte V.34 FAST or FAST+ Plug &amp; Play */</i></td></tr>
+<tr><th id="148">148</th><td>	{	<q>"MNP0336"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="149">149</th><td>	<i>/* Microcom DeskPorte FAST EP 28.8 Plug &amp; Play */</i></td></tr>
+<tr><th id="150">150</th><td>	{	<q>"MNP0339"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="151">151</th><td>	<i>/* Microcom DeskPorte 28.8P Plug &amp; Play */</i></td></tr>
+<tr><th id="152">152</th><td>	{	<q>"MNP0342"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="153">153</th><td>	<i>/* Microcom DeskPorte FAST ES 28.8 Plug &amp; Play */</i></td></tr>
+<tr><th id="154">154</th><td>	{	<q>"MNP0500"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="155">155</th><td>	<i>/* Microcom DeskPorte FAST ES 28.8 Plug &amp; Play */</i></td></tr>
+<tr><th id="156">156</th><td>	{	<q>"MNP0501"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="157">157</th><td>	<i>/* Microcom DeskPorte 28.8S Internal Plug &amp; Play */</i></td></tr>
+<tr><th id="158">158</th><td>	{	<q>"MNP0502"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="159">159</th><td>	<i>/* Motorola */</i></td></tr>
+<tr><th id="160">160</th><td>	<i>/* Motorola BitSURFR Plug &amp; Play */</i></td></tr>
+<tr><th id="161">161</th><td>	{	<q>"MOT1105"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="162">162</th><td>	<i>/* Motorola TA210 Plug &amp; Play */</i></td></tr>
+<tr><th id="163">163</th><td>	{	<q>"MOT1111"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="164">164</th><td>	<i>/* Motorola HMTA 200 (ISDN) Plug &amp; Play */</i></td></tr>
+<tr><th id="165">165</th><td>	{	<q>"MOT1114"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="166">166</th><td>	<i>/* Motorola BitSURFR Plug &amp; Play */</i></td></tr>
+<tr><th id="167">167</th><td>	{	<q>"MOT1115"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="168">168</th><td>	<i>/* Motorola Lifestyle 28.8 Internal */</i></td></tr>
+<tr><th id="169">169</th><td>	{	<q>"MOT1190"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="170">170</th><td>	<i>/* Motorola V.3400 Plug &amp; Play */</i></td></tr>
+<tr><th id="171">171</th><td>	{	<q>"MOT1501"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="172">172</th><td>	<i>/* Motorola Lifestyle 28.8 V.34 Plug &amp; Play */</i></td></tr>
+<tr><th id="173">173</th><td>	{	<q>"MOT1502"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="174">174</th><td>	<i>/* Motorola Power 28.8 V.34 Plug &amp; Play */</i></td></tr>
+<tr><th id="175">175</th><td>	{	<q>"MOT1505"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="176">176</th><td>	<i>/* Motorola ModemSURFR External 28.8 Plug &amp; Play */</i></td></tr>
+<tr><th id="177">177</th><td>	{	<q>"MOT1509"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="178">178</th><td>	<i>/* Motorola Premier 33.6 Desktop Plug &amp; Play */</i></td></tr>
+<tr><th id="179">179</th><td>	{	<q>"MOT150A"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="180">180</th><td>	<i>/* Motorola VoiceSURFR 56K External PnP */</i></td></tr>
+<tr><th id="181">181</th><td>	{	<q>"MOT150F"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="182">182</th><td>	<i>/* Motorola ModemSURFR 56K External PnP */</i></td></tr>
+<tr><th id="183">183</th><td>	{	<q>"MOT1510"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="184">184</th><td>	<i>/* Motorola ModemSURFR 56K Internal PnP */</i></td></tr>
+<tr><th id="185">185</th><td>	{	<q>"MOT1550"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="186">186</th><td>	<i>/* Motorola ModemSURFR Internal 28.8 Plug &amp; Play */</i></td></tr>
+<tr><th id="187">187</th><td>	{	<q>"MOT1560"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="188">188</th><td>	<i>/* Motorola Premier 33.6 Internal Plug &amp; Play */</i></td></tr>
+<tr><th id="189">189</th><td>	{	<q>"MOT1580"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="190">190</th><td>	<i>/* Motorola OnlineSURFR 28.8 Internal Plug &amp; Play */</i></td></tr>
+<tr><th id="191">191</th><td>	{	<q>"MOT15B0"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="192">192</th><td>	<i>/* Motorola VoiceSURFR 56K Internal PnP */</i></td></tr>
+<tr><th id="193">193</th><td>	{	<q>"MOT15F0"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="194">194</th><td>	<i>/* Com 1 */</i></td></tr>
+<tr><th id="195">195</th><td>	<i>/*  Deskline K56 Phone System PnP */</i></td></tr>
+<tr><th id="196">196</th><td>	{	<q>"MVX00A1"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="197">197</th><td>	<i>/* PC Rider K56 Phone System PnP */</i></td></tr>
+<tr><th id="198">198</th><td>	{	<q>"MVX00F2"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="199">199</th><td>	<i>/* NEC 98NOTE SPEAKER PHONE FAX MODEM(33600bps) */</i></td></tr>
+<tr><th id="200">200</th><td>	{	<q>"nEC8241"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="201">201</th><td>	<i>/* Pace 56 Voice Internal Plug &amp; Play Modem */</i></td></tr>
+<tr><th id="202">202</th><td>	{	<q>"PMC2430"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="203">203</th><td>	<i>/* Generic */</i></td></tr>
+<tr><th id="204">204</th><td>	<i>/* Generic standard PC COM port	 */</i></td></tr>
+<tr><th id="205">205</th><td>	{	<q>"PNP0500"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="206">206</th><td>	<i>/* Generic 16550A-compatible COM port */</i></td></tr>
+<tr><th id="207">207</th><td>	{	<q>"PNP0501"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="208">208</th><td>	<i>/* Compaq 14400 Modem */</i></td></tr>
+<tr><th id="209">209</th><td>	{	<q>"PNPC000"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="210">210</th><td>	<i>/* Compaq 2400/9600 Modem */</i></td></tr>
+<tr><th id="211">211</th><td>	{	<q>"PNPC001"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="212">212</th><td>	<i>/* Dial-Up Networking Serial Cable between 2 PCs */</i></td></tr>
+<tr><th id="213">213</th><td>	{	<q>"PNPC031"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="214">214</th><td>	<i>/* Dial-Up Networking Parallel Cable between 2 PCs */</i></td></tr>
+<tr><th id="215">215</th><td>	{	<q>"PNPC032"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="216">216</th><td>	<i>/* Standard 9600 bps Modem */</i></td></tr>
+<tr><th id="217">217</th><td>	{	<q>"PNPC100"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="218">218</th><td>	<i>/* Standard 14400 bps Modem */</i></td></tr>
+<tr><th id="219">219</th><td>	{	<q>"PNPC101"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="220">220</th><td>	<i>/*  Standard 28800 bps Modem*/</i></td></tr>
+<tr><th id="221">221</th><td>	{	<q>"PNPC102"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="222">222</th><td>	<i>/*  Standard Modem*/</i></td></tr>
+<tr><th id="223">223</th><td>	{	<q>"PNPC103"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="224">224</th><td>	<i>/*  Standard 9600 bps Modem*/</i></td></tr>
+<tr><th id="225">225</th><td>	{	<q>"PNPC104"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="226">226</th><td>	<i>/*  Standard 14400 bps Modem*/</i></td></tr>
+<tr><th id="227">227</th><td>	{	<q>"PNPC105"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="228">228</th><td>	<i>/*  Standard 28800 bps Modem*/</i></td></tr>
+<tr><th id="229">229</th><td>	{	<q>"PNPC106"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="230">230</th><td>	<i>/*  Standard Modem */</i></td></tr>
+<tr><th id="231">231</th><td>	{	<q>"PNPC107"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="232">232</th><td>	<i>/* Standard 9600 bps Modem */</i></td></tr>
+<tr><th id="233">233</th><td>	{	<q>"PNPC108"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="234">234</th><td>	<i>/* Standard 14400 bps Modem */</i></td></tr>
+<tr><th id="235">235</th><td>	{	<q>"PNPC109"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="236">236</th><td>	<i>/* Standard 28800 bps Modem */</i></td></tr>
+<tr><th id="237">237</th><td>	{	<q>"PNPC10A"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="238">238</th><td>	<i>/* Standard Modem */</i></td></tr>
+<tr><th id="239">239</th><td>	{	<q>"PNPC10B"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="240">240</th><td>	<i>/* Standard 9600 bps Modem */</i></td></tr>
+<tr><th id="241">241</th><td>	{	<q>"PNPC10C"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="242">242</th><td>	<i>/* Standard 14400 bps Modem */</i></td></tr>
+<tr><th id="243">243</th><td>	{	<q>"PNPC10D"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="244">244</th><td>	<i>/* Standard 28800 bps Modem */</i></td></tr>
+<tr><th id="245">245</th><td>	{	<q>"PNPC10E"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="246">246</th><td>	<i>/* Standard Modem */</i></td></tr>
+<tr><th id="247">247</th><td>	{	<q>"PNPC10F"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="248">248</th><td>	<i>/* Standard PCMCIA Card Modem */</i></td></tr>
+<tr><th id="249">249</th><td>	{	<q>"PNP2000"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="250">250</th><td>	<i>/* Rockwell */</i></td></tr>
+<tr><th id="251">251</th><td>	<i>/* Modular Technology */</i></td></tr>
+<tr><th id="252">252</th><td>	<i>/* Rockwell 33.6 DPF Internal PnP */</i></td></tr>
+<tr><th id="253">253</th><td>	<i>/* Modular Technology 33.6 Internal PnP */</i></td></tr>
+<tr><th id="254">254</th><td>	{	<q>"ROK0030"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="255">255</th><td>	<i>/* Kortex International */</i></td></tr>
+<tr><th id="256">256</th><td>	<i>/* KORTEX 14400 Externe PnP */</i></td></tr>
+<tr><th id="257">257</th><td>	{	<q>"ROK0100"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="258">258</th><td>	<i>/* Rockwell 28.8 */</i></td></tr>
+<tr><th id="259">259</th><td>	{	<q>"ROK4120"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="260">260</th><td>	<i>/* Viking Components, Inc */</i></td></tr>
+<tr><th id="261">261</th><td>	<i>/* Viking 28.8 INTERNAL Fax+Data+Voice PnP */</i></td></tr>
+<tr><th id="262">262</th><td>	{	<q>"ROK4920"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="263">263</th><td>	<i>/* Rockwell */</i></td></tr>
+<tr><th id="264">264</th><td>	<i>/* British Telecom */</i></td></tr>
+<tr><th id="265">265</th><td>	<i>/* Modular Technology */</i></td></tr>
+<tr><th id="266">266</th><td>	<i>/* Rockwell 33.6 DPF External PnP */</i></td></tr>
+<tr><th id="267">267</th><td>	<i>/* BT Prologue 33.6 External PnP */</i></td></tr>
+<tr><th id="268">268</th><td>	<i>/* Modular Technology 33.6 External PnP */</i></td></tr>
+<tr><th id="269">269</th><td>	{	<q>"RSS00A0"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="270">270</th><td>	<i>/* Viking 56K FAX INT */</i></td></tr>
+<tr><th id="271">271</th><td>	{	<q>"RSS0262"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="272">272</th><td>	<i>/* K56 par,VV,Voice,Speakphone,AudioSpan,PnP */</i></td></tr>
+<tr><th id="273">273</th><td>	{       <q>"RSS0250"</q>,              <var>0</var>       },</td></tr>
+<tr><th id="274">274</th><td>	<i>/* SupraExpress 28.8 Data/Fax PnP modem */</i></td></tr>
+<tr><th id="275">275</th><td>	{	<q>"SUP1310"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="276">276</th><td>	<i>/* SupraExpress 336i PnP Voice Modem */</i></td></tr>
+<tr><th id="277">277</th><td>	{	<q>"SUP1381"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="278">278</th><td>	<i>/* SupraExpress 33.6 Data/Fax PnP modem */</i></td></tr>
+<tr><th id="279">279</th><td>	{	<q>"SUP1421"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="280">280</th><td>	<i>/* SupraExpress 33.6 Data/Fax PnP modem */</i></td></tr>
+<tr><th id="281">281</th><td>	{	<q>"SUP1590"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="282">282</th><td>	<i>/* SupraExpress 336i Sp ASVD */</i></td></tr>
+<tr><th id="283">283</th><td>	{	<q>"SUP1620"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="284">284</th><td>	<i>/* SupraExpress 33.6 Data/Fax PnP modem */</i></td></tr>
+<tr><th id="285">285</th><td>	{	<q>"SUP1760"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="286">286</th><td>	<i>/* SupraExpress 56i Sp Intl */</i></td></tr>
+<tr><th id="287">287</th><td>	{	<q>"SUP2171"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="288">288</th><td>	<i>/* Phoebe Micro */</i></td></tr>
+<tr><th id="289">289</th><td>	<i>/* Phoebe Micro 33.6 Data Fax 1433VQH Plug &amp; Play */</i></td></tr>
+<tr><th id="290">290</th><td>	{	<q>"TEX0011"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="291">291</th><td>	<i>/* Archtek America Corp. */</i></td></tr>
+<tr><th id="292">292</th><td>	<i>/* Archtek SmartLink Modem 3334BT Plug &amp; Play */</i></td></tr>
+<tr><th id="293">293</th><td>	{	<q>"UAC000F"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="294">294</th><td>	<i>/* 3Com Corp. */</i></td></tr>
+<tr><th id="295">295</th><td>	<i>/* Gateway Telepath IIvi 33.6 */</i></td></tr>
+<tr><th id="296">296</th><td>	{	<q>"USR0000"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="297">297</th><td>	<i>/* U.S. Robotics Sporster 33.6K Fax INT PnP */</i></td></tr>
+<tr><th id="298">298</th><td>	{	<q>"USR0002"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="299">299</th><td>	<i>/*  Sportster Vi 14.4 PnP FAX Voicemail */</i></td></tr>
+<tr><th id="300">300</th><td>	{	<q>"USR0004"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="301">301</th><td>	<i>/* U.S. Robotics 33.6K Voice INT PnP */</i></td></tr>
+<tr><th id="302">302</th><td>	{	<q>"USR0006"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="303">303</th><td>	<i>/* U.S. Robotics 33.6K Voice EXT PnP */</i></td></tr>
+<tr><th id="304">304</th><td>	{	<q>"USR0007"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="305">305</th><td>	<i>/* U.S. Robotics Courier V.Everything INT PnP */</i></td></tr>
+<tr><th id="306">306</th><td>	{	<q>"USR0009"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="307">307</th><td>	<i>/* U.S. Robotics 33.6K Voice INT PnP */</i></td></tr>
+<tr><th id="308">308</th><td>	{	<q>"USR2002"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="309">309</th><td>	<i>/* U.S. Robotics 56K Voice INT PnP */</i></td></tr>
+<tr><th id="310">310</th><td>	{	<q>"USR2070"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="311">311</th><td>	<i>/* U.S. Robotics 56K Voice EXT PnP */</i></td></tr>
+<tr><th id="312">312</th><td>	{	<q>"USR2080"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="313">313</th><td>	<i>/* U.S. Robotics 56K FAX INT */</i></td></tr>
+<tr><th id="314">314</th><td>	{	<q>"USR3031"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="315">315</th><td>	<i>/* U.S. Robotics 56K FAX INT */</i></td></tr>
+<tr><th id="316">316</th><td>	{	<q>"USR3050"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="317">317</th><td>	<i>/* U.S. Robotics 56K Voice INT PnP */</i></td></tr>
+<tr><th id="318">318</th><td>	{	<q>"USR3070"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="319">319</th><td>	<i>/* U.S. Robotics 56K Voice EXT PnP */</i></td></tr>
+<tr><th id="320">320</th><td>	{	<q>"USR3080"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="321">321</th><td>	<i>/* U.S. Robotics 56K Voice INT PnP */</i></td></tr>
+<tr><th id="322">322</th><td>	{	<q>"USR3090"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="323">323</th><td>	<i>/* U.S. Robotics 56K Message  */</i></td></tr>
+<tr><th id="324">324</th><td>	{	<q>"USR9100"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="325">325</th><td>	<i>/* U.S. Robotics 56K FAX EXT PnP*/</i></td></tr>
+<tr><th id="326">326</th><td>	{	<q>"USR9160"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="327">327</th><td>	<i>/* U.S. Robotics 56K FAX INT PnP*/</i></td></tr>
+<tr><th id="328">328</th><td>	{	<q>"USR9170"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="329">329</th><td>	<i>/* U.S. Robotics 56K Voice EXT PnP*/</i></td></tr>
+<tr><th id="330">330</th><td>	{	<q>"USR9180"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="331">331</th><td>	<i>/* U.S. Robotics 56K Voice INT PnP*/</i></td></tr>
+<tr><th id="332">332</th><td>	{	<q>"USR9190"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="333">333</th><td>	<i>/* Wacom tablets */</i></td></tr>
+<tr><th id="334">334</th><td>	{	<q>"WACFXXX"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="335">335</th><td>	<i>/* Compaq touchscreen */</i></td></tr>
+<tr><th id="336">336</th><td>	{       <q>"FPI2002"</q>,              <var>0</var> },</td></tr>
+<tr><th id="337">337</th><td>	<i>/* Fujitsu Stylistic touchscreens */</i></td></tr>
+<tr><th id="338">338</th><td>	{       <q>"FUJ02B2"</q>,              <var>0</var> },</td></tr>
+<tr><th id="339">339</th><td>	{       <q>"FUJ02B3"</q>,              <var>0</var> },</td></tr>
+<tr><th id="340">340</th><td>	<i>/* Fujitsu Stylistic LT touchscreens */</i></td></tr>
+<tr><th id="341">341</th><td>	{       <q>"FUJ02B4"</q>,              <var>0</var> },</td></tr>
+<tr><th id="342">342</th><td>	<i>/* Passive Fujitsu Stylistic touchscreens */</i></td></tr>
+<tr><th id="343">343</th><td>	{       <q>"FUJ02B6"</q>,              <var>0</var> },</td></tr>
+<tr><th id="344">344</th><td>	{       <q>"FUJ02B7"</q>,              <var>0</var> },</td></tr>
+<tr><th id="345">345</th><td>	{       <q>"FUJ02B8"</q>,              <var>0</var> },</td></tr>
+<tr><th id="346">346</th><td>	{       <q>"FUJ02B9"</q>,              <var>0</var> },</td></tr>
+<tr><th id="347">347</th><td>	{       <q>"FUJ02BC"</q>,              <var>0</var> },</td></tr>
+<tr><th id="348">348</th><td>	<i>/* Fujitsu Wacom Tablet PC device */</i></td></tr>
+<tr><th id="349">349</th><td>	{	<q>"FUJ02E5"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="350">350</th><td>	<i>/* Fujitsu P-series tablet PC device */</i></td></tr>
+<tr><th id="351">351</th><td>	{	<q>"FUJ02E6"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="352">352</th><td>	<i>/* Fujitsu Wacom 2FGT Tablet PC device */</i></td></tr>
+<tr><th id="353">353</th><td>	{	<q>"FUJ02E7"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="354">354</th><td>	<i>/* Fujitsu Wacom 1FGT Tablet PC device */</i></td></tr>
+<tr><th id="355">355</th><td>	{	<q>"FUJ02E9"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="356">356</th><td>	<i>/*</i></td></tr>
+<tr><th id="357">357</th><td><i>	 * LG C1 EXPRESS DUAL (C1-PB11A3) touch screen (actually a FUJ02E6</i></td></tr>
+<tr><th id="358">358</th><td><i>	 * in disguise).</i></td></tr>
+<tr><th id="359">359</th><td><i>	 */</i></td></tr>
+<tr><th id="360">360</th><td>	{	<q>"LTS0001"</q>,		<var>0</var>       },</td></tr>
+<tr><th id="361">361</th><td>	<i>/* Rockwell's (PORALiNK) 33600 INT PNP */</i></td></tr>
+<tr><th id="362">362</th><td>	{	<q>"WCI0003"</q>,		<var>0</var>	},</td></tr>
+<tr><th id="363">363</th><td>	<i>/* Unknown PnP modems */</i></td></tr>
+<tr><th id="364">364</th><td>	{	<q>"PNPCXXX"</q>,		<a class="macro" href="#23" title="0x3000" data-ref="_M/UNKNOWN_DEV">UNKNOWN_DEV</a>	},</td></tr>
+<tr><th id="365">365</th><td>	<i>/* More unknown PnP modems */</i></td></tr>
+<tr><th id="366">366</th><td>	{	<q>"PNPDXXX"</q>,		<a class="macro" href="#23" title="0x3000" data-ref="_M/UNKNOWN_DEV">UNKNOWN_DEV</a>	},</td></tr>
+<tr><th id="367">367</th><td>	<i>/*</i></td></tr>
+<tr><th id="368">368</th><td><i>	 * Winbond CIR port, should not be probed. We should keep track of</i></td></tr>
+<tr><th id="369">369</th><td><i>	 * it to prevent the legacy serial driver from probing it.</i></td></tr>
+<tr><th id="370">370</th><td><i>	 */</i></td></tr>
+<tr><th id="371">371</th><td>	{	<q>"WEC1022"</q>,		<a class="macro" href="#24" title="0x0800" data-ref="_M/CIR_PORT">CIR_PORT</a>	},</td></tr>
+<tr><th id="372">372</th><td>	<i>/*</i></td></tr>
+<tr><th id="373">373</th><td><i>	 * SMSC IrCC SIR/FIR port, should not be probed by serial driver as</i></td></tr>
+<tr><th id="374">374</th><td><i>	 * well so its own driver can bind to it.</i></td></tr>
+<tr><th id="375">375</th><td><i>	 */</i></td></tr>
+<tr><th id="376">376</th><td>	{	<q>"SMCF010"</q>,		<a class="macro" href="#24" title="0x0800" data-ref="_M/CIR_PORT">CIR_PORT</a>	},</td></tr>
+<tr><th id="377">377</th><td>	{	<q>""</q>,			<var>0</var>	}</td></tr>
+<tr><th id="378">378</th><td>};</td></tr>
+<tr><th id="379">379</th><td></td></tr>
+<tr><th id="380">380</th><td><a class="macro" href="../../../../include/linux/module.h.html#233" title="" data-ref="_M/MODULE_DEVICE_TABLE">MODULE_DEVICE_TABLE</a>(pnp, pnp_dev_table);</td></tr>
+<tr><th id="381">381</th><td></td></tr>
+<tr><th id="382">382</th><td><em>static</em> <em>const</em> <em>char</em> *<dfn class="tu decl def" id="modem_names" title='modem_names' data-type='const char *[25]' data-ref="modem_names" data-ref-filename="modem_names">modem_names</dfn>[] = {</td></tr>
+<tr><th id="383">383</th><td>	<q>"MODEM"</q>, <q>"Modem"</q>, <q>"modem"</q>, <q>"FAX"</q>, <q>"Fax"</q>, <q>"fax"</q>,</td></tr>
+<tr><th id="384">384</th><td>	<q>"56K"</q>, <q>"56k"</q>, <q>"K56"</q>, <q>"33.6"</q>, <q>"28.8"</q>, <q>"14.4"</q>,</td></tr>
+<tr><th id="385">385</th><td>	<q>"33,600"</q>, <q>"28,800"</q>, <q>"14,400"</q>, <q>"33.600"</q>, <q>"28.800"</q>, <q>"14.400"</q>,</td></tr>
+<tr><th id="386">386</th><td>	<q>"33600"</q>, <q>"28800"</q>, <q>"14400"</q>, <q>"V.90"</q>, <q>"V.34"</q>, <q>"V.32"</q>, <a class="macro" href="../../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a></td></tr>
+<tr><th id="387">387</th><td>};</td></tr>
+<tr><th id="388">388</th><td></td></tr>
+<tr><th id="389">389</th><td><em>static</em> <a class="typedef" href="../../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="tu decl def fn" id="check_name" title='check_name' data-type='bool check_name(const char * name)' data-ref="check_name" data-ref-filename="check_name">check_name</dfn>(<em>const</em> <em>char</em> *<dfn class="local col1 decl" id="1name" title='name' data-type='const char *' data-ref="1name" data-ref-filename="1name">name</dfn>)</td></tr>
+<tr><th id="390">390</th><td>{</td></tr>
+<tr><th id="391">391</th><td>	<em>const</em> <em>char</em> **<dfn class="local col2 decl" id="2tmp" title='tmp' data-type='const char **' data-ref="2tmp" data-ref-filename="2tmp">tmp</dfn>;</td></tr>
+<tr><th id="392">392</th><td></td></tr>
+<tr><th id="393">393</th><td>	<b>for</b> (<a class="local col2 ref" href="#2tmp" title='tmp' data-ref="2tmp" data-ref-filename="2tmp">tmp</a> = <a class="tu ref" href="#modem_names" title='modem_names' data-use='r' data-ref="modem_names" data-ref-filename="modem_names">modem_names</a>; *<a class="local col2 ref" href="#2tmp" title='tmp' data-ref="2tmp" data-ref-filename="2tmp">tmp</a>; <a class="local col2 ref" href="#2tmp" title='tmp' data-ref="2tmp" data-ref-filename="2tmp">tmp</a>++)</td></tr>
+<tr><th id="394">394</th><td>		<b>if</b> (<a class="ref fn" href="../../../../include/linux/string.h.html#strstr" title='strstr' data-ref="strstr" data-ref-filename="strstr">strstr</a>(<a class="local col1 ref" href="#1name" title='name' data-ref="1name" data-ref-filename="1name">name</a>, *<a class="local col2 ref" href="#2tmp" title='tmp' data-ref="2tmp" data-ref-filename="2tmp">tmp</a>))</td></tr>
+<tr><th id="395">395</th><td>			<b>return</b> <a class="enum" href="../../../../include/linux/stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>;</td></tr>
+<tr><th id="396">396</th><td></td></tr>
+<tr><th id="397">397</th><td>	<b>return</b> <a class="enum" href="../../../../include/linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="398">398</th><td>}</td></tr>
+<tr><th id="399">399</th><td></td></tr>
+<tr><th id="400">400</th><td><em>static</em> <a class="typedef" href="../../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="tu decl def fn" id="check_resources" title='check_resources' data-type='bool check_resources(struct pnp_dev * dev)' data-ref="check_resources" data-ref-filename="check_resources">check_resources</dfn>(<b>struct</b> <a class="type" href="../../../../include/linux/pnp.h.html#pnp_dev" title='pnp_dev' data-ref="pnp_dev" data-ref-filename="pnp_dev">pnp_dev</a> *<dfn class="local col3 decl" id="3dev" title='dev' data-type='struct pnp_dev *' data-ref="3dev" data-ref-filename="3dev">dev</dfn>)</td></tr>
+<tr><th id="401">401</th><td>{</td></tr>
+<tr><th id="402">402</th><td>	<em>static</em> <em>const</em> <a class="typedef" href="../../../../include/linux/types.h.html#resource_size_t" title='resource_size_t' data-type='phys_addr_t' data-ref="resource_size_t" data-ref-filename="resource_size_t">resource_size_t</a> <dfn class="local col4 decl" id="4base" title='base' data-type='const resource_size_t [4]' data-ref="4base" data-ref-filename="4base">base</dfn>[] = {<var>0x2f8</var>, <var>0x3f8</var>, <var>0x2e8</var>, <var>0x3e8</var>};</td></tr>
+<tr><th id="403">403</th><td>	<em>unsigned</em> <em>int</em> <dfn class="local col5 decl" id="5i" title='i' data-type='unsigned int' data-ref="5i" data-ref-filename="5i">i</dfn>;</td></tr>
+<tr><th id="404">404</th><td></td></tr>
+<tr><th id="405">405</th><td>	<b>for</b> (<a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a> = <var>0</var>; <a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a> &lt; <a class="macro" href="../../../../include/linux/kernel.h.html#47" title="(sizeof(base) / sizeof((base)[0]) + (sizeof(struct { int:(-!!(__builtin_types_compatible_p(typeof((base)), typeof(&amp;(base)[0])))); })))" data-ref="_M/ARRAY_SIZE">ARRAY_SIZE</a>(<a class="local col4 ref" href="#4base" title='base' data-ref="4base" data-ref-filename="4base">base</a>); <a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a>++) {</td></tr>
+<tr><th id="406">406</th><td>		<b>if</b> (<a class="ref fn" href="../../../../include/linux/pnp.h.html#pnp_possible_config" title='pnp_possible_config' data-ref="pnp_possible_config" data-ref-filename="pnp_possible_config">pnp_possible_config</a>(<a class="local col3 ref" href="#3dev" title='dev' data-ref="3dev" data-ref-filename="3dev">dev</a>, <a class="macro" href="../../../../include/linux/ioport.h.html#38" title="0x00000100" data-ref="_M/IORESOURCE_IO">IORESOURCE_IO</a>, <a class="local col4 ref" href="#4base" title='base' data-ref="4base" data-ref-filename="4base">base</a>[<a class="local col5 ref" href="#5i" title='i' data-ref="5i" data-ref-filename="5i">i</a>], <var>8</var>))</td></tr>
+<tr><th id="407">407</th><td>			<b>return</b> <a class="enum" href="../../../../include/linux/stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>;</td></tr>
+<tr><th id="408">408</th><td>	}</td></tr>
+<tr><th id="409">409</th><td></td></tr>
+<tr><th id="410">410</th><td>	<b>return</b> <a class="enum" href="../../../../include/linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="411">411</th><td>}</td></tr>
+<tr><th id="412">412</th><td></td></tr>
+<tr><th id="413">413</th><td><i  data-doc="serial_pnp_guess_board">/*</i></td></tr>
+<tr><th id="414">414</th><td><i  data-doc="serial_pnp_guess_board"> * Given a complete unknown PnP device, try to use some heuristics to</i></td></tr>
+<tr><th id="415">415</th><td><i  data-doc="serial_pnp_guess_board"> * detect modems. Currently use such heuristic set:</i></td></tr>
+<tr><th id="416">416</th><td><i  data-doc="serial_pnp_guess_board"> *     - dev-&gt;name or dev-&gt;bus-&gt;name must contain "modem" substring;</i></td></tr>
+<tr><th id="417">417</th><td><i  data-doc="serial_pnp_guess_board"> *     - device must have only one IO region (8 byte long) with base address</i></td></tr>
+<tr><th id="418">418</th><td><i  data-doc="serial_pnp_guess_board"> *       0x2e8, 0x3e8, 0x2f8 or 0x3f8.</i></td></tr>
+<tr><th id="419">419</th><td><i  data-doc="serial_pnp_guess_board"> *</i></td></tr>
+<tr><th id="420">420</th><td><i  data-doc="serial_pnp_guess_board"> * Such detection looks very ugly, but can detect at least some of numerous</i></td></tr>
+<tr><th id="421">421</th><td><i  data-doc="serial_pnp_guess_board"> * PnP modems, alternatively we must hardcode all modems in pnp_devices[]</i></td></tr>
+<tr><th id="422">422</th><td><i  data-doc="serial_pnp_guess_board"> * table.</i></td></tr>
+<tr><th id="423">423</th><td><i  data-doc="serial_pnp_guess_board"> */</i></td></tr>
+<tr><th id="424">424</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="serial_pnp_guess_board" title='serial_pnp_guess_board' data-type='int serial_pnp_guess_board(struct pnp_dev * dev)' data-ref="serial_pnp_guess_board" data-ref-filename="serial_pnp_guess_board">serial_pnp_guess_board</dfn>(<b>struct</b> <a class="type" href="../../../../include/linux/pnp.h.html#pnp_dev" title='pnp_dev' data-ref="pnp_dev" data-ref-filename="pnp_dev">pnp_dev</a> *<dfn class="local col6 decl" id="6dev" title='dev' data-type='struct pnp_dev *' data-ref="6dev" data-ref-filename="6dev">dev</dfn>)</td></tr>
+<tr><th id="425">425</th><td>{</td></tr>
+<tr><th id="426">426</th><td>	<b>if</b> (!(<a class="tu ref fn" href="#check_name" title='check_name' data-use='c' data-ref="check_name" data-ref-filename="check_name">check_name</a>(<a class="macro" href="../../../../include/linux/pnp.h.html#287" title="(dev)-&gt;name" data-ref="_M/pnp_dev_name">pnp_dev_name</a>(<a class="local col6 ref" href="#6dev" title='dev' data-ref="6dev" data-ref-filename="6dev">dev</a>)) ||</td></tr>
+<tr><th id="427">427</th><td>	    (<a class="local col6 ref" href="#6dev" title='dev' data-ref="6dev" data-ref-filename="6dev">dev</a>-&gt;<a class="ref field" href="../../../../include/linux/pnp.h.html#pnp_dev::card" title='pnp_dev::card' data-ref="pnp_dev::card" data-ref-filename="pnp_dev..card">card</a> &amp;&amp; <a class="tu ref fn" href="#check_name" title='check_name' data-use='c' data-ref="check_name" data-ref-filename="check_name">check_name</a>(<a class="local col6 ref" href="#6dev" title='dev' data-ref="6dev" data-ref-filename="6dev">dev</a>-&gt;<a class="ref field" href="../../../../include/linux/pnp.h.html#pnp_dev::card" title='pnp_dev::card' data-ref="pnp_dev::card" data-ref-filename="pnp_dev..card">card</a>-&gt;<a class="ref field" href="../../../../include/linux/pnp.h.html#pnp_card::name" title='pnp_card::name' data-ref="pnp_card::name" data-ref-filename="pnp_card..name">name</a>))))</td></tr>
+<tr><th id="428">428</th><td>		<b>return</b> -<a class="macro" href="../../../../include/uapi/asm-generic/errno-base.h.html#23" title="19" data-ref="_M/ENODEV">ENODEV</a>;</td></tr>
+<tr><th id="429">429</th><td></td></tr>
+<tr><th id="430">430</th><td>	<b>if</b> (<a class="tu ref fn" href="#check_resources" title='check_resources' data-use='c' data-ref="check_resources" data-ref-filename="check_resources">check_resources</a>(<a class="local col6 ref" href="#6dev" title='dev' data-ref="6dev" data-ref-filename="6dev">dev</a>))</td></tr>
+<tr><th id="431">431</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="432">432</th><td></td></tr>
+<tr><th id="433">433</th><td>	<b>return</b> -<a class="macro" href="../../../../include/uapi/asm-generic/errno-base.h.html#23" title="19" data-ref="_M/ENODEV">ENODEV</a>;</td></tr>
+<tr><th id="434">434</th><td>}</td></tr>
+<tr><th id="435">435</th><td></td></tr>
+<tr><th id="436">436</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="437">437</th><td><dfn class="tu decl def fn" id="serial_pnp_probe" title='serial_pnp_probe' data-type='int serial_pnp_probe(struct pnp_dev * dev, const struct pnp_device_id * dev_id)' data-ref="serial_pnp_probe" data-ref-filename="serial_pnp_probe">serial_pnp_probe</dfn>(<b>struct</b> <a class="type" href="../../../../include/linux/pnp.h.html#pnp_dev" title='pnp_dev' data-ref="pnp_dev" data-ref-filename="pnp_dev">pnp_dev</a> *<dfn class="local col7 decl" id="7dev" title='dev' data-type='struct pnp_dev *' data-ref="7dev" data-ref-filename="7dev">dev</dfn>, <em>const</em> <b>struct</b> <a class="type" href="../../../../include/linux/mod_devicetable.h.html#pnp_device_id" title='pnp_device_id' data-ref="pnp_device_id" data-ref-filename="pnp_device_id">pnp_device_id</a> *<dfn class="local col8 decl" id="8dev_id" title='dev_id' data-type='const struct pnp_device_id *' data-ref="8dev_id" data-ref-filename="8dev_id">dev_id</dfn>)</td></tr>
+<tr><th id="438">438</th><td>{</td></tr>
+<tr><th id="439">439</th><td>	<b>struct</b> <a class="type" href="../../../../include/linux/serial_8250.h.html#uart_8250_port" title='uart_8250_port' data-ref="uart_8250_port" data-ref-filename="uart_8250_port">uart_8250_port</a> <dfn class="local col9 decl" id="9uart" title='uart' data-type='struct uart_8250_port' data-ref="9uart" data-ref-filename="9uart">uart</dfn>, *<dfn class="local col0 decl" id="10port" title='port' data-type='struct uart_8250_port *' data-ref="10port" data-ref-filename="10port">port</dfn>;</td></tr>
+<tr><th id="440">440</th><td>	<em>int</em> <dfn class="local col1 decl" id="11ret" title='ret' data-type='int' data-ref="11ret" data-ref-filename="11ret">ret</dfn>, <dfn class="local col2 decl" id="12line" title='line' data-type='int' data-ref="12line" data-ref-filename="12line">line</dfn>, <dfn class="local col3 decl" id="13flags" title='flags' data-type='int' data-ref="13flags" data-ref-filename="13flags">flags</dfn> = <a class="local col8 ref" href="#8dev_id" title='dev_id' data-ref="8dev_id" data-ref-filename="8dev_id">dev_id</a>-&gt;<a class="ref field" href="../../../../include/linux/mod_devicetable.h.html#pnp_device_id::driver_data" title='pnp_device_id::driver_data' data-ref="pnp_device_id::driver_data" data-ref-filename="pnp_device_id..driver_data">driver_data</a>;</td></tr>
+<tr><th id="441">441</th><td></td></tr>
+<tr><th id="442">442</th><td>	<b>if</b> (<a class="local col3 ref" href="#13flags" title='flags' data-ref="13flags" data-ref-filename="13flags">flags</a> &amp; <a class="macro" href="#23" title="0x3000" data-ref="_M/UNKNOWN_DEV">UNKNOWN_DEV</a>) {</td></tr>
+<tr><th id="443">443</th><td>		<a class="local col1 ref" href="#11ret" title='ret' data-ref="11ret" data-ref-filename="11ret">ret</a> = <a class="tu ref fn" href="#serial_pnp_guess_board" title='serial_pnp_guess_board' data-use='c' data-ref="serial_pnp_guess_board" data-ref-filename="serial_pnp_guess_board">serial_pnp_guess_board</a>(<a class="local col7 ref" href="#7dev" title='dev' data-ref="7dev" data-ref-filename="7dev">dev</a>);</td></tr>
+<tr><th id="444">444</th><td>		<b>if</b> (<a class="local col1 ref" href="#11ret" title='ret' data-ref="11ret" data-ref-filename="11ret">ret</a> &lt; <var>0</var>)</td></tr>
+<tr><th id="445">445</th><td>			<b>return</b> <a class="local col1 ref" href="#11ret" title='ret' data-ref="11ret" data-ref-filename="11ret">ret</a>;</td></tr>
+<tr><th id="446">446</th><td>	}</td></tr>
+<tr><th id="447">447</th><td></td></tr>
+<tr><th id="448">448</th><td>	<a class="ref fn" href="../../../../arch/x86/include/asm/string_64.h.html#memset" title='memset' data-ref="memset" data-ref-filename="memset">memset</a>(&amp;<a class="local col9 ref" href="#9uart" title='uart' data-ref="9uart" data-ref-filename="9uart">uart</a>, <var>0</var>, <b>sizeof</b>(<a class="local col9 ref" href="#9uart" title='uart' data-ref="9uart" data-ref-filename="9uart">uart</a>));</td></tr>
+<tr><th id="449">449</th><td>	<b>if</b> (<a class="ref fn" href="../../../../include/linux/pnp.h.html#pnp_irq_valid" title='pnp_irq_valid' data-ref="pnp_irq_valid" data-ref-filename="pnp_irq_valid">pnp_irq_valid</a>(<a class="local col7 ref" href="#7dev" title='dev' data-ref="7dev" data-ref-filename="7dev">dev</a>, <var>0</var>))</td></tr>
+<tr><th id="450">450</th><td>		<a class="local col9 ref" href="#9uart" title='uart' data-ref="9uart" data-ref-filename="9uart">uart</a>.<a class="ref field" href="../../../../include/linux/serial_8250.h.html#uart_8250_port::port" title='uart_8250_port::port' data-ref="uart_8250_port::port" data-ref-filename="uart_8250_port..port">port</a>.<a class="ref field" href="../../../../include/linux/serial_core.h.html#uart_port::irq" title='uart_port::irq' data-ref="uart_port::irq" data-ref-filename="uart_port..irq">irq</a> = <a class="ref fn" href="../../../../include/linux/pnp.h.html#pnp_irq" title='pnp_irq' data-ref="pnp_irq" data-ref-filename="pnp_irq">pnp_irq</a>(<a class="local col7 ref" href="#7dev" title='dev' data-ref="7dev" data-ref-filename="7dev">dev</a>, <var>0</var>);</td></tr>
+<tr><th id="451">451</th><td>	<b>if</b> ((<a class="local col3 ref" href="#13flags" title='flags' data-ref="13flags" data-ref-filename="13flags">flags</a> &amp; <a class="macro" href="#24" title="0x0800" data-ref="_M/CIR_PORT">CIR_PORT</a>) &amp;&amp; <a class="ref fn" href="../../../../include/linux/pnp.h.html#pnp_port_valid" title='pnp_port_valid' data-ref="pnp_port_valid" data-ref-filename="pnp_port_valid">pnp_port_valid</a>(<a class="local col7 ref" href="#7dev" title='dev' data-ref="7dev" data-ref-filename="7dev">dev</a>, <var>2</var>)) {</td></tr>
+<tr><th id="452">452</th><td>		<a class="local col9 ref" href="#9uart" title='uart' data-ref="9uart" data-ref-filename="9uart">uart</a>.<a class="ref field" href="../../../../include/linux/serial_8250.h.html#uart_8250_port::port" title='uart_8250_port::port' data-ref="uart_8250_port::port" data-ref-filename="uart_8250_port..port">port</a>.<a class="ref field" href="../../../../include/linux/serial_core.h.html#uart_port::iobase" title='uart_port::iobase' data-ref="uart_port::iobase" data-ref-filename="uart_port..iobase">iobase</a> = <a class="ref fn" href="../../../../include/linux/pnp.h.html#pnp_port_start" title='pnp_port_start' data-ref="pnp_port_start" data-ref-filename="pnp_port_start">pnp_port_start</a>(<a class="local col7 ref" href="#7dev" title='dev' data-ref="7dev" data-ref-filename="7dev">dev</a>, <var>2</var>);</td></tr>
+<tr><th id="453">453</th><td>		<a class="local col9 ref" href="#9uart" title='uart' data-ref="9uart" data-ref-filename="9uart">uart</a>.<a class="ref field" href="../../../../include/linux/serial_8250.h.html#uart_8250_port::port" title='uart_8250_port::port' data-ref="uart_8250_port::port" data-ref-filename="uart_8250_port..port">port</a>.<a class="ref field" href="../../../../include/linux/serial_core.h.html#uart_port::iotype" title='uart_port::iotype' data-ref="uart_port::iotype" data-ref-filename="uart_port..iotype">iotype</a> = <a class="macro" href="../../../../include/linux/serial_core.h.html#146" title="(0)" data-ref="_M/UPIO_PORT">UPIO_PORT</a>;</td></tr>
+<tr><th id="454">454</th><td>	} <b>else</b> <b>if</b> (<a class="ref fn" href="../../../../include/linux/pnp.h.html#pnp_port_valid" title='pnp_port_valid' data-ref="pnp_port_valid" data-ref-filename="pnp_port_valid">pnp_port_valid</a>(<a class="local col7 ref" href="#7dev" title='dev' data-ref="7dev" data-ref-filename="7dev">dev</a>, <var>0</var>)) {</td></tr>
+<tr><th id="455">455</th><td>		<a class="local col9 ref" href="#9uart" title='uart' data-ref="9uart" data-ref-filename="9uart">uart</a>.<a class="ref field" href="../../../../include/linux/serial_8250.h.html#uart_8250_port::port" title='uart_8250_port::port' data-ref="uart_8250_port::port" data-ref-filename="uart_8250_port..port">port</a>.<a class="ref field" href="../../../../include/linux/serial_core.h.html#uart_port::iobase" title='uart_port::iobase' data-ref="uart_port::iobase" data-ref-filename="uart_port..iobase">iobase</a> = <a class="ref fn" href="../../../../include/linux/pnp.h.html#pnp_port_start" title='pnp_port_start' data-ref="pnp_port_start" data-ref-filename="pnp_port_start">pnp_port_start</a>(<a class="local col7 ref" href="#7dev" title='dev' data-ref="7dev" data-ref-filename="7dev">dev</a>, <var>0</var>);</td></tr>
+<tr><th id="456">456</th><td>		<a class="local col9 ref" href="#9uart" title='uart' data-ref="9uart" data-ref-filename="9uart">uart</a>.<a class="ref field" href="../../../../include/linux/serial_8250.h.html#uart_8250_port::port" title='uart_8250_port::port' data-ref="uart_8250_port::port" data-ref-filename="uart_8250_port..port">port</a>.<a class="ref field" href="../../../../include/linux/serial_core.h.html#uart_port::iotype" title='uart_port::iotype' data-ref="uart_port::iotype" data-ref-filename="uart_port..iotype">iotype</a> = <a class="macro" href="../../../../include/linux/serial_core.h.html#146" title="(0)" data-ref="_M/UPIO_PORT">UPIO_PORT</a>;</td></tr>
+<tr><th id="457">457</th><td>	} <b>else</b> <b>if</b> (<a class="ref fn" href="../../../../include/linux/pnp.h.html#pnp_mem_valid" title='pnp_mem_valid' data-ref="pnp_mem_valid" data-ref-filename="pnp_mem_valid">pnp_mem_valid</a>(<a class="local col7 ref" href="#7dev" title='dev' data-ref="7dev" data-ref-filename="7dev">dev</a>, <var>0</var>)) {</td></tr>
+<tr><th id="458">458</th><td>		<a class="local col9 ref" href="#9uart" title='uart' data-ref="9uart" data-ref-filename="9uart">uart</a>.<a class="ref field" href="../../../../include/linux/serial_8250.h.html#uart_8250_port::port" title='uart_8250_port::port' data-ref="uart_8250_port::port" data-ref-filename="uart_8250_port..port">port</a>.<a class="ref field" href="../../../../include/linux/serial_core.h.html#uart_port::mapbase" title='uart_port::mapbase' data-ref="uart_port::mapbase" data-ref-filename="uart_port..mapbase">mapbase</a> = <a class="ref fn" href="../../../../include/linux/pnp.h.html#pnp_mem_start" title='pnp_mem_start' data-ref="pnp_mem_start" data-ref-filename="pnp_mem_start">pnp_mem_start</a>(<a class="local col7 ref" href="#7dev" title='dev' data-ref="7dev" data-ref-filename="7dev">dev</a>, <var>0</var>);</td></tr>
+<tr><th id="459">459</th><td>		<a class="local col9 ref" href="#9uart" title='uart' data-ref="9uart" data-ref-filename="9uart">uart</a>.<a class="ref field" href="../../../../include/linux/serial_8250.h.html#uart_8250_port::port" title='uart_8250_port::port' data-ref="uart_8250_port::port" data-ref-filename="uart_8250_port..port">port</a>.<a class="ref field" href="../../../../include/linux/serial_core.h.html#uart_port::iotype" title='uart_port::iotype' data-ref="uart_port::iotype" data-ref-filename="uart_port..iotype">iotype</a> = <a class="macro" href="../../../../include/linux/serial_core.h.html#148" title="(2)" data-ref="_M/UPIO_MEM">UPIO_MEM</a>;</td></tr>
+<tr><th id="460">460</th><td>		<a class="local col9 ref" href="#9uart" title='uart' data-ref="9uart" data-ref-filename="9uart">uart</a>.<a class="ref field" href="../../../../include/linux/serial_8250.h.html#uart_8250_port::port" title='uart_8250_port::port' data-ref="uart_8250_port::port" data-ref-filename="uart_8250_port..port">port</a>.<a class="ref field" href="../../../../include/linux/serial_core.h.html#uart_port::flags" title='uart_port::flags' data-ref="uart_port::flags" data-ref-filename="uart_port..flags">flags</a> = <a class="macro" href="../../../../include/linux/serial_core.h.html#213" title="(( upf_t) (1 &lt;&lt; 31))" data-ref="_M/UPF_IOREMAP">UPF_IOREMAP</a>;</td></tr>
+<tr><th id="461">461</th><td>	} <b>else</b></td></tr>
+<tr><th id="462">462</th><td>		<b>return</b> -<a class="macro" href="../../../../include/uapi/asm-generic/errno-base.h.html#23" title="19" data-ref="_M/ENODEV">ENODEV</a>;</td></tr>
+<tr><th id="463">463</th><td></td></tr>
+<tr><th id="464">464</th><td>	<a class="macro" href="../../../../include/linux/device.h.html#1514" title="({ if (0) dev_printk(&quot;\001&quot; &quot;7&quot;, &amp;dev-&gt;dev, &quot;Setup PNP port: port %#lx, mem %#llx, irq %u, type %u\n&quot;, uart.port.iobase, (unsigned long long)uart.port.mapbase, uart.port.irq, uart.port.iotype); })" data-ref="_M/dev_dbg">dev_dbg</a>(&amp;<a class="local col7 ref" href="#7dev" title='dev' data-ref="7dev" data-ref-filename="7dev">dev</a>-&gt;<a class="ref field" href="../../../../include/linux/pnp.h.html#pnp_dev::dev" title='pnp_dev::dev' data-ref="pnp_dev::dev" data-ref-filename="pnp_dev..dev">dev</a>,</td></tr>
+<tr><th id="465">465</th><td>		 <q>"Setup PNP port: port %#lx, mem %#llx, irq %u, type %u\n"</q>,</td></tr>
+<tr><th id="466">466</th><td>		 <a class="local col9 ref" href="#9uart" title='uart' data-ref="9uart" data-ref-filename="9uart">uart</a>.<a class="ref field" href="../../../../include/linux/serial_8250.h.html#uart_8250_port::port" title='uart_8250_port::port' data-ref="uart_8250_port::port" data-ref-filename="uart_8250_port..port">port</a>.<a class="ref field" href="../../../../include/linux/serial_core.h.html#uart_port::iobase" title='uart_port::iobase' data-ref="uart_port::iobase" data-ref-filename="uart_port..iobase">iobase</a>, (<em>unsigned</em> <em>long</em> <em>long</em>)<a class="local col9 ref" href="#9uart" title='uart' data-ref="9uart" data-ref-filename="9uart">uart</a>.<a class="ref field" href="../../../../include/linux/serial_8250.h.html#uart_8250_port::port" title='uart_8250_port::port' data-ref="uart_8250_port::port" data-ref-filename="uart_8250_port..port">port</a>.<a class="ref field" href="../../../../include/linux/serial_core.h.html#uart_port::mapbase" title='uart_port::mapbase' data-ref="uart_port::mapbase" data-ref-filename="uart_port..mapbase">mapbase</a>,</td></tr>
+<tr><th id="467">467</th><td>		 <a class="local col9 ref" href="#9uart" title='uart' data-ref="9uart" data-ref-filename="9uart">uart</a>.<a class="ref field" href="../../../../include/linux/serial_8250.h.html#uart_8250_port::port" title='uart_8250_port::port' data-ref="uart_8250_port::port" data-ref-filename="uart_8250_port..port">port</a>.<a class="ref field" href="../../../../include/linux/serial_core.h.html#uart_port::irq" title='uart_port::irq' data-ref="uart_port::irq" data-ref-filename="uart_port..irq">irq</a>, <a class="local col9 ref" href="#9uart" title='uart' data-ref="9uart" data-ref-filename="9uart">uart</a>.<a class="ref field" href="../../../../include/linux/serial_8250.h.html#uart_8250_port::port" title='uart_8250_port::port' data-ref="uart_8250_port::port" data-ref-filename="uart_8250_port..port">port</a>.<a class="ref field" href="../../../../include/linux/serial_core.h.html#uart_port::iotype" title='uart_port::iotype' data-ref="uart_port::iotype" data-ref-filename="uart_port..iotype">iotype</a>);</td></tr>
+<tr><th id="468">468</th><td></td></tr>
+<tr><th id="469">469</th><td>	<b>if</b> (<a class="local col3 ref" href="#13flags" title='flags' data-ref="13flags" data-ref-filename="13flags">flags</a> &amp; <a class="macro" href="#24" title="0x0800" data-ref="_M/CIR_PORT">CIR_PORT</a>) {</td></tr>
+<tr><th id="470">470</th><td>		<a class="local col9 ref" href="#9uart" title='uart' data-ref="9uart" data-ref-filename="9uart">uart</a>.<a class="ref field" href="../../../../include/linux/serial_8250.h.html#uart_8250_port::port" title='uart_8250_port::port' data-ref="uart_8250_port::port" data-ref-filename="uart_8250_port..port">port</a>.<a class="ref field" href="../../../../include/linux/serial_core.h.html#uart_port::flags" title='uart_port::flags' data-ref="uart_port::flags" data-ref-filename="uart_port..flags">flags</a> |= <a class="macro" href="../../../../include/linux/serial_core.h.html#211" title="(( upf_t) (1 &lt;&lt; 29))" data-ref="_M/UPF_FIXED_PORT">UPF_FIXED_PORT</a> | <a class="macro" href="../../../../include/linux/serial_core.h.html#209" title="(( upf_t) (1 &lt;&lt; 27))" data-ref="_M/UPF_FIXED_TYPE">UPF_FIXED_TYPE</a>;</td></tr>
+<tr><th id="471">471</th><td>		<a class="local col9 ref" href="#9uart" title='uart' data-ref="9uart" data-ref-filename="9uart">uart</a>.<a class="ref field" href="../../../../include/linux/serial_8250.h.html#uart_8250_port::port" title='uart_8250_port::port' data-ref="uart_8250_port::port" data-ref-filename="uart_8250_port..port">port</a>.<a class="ref field" href="../../../../include/linux/serial_core.h.html#uart_port::type" title='uart_port::type' data-ref="uart_port::type" data-ref-filename="uart_port..type">type</a> = <a class="macro" href="../../../../include/uapi/linux/serial_core.h.html#52" title="23" data-ref="_M/PORT_8250_CIR">PORT_8250_CIR</a>;</td></tr>
+<tr><th id="472">472</th><td>	}</td></tr>
+<tr><th id="473">473</th><td></td></tr>
+<tr><th id="474">474</th><td>	<a class="local col9 ref" href="#9uart" title='uart' data-ref="9uart" data-ref-filename="9uart">uart</a>.<a class="ref field" href="../../../../include/linux/serial_8250.h.html#uart_8250_port::port" title='uart_8250_port::port' data-ref="uart_8250_port::port" data-ref-filename="uart_8250_port..port">port</a>.<a class="ref field" href="../../../../include/linux/serial_core.h.html#uart_port::flags" title='uart_port::flags' data-ref="uart_port::flags" data-ref-filename="uart_port..flags">flags</a> |= <a class="macro" href="../../../../include/linux/serial_core.h.html#189" title="(( upf_t) (1U &lt;&lt; 6) )" data-ref="_M/UPF_SKIP_TEST">UPF_SKIP_TEST</a> | <a class="macro" href="../../../../include/linux/serial_core.h.html#210" title="(( upf_t) (1 &lt;&lt; 28))" data-ref="_M/UPF_BOOT_AUTOCONF">UPF_BOOT_AUTOCONF</a>;</td></tr>
+<tr><th id="475">475</th><td>	<b>if</b> (<a class="ref fn" href="../../../../include/linux/pnp.h.html#pnp_irq_flags" title='pnp_irq_flags' data-ref="pnp_irq_flags" data-ref-filename="pnp_irq_flags">pnp_irq_flags</a>(<a class="local col7 ref" href="#7dev" title='dev' data-ref="7dev" data-ref-filename="7dev">dev</a>, <var>0</var>) &amp; <a class="macro" href="../../../../include/linux/ioport.h.html#76" title="(1&lt;&lt;4)" data-ref="_M/IORESOURCE_IRQ_SHAREABLE">IORESOURCE_IRQ_SHAREABLE</a>)</td></tr>
+<tr><th id="476">476</th><td>		<a class="local col9 ref" href="#9uart" title='uart' data-ref="9uart" data-ref-filename="9uart">uart</a>.<a class="ref field" href="../../../../include/linux/serial_8250.h.html#uart_8250_port::port" title='uart_8250_port::port' data-ref="uart_8250_port::port" data-ref-filename="uart_8250_port..port">port</a>.<a class="ref field" href="../../../../include/linux/serial_core.h.html#uart_port::flags" title='uart_port::flags' data-ref="uart_port::flags" data-ref-filename="uart_port..flags">flags</a> |= <a class="macro" href="../../../../include/linux/serial_core.h.html#205" title="(( upf_t) (1 &lt;&lt; 24))" data-ref="_M/UPF_SHARE_IRQ">UPF_SHARE_IRQ</a>;</td></tr>
+<tr><th id="477">477</th><td>	<a class="local col9 ref" href="#9uart" title='uart' data-ref="9uart" data-ref-filename="9uart">uart</a>.<a class="ref field" href="../../../../include/linux/serial_8250.h.html#uart_8250_port::port" title='uart_8250_port::port' data-ref="uart_8250_port::port" data-ref-filename="uart_8250_port..port">port</a>.<a class="ref field" href="../../../../include/linux/serial_core.h.html#uart_port::uartclk" title='uart_port::uartclk' data-ref="uart_port::uartclk" data-ref-filename="uart_port..uartclk">uartclk</a> = <var>1843200</var>;</td></tr>
+<tr><th id="478">478</th><td>	<a class="local col9 ref" href="#9uart" title='uart' data-ref="9uart" data-ref-filename="9uart">uart</a>.<a class="ref field" href="../../../../include/linux/serial_8250.h.html#uart_8250_port::port" title='uart_8250_port::port' data-ref="uart_8250_port::port" data-ref-filename="uart_8250_port..port">port</a>.<a class="ref field" href="../../../../include/linux/serial_core.h.html#uart_port::dev" title='uart_port::dev' data-ref="uart_port::dev" data-ref-filename="uart_port..dev">dev</a> = &amp;<a class="local col7 ref" href="#7dev" title='dev' data-ref="7dev" data-ref-filename="7dev">dev</a>-&gt;<a class="ref field" href="../../../../include/linux/pnp.h.html#pnp_dev::dev" title='pnp_dev::dev' data-ref="pnp_dev::dev" data-ref-filename="pnp_dev..dev">dev</a>;</td></tr>
+<tr><th id="479">479</th><td></td></tr>
+<tr><th id="480">480</th><td>	<a class="local col2 ref" href="#12line" title='line' data-ref="12line" data-ref-filename="12line">line</a> = <a class="ref fn" href="../../../../include/linux/serial_8250.h.html#serial8250_register_8250_port" title='serial8250_register_8250_port' data-ref="serial8250_register_8250_port" data-ref-filename="serial8250_register_8250_port">serial8250_register_8250_port</a>(&amp;<a class="local col9 ref" href="#9uart" title='uart' data-ref="9uart" data-ref-filename="9uart">uart</a>);</td></tr>
+<tr><th id="481">481</th><td>	<b>if</b> (<a class="local col2 ref" href="#12line" title='line' data-ref="12line" data-ref-filename="12line">line</a> &lt; <var>0</var> || (<a class="local col3 ref" href="#13flags" title='flags' data-ref="13flags" data-ref-filename="13flags">flags</a> &amp; <a class="macro" href="#24" title="0x0800" data-ref="_M/CIR_PORT">CIR_PORT</a>))</td></tr>
+<tr><th id="482">482</th><td>		<b>return</b> -<a class="macro" href="../../../../include/uapi/asm-generic/errno-base.h.html#23" title="19" data-ref="_M/ENODEV">ENODEV</a>;</td></tr>
+<tr><th id="483">483</th><td></td></tr>
+<tr><th id="484">484</th><td>	<a class="local col0 ref" href="#10port" title='port' data-ref="10port" data-ref-filename="10port">port</a> = <a class="ref fn" href="8250.h.html#serial8250_get_port" title='serial8250_get_port' data-ref="serial8250_get_port" data-ref-filename="serial8250_get_port">serial8250_get_port</a>(<a class="local col2 ref" href="#12line" title='line' data-ref="12line" data-ref-filename="12line">line</a>);</td></tr>
+<tr><th id="485">485</th><td>	<b>if</b> (<a class="macro" href="../../../../include/linux/serial_core.h.html#23" title="((&amp;port-&gt;port)-&gt;cons &amp;&amp; (&amp;port-&gt;port)-&gt;cons-&gt;index == (&amp;port-&gt;port)-&gt;line)" data-ref="_M/uart_console">uart_console</a>(&amp;<a class="local col0 ref" href="#10port" title='port' data-ref="10port" data-ref-filename="10port">port</a>-&gt;<a class="ref field" href="../../../../include/linux/serial_8250.h.html#uart_8250_port::port" title='uart_8250_port::port' data-ref="uart_8250_port::port" data-ref-filename="uart_8250_port..port">port</a>))</td></tr>
+<tr><th id="486">486</th><td>		<a class="local col7 ref" href="#7dev" title='dev' data-ref="7dev" data-ref-filename="7dev">dev</a>-&gt;<a class="ref field" href="../../../../include/linux/pnp.h.html#pnp_dev::capabilities" title='pnp_dev::capabilities' data-ref="pnp_dev::capabilities" data-ref-filename="pnp_dev..capabilities">capabilities</a> |= <a class="macro" href="../../../../include/linux/pnp.h.html#314" title="0x0020" data-ref="_M/PNP_CONSOLE">PNP_CONSOLE</a>;</td></tr>
+<tr><th id="487">487</th><td></td></tr>
+<tr><th id="488">488</th><td>	<a class="ref fn" href="../../../../include/linux/pnp.h.html#pnp_set_drvdata" title='pnp_set_drvdata' data-ref="pnp_set_drvdata" data-ref-filename="pnp_set_drvdata">pnp_set_drvdata</a>(<a class="local col7 ref" href="#7dev" title='dev' data-ref="7dev" data-ref-filename="7dev">dev</a>, (<em>void</em> *)((<em>long</em>)<a class="local col2 ref" href="#12line" title='line' data-ref="12line" data-ref-filename="12line">line</a> + <var>1</var>));</td></tr>
+<tr><th id="489">489</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="490">490</th><td>}</td></tr>
+<tr><th id="491">491</th><td></td></tr>
+<tr><th id="492">492</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="serial_pnp_remove" title='serial_pnp_remove' data-type='void serial_pnp_remove(struct pnp_dev * dev)' data-ref="serial_pnp_remove" data-ref-filename="serial_pnp_remove">serial_pnp_remove</dfn>(<b>struct</b> <a class="type" href="../../../../include/linux/pnp.h.html#pnp_dev" title='pnp_dev' data-ref="pnp_dev" data-ref-filename="pnp_dev">pnp_dev</a> *<dfn class="local col4 decl" id="14dev" title='dev' data-type='struct pnp_dev *' data-ref="14dev" data-ref-filename="14dev">dev</dfn>)</td></tr>
+<tr><th id="493">493</th><td>{</td></tr>
+<tr><th id="494">494</th><td>	<em>long</em> <dfn class="local col5 decl" id="15line" title='line' data-type='long' data-ref="15line" data-ref-filename="15line">line</dfn> = (<em>long</em>)<a class="ref fn" href="../../../../include/linux/pnp.h.html#pnp_get_drvdata" title='pnp_get_drvdata' data-ref="pnp_get_drvdata" data-ref-filename="pnp_get_drvdata">pnp_get_drvdata</a>(<a class="local col4 ref" href="#14dev" title='dev' data-ref="14dev" data-ref-filename="14dev">dev</a>);</td></tr>
+<tr><th id="495">495</th><td></td></tr>
+<tr><th id="496">496</th><td>	<a class="local col4 ref" href="#14dev" title='dev' data-ref="14dev" data-ref-filename="14dev">dev</a>-&gt;<a class="ref field" href="../../../../include/linux/pnp.h.html#pnp_dev::capabilities" title='pnp_dev::capabilities' data-ref="pnp_dev::capabilities" data-ref-filename="pnp_dev..capabilities">capabilities</a> &amp;= ~<a class="macro" href="../../../../include/linux/pnp.h.html#314" title="0x0020" data-ref="_M/PNP_CONSOLE">PNP_CONSOLE</a>;</td></tr>
+<tr><th id="497">497</th><td>	<b>if</b> (<a class="local col5 ref" href="#15line" title='line' data-ref="15line" data-ref-filename="15line">line</a>)</td></tr>
+<tr><th id="498">498</th><td>		<a class="ref fn" href="../../../../include/linux/serial_8250.h.html#serial8250_unregister_port" title='serial8250_unregister_port' data-ref="serial8250_unregister_port" data-ref-filename="serial8250_unregister_port">serial8250_unregister_port</a>(<a class="local col5 ref" href="#15line" title='line' data-ref="15line" data-ref-filename="15line">line</a> - <var>1</var>);</td></tr>
+<tr><th id="499">499</th><td>}</td></tr>
+<tr><th id="500">500</th><td></td></tr>
+<tr><th id="501">501</th><td><u>#<span data-ppcond="501">ifdef</span> <a class="macro" href="../../../../include/generated/autoconf.h.html#275" data-ref="_M/CONFIG_PM">CONFIG_PM</a></u></td></tr>
+<tr><th id="502">502</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="serial_pnp_suspend" title='serial_pnp_suspend' data-type='int serial_pnp_suspend(struct pnp_dev * dev, pm_message_t state)' data-ref="serial_pnp_suspend" data-ref-filename="serial_pnp_suspend">serial_pnp_suspend</dfn>(<b>struct</b> <a class="type" href="../../../../include/linux/pnp.h.html#pnp_dev" title='pnp_dev' data-ref="pnp_dev" data-ref-filename="pnp_dev">pnp_dev</a> *<dfn class="local col6 decl" id="16dev" title='dev' data-type='struct pnp_dev *' data-ref="16dev" data-ref-filename="16dev">dev</dfn>, <a class="typedef" href="../../../../include/linux/pm.h.html#pm_message_t" title='pm_message_t' data-type='struct pm_message' data-ref="pm_message_t" data-ref-filename="pm_message_t">pm_message_t</a> <dfn class="local col7 decl" id="17state" title='state' data-type='pm_message_t' data-ref="17state" data-ref-filename="17state">state</dfn>)</td></tr>
+<tr><th id="503">503</th><td>{</td></tr>
+<tr><th id="504">504</th><td>	<em>long</em> <dfn class="local col8 decl" id="18line" title='line' data-type='long' data-ref="18line" data-ref-filename="18line">line</dfn> = (<em>long</em>)<a class="ref fn" href="../../../../include/linux/pnp.h.html#pnp_get_drvdata" title='pnp_get_drvdata' data-ref="pnp_get_drvdata" data-ref-filename="pnp_get_drvdata">pnp_get_drvdata</a>(<a class="local col6 ref" href="#16dev" title='dev' data-ref="16dev" data-ref-filename="16dev">dev</a>);</td></tr>
+<tr><th id="505">505</th><td></td></tr>
+<tr><th id="506">506</th><td>	<b>if</b> (!<a class="local col8 ref" href="#18line" title='line' data-ref="18line" data-ref-filename="18line">line</a>)</td></tr>
+<tr><th id="507">507</th><td>		<b>return</b> -<a class="macro" href="../../../../include/uapi/asm-generic/errno-base.h.html#23" title="19" data-ref="_M/ENODEV">ENODEV</a>;</td></tr>
+<tr><th id="508">508</th><td>	<a class="ref fn" href="../../../../include/linux/serial_8250.h.html#serial8250_suspend_port" title='serial8250_suspend_port' data-ref="serial8250_suspend_port" data-ref-filename="serial8250_suspend_port">serial8250_suspend_port</a>(<a class="local col8 ref" href="#18line" title='line' data-ref="18line" data-ref-filename="18line">line</a> - <var>1</var>);</td></tr>
+<tr><th id="509">509</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="510">510</th><td>}</td></tr>
+<tr><th id="511">511</th><td></td></tr>
+<tr><th id="512">512</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="serial_pnp_resume" title='serial_pnp_resume' data-type='int serial_pnp_resume(struct pnp_dev * dev)' data-ref="serial_pnp_resume" data-ref-filename="serial_pnp_resume">serial_pnp_resume</dfn>(<b>struct</b> <a class="type" href="../../../../include/linux/pnp.h.html#pnp_dev" title='pnp_dev' data-ref="pnp_dev" data-ref-filename="pnp_dev">pnp_dev</a> *<dfn class="local col9 decl" id="19dev" title='dev' data-type='struct pnp_dev *' data-ref="19dev" data-ref-filename="19dev">dev</dfn>)</td></tr>
+<tr><th id="513">513</th><td>{</td></tr>
+<tr><th id="514">514</th><td>	<em>long</em> <dfn class="local col0 decl" id="20line" title='line' data-type='long' data-ref="20line" data-ref-filename="20line">line</dfn> = (<em>long</em>)<a class="ref fn" href="../../../../include/linux/pnp.h.html#pnp_get_drvdata" title='pnp_get_drvdata' data-ref="pnp_get_drvdata" data-ref-filename="pnp_get_drvdata">pnp_get_drvdata</a>(<a class="local col9 ref" href="#19dev" title='dev' data-ref="19dev" data-ref-filename="19dev">dev</a>);</td></tr>
+<tr><th id="515">515</th><td></td></tr>
+<tr><th id="516">516</th><td>	<b>if</b> (!<a class="local col0 ref" href="#20line" title='line' data-ref="20line" data-ref-filename="20line">line</a>)</td></tr>
+<tr><th id="517">517</th><td>		<b>return</b> -<a class="macro" href="../../../../include/uapi/asm-generic/errno-base.h.html#23" title="19" data-ref="_M/ENODEV">ENODEV</a>;</td></tr>
+<tr><th id="518">518</th><td>	<a class="ref fn" href="../../../../include/linux/serial_8250.h.html#serial8250_resume_port" title='serial8250_resume_port' data-ref="serial8250_resume_port" data-ref-filename="serial8250_resume_port">serial8250_resume_port</a>(<a class="local col0 ref" href="#20line" title='line' data-ref="20line" data-ref-filename="20line">line</a> - <var>1</var>);</td></tr>
+<tr><th id="519">519</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="520">520</th><td>}</td></tr>
+<tr><th id="521">521</th><td><u>#<span data-ppcond="501">else</span></u></td></tr>
+<tr><th id="522">522</th><td><u>#define serial_pnp_suspend NULL</u></td></tr>
+<tr><th id="523">523</th><td><u>#define serial_pnp_resume NULL</u></td></tr>
+<tr><th id="524">524</th><td><u>#<span data-ppcond="501">endif</span> /* CONFIG_PM */</u></td></tr>
+<tr><th id="525">525</th><td></td></tr>
+<tr><th id="526">526</th><td><em>static</em> <b>struct</b> <a class="type" href="../../../../include/linux/pnp.h.html#pnp_driver" title='pnp_driver' data-ref="pnp_driver" data-ref-filename="pnp_driver">pnp_driver</a> <dfn class="tu decl def" id="serial_pnp_driver" title='serial_pnp_driver' data-type='struct pnp_driver' data-ref="serial_pnp_driver" data-ref-filename="serial_pnp_driver">serial_pnp_driver</dfn> = {</td></tr>
+<tr><th id="527">527</th><td>	.<a class="ref field" href="../../../../include/linux/pnp.h.html#pnp_driver::name" title='pnp_driver::name' data-ref="pnp_driver::name" data-ref-filename="pnp_driver..name">name</a>		= <q>"serial"</q>,</td></tr>
+<tr><th id="528">528</th><td>	.<a class="ref field" href="../../../../include/linux/pnp.h.html#pnp_driver::probe" title='pnp_driver::probe' data-ref="pnp_driver::probe" data-ref-filename="pnp_driver..probe">probe</a>		= <a class="tu ref fn" href="#serial_pnp_probe" title='serial_pnp_probe' data-ref="serial_pnp_probe" data-ref-filename="serial_pnp_probe">serial_pnp_probe</a>,</td></tr>
+<tr><th id="529">529</th><td>	.<a class="ref field" href="../../../../include/linux/pnp.h.html#pnp_driver::remove" title='pnp_driver::remove' data-ref="pnp_driver::remove" data-ref-filename="pnp_driver..remove">remove</a>		= <a class="tu ref fn" href="#serial_pnp_remove" title='serial_pnp_remove' data-ref="serial_pnp_remove" data-ref-filename="serial_pnp_remove">serial_pnp_remove</a>,</td></tr>
+<tr><th id="530">530</th><td>	.<a class="ref field" href="../../../../include/linux/pnp.h.html#pnp_driver::suspend" title='pnp_driver::suspend' data-ref="pnp_driver::suspend" data-ref-filename="pnp_driver..suspend">suspend</a>	= <a class="tu ref fn" href="#serial_pnp_suspend" title='serial_pnp_suspend' data-ref="serial_pnp_suspend" data-ref-filename="serial_pnp_suspend">serial_pnp_suspend</a>,</td></tr>
+<tr><th id="531">531</th><td>	.<a class="ref field" href="../../../../include/linux/pnp.h.html#pnp_driver::resume" title='pnp_driver::resume' data-ref="pnp_driver::resume" data-ref-filename="pnp_driver..resume">resume</a>		= <a class="tu ref fn" href="#serial_pnp_resume" title='serial_pnp_resume' data-ref="serial_pnp_resume" data-ref-filename="serial_pnp_resume">serial_pnp_resume</a>,</td></tr>
+<tr><th id="532">532</th><td>	.<a class="ref field" href="../../../../include/linux/pnp.h.html#pnp_driver::id_table" title='pnp_driver::id_table' data-ref="pnp_driver::id_table" data-ref-filename="pnp_driver..id_table">id_table</a>	= <a class="tu ref" href="#pnp_dev_table" title='pnp_dev_table' data-ref="pnp_dev_table" data-ref-filename="pnp_dev_table">pnp_dev_table</a>,</td></tr>
+<tr><th id="533">533</th><td>};</td></tr>
+<tr><th id="534">534</th><td></td></tr>
+<tr><th id="535">535</th><td><em>int</em> <dfn class="decl def fn" id="serial8250_pnp_init" title='serial8250_pnp_init' data-ref="serial8250_pnp_init" data-ref-filename="serial8250_pnp_init">serial8250_pnp_init</dfn>(<em>void</em>)</td></tr>
+<tr><th id="536">536</th><td>{</td></tr>
+<tr><th id="537">537</th><td>	<b>return</b> <a class="ref fn" href="../../../../include/linux/pnp.h.html#pnp_register_driver" title='pnp_register_driver' data-ref="pnp_register_driver" data-ref-filename="pnp_register_driver">pnp_register_driver</a>(&amp;<a class="tu ref" href="#serial_pnp_driver" title='serial_pnp_driver' data-use='a' data-ref="serial_pnp_driver" data-ref-filename="serial_pnp_driver">serial_pnp_driver</a>);</td></tr>
+<tr><th id="538">538</th><td>}</td></tr>
+<tr><th id="539">539</th><td></td></tr>
+<tr><th id="540">540</th><td><em>void</em> <dfn class="decl def fn" id="serial8250_pnp_exit" title='serial8250_pnp_exit' data-ref="serial8250_pnp_exit" data-ref-filename="serial8250_pnp_exit">serial8250_pnp_exit</dfn>(<em>void</em>)</td></tr>
+<tr><th id="541">541</th><td>{</td></tr>
+<tr><th id="542">542</th><td>	<a class="ref fn" href="../../../../include/linux/pnp.h.html#pnp_unregister_driver" title='pnp_unregister_driver' data-ref="pnp_unregister_driver" data-ref-filename="pnp_unregister_driver">pnp_unregister_driver</a>(&amp;<a class="tu ref" href="#serial_pnp_driver" title='serial_pnp_driver' data-use='a' data-ref="serial_pnp_driver" data-ref-filename="serial_pnp_driver">serial_pnp_driver</a>);</td></tr>
+<tr><th id="543">543</th><td>}</td></tr>
+<tr><th id="544">544</th><td></td></tr>
+<tr><th id="545">545</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

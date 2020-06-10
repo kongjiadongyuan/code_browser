@@ -1,0 +1,938 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>sparse.c source code [linux-5.3.1/mm/sparse.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/mm/sparse.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>linux-5.3.1</a>/<a href='./'>mm</a>/<a href='sparse.c.html'>sparse.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * sparse memory mappings.</i></td></tr>
+<tr><th id="4">4</th><td><i> */</i></td></tr>
+<tr><th id="5">5</th><td><u>#include <a href="../include/linux/mm.h.html">&lt;linux/mm.h&gt;</a></u></td></tr>
+<tr><th id="6">6</th><td><u>#include <a href="../include/linux/slab.h.html">&lt;linux/slab.h&gt;</a></u></td></tr>
+<tr><th id="7">7</th><td><u>#include <a href="../include/linux/mmzone.h.html">&lt;linux/mmzone.h&gt;</a></u></td></tr>
+<tr><th id="8">8</th><td><u>#include <a href="../include/linux/memblock.h.html">&lt;linux/memblock.h&gt;</a></u></td></tr>
+<tr><th id="9">9</th><td><u>#include <a href="../include/linux/compiler.h.html">&lt;linux/compiler.h&gt;</a></u></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="../include/linux/highmem.h.html">&lt;linux/highmem.h&gt;</a></u></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../include/linux/export.h.html">&lt;linux/export.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="../include/linux/spinlock.h.html">&lt;linux/spinlock.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="../include/linux/vmalloc.h.html">&lt;linux/vmalloc.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td></td></tr>
+<tr><th id="15">15</th><td><u>#include <a href="internal.h.html">"internal.h"</a></u></td></tr>
+<tr><th id="16">16</th><td><u>#include <a href="../arch/x86/include/asm/dma.h.html">&lt;asm/dma.h&gt;</a></u></td></tr>
+<tr><th id="17">17</th><td><u>#include <a href="../arch/x86/include/asm/pgalloc.h.html">&lt;asm/pgalloc.h&gt;</a></u></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../arch/x86/include/asm/pgtable.h.html">&lt;asm/pgtable.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><i>/*</i></td></tr>
+<tr><th id="21">21</th><td><i> * Permanent SPARSEMEM data:</i></td></tr>
+<tr><th id="22">22</th><td><i> *</i></td></tr>
+<tr><th id="23">23</th><td><i> * 1) mem_section	- memory sections, mem_map's for valid memory</i></td></tr>
+<tr><th id="24">24</th><td><i> */</i></td></tr>
+<tr><th id="25">25</th><td><u>#<span data-ppcond="25">ifdef</span> <a class="macro" href="../include/generated/autoconf.h.html#308" data-ref="_M/CONFIG_SPARSEMEM_EXTREME">CONFIG_SPARSEMEM_EXTREME</a></u></td></tr>
+<tr><th id="26">26</th><td><b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#mem_section" title='mem_section' data-ref="mem_section" data-ref-filename="mem_section">mem_section</a> **<dfn class="decl def" id="mem_section" title='mem_section' data-ref="mem_section" data-ref-filename="mem_section">mem_section</dfn>;</td></tr>
+<tr><th id="27">27</th><td><u>#<span data-ppcond="25">else</span></u></td></tr>
+<tr><th id="28">28</th><td><b>struct</b> mem_section mem_section[NR_SECTION_ROOTS][SECTIONS_PER_ROOT]</td></tr>
+<tr><th id="29">29</th><td>	____cacheline_internodealigned_in_smp;</td></tr>
+<tr><th id="30">30</th><td><u>#<span data-ppcond="25">endif</span></u></td></tr>
+<tr><th id="31">31</th><td><a class="macro" href="../include/linux/export.h.html#123" title="extern typeof(mem_section) mem_section; static const char __kstrtab_mem_section[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;mem_section&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_mem_section31 = (void *)&amp;mem_section; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;&quot; &quot;+&quot; &quot;mem_section&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;mem_section&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;mem_section&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;mem_section&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL">EXPORT_SYMBOL</a>(<a class="decl" href="../include/linux/mmzone.h.html#mem_section" title='mem_section' data-ref="mem_section" data-ref-filename="mem_section" id="mem_section"><a class="ref" href="../include/linux/mmzone.h.html#mem_section" title='mem_section' data-ref="mem_section" data-ref-filename="mem_section"><a class="ref" href="../include/linux/mmzone.h.html#mem_section" title='mem_section' data-ref="mem_section" data-ref-filename="mem_section">mem_section</a></a></a>);</td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td><u>#<span data-ppcond="33">ifdef</span> <span class="macro" data-ref="_M/NODE_NOT_IN_PAGE_FLAGS">NODE_NOT_IN_PAGE_FLAGS</span></u></td></tr>
+<tr><th id="34">34</th><td><i>/*</i></td></tr>
+<tr><th id="35">35</th><td><i> * If we did not store the node number in the page then we have to</i></td></tr>
+<tr><th id="36">36</th><td><i> * do a lookup in the section_to_node_table in order to find which</i></td></tr>
+<tr><th id="37">37</th><td><i> * node the page belongs to.</i></td></tr>
+<tr><th id="38">38</th><td><i> */</i></td></tr>
+<tr><th id="39">39</th><td><u>#if MAX_NUMNODES &lt;= 256</u></td></tr>
+<tr><th id="40">40</th><td><em>static</em> u8 section_to_node_table[NR_MEM_SECTIONS] __cacheline_aligned;</td></tr>
+<tr><th id="41">41</th><td><u>#else</u></td></tr>
+<tr><th id="42">42</th><td><em>static</em> u16 section_to_node_table[NR_MEM_SECTIONS] __cacheline_aligned;</td></tr>
+<tr><th id="43">43</th><td><u>#endif</u></td></tr>
+<tr><th id="44">44</th><td></td></tr>
+<tr><th id="45">45</th><td><em>int</em> page_to_nid(<em>const</em> <b>struct</b> page *page)</td></tr>
+<tr><th id="46">46</th><td>{</td></tr>
+<tr><th id="47">47</th><td>	<b>return</b> section_to_node_table[page_to_section(page)];</td></tr>
+<tr><th id="48">48</th><td>}</td></tr>
+<tr><th id="49">49</th><td>EXPORT_SYMBOL(page_to_nid);</td></tr>
+<tr><th id="50">50</th><td></td></tr>
+<tr><th id="51">51</th><td><em>static</em> <em>void</em> set_section_nid(<em>unsigned</em> <em>long</em> section_nr, <em>int</em> nid)</td></tr>
+<tr><th id="52">52</th><td>{</td></tr>
+<tr><th id="53">53</th><td>	section_to_node_table[section_nr] = nid;</td></tr>
+<tr><th id="54">54</th><td>}</td></tr>
+<tr><th id="55">55</th><td><u>#<span data-ppcond="33">else</span> /* !NODE_NOT_IN_PAGE_FLAGS */</u></td></tr>
+<tr><th id="56">56</th><td><em>static</em> <a class="macro" href="../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="tu decl def fn" id="set_section_nid" title='set_section_nid' data-type='void set_section_nid(unsigned long section_nr, int nid)' data-ref="set_section_nid" data-ref-filename="set_section_nid">set_section_nid</dfn>(<em>unsigned</em> <em>long</em> <dfn class="local col1 decl" id="1section_nr" title='section_nr' data-type='unsigned long' data-ref="1section_nr" data-ref-filename="1section_nr">section_nr</dfn>, <em>int</em> <dfn class="local col2 decl" id="2nid" title='nid' data-type='int' data-ref="2nid" data-ref-filename="2nid">nid</dfn>)</td></tr>
+<tr><th id="57">57</th><td>{</td></tr>
+<tr><th id="58">58</th><td>}</td></tr>
+<tr><th id="59">59</th><td><u>#<span data-ppcond="33">endif</span></u></td></tr>
+<tr><th id="60">60</th><td></td></tr>
+<tr><th id="61">61</th><td><u>#<span data-ppcond="61">ifdef</span> <a class="macro" href="../include/generated/autoconf.h.html#308" data-ref="_M/CONFIG_SPARSEMEM_EXTREME">CONFIG_SPARSEMEM_EXTREME</a></u></td></tr>
+<tr><th id="62">62</th><td><em>static</em> <a class="macro" href="../include/linux/compiler_attributes.h.html#194" title="__attribute__((__noinline__))" data-ref="_M/noinline">noinline</a> <b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#mem_section" title='mem_section' data-ref="mem_section" data-ref-filename="mem_section">mem_section</a> <a class="macro" href="../include/linux/init.h.html#73" title="__attribute__((__section__(&quot;.ref.text&quot;))) __attribute__((__noinline__))" data-ref="_M/__ref">__ref</a> *<dfn class="tu decl def fn" id="sparse_index_alloc" title='sparse_index_alloc' data-type='struct mem_section * sparse_index_alloc(int nid)' data-ref="sparse_index_alloc" data-ref-filename="sparse_index_alloc">sparse_index_alloc</dfn>(<em>int</em> <dfn class="local col3 decl" id="3nid" title='nid' data-type='int' data-ref="3nid" data-ref-filename="3nid">nid</dfn>)</td></tr>
+<tr><th id="63">63</th><td>{</td></tr>
+<tr><th id="64">64</th><td>	<b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#mem_section" title='mem_section' data-ref="mem_section" data-ref-filename="mem_section">mem_section</a> *<dfn class="local col4 decl" id="4section" title='section' data-type='struct mem_section *' data-ref="4section" data-ref-filename="4section">section</dfn> = <a class="macro" href="../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="65">65</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col5 decl" id="5array_size" title='array_size' data-type='unsigned long' data-ref="5array_size" data-ref-filename="5array_size">array_size</dfn> = <a class="macro" href="../include/linux/mmzone.h.html#1208" title="(((1UL) &lt;&lt; 12) / sizeof (struct mem_section))" data-ref="_M/SECTIONS_PER_ROOT">SECTIONS_PER_ROOT</a> *</td></tr>
+<tr><th id="66">66</th><td>				   <b>sizeof</b>(<b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#mem_section" title='mem_section' data-ref="mem_section" data-ref-filename="mem_section">mem_section</a>);</td></tr>
+<tr><th id="67">67</th><td></td></tr>
+<tr><th id="68">68</th><td>	<b>if</b> (<a class="ref fn" href="../include/linux/slab.h.html#slab_is_available" title='slab_is_available' data-ref="slab_is_available" data-ref-filename="slab_is_available">slab_is_available</a>()) {</td></tr>
+<tr><th id="69">69</th><td>		<a class="local col4 ref" href="#4section" title='section' data-ref="4section" data-ref-filename="4section">section</a> = <a class="ref fn" href="../include/linux/slab.h.html#kzalloc_node" title='kzalloc_node' data-ref="kzalloc_node" data-ref-filename="kzalloc_node">kzalloc_node</a>(<a class="local col5 ref" href="#5array_size" title='array_size' data-ref="5array_size" data-ref-filename="5array_size">array_size</a>, <a class="macro" href="../include/linux/gfp.h.html#290" title="((( gfp_t)(0x400u|0x800u)) | (( gfp_t)0x40u) | (( gfp_t)0x80u))" data-ref="_M/GFP_KERNEL">GFP_KERNEL</a>, <a class="local col3 ref" href="#3nid" title='nid' data-ref="3nid" data-ref-filename="3nid">nid</a>);</td></tr>
+<tr><th id="70">70</th><td>	} <b>else</b> {</td></tr>
+<tr><th id="71">71</th><td>		<a class="local col4 ref" href="#4section" title='section' data-ref="4section" data-ref-filename="4section">section</a> = <a class="ref fn" href="../include/linux/memblock.h.html#memblock_alloc_node" title='memblock_alloc_node' data-ref="memblock_alloc_node" data-ref-filename="memblock_alloc_node">memblock_alloc_node</a>(<a class="local col5 ref" href="#5array_size" title='array_size' data-ref="5array_size" data-ref-filename="5array_size">array_size</a>, <a class="macro" href="../include/linux/cache.h.html#13" title="(1 &lt;&lt; (6))" data-ref="_M/SMP_CACHE_BYTES">SMP_CACHE_BYTES</a>,</td></tr>
+<tr><th id="72">72</th><td>					      <a class="local col3 ref" href="#3nid" title='nid' data-ref="3nid" data-ref-filename="3nid">nid</a>);</td></tr>
+<tr><th id="73">73</th><td>		<b>if</b> (!<a class="local col4 ref" href="#4section" title='section' data-ref="4section" data-ref-filename="4section">section</a>)</td></tr>
+<tr><th id="74">74</th><td>			<a class="ref fn" href="../include/linux/kernel.h.html#panic" title='panic' data-ref="panic" data-ref-filename="panic">panic</a>(<q>"%s: Failed to allocate %lu bytes nid=%d\n"</q>,</td></tr>
+<tr><th id="75">75</th><td>			      <b>__func__</b>, <a class="local col5 ref" href="#5array_size" title='array_size' data-ref="5array_size" data-ref-filename="5array_size">array_size</a>, <a class="local col3 ref" href="#3nid" title='nid' data-ref="3nid" data-ref-filename="3nid">nid</a>);</td></tr>
+<tr><th id="76">76</th><td>	}</td></tr>
+<tr><th id="77">77</th><td></td></tr>
+<tr><th id="78">78</th><td>	<b>return</b> <a class="local col4 ref" href="#4section" title='section' data-ref="4section" data-ref-filename="4section">section</a>;</td></tr>
+<tr><th id="79">79</th><td>}</td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td><em>static</em> <em>int</em> <a class="macro" href="../include/linux/init.h.html#86" title="__attribute__((__section__(&quot;.meminit.text&quot;))) __attribute__((__cold__)) __attribute__((no_instrument_function))" data-ref="_M/__meminit">__meminit</a> <dfn class="tu decl def fn" id="sparse_index_init" title='sparse_index_init' data-type='int sparse_index_init(unsigned long section_nr, int nid)' data-ref="sparse_index_init" data-ref-filename="sparse_index_init">sparse_index_init</dfn>(<em>unsigned</em> <em>long</em> <dfn class="local col6 decl" id="6section_nr" title='section_nr' data-type='unsigned long' data-ref="6section_nr" data-ref-filename="6section_nr">section_nr</dfn>, <em>int</em> <dfn class="local col7 decl" id="7nid" title='nid' data-type='int' data-ref="7nid" data-ref-filename="7nid">nid</dfn>)</td></tr>
+<tr><th id="82">82</th><td>{</td></tr>
+<tr><th id="83">83</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col8 decl" id="8root" title='root' data-type='unsigned long' data-ref="8root" data-ref-filename="8root">root</dfn> = <a class="macro" href="../include/linux/mmzone.h.html#1213" title="((section_nr) / (((1UL) &lt;&lt; 12) / sizeof (struct mem_section)))" data-ref="_M/SECTION_NR_TO_ROOT">SECTION_NR_TO_ROOT</a>(<a class="local col6 ref" href="#6section_nr" title='section_nr' data-ref="6section_nr" data-ref-filename="6section_nr">section_nr</a>);</td></tr>
+<tr><th id="84">84</th><td>	<b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#mem_section" title='mem_section' data-ref="mem_section" data-ref-filename="mem_section">mem_section</a> *<dfn class="local col9 decl" id="9section" title='section' data-type='struct mem_section *' data-ref="9section" data-ref-filename="9section">section</dfn>;</td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td>	<i>/*</i></td></tr>
+<tr><th id="87">87</th><td><i>	 * An existing section is possible in the sub-section hotplug</i></td></tr>
+<tr><th id="88">88</th><td><i>	 * case. First hot-add instantiates, follow-on hot-add reuses</i></td></tr>
+<tr><th id="89">89</th><td><i>	 * the existing section.</i></td></tr>
+<tr><th id="90">90</th><td><i>	 *</i></td></tr>
+<tr><th id="91">91</th><td><i>	 * The mem_hotplug_lock resolves the apparent race below.</i></td></tr>
+<tr><th id="92">92</th><td><i>	 */</i></td></tr>
+<tr><th id="93">93</th><td>	<b>if</b> (<a class="ref" href="../include/linux/mmzone.h.html#mem_section" title='mem_section' data-ref="mem_section" data-ref-filename="mem_section">mem_section</a>[<a class="local col8 ref" href="#8root" title='root' data-ref="8root" data-ref-filename="8root">root</a>])</td></tr>
+<tr><th id="94">94</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="95">95</th><td></td></tr>
+<tr><th id="96">96</th><td>	<a class="local col9 ref" href="#9section" title='section' data-ref="9section" data-ref-filename="9section">section</a> = <a class="tu ref fn" href="#sparse_index_alloc" title='sparse_index_alloc' data-use='c' data-ref="sparse_index_alloc" data-ref-filename="sparse_index_alloc">sparse_index_alloc</a>(<a class="local col7 ref" href="#7nid" title='nid' data-ref="7nid" data-ref-filename="7nid">nid</a>);</td></tr>
+<tr><th id="97">97</th><td>	<b>if</b> (!<a class="local col9 ref" href="#9section" title='section' data-ref="9section" data-ref-filename="9section">section</a>)</td></tr>
+<tr><th id="98">98</th><td>		<b>return</b> -<a class="macro" href="../include/uapi/asm-generic/errno-base.h.html#16" title="12" data-ref="_M/ENOMEM">ENOMEM</a>;</td></tr>
+<tr><th id="99">99</th><td></td></tr>
+<tr><th id="100">100</th><td>	<a class="ref" href="../include/linux/mmzone.h.html#mem_section" title='mem_section' data-ref="mem_section" data-ref-filename="mem_section">mem_section</a>[<a class="local col8 ref" href="#8root" title='root' data-ref="8root" data-ref-filename="8root">root</a>] = <a class="local col9 ref" href="#9section" title='section' data-ref="9section" data-ref-filename="9section">section</a>;</td></tr>
+<tr><th id="101">101</th><td></td></tr>
+<tr><th id="102">102</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="103">103</th><td>}</td></tr>
+<tr><th id="104">104</th><td><u>#<span data-ppcond="61">else</span> /* !SPARSEMEM_EXTREME */</u></td></tr>
+<tr><th id="105">105</th><td><em>static</em> <b>inline</b> <em>int</em> sparse_index_init(<em>unsigned</em> <em>long</em> section_nr, <em>int</em> nid)</td></tr>
+<tr><th id="106">106</th><td>{</td></tr>
+<tr><th id="107">107</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="108">108</th><td>}</td></tr>
+<tr><th id="109">109</th><td><u>#<span data-ppcond="61">endif</span></u></td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td><u>#<span data-ppcond="111">ifdef</span> <a class="macro" href="../include/generated/autoconf.h.html#308" data-ref="_M/CONFIG_SPARSEMEM_EXTREME">CONFIG_SPARSEMEM_EXTREME</a></u></td></tr>
+<tr><th id="112">112</th><td><em>unsigned</em> <em>long</em> <dfn class="decl def fn" id="__section_nr" title='__section_nr' data-ref="__section_nr" data-ref-filename="__section_nr">__section_nr</dfn>(<b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#mem_section" title='mem_section' data-ref="mem_section" data-ref-filename="mem_section">mem_section</a> *<dfn class="local col0 decl" id="10ms" title='ms' data-type='struct mem_section *' data-ref="10ms" data-ref-filename="10ms">ms</dfn>)</td></tr>
+<tr><th id="113">113</th><td>{</td></tr>
+<tr><th id="114">114</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col1 decl" id="11root_nr" title='root_nr' data-type='unsigned long' data-ref="11root_nr" data-ref-filename="11root_nr">root_nr</dfn>;</td></tr>
+<tr><th id="115">115</th><td>	<b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#mem_section" title='mem_section' data-ref="mem_section" data-ref-filename="mem_section">mem_section</a> *<dfn class="local col2 decl" id="12root" title='root' data-type='struct mem_section *' data-ref="12root" data-ref-filename="12root">root</dfn> = <a class="macro" href="../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="116">116</th><td></td></tr>
+<tr><th id="117">117</th><td>	<b>for</b> (<a class="local col1 ref" href="#11root_nr" title='root_nr' data-ref="11root_nr" data-ref-filename="11root_nr">root_nr</a> = <var>0</var>; <a class="local col1 ref" href="#11root_nr" title='root_nr' data-ref="11root_nr" data-ref-filename="11root_nr">root_nr</a> &lt; <a class="macro" href="../include/linux/mmzone.h.html#1214" title="((((1UL &lt;&lt; ((0 ? 52 : 46) - 27))) + ((((1UL) &lt;&lt; 12) / sizeof (struct mem_section))) - 1) / ((((1UL) &lt;&lt; 12) / sizeof (struct mem_section))))" data-ref="_M/NR_SECTION_ROOTS">NR_SECTION_ROOTS</a>; <a class="local col1 ref" href="#11root_nr" title='root_nr' data-ref="11root_nr" data-ref-filename="11root_nr">root_nr</a>++) {</td></tr>
+<tr><th id="118">118</th><td>		<a class="local col2 ref" href="#12root" title='root' data-ref="12root" data-ref-filename="12root">root</a> = <a class="ref fn" href="../include/linux/mmzone.h.html#__nr_to_section" title='__nr_to_section' data-ref="__nr_to_section" data-ref-filename="__nr_to_section">__nr_to_section</a>(<a class="local col1 ref" href="#11root_nr" title='root_nr' data-ref="11root_nr" data-ref-filename="11root_nr">root_nr</a> * <a class="macro" href="../include/linux/mmzone.h.html#1208" title="(((1UL) &lt;&lt; 12) / sizeof (struct mem_section))" data-ref="_M/SECTIONS_PER_ROOT">SECTIONS_PER_ROOT</a>);</td></tr>
+<tr><th id="119">119</th><td>		<b>if</b> (!<a class="local col2 ref" href="#12root" title='root' data-ref="12root" data-ref-filename="12root">root</a>)</td></tr>
+<tr><th id="120">120</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="121">121</th><td></td></tr>
+<tr><th id="122">122</th><td>		<b>if</b> ((<a class="local col0 ref" href="#10ms" title='ms' data-ref="10ms" data-ref-filename="10ms">ms</a> &gt;= <a class="local col2 ref" href="#12root" title='root' data-ref="12root" data-ref-filename="12root">root</a>) &amp;&amp; (<a class="local col0 ref" href="#10ms" title='ms' data-ref="10ms" data-ref-filename="10ms">ms</a> &lt; (<a class="local col2 ref" href="#12root" title='root' data-ref="12root" data-ref-filename="12root">root</a> + <a class="macro" href="../include/linux/mmzone.h.html#1208" title="(((1UL) &lt;&lt; 12) / sizeof (struct mem_section))" data-ref="_M/SECTIONS_PER_ROOT">SECTIONS_PER_ROOT</a>)))</td></tr>
+<tr><th id="123">123</th><td>		     <b>break</b>;</td></tr>
+<tr><th id="124">124</th><td>	}</td></tr>
+<tr><th id="125">125</th><td></td></tr>
+<tr><th id="126">126</th><td>	<a class="macro" href="../include/linux/mmdebug.h.html#45" title="((void)(sizeof(( long)(!root))))" data-ref="_M/VM_BUG_ON">VM_BUG_ON</a>(!<a class="local col2 ref" href="#12root" title='root' data-ref="12root" data-ref-filename="12root">root</a>);</td></tr>
+<tr><th id="127">127</th><td></td></tr>
+<tr><th id="128">128</th><td>	<b>return</b> (<a class="local col1 ref" href="#11root_nr" title='root_nr' data-ref="11root_nr" data-ref-filename="11root_nr">root_nr</a> * <a class="macro" href="../include/linux/mmzone.h.html#1208" title="(((1UL) &lt;&lt; 12) / sizeof (struct mem_section))" data-ref="_M/SECTIONS_PER_ROOT">SECTIONS_PER_ROOT</a>) + (<a class="local col0 ref" href="#10ms" title='ms' data-ref="10ms" data-ref-filename="10ms">ms</a> - <a class="local col2 ref" href="#12root" title='root' data-ref="12root" data-ref-filename="12root">root</a>);</td></tr>
+<tr><th id="129">129</th><td>}</td></tr>
+<tr><th id="130">130</th><td><u>#<span data-ppcond="111">else</span></u></td></tr>
+<tr><th id="131">131</th><td><em>unsigned</em> <em>long</em> __section_nr(<b>struct</b> mem_section *ms)</td></tr>
+<tr><th id="132">132</th><td>{</td></tr>
+<tr><th id="133">133</th><td>	<b>return</b> (<em>unsigned</em> <em>long</em>)(ms - mem_section[<var>0</var>]);</td></tr>
+<tr><th id="134">134</th><td>}</td></tr>
+<tr><th id="135">135</th><td><u>#<span data-ppcond="111">endif</span></u></td></tr>
+<tr><th id="136">136</th><td></td></tr>
+<tr><th id="137">137</th><td><i  data-doc="sparse_encode_early_nid">/*</i></td></tr>
+<tr><th id="138">138</th><td><i  data-doc="sparse_encode_early_nid"> * During early boot, before section_mem_map is used for an actual</i></td></tr>
+<tr><th id="139">139</th><td><i  data-doc="sparse_encode_early_nid"> * mem_map, we use section_mem_map to store the section's NUMA</i></td></tr>
+<tr><th id="140">140</th><td><i  data-doc="sparse_encode_early_nid"> * node.  This keeps us from having to use another data structure.  The</i></td></tr>
+<tr><th id="141">141</th><td><i  data-doc="sparse_encode_early_nid"> * node information is cleared just before we store the real mem_map.</i></td></tr>
+<tr><th id="142">142</th><td><i  data-doc="sparse_encode_early_nid"> */</i></td></tr>
+<tr><th id="143">143</th><td><em>static</em> <a class="macro" href="../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>long</em> <dfn class="tu decl def fn" id="sparse_encode_early_nid" title='sparse_encode_early_nid' data-type='unsigned long sparse_encode_early_nid(int nid)' data-ref="sparse_encode_early_nid" data-ref-filename="sparse_encode_early_nid">sparse_encode_early_nid</dfn>(<em>int</em> <dfn class="local col3 decl" id="13nid" title='nid' data-type='int' data-ref="13nid" data-ref-filename="13nid">nid</dfn>)</td></tr>
+<tr><th id="144">144</th><td>{</td></tr>
+<tr><th id="145">145</th><td>	<b>return</b> (<a class="local col3 ref" href="#13nid" title='nid' data-ref="13nid" data-ref-filename="13nid">nid</a> &lt;&lt; <a class="macro" href="../include/linux/mmzone.h.html#1260" title="3" data-ref="_M/SECTION_NID_SHIFT">SECTION_NID_SHIFT</a>);</td></tr>
+<tr><th id="146">146</th><td>}</td></tr>
+<tr><th id="147">147</th><td></td></tr>
+<tr><th id="148">148</th><td><em>static</em> <a class="macro" href="../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="tu decl def fn" id="sparse_early_nid" title='sparse_early_nid' data-type='int sparse_early_nid(struct mem_section * section)' data-ref="sparse_early_nid" data-ref-filename="sparse_early_nid">sparse_early_nid</dfn>(<b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#mem_section" title='mem_section' data-ref="mem_section" data-ref-filename="mem_section">mem_section</a> *<dfn class="local col4 decl" id="14section" title='section' data-type='struct mem_section *' data-ref="14section" data-ref-filename="14section">section</dfn>)</td></tr>
+<tr><th id="149">149</th><td>{</td></tr>
+<tr><th id="150">150</th><td>	<b>return</b> (<a class="local col4 ref" href="#14section" title='section' data-ref="14section" data-ref-filename="14section">section</a>-&gt;<a class="ref field" href="../include/linux/mmzone.h.html#mem_section::section_mem_map" title='mem_section::section_mem_map' data-ref="mem_section::section_mem_map" data-ref-filename="mem_section..section_mem_map">section_mem_map</a> &gt;&gt; <a class="macro" href="../include/linux/mmzone.h.html#1260" title="3" data-ref="_M/SECTION_NID_SHIFT">SECTION_NID_SHIFT</a>);</td></tr>
+<tr><th id="151">151</th><td>}</td></tr>
+<tr><th id="152">152</th><td></td></tr>
+<tr><th id="153">153</th><td><i>/* Validate the physical addressing limitations of the model */</i></td></tr>
+<tr><th id="154">154</th><td><em>void</em> <a class="macro" href="../include/linux/init.h.html#86" title="__attribute__((__section__(&quot;.meminit.text&quot;))) __attribute__((__cold__)) __attribute__((no_instrument_function))" data-ref="_M/__meminit">__meminit</a> <dfn class="decl def fn" id="mminit_validate_memmodel_limits" title='mminit_validate_memmodel_limits' data-ref="mminit_validate_memmodel_limits" data-ref-filename="mminit_validate_memmodel_limits">mminit_validate_memmodel_limits</dfn>(<em>unsigned</em> <em>long</em> *<dfn class="local col5 decl" id="15start_pfn" title='start_pfn' data-type='unsigned long *' data-ref="15start_pfn" data-ref-filename="15start_pfn">start_pfn</dfn>,</td></tr>
+<tr><th id="155">155</th><td>						<em>unsigned</em> <em>long</em> *<dfn class="local col6 decl" id="16end_pfn" title='end_pfn' data-type='unsigned long *' data-ref="16end_pfn" data-ref-filename="16end_pfn">end_pfn</dfn>)</td></tr>
+<tr><th id="156">156</th><td>{</td></tr>
+<tr><th id="157">157</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col7 decl" id="17max_sparsemem_pfn" title='max_sparsemem_pfn' data-type='unsigned long' data-ref="17max_sparsemem_pfn" data-ref-filename="17max_sparsemem_pfn">max_sparsemem_pfn</dfn> = <var>1UL</var> &lt;&lt; (<a class="macro" href="../arch/x86/include/asm/sparsemem.h.html#31" title="(0 ? 52 : 46)" data-ref="_M/MAX_PHYSMEM_BITS">MAX_PHYSMEM_BITS</a>-<a class="macro" href="../arch/x86/include/asm/page_types.h.html#10" title="12" data-ref="_M/PAGE_SHIFT">PAGE_SHIFT</a>);</td></tr>
+<tr><th id="158">158</th><td></td></tr>
+<tr><th id="159">159</th><td>	<i>/*</i></td></tr>
+<tr><th id="160">160</th><td><i>	 * Sanity checks - do not allow an architecture to pass</i></td></tr>
+<tr><th id="161">161</th><td><i>	 * in larger pfns than the maximum scope of sparsemem:</i></td></tr>
+<tr><th id="162">162</th><td><i>	 */</i></td></tr>
+<tr><th id="163">163</th><td>	<b>if</b> (*<a class="local col5 ref" href="#15start_pfn" title='start_pfn' data-ref="15start_pfn" data-ref-filename="15start_pfn">start_pfn</a> &gt; <a class="local col7 ref" href="#17max_sparsemem_pfn" title='max_sparsemem_pfn' data-ref="17max_sparsemem_pfn" data-ref-filename="17max_sparsemem_pfn">max_sparsemem_pfn</a>) {</td></tr>
+<tr><th id="164">164</th><td>		<a class="macro" href="internal.h.html#411" title="do { if (MMINIT_WARNING &lt; mminit_loglevel) { if (MMINIT_WARNING &lt;= MMINIT_WARNING) printk(&quot;\001&quot; &quot;4&quot; &quot;mminit::&quot; &quot;pfnvalidation&quot; &quot; &quot; &quot;Start of range %lu -&gt; %lu exceeds SPARSEMEM max %lu\n&quot;, *start_pfn, *end_pfn, max_sparsemem_pfn); else printk(&quot;\001&quot; &quot;7&quot; &quot;mminit::&quot; &quot;pfnvalidation&quot; &quot; &quot; &quot;Start of range %lu -&gt; %lu exceeds SPARSEMEM max %lu\n&quot;, *start_pfn, *end_pfn, max_sparsemem_pfn); } } while (0)" data-ref="_M/mminit_dprintk">mminit_dprintk</a>(<a class="enum" href="internal.h.html#MMINIT_WARNING" title='MMINIT_WARNING' data-ref="MMINIT_WARNING" data-ref-filename="MMINIT_WARNING">MMINIT_WARNING</a>, <q>"pfnvalidation"</q>,</td></tr>
+<tr><th id="165">165</th><td>			<q>"Start of range %lu -&gt; %lu exceeds SPARSEMEM max %lu\n"</q>,</td></tr>
+<tr><th id="166">166</th><td>			*<a class="local col5 ref" href="#15start_pfn" title='start_pfn' data-ref="15start_pfn" data-ref-filename="15start_pfn">start_pfn</a>, *<a class="local col6 ref" href="#16end_pfn" title='end_pfn' data-ref="16end_pfn" data-ref-filename="16end_pfn">end_pfn</a>, <a class="local col7 ref" href="#17max_sparsemem_pfn" title='max_sparsemem_pfn' data-ref="17max_sparsemem_pfn" data-ref-filename="17max_sparsemem_pfn">max_sparsemem_pfn</a>);</td></tr>
+<tr><th id="167">167</th><td>		<a class="macro" href="../include/asm-generic/bug.h.html#68" title="({ int __ret_warn_on = !!(1); if (__builtin_expect(!!(__ret_warn_on), 0)) do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/mm/sparse.c&quot;), &quot;i&quot; (167), &quot;i&quot; ((1 &lt;&lt; 0)|((1 &lt;&lt; 1)|((9) &lt;&lt; 8))), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.reachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (40)); }); } while (0); __builtin_expect(!!(__ret_warn_on), 0); })" data-ref="_M/WARN_ON_ONCE">WARN_ON_ONCE</a>(<var>1</var>);</td></tr>
+<tr><th id="168">168</th><td>		*<a class="local col5 ref" href="#15start_pfn" title='start_pfn' data-ref="15start_pfn" data-ref-filename="15start_pfn">start_pfn</a> = <a class="local col7 ref" href="#17max_sparsemem_pfn" title='max_sparsemem_pfn' data-ref="17max_sparsemem_pfn" data-ref-filename="17max_sparsemem_pfn">max_sparsemem_pfn</a>;</td></tr>
+<tr><th id="169">169</th><td>		*<a class="local col6 ref" href="#16end_pfn" title='end_pfn' data-ref="16end_pfn" data-ref-filename="16end_pfn">end_pfn</a> = <a class="local col7 ref" href="#17max_sparsemem_pfn" title='max_sparsemem_pfn' data-ref="17max_sparsemem_pfn" data-ref-filename="17max_sparsemem_pfn">max_sparsemem_pfn</a>;</td></tr>
+<tr><th id="170">170</th><td>	} <b>else</b> <b>if</b> (*<a class="local col6 ref" href="#16end_pfn" title='end_pfn' data-ref="16end_pfn" data-ref-filename="16end_pfn">end_pfn</a> &gt; <a class="local col7 ref" href="#17max_sparsemem_pfn" title='max_sparsemem_pfn' data-ref="17max_sparsemem_pfn" data-ref-filename="17max_sparsemem_pfn">max_sparsemem_pfn</a>) {</td></tr>
+<tr><th id="171">171</th><td>		<a class="macro" href="internal.h.html#411" title="do { if (MMINIT_WARNING &lt; mminit_loglevel) { if (MMINIT_WARNING &lt;= MMINIT_WARNING) printk(&quot;\001&quot; &quot;4&quot; &quot;mminit::&quot; &quot;pfnvalidation&quot; &quot; &quot; &quot;End of range %lu -&gt; %lu exceeds SPARSEMEM max %lu\n&quot;, *start_pfn, *end_pfn, max_sparsemem_pfn); else printk(&quot;\001&quot; &quot;7&quot; &quot;mminit::&quot; &quot;pfnvalidation&quot; &quot; &quot; &quot;End of range %lu -&gt; %lu exceeds SPARSEMEM max %lu\n&quot;, *start_pfn, *end_pfn, max_sparsemem_pfn); } } while (0)" data-ref="_M/mminit_dprintk">mminit_dprintk</a>(<a class="enum" href="internal.h.html#MMINIT_WARNING" title='MMINIT_WARNING' data-ref="MMINIT_WARNING" data-ref-filename="MMINIT_WARNING">MMINIT_WARNING</a>, <q>"pfnvalidation"</q>,</td></tr>
+<tr><th id="172">172</th><td>			<q>"End of range %lu -&gt; %lu exceeds SPARSEMEM max %lu\n"</q>,</td></tr>
+<tr><th id="173">173</th><td>			*<a class="local col5 ref" href="#15start_pfn" title='start_pfn' data-ref="15start_pfn" data-ref-filename="15start_pfn">start_pfn</a>, *<a class="local col6 ref" href="#16end_pfn" title='end_pfn' data-ref="16end_pfn" data-ref-filename="16end_pfn">end_pfn</a>, <a class="local col7 ref" href="#17max_sparsemem_pfn" title='max_sparsemem_pfn' data-ref="17max_sparsemem_pfn" data-ref-filename="17max_sparsemem_pfn">max_sparsemem_pfn</a>);</td></tr>
+<tr><th id="174">174</th><td>		<a class="macro" href="../include/asm-generic/bug.h.html#68" title="({ int __ret_warn_on = !!(1); if (__builtin_expect(!!(__ret_warn_on), 0)) do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/mm/sparse.c&quot;), &quot;i&quot; (174), &quot;i&quot; ((1 &lt;&lt; 0)|((1 &lt;&lt; 1)|((9) &lt;&lt; 8))), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.reachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (42)); }); } while (0); __builtin_expect(!!(__ret_warn_on), 0); })" data-ref="_M/WARN_ON_ONCE">WARN_ON_ONCE</a>(<var>1</var>);</td></tr>
+<tr><th id="175">175</th><td>		*<a class="local col6 ref" href="#16end_pfn" title='end_pfn' data-ref="16end_pfn" data-ref-filename="16end_pfn">end_pfn</a> = <a class="local col7 ref" href="#17max_sparsemem_pfn" title='max_sparsemem_pfn' data-ref="17max_sparsemem_pfn" data-ref-filename="17max_sparsemem_pfn">max_sparsemem_pfn</a>;</td></tr>
+<tr><th id="176">176</th><td>	}</td></tr>
+<tr><th id="177">177</th><td>}</td></tr>
+<tr><th id="178">178</th><td></td></tr>
+<tr><th id="179">179</th><td><i>/*</i></td></tr>
+<tr><th id="180">180</th><td><i> * There are a number of times that we loop over NR_MEM_SECTIONS,</i></td></tr>
+<tr><th id="181">181</th><td><i> * looking for section_present() on each.  But, when we have very</i></td></tr>
+<tr><th id="182">182</th><td><i> * large physical address spaces, NR_MEM_SECTIONS can also be</i></td></tr>
+<tr><th id="183">183</th><td><i> * very large which makes the loops quite long.</i></td></tr>
+<tr><th id="184">184</th><td><i> *</i></td></tr>
+<tr><th id="185">185</th><td><i> * Keeping track of this gives us an easy way to break out of</i></td></tr>
+<tr><th id="186">186</th><td><i> * those loops early.</i></td></tr>
+<tr><th id="187">187</th><td><i> */</i></td></tr>
+<tr><th id="188">188</th><td><em>unsigned</em> <em>long</em> <dfn class="decl def" id="__highest_present_section_nr" title='__highest_present_section_nr' data-ref="__highest_present_section_nr" data-ref-filename="__highest_present_section_nr">__highest_present_section_nr</dfn>;</td></tr>
+<tr><th id="189">189</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="section_mark_present" title='section_mark_present' data-type='void section_mark_present(struct mem_section * ms)' data-ref="section_mark_present" data-ref-filename="section_mark_present">section_mark_present</dfn>(<b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#mem_section" title='mem_section' data-ref="mem_section" data-ref-filename="mem_section">mem_section</a> *<dfn class="local col8 decl" id="18ms" title='ms' data-type='struct mem_section *' data-ref="18ms" data-ref-filename="18ms">ms</dfn>)</td></tr>
+<tr><th id="190">190</th><td>{</td></tr>
+<tr><th id="191">191</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col9 decl" id="19section_nr" title='section_nr' data-type='unsigned long' data-ref="19section_nr" data-ref-filename="19section_nr">section_nr</dfn> = <a class="ref fn" href="#__section_nr" title='__section_nr' data-ref="__section_nr" data-ref-filename="__section_nr">__section_nr</a>(<a class="local col8 ref" href="#18ms" title='ms' data-ref="18ms" data-ref-filename="18ms">ms</a>);</td></tr>
+<tr><th id="192">192</th><td></td></tr>
+<tr><th id="193">193</th><td>	<b>if</b> (<a class="local col9 ref" href="#19section_nr" title='section_nr' data-ref="19section_nr" data-ref-filename="19section_nr">section_nr</a> &gt; <a class="ref" href="../include/linux/mmzone.h.html#__highest_present_section_nr" title='__highest_present_section_nr' data-ref="__highest_present_section_nr" data-ref-filename="__highest_present_section_nr">__highest_present_section_nr</a>)</td></tr>
+<tr><th id="194">194</th><td>		<a class="ref" href="../include/linux/mmzone.h.html#__highest_present_section_nr" title='__highest_present_section_nr' data-ref="__highest_present_section_nr" data-ref-filename="__highest_present_section_nr">__highest_present_section_nr</a> = <a class="local col9 ref" href="#19section_nr" title='section_nr' data-ref="19section_nr" data-ref-filename="19section_nr">section_nr</a>;</td></tr>
+<tr><th id="195">195</th><td></td></tr>
+<tr><th id="196">196</th><td>	<a class="local col8 ref" href="#18ms" title='ms' data-ref="18ms" data-ref-filename="18ms">ms</a>-&gt;<a class="ref field" href="../include/linux/mmzone.h.html#mem_section::section_mem_map" title='mem_section::section_mem_map' data-ref="mem_section::section_mem_map" data-ref-filename="mem_section..section_mem_map">section_mem_map</a> |= <a class="macro" href="../include/linux/mmzone.h.html#1254" title="(1UL&lt;&lt;0)" data-ref="_M/SECTION_MARKED_PRESENT">SECTION_MARKED_PRESENT</a>;</td></tr>
+<tr><th id="197">197</th><td>}</td></tr>
+<tr><th id="198">198</th><td></td></tr>
+<tr><th id="199">199</th><td><em>static</em> <a class="macro" href="../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>long</em> <dfn class="tu decl def fn" id="next_present_section_nr" title='next_present_section_nr' data-type='unsigned long next_present_section_nr(unsigned long section_nr)' data-ref="next_present_section_nr" data-ref-filename="next_present_section_nr">next_present_section_nr</dfn>(<em>unsigned</em> <em>long</em> <dfn class="local col0 decl" id="20section_nr" title='section_nr' data-type='unsigned long' data-ref="20section_nr" data-ref-filename="20section_nr">section_nr</dfn>)</td></tr>
+<tr><th id="200">200</th><td>{</td></tr>
+<tr><th id="201">201</th><td>	<b>do</b> {</td></tr>
+<tr><th id="202">202</th><td>		<a class="local col0 ref" href="#20section_nr" title='section_nr' data-ref="20section_nr" data-ref-filename="20section_nr">section_nr</a>++;</td></tr>
+<tr><th id="203">203</th><td>		<b>if</b> (<a class="ref fn" href="../include/linux/mmzone.h.html#present_section_nr" title='present_section_nr' data-ref="present_section_nr" data-ref-filename="present_section_nr">present_section_nr</a>(<a class="local col0 ref" href="#20section_nr" title='section_nr' data-ref="20section_nr" data-ref-filename="20section_nr">section_nr</a>))</td></tr>
+<tr><th id="204">204</th><td>			<b>return</b> <a class="local col0 ref" href="#20section_nr" title='section_nr' data-ref="20section_nr" data-ref-filename="20section_nr">section_nr</a>;</td></tr>
+<tr><th id="205">205</th><td>	} <b>while</b> ((<a class="local col0 ref" href="#20section_nr" title='section_nr' data-ref="20section_nr" data-ref-filename="20section_nr">section_nr</a> &lt;= <a class="ref" href="../include/linux/mmzone.h.html#__highest_present_section_nr" title='__highest_present_section_nr' data-ref="__highest_present_section_nr" data-ref-filename="__highest_present_section_nr">__highest_present_section_nr</a>));</td></tr>
+<tr><th id="206">206</th><td></td></tr>
+<tr><th id="207">207</th><td>	<b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="208">208</th><td>}</td></tr>
+<tr><th id="209">209</th><td><u>#define <dfn class="macro" id="_M/for_each_present_section_nr" data-ref="_M/for_each_present_section_nr">for_each_present_section_nr</dfn>(start, section_nr)		\</u></td></tr>
+<tr><th id="210">210</th><td><u>	for (section_nr = <a class="tu ref fn" href="#next_present_section_nr" title='next_present_section_nr' data-use='c' data-ref="next_present_section_nr" data-ref-filename="next_present_section_nr">next_present_section_nr</a>(start-1);	\</u></td></tr>
+<tr><th id="211">211</th><td><u>	     ((section_nr != -1) &amp;&amp;				\</u></td></tr>
+<tr><th id="212">212</th><td><u>	      (section_nr &lt;= <a class="ref" href="../include/linux/mmzone.h.html#__highest_present_section_nr" title='__highest_present_section_nr' data-ref="__highest_present_section_nr" data-ref-filename="__highest_present_section_nr">__highest_present_section_nr</a>));	\</u></td></tr>
+<tr><th id="213">213</th><td><u>	     section_nr = <a class="tu ref fn" href="#next_present_section_nr" title='next_present_section_nr' data-use='c' data-ref="next_present_section_nr" data-ref-filename="next_present_section_nr">next_present_section_nr</a>(section_nr))</u></td></tr>
+<tr><th id="214">214</th><td></td></tr>
+<tr><th id="215">215</th><td><em>static</em> <a class="macro" href="../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>long</em> <dfn class="tu decl def fn" id="first_present_section_nr" title='first_present_section_nr' data-type='unsigned long first_present_section_nr()' data-ref="first_present_section_nr" data-ref-filename="first_present_section_nr">first_present_section_nr</dfn>(<em>void</em>)</td></tr>
+<tr><th id="216">216</th><td>{</td></tr>
+<tr><th id="217">217</th><td>	<b>return</b> <a class="tu ref fn" href="#next_present_section_nr" title='next_present_section_nr' data-use='c' data-ref="next_present_section_nr" data-ref-filename="next_present_section_nr">next_present_section_nr</a>(-<var>1</var>);</td></tr>
+<tr><th id="218">218</th><td>}</td></tr>
+<tr><th id="219">219</th><td></td></tr>
+<tr><th id="220">220</th><td><em>void</em> <dfn class="decl def fn" id="subsection_mask_set" title='subsection_mask_set' data-ref="subsection_mask_set" data-ref-filename="subsection_mask_set">subsection_mask_set</dfn>(<em>unsigned</em> <em>long</em> *<dfn class="local col1 decl" id="21map" title='map' data-type='unsigned long *' data-ref="21map" data-ref-filename="21map">map</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col2 decl" id="22pfn" title='pfn' data-type='unsigned long' data-ref="22pfn" data-ref-filename="22pfn">pfn</dfn>,</td></tr>
+<tr><th id="221">221</th><td>		<em>unsigned</em> <em>long</em> <dfn class="local col3 decl" id="23nr_pages" title='nr_pages' data-type='unsigned long' data-ref="23nr_pages" data-ref-filename="23nr_pages">nr_pages</dfn>)</td></tr>
+<tr><th id="222">222</th><td>{</td></tr>
+<tr><th id="223">223</th><td>	<em>int</em> <dfn class="local col4 decl" id="24idx" title='idx' data-type='int' data-ref="24idx" data-ref-filename="24idx">idx</dfn> = <a class="ref fn" href="../include/linux/mmzone.h.html#subsection_map_index" title='subsection_map_index' data-ref="subsection_map_index" data-ref-filename="subsection_map_index">subsection_map_index</a>(<a class="local col2 ref" href="#22pfn" title='pfn' data-ref="22pfn" data-ref-filename="22pfn">pfn</a>);</td></tr>
+<tr><th id="224">224</th><td>	<em>int</em> <dfn class="local col5 decl" id="25end" title='end' data-type='int' data-ref="25end" data-ref-filename="25end">end</dfn> = <a class="ref fn" href="../include/linux/mmzone.h.html#subsection_map_index" title='subsection_map_index' data-ref="subsection_map_index" data-ref-filename="subsection_map_index">subsection_map_index</a>(<a class="local col2 ref" href="#22pfn" title='pfn' data-ref="22pfn" data-ref-filename="22pfn">pfn</a> + <a class="local col3 ref" href="#23nr_pages" title='nr_pages' data-ref="23nr_pages" data-ref-filename="23nr_pages">nr_pages</a> - <var>1</var>);</td></tr>
+<tr><th id="225">225</th><td></td></tr>
+<tr><th id="226">226</th><td>	<a class="ref fn" href="../include/linux/bitmap.h.html#bitmap_set" title='bitmap_set' data-ref="bitmap_set" data-ref-filename="bitmap_set">bitmap_set</a>(<a class="local col1 ref" href="#21map" title='map' data-ref="21map" data-ref-filename="21map">map</a>, <a class="local col4 ref" href="#24idx" title='idx' data-ref="24idx" data-ref-filename="24idx">idx</a>, <a class="local col5 ref" href="#25end" title='end' data-ref="25end" data-ref-filename="25end">end</a> - <a class="local col4 ref" href="#24idx" title='idx' data-ref="24idx" data-ref-filename="24idx">idx</a> + <var>1</var>);</td></tr>
+<tr><th id="227">227</th><td>}</td></tr>
+<tr><th id="228">228</th><td></td></tr>
+<tr><th id="229">229</th><td><em>void</em> <a class="macro" href="../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="decl def fn" id="subsection_map_init" title='subsection_map_init' data-ref="subsection_map_init" data-ref-filename="subsection_map_init">subsection_map_init</dfn>(<em>unsigned</em> <em>long</em> <dfn class="local col6 decl" id="26pfn" title='pfn' data-type='unsigned long' data-ref="26pfn" data-ref-filename="26pfn">pfn</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col7 decl" id="27nr_pages" title='nr_pages' data-type='unsigned long' data-ref="27nr_pages" data-ref-filename="27nr_pages">nr_pages</dfn>)</td></tr>
+<tr><th id="230">230</th><td>{</td></tr>
+<tr><th id="231">231</th><td>	<em>int</em> <dfn class="local col8 decl" id="28end_sec" title='end_sec' data-type='int' data-ref="28end_sec" data-ref-filename="28end_sec">end_sec</dfn> = <a class="ref fn" href="../include/linux/mmzone.h.html#pfn_to_section_nr" title='pfn_to_section_nr' data-ref="pfn_to_section_nr" data-ref-filename="pfn_to_section_nr">pfn_to_section_nr</a>(<a class="local col6 ref" href="#26pfn" title='pfn' data-ref="26pfn" data-ref-filename="26pfn">pfn</a> + <a class="local col7 ref" href="#27nr_pages" title='nr_pages' data-ref="27nr_pages" data-ref-filename="27nr_pages">nr_pages</a> - <var>1</var>);</td></tr>
+<tr><th id="232">232</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col9 decl" id="29nr" title='nr' data-type='unsigned long' data-ref="29nr" data-ref-filename="29nr">nr</dfn>, <dfn class="local col0 decl" id="30start_sec" title='start_sec' data-type='unsigned long' data-ref="30start_sec" data-ref-filename="30start_sec">start_sec</dfn> = <a class="ref fn" href="../include/linux/mmzone.h.html#pfn_to_section_nr" title='pfn_to_section_nr' data-ref="pfn_to_section_nr" data-ref-filename="pfn_to_section_nr">pfn_to_section_nr</a>(<a class="local col6 ref" href="#26pfn" title='pfn' data-ref="26pfn" data-ref-filename="26pfn">pfn</a>);</td></tr>
+<tr><th id="233">233</th><td></td></tr>
+<tr><th id="234">234</th><td>	<b>if</b> (!<a class="local col7 ref" href="#27nr_pages" title='nr_pages' data-ref="27nr_pages" data-ref-filename="27nr_pages">nr_pages</a>)</td></tr>
+<tr><th id="235">235</th><td>		<b>return</b>;</td></tr>
+<tr><th id="236">236</th><td></td></tr>
+<tr><th id="237">237</th><td>	<b>for</b> (<a class="local col9 ref" href="#29nr" title='nr' data-ref="29nr" data-ref-filename="29nr">nr</a> = <a class="local col0 ref" href="#30start_sec" title='start_sec' data-ref="30start_sec" data-ref-filename="30start_sec">start_sec</a>; <a class="local col9 ref" href="#29nr" title='nr' data-ref="29nr" data-ref-filename="29nr">nr</a> &lt;= <a class="local col8 ref" href="#28end_sec" title='end_sec' data-ref="28end_sec" data-ref-filename="28end_sec">end_sec</a>; <a class="local col9 ref" href="#29nr" title='nr' data-ref="29nr" data-ref-filename="29nr">nr</a>++) {</td></tr>
+<tr><th id="238">238</th><td>		<b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#mem_section" title='mem_section' data-ref="mem_section" data-ref-filename="mem_section">mem_section</a> *<dfn class="local col1 decl" id="31ms" title='ms' data-type='struct mem_section *' data-ref="31ms" data-ref-filename="31ms">ms</dfn>;</td></tr>
+<tr><th id="239">239</th><td>		<em>unsigned</em> <em>long</em> <dfn class="local col2 decl" id="32pfns" title='pfns' data-type='unsigned long' data-ref="32pfns" data-ref-filename="32pfns">pfns</dfn>;</td></tr>
+<tr><th id="240">240</th><td></td></tr>
+<tr><th id="241">241</th><td>		<a class="local col2 ref" href="#32pfns" title='pfns' data-ref="32pfns" data-ref-filename="32pfns">pfns</a> = <a class="macro" href="../include/linux/kernel.h.html#854" title="__builtin_choose_expr(((!!(sizeof((typeof(nr_pages) *)1 == (typeof((1UL &lt;&lt; (27 - 12)) - (pfn &amp; ~(~((1UL &lt;&lt; (27 - 12))-1)))) *)1))) &amp;&amp; ((sizeof(int) == sizeof(*(8 ? ((void *)((long)(nr_pages) * 0l)) : (int *)8))) &amp;&amp; (sizeof(int) == sizeof(*(8 ? ((void *)((long)((1UL &lt;&lt; (27 - 12)) - (pfn &amp; ~(~((1UL &lt;&lt; (27 - 12))-1)))) * 0l)) : (int *)8))))), ((nr_pages) &lt; ((1UL &lt;&lt; (27 - 12)) - (pfn &amp; ~(~((1UL &lt;&lt; (27 - 12))-1)))) ? (nr_pages) : ((1UL &lt;&lt; (27 - 12)) - (pfn &amp; ~(~((1UL &lt;&lt; (27 - 12))-1))))), ({ typeof(nr_pages) __UNIQUE_ID___x44 = (nr_pages); typeof((1UL &lt;&lt; (27 - 12)) - (pfn &amp; ~(~((1UL &lt;&lt; (27 - 12))-1)))) __UNIQUE_ID___y45 = ((1UL &lt;&lt; (27 - 12)) - (pfn &amp; ~(~((1UL &lt;&lt; (27 - 12))-1)))); ((__UNIQUE_ID___x44) &lt; (__UNIQUE_ID___y45) ? (__UNIQUE_ID___x44) : (__UNIQUE_ID___y45)); }))" data-ref="_M/min">min</a>(<a class="local col7 ref" href="#27nr_pages" title='nr_pages' data-ref="27nr_pages" data-ref-filename="27nr_pages">nr_pages</a>, <a class="macro" href="../include/linux/mmzone.h.html#1130" title="(1UL &lt;&lt; (27 - 12))" data-ref="_M/PAGES_PER_SECTION">PAGES_PER_SECTION</a></td></tr>
+<tr><th id="242">242</th><td>				- (<a class="local col6 ref" href="#26pfn" title='pfn' data-ref="26pfn" data-ref-filename="26pfn">pfn</a> &amp; ~<a class="macro" href="../include/linux/mmzone.h.html#1131" title="(~((1UL &lt;&lt; (27 - 12))-1))" data-ref="_M/PAGE_SECTION_MASK">PAGE_SECTION_MASK</a>));</td></tr>
+<tr><th id="243">243</th><td>		<a class="local col1 ref" href="#31ms" title='ms' data-ref="31ms" data-ref-filename="31ms">ms</a> = <a class="ref fn" href="../include/linux/mmzone.h.html#__nr_to_section" title='__nr_to_section' data-ref="__nr_to_section" data-ref-filename="__nr_to_section">__nr_to_section</a>(<a class="local col9 ref" href="#29nr" title='nr' data-ref="29nr" data-ref-filename="29nr">nr</a>);</td></tr>
+<tr><th id="244">244</th><td>		<a class="ref fn" href="#subsection_mask_set" title='subsection_mask_set' data-ref="subsection_mask_set" data-ref-filename="subsection_mask_set">subsection_mask_set</a>(<a class="local col1 ref" href="#31ms" title='ms' data-ref="31ms" data-ref-filename="31ms">ms</a>-&gt;<a class="ref field" href="../include/linux/mmzone.h.html#mem_section::usage" title='mem_section::usage' data-ref="mem_section::usage" data-ref-filename="mem_section..usage">usage</a>-&gt;<a class="ref field" href="../include/linux/mmzone.h.html#1168" title='mem_section_usage::subsection_map' data-ref="mem_section_usage::subsection_map" data-ref-filename="mem_section_usage..subsection_map">subsection_map</a>, <a class="local col6 ref" href="#26pfn" title='pfn' data-ref="26pfn" data-ref-filename="26pfn">pfn</a>, <a class="local col2 ref" href="#32pfns" title='pfns' data-ref="32pfns" data-ref-filename="32pfns">pfns</a>);</td></tr>
+<tr><th id="245">245</th><td></td></tr>
+<tr><th id="246">246</th><td>		<a class="macro" href="../include/linux/printk.h.html#341" title="({ if (0) printk(&quot;\001&quot; &quot;7&quot; &quot;%s: sec: %lu pfns: %lu set(%d, %d)\n&quot;, __func__, nr, pfns, subsection_map_index(pfn), subsection_map_index(pfn + pfns - 1)); 0; })" data-ref="_M/pr_debug">pr_debug</a>(<q>"%s: sec: %lu pfns: %lu set(%d, %d)\n"</q>, <b>__func__</b>, <a class="local col9 ref" href="#29nr" title='nr' data-ref="29nr" data-ref-filename="29nr">nr</a>,</td></tr>
+<tr><th id="247">247</th><td>				<a class="local col2 ref" href="#32pfns" title='pfns' data-ref="32pfns" data-ref-filename="32pfns">pfns</a>, <a class="ref fn" href="../include/linux/mmzone.h.html#subsection_map_index" title='subsection_map_index' data-ref="subsection_map_index" data-ref-filename="subsection_map_index">subsection_map_index</a>(<a class="local col6 ref" href="#26pfn" title='pfn' data-ref="26pfn" data-ref-filename="26pfn">pfn</a>),</td></tr>
+<tr><th id="248">248</th><td>				<a class="ref fn" href="../include/linux/mmzone.h.html#subsection_map_index" title='subsection_map_index' data-ref="subsection_map_index" data-ref-filename="subsection_map_index">subsection_map_index</a>(<a class="local col6 ref" href="#26pfn" title='pfn' data-ref="26pfn" data-ref-filename="26pfn">pfn</a> + <a class="local col2 ref" href="#32pfns" title='pfns' data-ref="32pfns" data-ref-filename="32pfns">pfns</a> - <var>1</var>));</td></tr>
+<tr><th id="249">249</th><td></td></tr>
+<tr><th id="250">250</th><td>		<a class="local col6 ref" href="#26pfn" title='pfn' data-ref="26pfn" data-ref-filename="26pfn">pfn</a> += <a class="local col2 ref" href="#32pfns" title='pfns' data-ref="32pfns" data-ref-filename="32pfns">pfns</a>;</td></tr>
+<tr><th id="251">251</th><td>		<a class="local col7 ref" href="#27nr_pages" title='nr_pages' data-ref="27nr_pages" data-ref-filename="27nr_pages">nr_pages</a> -= <a class="local col2 ref" href="#32pfns" title='pfns' data-ref="32pfns" data-ref-filename="32pfns">pfns</a>;</td></tr>
+<tr><th id="252">252</th><td>	}</td></tr>
+<tr><th id="253">253</th><td>}</td></tr>
+<tr><th id="254">254</th><td></td></tr>
+<tr><th id="255">255</th><td><i>/* Record a memory area against a node. */</i></td></tr>
+<tr><th id="256">256</th><td><em>void</em> <a class="macro" href="../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="decl def fn" id="memory_present" title='memory_present' data-ref="memory_present" data-ref-filename="memory_present">memory_present</dfn>(<em>int</em> <dfn class="local col3 decl" id="33nid" title='nid' data-type='int' data-ref="33nid" data-ref-filename="33nid">nid</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col4 decl" id="34start" title='start' data-type='unsigned long' data-ref="34start" data-ref-filename="34start">start</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col5 decl" id="35end" title='end' data-type='unsigned long' data-ref="35end" data-ref-filename="35end">end</dfn>)</td></tr>
+<tr><th id="257">257</th><td>{</td></tr>
+<tr><th id="258">258</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col6 decl" id="36pfn" title='pfn' data-type='unsigned long' data-ref="36pfn" data-ref-filename="36pfn">pfn</dfn>;</td></tr>
+<tr><th id="259">259</th><td></td></tr>
+<tr><th id="260">260</th><td><u>#<span data-ppcond="260">ifdef</span> <a class="macro" href="../include/generated/autoconf.h.html#308" data-ref="_M/CONFIG_SPARSEMEM_EXTREME">CONFIG_SPARSEMEM_EXTREME</a></u></td></tr>
+<tr><th id="261">261</th><td>	<b>if</b> (<a class="macro" href="../include/linux/compiler.h.html#78" title="__builtin_expect(!!(!mem_section), 0)" data-ref="_M/unlikely">unlikely</a>(!<a class="ref" href="../include/linux/mmzone.h.html#mem_section" title='mem_section' data-ref="mem_section" data-ref-filename="mem_section">mem_section</a>)) {</td></tr>
+<tr><th id="262">262</th><td>		<em>unsigned</em> <em>long</em> <dfn class="local col7 decl" id="37size" title='size' data-type='unsigned long' data-ref="37size" data-ref-filename="37size">size</dfn>, <dfn class="local col8 decl" id="38align" title='align' data-type='unsigned long' data-ref="38align" data-ref-filename="38align">align</dfn>;</td></tr>
+<tr><th id="263">263</th><td></td></tr>
+<tr><th id="264">264</th><td>		<a class="local col7 ref" href="#37size" title='size' data-ref="37size" data-ref-filename="37size">size</a> = <b>sizeof</b>(<b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#mem_section" title='mem_section' data-ref="mem_section" data-ref-filename="mem_section">mem_section</a>*) * <a class="macro" href="../include/linux/mmzone.h.html#1214" title="((((1UL &lt;&lt; ((0 ? 52 : 46) - 27))) + ((((1UL) &lt;&lt; 12) / sizeof (struct mem_section))) - 1) / ((((1UL) &lt;&lt; 12) / sizeof (struct mem_section))))" data-ref="_M/NR_SECTION_ROOTS">NR_SECTION_ROOTS</a>;</td></tr>
+<tr><th id="265">265</th><td>		<a class="local col8 ref" href="#38align" title='align' data-ref="38align" data-ref-filename="38align">align</a> = <var>1</var> &lt;&lt; (<a class="macro" href="../arch/x86/include/asm/cache.h.html#13" title="6" data-ref="_M/INTERNODE_CACHE_SHIFT">INTERNODE_CACHE_SHIFT</a>);</td></tr>
+<tr><th id="266">266</th><td>		<a class="ref" href="../include/linux/mmzone.h.html#mem_section" title='mem_section' data-ref="mem_section" data-ref-filename="mem_section">mem_section</a> = <a class="ref fn" href="../include/linux/memblock.h.html#memblock_alloc" title='memblock_alloc' data-ref="memblock_alloc" data-ref-filename="memblock_alloc">memblock_alloc</a>(<a class="local col7 ref" href="#37size" title='size' data-ref="37size" data-ref-filename="37size">size</a>, <a class="local col8 ref" href="#38align" title='align' data-ref="38align" data-ref-filename="38align">align</a>);</td></tr>
+<tr><th id="267">267</th><td>		<b>if</b> (!<a class="ref" href="../include/linux/mmzone.h.html#mem_section" title='mem_section' data-ref="mem_section" data-ref-filename="mem_section">mem_section</a>)</td></tr>
+<tr><th id="268">268</th><td>			<a class="ref fn" href="../include/linux/kernel.h.html#panic" title='panic' data-ref="panic" data-ref-filename="panic">panic</a>(<q>"%s: Failed to allocate %lu bytes align=0x%lx\n"</q>,</td></tr>
+<tr><th id="269">269</th><td>			      <b>__func__</b>, <a class="local col7 ref" href="#37size" title='size' data-ref="37size" data-ref-filename="37size">size</a>, <a class="local col8 ref" href="#38align" title='align' data-ref="38align" data-ref-filename="38align">align</a>);</td></tr>
+<tr><th id="270">270</th><td>	}</td></tr>
+<tr><th id="271">271</th><td><u>#<span data-ppcond="260">endif</span></u></td></tr>
+<tr><th id="272">272</th><td></td></tr>
+<tr><th id="273">273</th><td>	<a class="local col4 ref" href="#34start" title='start' data-ref="34start" data-ref-filename="34start">start</a> &amp;= <a class="macro" href="../include/linux/mmzone.h.html#1131" title="(~((1UL &lt;&lt; (27 - 12))-1))" data-ref="_M/PAGE_SECTION_MASK">PAGE_SECTION_MASK</a>;</td></tr>
+<tr><th id="274">274</th><td>	<a class="ref fn" href="#mminit_validate_memmodel_limits" title='mminit_validate_memmodel_limits' data-ref="mminit_validate_memmodel_limits" data-ref-filename="mminit_validate_memmodel_limits">mminit_validate_memmodel_limits</a>(&amp;<a class="local col4 ref" href="#34start" title='start' data-ref="34start" data-ref-filename="34start">start</a>, &amp;<a class="local col5 ref" href="#35end" title='end' data-ref="35end" data-ref-filename="35end">end</a>);</td></tr>
+<tr><th id="275">275</th><td>	<b>for</b> (<a class="local col6 ref" href="#36pfn" title='pfn' data-ref="36pfn" data-ref-filename="36pfn">pfn</a> = <a class="local col4 ref" href="#34start" title='start' data-ref="34start" data-ref-filename="34start">start</a>; <a class="local col6 ref" href="#36pfn" title='pfn' data-ref="36pfn" data-ref-filename="36pfn">pfn</a> &lt; <a class="local col5 ref" href="#35end" title='end' data-ref="35end" data-ref-filename="35end">end</a>; <a class="local col6 ref" href="#36pfn" title='pfn' data-ref="36pfn" data-ref-filename="36pfn">pfn</a> += <a class="macro" href="../include/linux/mmzone.h.html#1130" title="(1UL &lt;&lt; (27 - 12))" data-ref="_M/PAGES_PER_SECTION">PAGES_PER_SECTION</a>) {</td></tr>
+<tr><th id="276">276</th><td>		<em>unsigned</em> <em>long</em> <dfn class="local col9 decl" id="39section" title='section' data-type='unsigned long' data-ref="39section" data-ref-filename="39section">section</dfn> = <a class="ref fn" href="../include/linux/mmzone.h.html#pfn_to_section_nr" title='pfn_to_section_nr' data-ref="pfn_to_section_nr" data-ref-filename="pfn_to_section_nr">pfn_to_section_nr</a>(<a class="local col6 ref" href="#36pfn" title='pfn' data-ref="36pfn" data-ref-filename="36pfn">pfn</a>);</td></tr>
+<tr><th id="277">277</th><td>		<b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#mem_section" title='mem_section' data-ref="mem_section" data-ref-filename="mem_section">mem_section</a> *<dfn class="local col0 decl" id="40ms" title='ms' data-type='struct mem_section *' data-ref="40ms" data-ref-filename="40ms">ms</dfn>;</td></tr>
+<tr><th id="278">278</th><td></td></tr>
+<tr><th id="279">279</th><td>		<a class="tu ref fn" href="#sparse_index_init" title='sparse_index_init' data-use='c' data-ref="sparse_index_init" data-ref-filename="sparse_index_init">sparse_index_init</a>(<a class="local col9 ref" href="#39section" title='section' data-ref="39section" data-ref-filename="39section">section</a>, <a class="local col3 ref" href="#33nid" title='nid' data-ref="33nid" data-ref-filename="33nid">nid</a>);</td></tr>
+<tr><th id="280">280</th><td>		<a class="tu ref fn" href="#set_section_nid" title='set_section_nid' data-use='c' data-ref="set_section_nid" data-ref-filename="set_section_nid">set_section_nid</a>(<a class="local col9 ref" href="#39section" title='section' data-ref="39section" data-ref-filename="39section">section</a>, <a class="local col3 ref" href="#33nid" title='nid' data-ref="33nid" data-ref-filename="33nid">nid</a>);</td></tr>
+<tr><th id="281">281</th><td></td></tr>
+<tr><th id="282">282</th><td>		<a class="local col0 ref" href="#40ms" title='ms' data-ref="40ms" data-ref-filename="40ms">ms</a> = <a class="ref fn" href="../include/linux/mmzone.h.html#__nr_to_section" title='__nr_to_section' data-ref="__nr_to_section" data-ref-filename="__nr_to_section">__nr_to_section</a>(<a class="local col9 ref" href="#39section" title='section' data-ref="39section" data-ref-filename="39section">section</a>);</td></tr>
+<tr><th id="283">283</th><td>		<b>if</b> (!<a class="local col0 ref" href="#40ms" title='ms' data-ref="40ms" data-ref-filename="40ms">ms</a>-&gt;<a class="ref field" href="../include/linux/mmzone.h.html#mem_section::section_mem_map" title='mem_section::section_mem_map' data-ref="mem_section::section_mem_map" data-ref-filename="mem_section..section_mem_map">section_mem_map</a>) {</td></tr>
+<tr><th id="284">284</th><td>			<a class="local col0 ref" href="#40ms" title='ms' data-ref="40ms" data-ref-filename="40ms">ms</a>-&gt;<a class="ref field" href="../include/linux/mmzone.h.html#mem_section::section_mem_map" title='mem_section::section_mem_map' data-ref="mem_section::section_mem_map" data-ref-filename="mem_section..section_mem_map">section_mem_map</a> = <a class="tu ref fn" href="#sparse_encode_early_nid" title='sparse_encode_early_nid' data-use='c' data-ref="sparse_encode_early_nid" data-ref-filename="sparse_encode_early_nid">sparse_encode_early_nid</a>(<a class="local col3 ref" href="#33nid" title='nid' data-ref="33nid" data-ref-filename="33nid">nid</a>) |</td></tr>
+<tr><th id="285">285</th><td>							<a class="macro" href="../include/linux/mmzone.h.html#1256" title="(1UL&lt;&lt;2)" data-ref="_M/SECTION_IS_ONLINE">SECTION_IS_ONLINE</a>;</td></tr>
+<tr><th id="286">286</th><td>			<a class="tu ref fn" href="#section_mark_present" title='section_mark_present' data-use='c' data-ref="section_mark_present" data-ref-filename="section_mark_present">section_mark_present</a>(<a class="local col0 ref" href="#40ms" title='ms' data-ref="40ms" data-ref-filename="40ms">ms</a>);</td></tr>
+<tr><th id="287">287</th><td>		}</td></tr>
+<tr><th id="288">288</th><td>	}</td></tr>
+<tr><th id="289">289</th><td>}</td></tr>
+<tr><th id="290">290</th><td></td></tr>
+<tr><th id="291">291</th><td><i>/*</i></td></tr>
+<tr><th id="292">292</th><td><i> * Mark all memblocks as present using memory_present(). This is a</i></td></tr>
+<tr><th id="293">293</th><td><i> * convienence function that is useful for a number of arches</i></td></tr>
+<tr><th id="294">294</th><td><i> * to mark all of the systems memory as present during initialization.</i></td></tr>
+<tr><th id="295">295</th><td><i> */</i></td></tr>
+<tr><th id="296">296</th><td><em>void</em> <a class="macro" href="../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="decl def fn" id="memblocks_present" title='memblocks_present' data-ref="memblocks_present" data-ref-filename="memblocks_present">memblocks_present</dfn>(<em>void</em>)</td></tr>
+<tr><th id="297">297</th><td>{</td></tr>
+<tr><th id="298">298</th><td>	<b>struct</b> <a class="type" href="../include/linux/memblock.h.html#memblock_region" title='memblock_region' data-ref="memblock_region" data-ref-filename="memblock_region">memblock_region</a> *<dfn class="local col1 decl" id="41reg" title='reg' data-type='struct memblock_region *' data-ref="41reg" data-ref-filename="41reg">reg</dfn>;</td></tr>
+<tr><th id="299">299</th><td></td></tr>
+<tr><th id="300">300</th><td>	<a class="macro" href="../include/linux/memblock.h.html#524" title="for (reg = memblock.memory.regions; reg &lt; (memblock.memory.regions + memblock.memory.cnt); reg++)" data-ref="_M/for_each_memblock">for_each_memblock</a>(<a class="ref field" href="../include/linux/memblock.h.html#memblock::memory" title='memblock::memory' data-ref="memblock::memory" data-ref-filename="memblock..memory">memory</a>, <a class="local col1 ref" href="#41reg" title='reg' data-ref="41reg" data-ref-filename="41reg">reg</a>) {</td></tr>
+<tr><th id="301">301</th><td>		<a class="ref fn" href="#memory_present" title='memory_present' data-ref="memory_present" data-ref-filename="memory_present">memory_present</a>(<a class="ref fn" href="../include/linux/memblock.h.html#memblock_get_region_node" title='memblock_get_region_node' data-ref="memblock_get_region_node" data-ref-filename="memblock_get_region_node">memblock_get_region_node</a>(<a class="local col1 ref" href="#41reg" title='reg' data-ref="41reg" data-ref-filename="41reg">reg</a>),</td></tr>
+<tr><th id="302">302</th><td>			       <a class="ref fn" href="../include/linux/memblock.h.html#memblock_region_memory_base_pfn" title='memblock_region_memory_base_pfn' data-ref="memblock_region_memory_base_pfn" data-ref-filename="memblock_region_memory_base_pfn">memblock_region_memory_base_pfn</a>(<a class="local col1 ref" href="#41reg" title='reg' data-ref="41reg" data-ref-filename="41reg">reg</a>),</td></tr>
+<tr><th id="303">303</th><td>			       <a class="ref fn" href="../include/linux/memblock.h.html#memblock_region_memory_end_pfn" title='memblock_region_memory_end_pfn' data-ref="memblock_region_memory_end_pfn" data-ref-filename="memblock_region_memory_end_pfn">memblock_region_memory_end_pfn</a>(<a class="local col1 ref" href="#41reg" title='reg' data-ref="41reg" data-ref-filename="41reg">reg</a>));</td></tr>
+<tr><th id="304">304</th><td>	}</td></tr>
+<tr><th id="305">305</th><td>}</td></tr>
+<tr><th id="306">306</th><td></td></tr>
+<tr><th id="307">307</th><td><i  data-doc="sparse_encode_mem_map">/*</i></td></tr>
+<tr><th id="308">308</th><td><i  data-doc="sparse_encode_mem_map"> * Subtle, we encode the real pfn into the mem_map such that</i></td></tr>
+<tr><th id="309">309</th><td><i  data-doc="sparse_encode_mem_map"> * the identity pfn - section_mem_map will return the actual</i></td></tr>
+<tr><th id="310">310</th><td><i  data-doc="sparse_encode_mem_map"> * physical page frame number.</i></td></tr>
+<tr><th id="311">311</th><td><i  data-doc="sparse_encode_mem_map"> */</i></td></tr>
+<tr><th id="312">312</th><td><em>static</em> <em>unsigned</em> <em>long</em> <dfn class="tu decl def fn" id="sparse_encode_mem_map" title='sparse_encode_mem_map' data-type='unsigned long sparse_encode_mem_map(struct page * mem_map, unsigned long pnum)' data-ref="sparse_encode_mem_map" data-ref-filename="sparse_encode_mem_map">sparse_encode_mem_map</dfn>(<b>struct</b> <a class="type" href="../include/linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="local col2 decl" id="42mem_map" title='mem_map' data-type='struct page *' data-ref="42mem_map" data-ref-filename="42mem_map">mem_map</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col3 decl" id="43pnum" title='pnum' data-type='unsigned long' data-ref="43pnum" data-ref-filename="43pnum">pnum</dfn>)</td></tr>
+<tr><th id="313">313</th><td>{</td></tr>
+<tr><th id="314">314</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col4 decl" id="44coded_mem_map" title='coded_mem_map' data-type='unsigned long' data-ref="44coded_mem_map" data-ref-filename="44coded_mem_map">coded_mem_map</dfn> =</td></tr>
+<tr><th id="315">315</th><td>		(<em>unsigned</em> <em>long</em>)(<a class="local col2 ref" href="#42mem_map" title='mem_map' data-ref="42mem_map" data-ref-filename="42mem_map">mem_map</a> - (<a class="ref fn" href="../include/linux/mmzone.h.html#section_nr_to_pfn" title='section_nr_to_pfn' data-ref="section_nr_to_pfn" data-ref-filename="section_nr_to_pfn">section_nr_to_pfn</a>(<a class="local col3 ref" href="#43pnum" title='pnum' data-ref="43pnum" data-ref-filename="43pnum">pnum</a>)));</td></tr>
+<tr><th id="316">316</th><td>	<a class="macro" href="../include/linux/build_bug.h.html#49" title="do { extern void __compiletime_assert_316(void) ; if (!(!((1UL&lt;&lt;4) &gt; (1UL&lt;&lt;(27 - 12))))) __compiletime_assert_316(); } while (0)" data-ref="_M/BUILD_BUG_ON">BUILD_BUG_ON</a>(<a class="macro" href="../include/linux/mmzone.h.html#1258" title="(1UL&lt;&lt;4)" data-ref="_M/SECTION_MAP_LAST_BIT">SECTION_MAP_LAST_BIT</a> &gt; (<var>1UL</var>&lt;&lt;<a class="macro" href="../include/linux/mmzone.h.html#1126" title="(27 - 12)" data-ref="_M/PFN_SECTION_SHIFT">PFN_SECTION_SHIFT</a>));</td></tr>
+<tr><th id="317">317</th><td>	<a class="macro" href="../include/asm-generic/bug.h.html#61" title="do { if (__builtin_expect(!!(coded_mem_map &amp; ~(~((1UL&lt;&lt;4)-1))), 0)) do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/mm/sparse.c&quot;), &quot;i&quot; (317), &quot;i&quot; (0), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); do { ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.unreachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (48)); }); __builtin_unreachable(); } while (0); } while (0); } while (0)" data-ref="_M/BUG_ON">BUG_ON</a>(<a class="local col4 ref" href="#44coded_mem_map" title='coded_mem_map' data-ref="44coded_mem_map" data-ref-filename="44coded_mem_map">coded_mem_map</a> &amp; ~<a class="macro" href="../include/linux/mmzone.h.html#1259" title="(~((1UL&lt;&lt;4)-1))" data-ref="_M/SECTION_MAP_MASK">SECTION_MAP_MASK</a>);</td></tr>
+<tr><th id="318">318</th><td>	<b>return</b> <a class="local col4 ref" href="#44coded_mem_map" title='coded_mem_map' data-ref="44coded_mem_map" data-ref-filename="44coded_mem_map">coded_mem_map</a>;</td></tr>
+<tr><th id="319">319</th><td>}</td></tr>
+<tr><th id="320">320</th><td></td></tr>
+<tr><th id="321">321</th><td><i>/*</i></td></tr>
+<tr><th id="322">322</th><td><i> * Decode mem_map from the coded memmap</i></td></tr>
+<tr><th id="323">323</th><td><i> */</i></td></tr>
+<tr><th id="324">324</th><td><b>struct</b> <a class="type" href="../include/linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="decl def fn" id="sparse_decode_mem_map" title='sparse_decode_mem_map' data-ref="sparse_decode_mem_map" data-ref-filename="sparse_decode_mem_map">sparse_decode_mem_map</dfn>(<em>unsigned</em> <em>long</em> <dfn class="local col5 decl" id="45coded_mem_map" title='coded_mem_map' data-type='unsigned long' data-ref="45coded_mem_map" data-ref-filename="45coded_mem_map">coded_mem_map</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col6 decl" id="46pnum" title='pnum' data-type='unsigned long' data-ref="46pnum" data-ref-filename="46pnum">pnum</dfn>)</td></tr>
+<tr><th id="325">325</th><td>{</td></tr>
+<tr><th id="326">326</th><td>	<i>/* mask off the extra low bits of information */</i></td></tr>
+<tr><th id="327">327</th><td>	<a class="local col5 ref" href="#45coded_mem_map" title='coded_mem_map' data-ref="45coded_mem_map" data-ref-filename="45coded_mem_map">coded_mem_map</a> &amp;= <a class="macro" href="../include/linux/mmzone.h.html#1259" title="(~((1UL&lt;&lt;4)-1))" data-ref="_M/SECTION_MAP_MASK">SECTION_MAP_MASK</a>;</td></tr>
+<tr><th id="328">328</th><td>	<b>return</b> ((<b>struct</b> <a class="type" href="../include/linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *)<a class="local col5 ref" href="#45coded_mem_map" title='coded_mem_map' data-ref="45coded_mem_map" data-ref-filename="45coded_mem_map">coded_mem_map</a>) + <a class="ref fn" href="../include/linux/mmzone.h.html#section_nr_to_pfn" title='section_nr_to_pfn' data-ref="section_nr_to_pfn" data-ref-filename="section_nr_to_pfn">section_nr_to_pfn</a>(<a class="local col6 ref" href="#46pnum" title='pnum' data-ref="46pnum" data-ref-filename="46pnum">pnum</a>);</td></tr>
+<tr><th id="329">329</th><td>}</td></tr>
+<tr><th id="330">330</th><td></td></tr>
+<tr><th id="331">331</th><td><em>static</em> <em>void</em> <a class="macro" href="../include/linux/init.h.html#86" title="__attribute__((__section__(&quot;.meminit.text&quot;))) __attribute__((__cold__)) __attribute__((no_instrument_function))" data-ref="_M/__meminit">__meminit</a> <dfn class="tu decl def fn" id="sparse_init_one_section" title='sparse_init_one_section' data-type='void sparse_init_one_section(struct mem_section * ms, unsigned long pnum, struct page * mem_map, struct mem_section_usage * usage, unsigned long flags)' data-ref="sparse_init_one_section" data-ref-filename="sparse_init_one_section">sparse_init_one_section</dfn>(<b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#mem_section" title='mem_section' data-ref="mem_section" data-ref-filename="mem_section">mem_section</a> *<dfn class="local col7 decl" id="47ms" title='ms' data-type='struct mem_section *' data-ref="47ms" data-ref-filename="47ms">ms</dfn>,</td></tr>
+<tr><th id="332">332</th><td>		<em>unsigned</em> <em>long</em> <dfn class="local col8 decl" id="48pnum" title='pnum' data-type='unsigned long' data-ref="48pnum" data-ref-filename="48pnum">pnum</dfn>, <b>struct</b> <a class="type" href="../include/linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="local col9 decl" id="49mem_map" title='mem_map' data-type='struct page *' data-ref="49mem_map" data-ref-filename="49mem_map">mem_map</dfn>,</td></tr>
+<tr><th id="333">333</th><td>		<b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#mem_section_usage" title='mem_section_usage' data-ref="mem_section_usage" data-ref-filename="mem_section_usage">mem_section_usage</a> *<dfn class="local col0 decl" id="50usage" title='usage' data-type='struct mem_section_usage *' data-ref="50usage" data-ref-filename="50usage">usage</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col1 decl" id="51flags" title='flags' data-type='unsigned long' data-ref="51flags" data-ref-filename="51flags">flags</dfn>)</td></tr>
+<tr><th id="334">334</th><td>{</td></tr>
+<tr><th id="335">335</th><td>	<a class="local col7 ref" href="#47ms" title='ms' data-ref="47ms" data-ref-filename="47ms">ms</a>-&gt;<a class="ref field" href="../include/linux/mmzone.h.html#mem_section::section_mem_map" title='mem_section::section_mem_map' data-ref="mem_section::section_mem_map" data-ref-filename="mem_section..section_mem_map">section_mem_map</a> &amp;= ~<a class="macro" href="../include/linux/mmzone.h.html#1259" title="(~((1UL&lt;&lt;4)-1))" data-ref="_M/SECTION_MAP_MASK">SECTION_MAP_MASK</a>;</td></tr>
+<tr><th id="336">336</th><td>	<a class="local col7 ref" href="#47ms" title='ms' data-ref="47ms" data-ref-filename="47ms">ms</a>-&gt;<a class="ref field" href="../include/linux/mmzone.h.html#mem_section::section_mem_map" title='mem_section::section_mem_map' data-ref="mem_section::section_mem_map" data-ref-filename="mem_section..section_mem_map">section_mem_map</a> |= <a class="tu ref fn" href="#sparse_encode_mem_map" title='sparse_encode_mem_map' data-use='c' data-ref="sparse_encode_mem_map" data-ref-filename="sparse_encode_mem_map">sparse_encode_mem_map</a>(<a class="local col9 ref" href="#49mem_map" title='mem_map' data-ref="49mem_map" data-ref-filename="49mem_map">mem_map</a>, <a class="local col8 ref" href="#48pnum" title='pnum' data-ref="48pnum" data-ref-filename="48pnum">pnum</a>)</td></tr>
+<tr><th id="337">337</th><td>		| <a class="macro" href="../include/linux/mmzone.h.html#1255" title="(1UL&lt;&lt;1)" data-ref="_M/SECTION_HAS_MEM_MAP">SECTION_HAS_MEM_MAP</a> | <a class="local col1 ref" href="#51flags" title='flags' data-ref="51flags" data-ref-filename="51flags">flags</a>;</td></tr>
+<tr><th id="338">338</th><td>	<a class="local col7 ref" href="#47ms" title='ms' data-ref="47ms" data-ref-filename="47ms">ms</a>-&gt;<a class="ref field" href="../include/linux/mmzone.h.html#mem_section::usage" title='mem_section::usage' data-ref="mem_section::usage" data-ref-filename="mem_section..usage">usage</a> = <a class="local col0 ref" href="#50usage" title='usage' data-ref="50usage" data-ref-filename="50usage">usage</a>;</td></tr>
+<tr><th id="339">339</th><td>}</td></tr>
+<tr><th id="340">340</th><td></td></tr>
+<tr><th id="341">341</th><td><em>static</em> <em>unsigned</em> <em>long</em> <dfn class="tu decl def fn" id="usemap_size" title='usemap_size' data-type='unsigned long usemap_size()' data-ref="usemap_size" data-ref-filename="usemap_size">usemap_size</dfn>(<em>void</em>)</td></tr>
+<tr><th id="342">342</th><td>{</td></tr>
+<tr><th id="343">343</th><td>	<b>return</b> <a class="macro" href="../include/linux/bitops.h.html#8" title="(((((1UL &lt;&lt; ((27 - 12) - (21 - 12))) * NR_PAGEBLOCK_BITS)) + ((sizeof(long) * 8)) - 1) / ((sizeof(long) * 8)))" data-ref="_M/BITS_TO_LONGS">BITS_TO_LONGS</a>(<a class="macro" href="../include/linux/mmzone.h.html#1133" title="((1UL &lt;&lt; ((27 - 12) - (21 - 12))) * NR_PAGEBLOCK_BITS)" data-ref="_M/SECTION_BLOCKFLAGS_BITS">SECTION_BLOCKFLAGS_BITS</a>) * <b>sizeof</b>(<em>unsigned</em> <em>long</em>);</td></tr>
+<tr><th id="344">344</th><td>}</td></tr>
+<tr><th id="345">345</th><td></td></tr>
+<tr><th id="346">346</th><td><a class="typedef" href="../include/linux/types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="decl def fn" id="mem_section_usage_size" title='mem_section_usage_size' data-ref="mem_section_usage_size" data-ref-filename="mem_section_usage_size">mem_section_usage_size</dfn>(<em>void</em>)</td></tr>
+<tr><th id="347">347</th><td>{</td></tr>
+<tr><th id="348">348</th><td>	<b>return</b> <b>sizeof</b>(<b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#mem_section_usage" title='mem_section_usage' data-ref="mem_section_usage" data-ref-filename="mem_section_usage">mem_section_usage</a>) + <a class="tu ref fn" href="#usemap_size" title='usemap_size' data-use='c' data-ref="usemap_size" data-ref-filename="usemap_size">usemap_size</a>();</td></tr>
+<tr><th id="349">349</th><td>}</td></tr>
+<tr><th id="350">350</th><td></td></tr>
+<tr><th id="351">351</th><td><u>#<span data-ppcond="351">ifdef</span> <span class="macro" data-ref="_M/CONFIG_MEMORY_HOTREMOVE">CONFIG_MEMORY_HOTREMOVE</span></u></td></tr>
+<tr><th id="352">352</th><td><em>static</em> <b>struct</b> mem_section_usage * __init</td></tr>
+<tr><th id="353">353</th><td>sparse_early_usemaps_alloc_pgdat_section(<b>struct</b> pglist_data *pgdat,</td></tr>
+<tr><th id="354">354</th><td>					 <em>unsigned</em> <em>long</em> size)</td></tr>
+<tr><th id="355">355</th><td>{</td></tr>
+<tr><th id="356">356</th><td>	<b>struct</b> mem_section_usage *usage;</td></tr>
+<tr><th id="357">357</th><td>	<em>unsigned</em> <em>long</em> goal, limit;</td></tr>
+<tr><th id="358">358</th><td>	<em>int</em> nid;</td></tr>
+<tr><th id="359">359</th><td>	<i>/*</i></td></tr>
+<tr><th id="360">360</th><td><i>	 * A page may contain usemaps for other sections preventing the</i></td></tr>
+<tr><th id="361">361</th><td><i>	 * page being freed and making a section unremovable while</i></td></tr>
+<tr><th id="362">362</th><td><i>	 * other sections referencing the usemap remain active. Similarly,</i></td></tr>
+<tr><th id="363">363</th><td><i>	 * a pgdat can prevent a section being removed. If section A</i></td></tr>
+<tr><th id="364">364</th><td><i>	 * contains a pgdat and section B contains the usemap, both</i></td></tr>
+<tr><th id="365">365</th><td><i>	 * sections become inter-dependent. This allocates usemaps</i></td></tr>
+<tr><th id="366">366</th><td><i>	 * from the same section as the pgdat where possible to avoid</i></td></tr>
+<tr><th id="367">367</th><td><i>	 * this problem.</i></td></tr>
+<tr><th id="368">368</th><td><i>	 */</i></td></tr>
+<tr><th id="369">369</th><td>	goal = __pa(pgdat) &amp; (PAGE_SECTION_MASK &lt;&lt; PAGE_SHIFT);</td></tr>
+<tr><th id="370">370</th><td>	limit = goal + (<var>1UL</var> &lt;&lt; PA_SECTION_SHIFT);</td></tr>
+<tr><th id="371">371</th><td>	nid = early_pfn_to_nid(goal &gt;&gt; PAGE_SHIFT);</td></tr>
+<tr><th id="372">372</th><td>again:</td></tr>
+<tr><th id="373">373</th><td>	usage = memblock_alloc_try_nid(size, SMP_CACHE_BYTES, goal, limit, nid);</td></tr>
+<tr><th id="374">374</th><td>	<b>if</b> (!usage &amp;&amp; limit) {</td></tr>
+<tr><th id="375">375</th><td>		limit = <var>0</var>;</td></tr>
+<tr><th id="376">376</th><td>		<b>goto</b> again;</td></tr>
+<tr><th id="377">377</th><td>	}</td></tr>
+<tr><th id="378">378</th><td>	<b>return</b> usage;</td></tr>
+<tr><th id="379">379</th><td>}</td></tr>
+<tr><th id="380">380</th><td></td></tr>
+<tr><th id="381">381</th><td><em>static</em> <em>void</em> __init check_usemap_section_nr(<em>int</em> nid,</td></tr>
+<tr><th id="382">382</th><td>		<b>struct</b> mem_section_usage *usage)</td></tr>
+<tr><th id="383">383</th><td>{</td></tr>
+<tr><th id="384">384</th><td>	<em>unsigned</em> <em>long</em> usemap_snr, pgdat_snr;</td></tr>
+<tr><th id="385">385</th><td>	<em>static</em> <em>unsigned</em> <em>long</em> old_usemap_snr;</td></tr>
+<tr><th id="386">386</th><td>	<em>static</em> <em>unsigned</em> <em>long</em> old_pgdat_snr;</td></tr>
+<tr><th id="387">387</th><td>	<b>struct</b> pglist_data *pgdat = NODE_DATA(nid);</td></tr>
+<tr><th id="388">388</th><td>	<em>int</em> usemap_nid;</td></tr>
+<tr><th id="389">389</th><td></td></tr>
+<tr><th id="390">390</th><td>	<i>/* First call */</i></td></tr>
+<tr><th id="391">391</th><td>	<b>if</b> (!old_usemap_snr) {</td></tr>
+<tr><th id="392">392</th><td>		old_usemap_snr = NR_MEM_SECTIONS;</td></tr>
+<tr><th id="393">393</th><td>		old_pgdat_snr = NR_MEM_SECTIONS;</td></tr>
+<tr><th id="394">394</th><td>	}</td></tr>
+<tr><th id="395">395</th><td></td></tr>
+<tr><th id="396">396</th><td>	usemap_snr = pfn_to_section_nr(__pa(usage) &gt;&gt; PAGE_SHIFT);</td></tr>
+<tr><th id="397">397</th><td>	pgdat_snr = pfn_to_section_nr(__pa(pgdat) &gt;&gt; PAGE_SHIFT);</td></tr>
+<tr><th id="398">398</th><td>	<b>if</b> (usemap_snr == pgdat_snr)</td></tr>
+<tr><th id="399">399</th><td>		<b>return</b>;</td></tr>
+<tr><th id="400">400</th><td></td></tr>
+<tr><th id="401">401</th><td>	<b>if</b> (old_usemap_snr == usemap_snr &amp;&amp; old_pgdat_snr == pgdat_snr)</td></tr>
+<tr><th id="402">402</th><td>		<i>/* skip redundant message */</i></td></tr>
+<tr><th id="403">403</th><td>		<b>return</b>;</td></tr>
+<tr><th id="404">404</th><td></td></tr>
+<tr><th id="405">405</th><td>	old_usemap_snr = usemap_snr;</td></tr>
+<tr><th id="406">406</th><td>	old_pgdat_snr = pgdat_snr;</td></tr>
+<tr><th id="407">407</th><td></td></tr>
+<tr><th id="408">408</th><td>	usemap_nid = sparse_early_nid(__nr_to_section(usemap_snr));</td></tr>
+<tr><th id="409">409</th><td>	<b>if</b> (usemap_nid != nid) {</td></tr>
+<tr><th id="410">410</th><td>		pr_info(<q>"node %d must be removed before remove section %ld\n"</q>,</td></tr>
+<tr><th id="411">411</th><td>			nid, usemap_snr);</td></tr>
+<tr><th id="412">412</th><td>		<b>return</b>;</td></tr>
+<tr><th id="413">413</th><td>	}</td></tr>
+<tr><th id="414">414</th><td>	<i>/*</i></td></tr>
+<tr><th id="415">415</th><td><i>	 * There is a circular dependency.</i></td></tr>
+<tr><th id="416">416</th><td><i>	 * Some platforms allow un-removable section because they will just</i></td></tr>
+<tr><th id="417">417</th><td><i>	 * gather other removable sections for dynamic partitioning.</i></td></tr>
+<tr><th id="418">418</th><td><i>	 * Just notify un-removable section's number here.</i></td></tr>
+<tr><th id="419">419</th><td><i>	 */</i></td></tr>
+<tr><th id="420">420</th><td>	pr_info(<q>"Section %ld and %ld (node %d) have a circular dependency on usemap and pgdat allocations\n"</q>,</td></tr>
+<tr><th id="421">421</th><td>		usemap_snr, pgdat_snr, nid);</td></tr>
+<tr><th id="422">422</th><td>}</td></tr>
+<tr><th id="423">423</th><td><u>#<span data-ppcond="351">else</span></u></td></tr>
+<tr><th id="424">424</th><td><em>static</em> <b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#mem_section_usage" title='mem_section_usage' data-ref="mem_section_usage" data-ref-filename="mem_section_usage">mem_section_usage</a> * <a class="macro" href="../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a></td></tr>
+<tr><th id="425">425</th><td><dfn class="tu decl def fn" id="sparse_early_usemaps_alloc_pgdat_section" title='sparse_early_usemaps_alloc_pgdat_section' data-type='struct mem_section_usage * sparse_early_usemaps_alloc_pgdat_section(struct pglist_data * pgdat, unsigned long size)' data-ref="sparse_early_usemaps_alloc_pgdat_section" data-ref-filename="sparse_early_usemaps_alloc_pgdat_section">sparse_early_usemaps_alloc_pgdat_section</dfn>(<b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#pglist_data" title='pglist_data' data-ref="pglist_data" data-ref-filename="pglist_data">pglist_data</a> *<dfn class="local col2 decl" id="52pgdat" title='pgdat' data-type='struct pglist_data *' data-ref="52pgdat" data-ref-filename="52pgdat">pgdat</dfn>,</td></tr>
+<tr><th id="426">426</th><td>					 <em>unsigned</em> <em>long</em> <dfn class="local col3 decl" id="53size" title='size' data-type='unsigned long' data-ref="53size" data-ref-filename="53size">size</dfn>)</td></tr>
+<tr><th id="427">427</th><td>{</td></tr>
+<tr><th id="428">428</th><td>	<b>return</b> <a class="ref fn" href="../include/linux/memblock.h.html#memblock_alloc_node" title='memblock_alloc_node' data-ref="memblock_alloc_node" data-ref-filename="memblock_alloc_node">memblock_alloc_node</a>(<a class="local col3 ref" href="#53size" title='size' data-ref="53size" data-ref-filename="53size">size</a>, <a class="macro" href="../include/linux/cache.h.html#13" title="(1 &lt;&lt; (6))" data-ref="_M/SMP_CACHE_BYTES">SMP_CACHE_BYTES</a>, <a class="local col2 ref" href="#52pgdat" title='pgdat' data-ref="52pgdat" data-ref-filename="52pgdat">pgdat</a>-&gt;<a class="ref field" href="../include/linux/mmzone.h.html#pglist_data::node_id" title='pglist_data::node_id' data-ref="pglist_data::node_id" data-ref-filename="pglist_data..node_id">node_id</a>);</td></tr>
+<tr><th id="429">429</th><td>}</td></tr>
+<tr><th id="430">430</th><td></td></tr>
+<tr><th id="431">431</th><td><em>static</em> <em>void</em> <a class="macro" href="../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="tu decl def fn" id="check_usemap_section_nr" title='check_usemap_section_nr' data-type='void check_usemap_section_nr(int nid, struct mem_section_usage * usage)' data-ref="check_usemap_section_nr" data-ref-filename="check_usemap_section_nr">check_usemap_section_nr</dfn>(<em>int</em> <dfn class="local col4 decl" id="54nid" title='nid' data-type='int' data-ref="54nid" data-ref-filename="54nid">nid</dfn>,</td></tr>
+<tr><th id="432">432</th><td>		<b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#mem_section_usage" title='mem_section_usage' data-ref="mem_section_usage" data-ref-filename="mem_section_usage">mem_section_usage</a> *<dfn class="local col5 decl" id="55usage" title='usage' data-type='struct mem_section_usage *' data-ref="55usage" data-ref-filename="55usage">usage</dfn>)</td></tr>
+<tr><th id="433">433</th><td>{</td></tr>
+<tr><th id="434">434</th><td>}</td></tr>
+<tr><th id="435">435</th><td><u>#<span data-ppcond="351">endif</span> /* CONFIG_MEMORY_HOTREMOVE */</u></td></tr>
+<tr><th id="436">436</th><td></td></tr>
+<tr><th id="437">437</th><td><u>#<span data-ppcond="437">ifdef</span> <a class="macro" href="../include/generated/autoconf.h.html#970" data-ref="_M/CONFIG_SPARSEMEM_VMEMMAP">CONFIG_SPARSEMEM_VMEMMAP</a></u></td></tr>
+<tr><th id="438">438</th><td><em>static</em> <em>unsigned</em> <em>long</em> <a class="macro" href="../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="tu decl def fn" id="section_map_size" title='section_map_size' data-type='unsigned long section_map_size()' data-ref="section_map_size" data-ref-filename="section_map_size">section_map_size</dfn>(<em>void</em>)</td></tr>
+<tr><th id="439">439</th><td>{</td></tr>
+<tr><th id="440">440</th><td>	<b>return</b> <a class="macro" href="../include/linux/kernel.h.html#33" title="((((sizeof(struct page) * (1UL &lt;&lt; (27 - 12)))) + ((typeof((sizeof(struct page) * (1UL &lt;&lt; (27 - 12)))))((((1UL) &lt;&lt; 21))) - 1)) &amp; ~((typeof((sizeof(struct page) * (1UL &lt;&lt; (27 - 12)))))((((1UL) &lt;&lt; 21))) - 1))" data-ref="_M/ALIGN">ALIGN</a>(<b>sizeof</b>(<b>struct</b> <a class="type" href="../include/linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a>) * <a class="macro" href="../include/linux/mmzone.h.html#1130" title="(1UL &lt;&lt; (27 - 12))" data-ref="_M/PAGES_PER_SECTION">PAGES_PER_SECTION</a>, <a class="macro" href="../arch/x86/include/asm/pgtable_64_types.h.html#98" title="((1UL) &lt;&lt; 21)" data-ref="_M/PMD_SIZE">PMD_SIZE</a>);</td></tr>
+<tr><th id="441">441</th><td>}</td></tr>
+<tr><th id="442">442</th><td></td></tr>
+<tr><th id="443">443</th><td><u>#<span data-ppcond="437">else</span></u></td></tr>
+<tr><th id="444">444</th><td><em>static</em> <em>unsigned</em> <em>long</em> __init section_map_size(<em>void</em>)</td></tr>
+<tr><th id="445">445</th><td>{</td></tr>
+<tr><th id="446">446</th><td>	<b>return</b> PAGE_ALIGN(<b>sizeof</b>(<b>struct</b> page) * PAGES_PER_SECTION);</td></tr>
+<tr><th id="447">447</th><td>}</td></tr>
+<tr><th id="448">448</th><td></td></tr>
+<tr><th id="449">449</th><td><b>struct</b> page __init *__populate_section_memmap(<em>unsigned</em> <em>long</em> pfn,</td></tr>
+<tr><th id="450">450</th><td>		<em>unsigned</em> <em>long</em> nr_pages, <em>int</em> nid, <b>struct</b> vmem_altmap *altmap)</td></tr>
+<tr><th id="451">451</th><td>{</td></tr>
+<tr><th id="452">452</th><td>	<em>unsigned</em> <em>long</em> size = section_map_size();</td></tr>
+<tr><th id="453">453</th><td>	<b>struct</b> page *map = sparse_buffer_alloc(size);</td></tr>
+<tr><th id="454">454</th><td>	phys_addr_t addr = __pa(MAX_DMA_ADDRESS);</td></tr>
+<tr><th id="455">455</th><td></td></tr>
+<tr><th id="456">456</th><td>	<b>if</b> (map)</td></tr>
+<tr><th id="457">457</th><td>		<b>return</b> map;</td></tr>
+<tr><th id="458">458</th><td></td></tr>
+<tr><th id="459">459</th><td>	map = memblock_alloc_try_nid(size,</td></tr>
+<tr><th id="460">460</th><td>					  PAGE_SIZE, addr,</td></tr>
+<tr><th id="461">461</th><td>					  MEMBLOCK_ALLOC_ACCESSIBLE, nid);</td></tr>
+<tr><th id="462">462</th><td>	<b>if</b> (!map)</td></tr>
+<tr><th id="463">463</th><td>		panic(<q>"%s: Failed to allocate %lu bytes align=0x%lx nid=%d from=%pa\n"</q>,</td></tr>
+<tr><th id="464">464</th><td>		      <b>__func__</b>, size, PAGE_SIZE, nid, &amp;addr);</td></tr>
+<tr><th id="465">465</th><td></td></tr>
+<tr><th id="466">466</th><td>	<b>return</b> map;</td></tr>
+<tr><th id="467">467</th><td>}</td></tr>
+<tr><th id="468">468</th><td><u>#<span data-ppcond="437">endif</span> /* !CONFIG_SPARSEMEM_VMEMMAP */</u></td></tr>
+<tr><th id="469">469</th><td></td></tr>
+<tr><th id="470">470</th><td><em>static</em> <em>void</em> *<dfn class="tu decl def" id="sparsemap_buf" title='sparsemap_buf' data-type='void *' data-ref="sparsemap_buf" data-ref-filename="sparsemap_buf">sparsemap_buf</dfn> <a class="macro" href="../include/linux/init.h.html#88" title="__attribute__((__section__(&quot;.meminit.data&quot;)))" data-ref="_M/__meminitdata">__meminitdata</a>;</td></tr>
+<tr><th id="471">471</th><td><em>static</em> <em>void</em> *<dfn class="tu decl def" id="sparsemap_buf_end" title='sparsemap_buf_end' data-type='void *' data-ref="sparsemap_buf_end" data-ref-filename="sparsemap_buf_end">sparsemap_buf_end</dfn> <a class="macro" href="../include/linux/init.h.html#88" title="__attribute__((__section__(&quot;.meminit.data&quot;)))" data-ref="_M/__meminitdata">__meminitdata</a>;</td></tr>
+<tr><th id="472">472</th><td></td></tr>
+<tr><th id="473">473</th><td><em>static</em> <em>void</em> <a class="macro" href="../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="tu decl def fn" id="sparse_buffer_init" title='sparse_buffer_init' data-type='void sparse_buffer_init(unsigned long size, int nid)' data-ref="sparse_buffer_init" data-ref-filename="sparse_buffer_init">sparse_buffer_init</dfn>(<em>unsigned</em> <em>long</em> <dfn class="local col6 decl" id="56size" title='size' data-type='unsigned long' data-ref="56size" data-ref-filename="56size">size</dfn>, <em>int</em> <dfn class="local col7 decl" id="57nid" title='nid' data-type='int' data-ref="57nid" data-ref-filename="57nid">nid</dfn>)</td></tr>
+<tr><th id="474">474</th><td>{</td></tr>
+<tr><th id="475">475</th><td>	<a class="typedef" href="../include/linux/types.h.html#phys_addr_t" title='phys_addr_t' data-type='u64' data-ref="phys_addr_t" data-ref-filename="phys_addr_t">phys_addr_t</a> <dfn class="local col8 decl" id="58addr" title='addr' data-type='phys_addr_t' data-ref="58addr" data-ref-filename="58addr">addr</dfn> = <a class="macro" href="../arch/x86/include/asm/page.h.html#42" title="__phys_addr_nodebug((unsigned long)(((unsigned long)((void *)((unsigned long)(((16UL * 1024 * 1024) &gt;&gt; 12) &lt;&lt; 12)+((unsigned long)page_offset_base))))))" data-ref="_M/__pa">__pa</a>(<a class="macro" href="../arch/x86/include/asm/dma.h.html#84" title="((unsigned long)((void *)((unsigned long)(((16UL * 1024 * 1024) &gt;&gt; 12) &lt;&lt; 12)+((unsigned long)page_offset_base))))" data-ref="_M/MAX_DMA_ADDRESS">MAX_DMA_ADDRESS</a>);</td></tr>
+<tr><th id="476">476</th><td>	<a class="macro" href="../include/asm-generic/bug.h.html#123" title="({ int __ret_warn_on = !!(sparsemap_buf); if (__builtin_expect(!!(__ret_warn_on), 0)) do { printk(&quot;\001&quot; &quot;4&quot; &quot;------------[ cut here ]------------\n&quot;); do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/mm/sparse.c&quot;), &quot;i&quot; (476), &quot;i&quot; ((1 &lt;&lt; 0)|(((9) &lt;&lt; 8))), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.reachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (50)); }); } while (0); } while (0); __builtin_expect(!!(__ret_warn_on), 0); })" data-ref="_M/WARN_ON">WARN_ON</a>(<a class="tu ref" href="#sparsemap_buf" title='sparsemap_buf' data-use='r' data-ref="sparsemap_buf" data-ref-filename="sparsemap_buf">sparsemap_buf</a>);	<i>/* forgot to call sparse_buffer_fini()? */</i></td></tr>
+<tr><th id="477">477</th><td>	<a class="tu ref" href="#sparsemap_buf" title='sparsemap_buf' data-use='w' data-ref="sparsemap_buf" data-ref-filename="sparsemap_buf">sparsemap_buf</a> =</td></tr>
+<tr><th id="478">478</th><td>		<a class="ref fn" href="../include/linux/memblock.h.html#memblock_alloc_try_nid_raw" title='memblock_alloc_try_nid_raw' data-ref="memblock_alloc_try_nid_raw" data-ref-filename="memblock_alloc_try_nid_raw">memblock_alloc_try_nid_raw</a>(<a class="local col6 ref" href="#56size" title='size' data-ref="56size" data-ref-filename="56size">size</a>, <a class="macro" href="../arch/x86/include/asm/page_types.h.html#11" title="((1UL) &lt;&lt; 12)" data-ref="_M/PAGE_SIZE">PAGE_SIZE</a>,</td></tr>
+<tr><th id="479">479</th><td>						<a class="local col8 ref" href="#58addr" title='addr' data-ref="58addr" data-ref-filename="58addr">addr</a>,</td></tr>
+<tr><th id="480">480</th><td>						<a class="macro" href="../include/linux/memblock.h.html#340" title="0" data-ref="_M/MEMBLOCK_ALLOC_ACCESSIBLE">MEMBLOCK_ALLOC_ACCESSIBLE</a>, <a class="local col7 ref" href="#57nid" title='nid' data-ref="57nid" data-ref-filename="57nid">nid</a>);</td></tr>
+<tr><th id="481">481</th><td>	<a class="tu ref" href="#sparsemap_buf_end" title='sparsemap_buf_end' data-use='w' data-ref="sparsemap_buf_end" data-ref-filename="sparsemap_buf_end">sparsemap_buf_end</a> = <a class="tu ref" href="#sparsemap_buf" title='sparsemap_buf' data-use='r' data-ref="sparsemap_buf" data-ref-filename="sparsemap_buf">sparsemap_buf</a> + <a class="local col6 ref" href="#56size" title='size' data-ref="56size" data-ref-filename="56size">size</a>;</td></tr>
+<tr><th id="482">482</th><td>}</td></tr>
+<tr><th id="483">483</th><td></td></tr>
+<tr><th id="484">484</th><td><em>static</em> <em>void</em> <a class="macro" href="../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="tu decl def fn" id="sparse_buffer_fini" title='sparse_buffer_fini' data-type='void sparse_buffer_fini()' data-ref="sparse_buffer_fini" data-ref-filename="sparse_buffer_fini">sparse_buffer_fini</dfn>(<em>void</em>)</td></tr>
+<tr><th id="485">485</th><td>{</td></tr>
+<tr><th id="486">486</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col9 decl" id="59size" title='size' data-type='unsigned long' data-ref="59size" data-ref-filename="59size">size</dfn> = <a class="tu ref" href="#sparsemap_buf_end" title='sparsemap_buf_end' data-use='r' data-ref="sparsemap_buf_end" data-ref-filename="sparsemap_buf_end">sparsemap_buf_end</a> - <a class="tu ref" href="#sparsemap_buf" title='sparsemap_buf' data-use='r' data-ref="sparsemap_buf" data-ref-filename="sparsemap_buf">sparsemap_buf</a>;</td></tr>
+<tr><th id="487">487</th><td></td></tr>
+<tr><th id="488">488</th><td>	<b>if</b> (<a class="tu ref" href="#sparsemap_buf" title='sparsemap_buf' data-use='r' data-ref="sparsemap_buf" data-ref-filename="sparsemap_buf">sparsemap_buf</a> &amp;&amp; <a class="local col9 ref" href="#59size" title='size' data-ref="59size" data-ref-filename="59size">size</a> &gt; <var>0</var>)</td></tr>
+<tr><th id="489">489</th><td>		<a class="ref fn" href="../include/linux/memblock.h.html#memblock_free_early" title='memblock_free_early' data-ref="memblock_free_early" data-ref-filename="memblock_free_early">memblock_free_early</a>(<a class="macro" href="../arch/x86/include/asm/page.h.html#42" title="__phys_addr_nodebug((unsigned long)(sparsemap_buf))" data-ref="_M/__pa">__pa</a>(<a class="tu ref" href="#sparsemap_buf" title='sparsemap_buf' data-use='r' data-ref="sparsemap_buf" data-ref-filename="sparsemap_buf">sparsemap_buf</a>), <a class="local col9 ref" href="#59size" title='size' data-ref="59size" data-ref-filename="59size">size</a>);</td></tr>
+<tr><th id="490">490</th><td>	<a class="tu ref" href="#sparsemap_buf" title='sparsemap_buf' data-use='w' data-ref="sparsemap_buf" data-ref-filename="sparsemap_buf">sparsemap_buf</a> = <a class="macro" href="../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="491">491</th><td>}</td></tr>
+<tr><th id="492">492</th><td></td></tr>
+<tr><th id="493">493</th><td><em>void</em> * <a class="macro" href="../include/linux/init.h.html#86" title="__attribute__((__section__(&quot;.meminit.text&quot;))) __attribute__((__cold__)) __attribute__((no_instrument_function))" data-ref="_M/__meminit">__meminit</a> <dfn class="decl def fn" id="sparse_buffer_alloc" title='sparse_buffer_alloc' data-ref="sparse_buffer_alloc" data-ref-filename="sparse_buffer_alloc">sparse_buffer_alloc</dfn>(<em>unsigned</em> <em>long</em> <dfn class="local col0 decl" id="60size" title='size' data-type='unsigned long' data-ref="60size" data-ref-filename="60size">size</dfn>)</td></tr>
+<tr><th id="494">494</th><td>{</td></tr>
+<tr><th id="495">495</th><td>	<em>void</em> *<dfn class="local col1 decl" id="61ptr" title='ptr' data-type='void *' data-ref="61ptr" data-ref-filename="61ptr">ptr</dfn> = <a class="macro" href="../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="496">496</th><td></td></tr>
+<tr><th id="497">497</th><td>	<b>if</b> (<a class="tu ref" href="#sparsemap_buf" title='sparsemap_buf' data-use='r' data-ref="sparsemap_buf" data-ref-filename="sparsemap_buf">sparsemap_buf</a>) {</td></tr>
+<tr><th id="498">498</th><td>		<a class="local col1 ref" href="#61ptr" title='ptr' data-ref="61ptr" data-ref-filename="61ptr">ptr</a> = <a class="macro" href="../include/linux/kernel.h.html#36" title="((typeof(sparsemap_buf))(((((unsigned long)(sparsemap_buf))) + ((typeof(((unsigned long)(sparsemap_buf))))(((size))) - 1)) &amp; ~((typeof(((unsigned long)(sparsemap_buf))))(((size))) - 1)))" data-ref="_M/PTR_ALIGN">PTR_ALIGN</a>(<a class="tu ref" href="#sparsemap_buf" title='sparsemap_buf' data-use='r' data-ref="sparsemap_buf" data-ref-filename="sparsemap_buf">sparsemap_buf</a>, <a class="local col0 ref" href="#60size" title='size' data-ref="60size" data-ref-filename="60size">size</a>);</td></tr>
+<tr><th id="499">499</th><td>		<b>if</b> (<a class="local col1 ref" href="#61ptr" title='ptr' data-ref="61ptr" data-ref-filename="61ptr">ptr</a> + <a class="local col0 ref" href="#60size" title='size' data-ref="60size" data-ref-filename="60size">size</a> &gt; <a class="tu ref" href="#sparsemap_buf_end" title='sparsemap_buf_end' data-use='r' data-ref="sparsemap_buf_end" data-ref-filename="sparsemap_buf_end">sparsemap_buf_end</a>)</td></tr>
+<tr><th id="500">500</th><td>			<a class="local col1 ref" href="#61ptr" title='ptr' data-ref="61ptr" data-ref-filename="61ptr">ptr</a> = <a class="macro" href="../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="501">501</th><td>		<b>else</b></td></tr>
+<tr><th id="502">502</th><td>			<a class="tu ref" href="#sparsemap_buf" title='sparsemap_buf' data-use='w' data-ref="sparsemap_buf" data-ref-filename="sparsemap_buf">sparsemap_buf</a> = <a class="local col1 ref" href="#61ptr" title='ptr' data-ref="61ptr" data-ref-filename="61ptr">ptr</a> + <a class="local col0 ref" href="#60size" title='size' data-ref="60size" data-ref-filename="60size">size</a>;</td></tr>
+<tr><th id="503">503</th><td>	}</td></tr>
+<tr><th id="504">504</th><td>	<b>return</b> <a class="local col1 ref" href="#61ptr" title='ptr' data-ref="61ptr" data-ref-filename="61ptr">ptr</a>;</td></tr>
+<tr><th id="505">505</th><td>}</td></tr>
+<tr><th id="506">506</th><td></td></tr>
+<tr><th id="507">507</th><td><em>void</em> <a class="macro" href="../include/linux/compiler_attributes.h.html#254" title="__attribute__((__weak__))" data-ref="_M/__weak">__weak</a> <a class="macro" href="../include/linux/init.h.html#86" title="__attribute__((__section__(&quot;.meminit.text&quot;))) __attribute__((__cold__)) __attribute__((no_instrument_function))" data-ref="_M/__meminit">__meminit</a> <dfn class="decl def fn" id="vmemmap_populate_print_last" title='vmemmap_populate_print_last' data-ref="vmemmap_populate_print_last" data-ref-filename="vmemmap_populate_print_last">vmemmap_populate_print_last</dfn>(<em>void</em>)</td></tr>
+<tr><th id="508">508</th><td>{</td></tr>
+<tr><th id="509">509</th><td>}</td></tr>
+<tr><th id="510">510</th><td></td></tr>
+<tr><th id="511">511</th><td><i  data-doc="sparse_init_nid">/*</i></td></tr>
+<tr><th id="512">512</th><td><i  data-doc="sparse_init_nid"> * Initialize sparse on a specific node. The node spans [pnum_begin, pnum_end)</i></td></tr>
+<tr><th id="513">513</th><td><i  data-doc="sparse_init_nid"> * And number of present sections in this node is map_count.</i></td></tr>
+<tr><th id="514">514</th><td><i  data-doc="sparse_init_nid"> */</i></td></tr>
+<tr><th id="515">515</th><td><em>static</em> <em>void</em> <a class="macro" href="../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="tu decl def fn" id="sparse_init_nid" title='sparse_init_nid' data-type='void sparse_init_nid(int nid, unsigned long pnum_begin, unsigned long pnum_end, unsigned long map_count)' data-ref="sparse_init_nid" data-ref-filename="sparse_init_nid">sparse_init_nid</dfn>(<em>int</em> <dfn class="local col2 decl" id="62nid" title='nid' data-type='int' data-ref="62nid" data-ref-filename="62nid">nid</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col3 decl" id="63pnum_begin" title='pnum_begin' data-type='unsigned long' data-ref="63pnum_begin" data-ref-filename="63pnum_begin">pnum_begin</dfn>,</td></tr>
+<tr><th id="516">516</th><td>				   <em>unsigned</em> <em>long</em> <dfn class="local col4 decl" id="64pnum_end" title='pnum_end' data-type='unsigned long' data-ref="64pnum_end" data-ref-filename="64pnum_end">pnum_end</dfn>,</td></tr>
+<tr><th id="517">517</th><td>				   <em>unsigned</em> <em>long</em> <dfn class="local col5 decl" id="65map_count" title='map_count' data-type='unsigned long' data-ref="65map_count" data-ref-filename="65map_count">map_count</dfn>)</td></tr>
+<tr><th id="518">518</th><td>{</td></tr>
+<tr><th id="519">519</th><td>	<b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#mem_section_usage" title='mem_section_usage' data-ref="mem_section_usage" data-ref-filename="mem_section_usage">mem_section_usage</a> *<dfn class="local col6 decl" id="66usage" title='usage' data-type='struct mem_section_usage *' data-ref="66usage" data-ref-filename="66usage">usage</dfn>;</td></tr>
+<tr><th id="520">520</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col7 decl" id="67pnum" title='pnum' data-type='unsigned long' data-ref="67pnum" data-ref-filename="67pnum">pnum</dfn>;</td></tr>
+<tr><th id="521">521</th><td>	<b>struct</b> <a class="type" href="../include/linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="local col8 decl" id="68map" title='map' data-type='struct page *' data-ref="68map" data-ref-filename="68map">map</dfn>;</td></tr>
+<tr><th id="522">522</th><td></td></tr>
+<tr><th id="523">523</th><td>	<a class="local col6 ref" href="#66usage" title='usage' data-ref="66usage" data-ref-filename="66usage">usage</a> = <a class="tu ref fn" href="#sparse_early_usemaps_alloc_pgdat_section" title='sparse_early_usemaps_alloc_pgdat_section' data-use='c' data-ref="sparse_early_usemaps_alloc_pgdat_section" data-ref-filename="sparse_early_usemaps_alloc_pgdat_section">sparse_early_usemaps_alloc_pgdat_section</a>(<a class="macro" href="../arch/x86/include/asm/mmzone_64.h.html#15" title="(node_data[nid])" data-ref="_M/NODE_DATA">NODE_DATA</a>(<a class="local col2 ref" href="#62nid" title='nid' data-ref="62nid" data-ref-filename="62nid">nid</a>),</td></tr>
+<tr><th id="524">524</th><td>			<a class="ref fn" href="#mem_section_usage_size" title='mem_section_usage_size' data-ref="mem_section_usage_size" data-ref-filename="mem_section_usage_size">mem_section_usage_size</a>() * <a class="local col5 ref" href="#65map_count" title='map_count' data-ref="65map_count" data-ref-filename="65map_count">map_count</a>);</td></tr>
+<tr><th id="525">525</th><td>	<b>if</b> (!<a class="local col6 ref" href="#66usage" title='usage' data-ref="66usage" data-ref-filename="66usage">usage</a>) {</td></tr>
+<tr><th id="526">526</th><td>		<a class="macro" href="../include/linux/printk.h.html#303" title="printk(&quot;\001&quot; &quot;3&quot; &quot;%s: node[%d] usemap allocation failed&quot;, __func__, nid)" data-ref="_M/pr_err">pr_err</a>(<q>"%s: node[%d] usemap allocation failed"</q>, <b>__func__</b>, <a class="local col2 ref" href="#62nid" title='nid' data-ref="62nid" data-ref-filename="62nid">nid</a>);</td></tr>
+<tr><th id="527">527</th><td>		<b>goto</b> <a class="lbl" href="#69failed" data-ref="69failed" data-ref-filename="69failed">failed</a>;</td></tr>
+<tr><th id="528">528</th><td>	}</td></tr>
+<tr><th id="529">529</th><td>	<a class="tu ref fn" href="#sparse_buffer_init" title='sparse_buffer_init' data-use='c' data-ref="sparse_buffer_init" data-ref-filename="sparse_buffer_init">sparse_buffer_init</a>(<a class="local col5 ref" href="#65map_count" title='map_count' data-ref="65map_count" data-ref-filename="65map_count">map_count</a> * <a class="tu ref fn" href="#section_map_size" title='section_map_size' data-use='c' data-ref="section_map_size" data-ref-filename="section_map_size">section_map_size</a>(), <a class="local col2 ref" href="#62nid" title='nid' data-ref="62nid" data-ref-filename="62nid">nid</a>);</td></tr>
+<tr><th id="530">530</th><td>	<a class="macro" href="#209" title="for (pnum = next_present_section_nr(pnum_begin-1); ((pnum != -1) &amp;&amp; (pnum &lt;= __highest_present_section_nr)); pnum = next_present_section_nr(pnum))" data-ref="_M/for_each_present_section_nr">for_each_present_section_nr</a>(<a class="local col3 ref" href="#63pnum_begin" title='pnum_begin' data-ref="63pnum_begin" data-ref-filename="63pnum_begin">pnum_begin</a>, <a class="local col7 ref" href="#67pnum" title='pnum' data-ref="67pnum" data-ref-filename="67pnum">pnum</a>) {</td></tr>
+<tr><th id="531">531</th><td>		<em>unsigned</em> <em>long</em> <dfn class="local col0 decl" id="70pfn" title='pfn' data-type='unsigned long' data-ref="70pfn" data-ref-filename="70pfn">pfn</dfn> = <a class="ref fn" href="../include/linux/mmzone.h.html#section_nr_to_pfn" title='section_nr_to_pfn' data-ref="section_nr_to_pfn" data-ref-filename="section_nr_to_pfn">section_nr_to_pfn</a>(<a class="local col7 ref" href="#67pnum" title='pnum' data-ref="67pnum" data-ref-filename="67pnum">pnum</a>);</td></tr>
+<tr><th id="532">532</th><td></td></tr>
+<tr><th id="533">533</th><td>		<b>if</b> (<a class="local col7 ref" href="#67pnum" title='pnum' data-ref="67pnum" data-ref-filename="67pnum">pnum</a> &gt;= <a class="local col4 ref" href="#64pnum_end" title='pnum_end' data-ref="64pnum_end" data-ref-filename="64pnum_end">pnum_end</a>)</td></tr>
+<tr><th id="534">534</th><td>			<b>break</b>;</td></tr>
+<tr><th id="535">535</th><td></td></tr>
+<tr><th id="536">536</th><td>		<a class="local col8 ref" href="#68map" title='map' data-ref="68map" data-ref-filename="68map">map</a> = <a class="ref fn" href="../include/linux/mm.h.html#__populate_section_memmap" title='__populate_section_memmap' data-ref="__populate_section_memmap" data-ref-filename="__populate_section_memmap">__populate_section_memmap</a>(<a class="local col0 ref" href="#70pfn" title='pfn' data-ref="70pfn" data-ref-filename="70pfn">pfn</a>, <a class="macro" href="../include/linux/mmzone.h.html#1130" title="(1UL &lt;&lt; (27 - 12))" data-ref="_M/PAGES_PER_SECTION">PAGES_PER_SECTION</a>,</td></tr>
+<tr><th id="537">537</th><td>				<a class="local col2 ref" href="#62nid" title='nid' data-ref="62nid" data-ref-filename="62nid">nid</a>, <a class="macro" href="../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>);</td></tr>
+<tr><th id="538">538</th><td>		<b>if</b> (!<a class="local col8 ref" href="#68map" title='map' data-ref="68map" data-ref-filename="68map">map</a>) {</td></tr>
+<tr><th id="539">539</th><td>			<a class="macro" href="../include/linux/printk.h.html#303" title="printk(&quot;\001&quot; &quot;3&quot; &quot;%s: node[%d] memory map backing failed. Some memory will not be available.&quot;, __func__, nid)" data-ref="_M/pr_err">pr_err</a>(<q>"%s: node[%d] memory map backing failed. Some memory will not be available."</q>,</td></tr>
+<tr><th id="540">540</th><td>			       <b>__func__</b>, <a class="local col2 ref" href="#62nid" title='nid' data-ref="62nid" data-ref-filename="62nid">nid</a>);</td></tr>
+<tr><th id="541">541</th><td>			<a class="local col3 ref" href="#63pnum_begin" title='pnum_begin' data-ref="63pnum_begin" data-ref-filename="63pnum_begin">pnum_begin</a> = <a class="local col7 ref" href="#67pnum" title='pnum' data-ref="67pnum" data-ref-filename="67pnum">pnum</a>;</td></tr>
+<tr><th id="542">542</th><td>			<b>goto</b> <a class="lbl" href="#69failed" data-ref="69failed" data-ref-filename="69failed">failed</a>;</td></tr>
+<tr><th id="543">543</th><td>		}</td></tr>
+<tr><th id="544">544</th><td>		<a class="tu ref fn" href="#check_usemap_section_nr" title='check_usemap_section_nr' data-use='c' data-ref="check_usemap_section_nr" data-ref-filename="check_usemap_section_nr">check_usemap_section_nr</a>(<a class="local col2 ref" href="#62nid" title='nid' data-ref="62nid" data-ref-filename="62nid">nid</a>, <a class="local col6 ref" href="#66usage" title='usage' data-ref="66usage" data-ref-filename="66usage">usage</a>);</td></tr>
+<tr><th id="545">545</th><td>		<a class="tu ref fn" href="#sparse_init_one_section" title='sparse_init_one_section' data-use='c' data-ref="sparse_init_one_section" data-ref-filename="sparse_init_one_section">sparse_init_one_section</a>(<a class="ref fn" href="../include/linux/mmzone.h.html#__nr_to_section" title='__nr_to_section' data-ref="__nr_to_section" data-ref-filename="__nr_to_section">__nr_to_section</a>(<a class="local col7 ref" href="#67pnum" title='pnum' data-ref="67pnum" data-ref-filename="67pnum">pnum</a>), <a class="local col7 ref" href="#67pnum" title='pnum' data-ref="67pnum" data-ref-filename="67pnum">pnum</a>, <a class="local col8 ref" href="#68map" title='map' data-ref="68map" data-ref-filename="68map">map</a>, <a class="local col6 ref" href="#66usage" title='usage' data-ref="66usage" data-ref-filename="66usage">usage</a>,</td></tr>
+<tr><th id="546">546</th><td>				<a class="macro" href="../include/linux/mmzone.h.html#1257" title="(1UL&lt;&lt;3)" data-ref="_M/SECTION_IS_EARLY">SECTION_IS_EARLY</a>);</td></tr>
+<tr><th id="547">547</th><td>		<a class="local col6 ref" href="#66usage" title='usage' data-ref="66usage" data-ref-filename="66usage">usage</a> = (<em>void</em> *) <a class="local col6 ref" href="#66usage" title='usage' data-ref="66usage" data-ref-filename="66usage">usage</a> + <a class="ref fn" href="#mem_section_usage_size" title='mem_section_usage_size' data-ref="mem_section_usage_size" data-ref-filename="mem_section_usage_size">mem_section_usage_size</a>();</td></tr>
+<tr><th id="548">548</th><td>	}</td></tr>
+<tr><th id="549">549</th><td>	<a class="tu ref fn" href="#sparse_buffer_fini" title='sparse_buffer_fini' data-use='c' data-ref="sparse_buffer_fini" data-ref-filename="sparse_buffer_fini">sparse_buffer_fini</a>();</td></tr>
+<tr><th id="550">550</th><td>	<b>return</b>;</td></tr>
+<tr><th id="551">551</th><td><dfn class="lbl" id="69failed" data-ref="69failed" data-ref-filename="69failed">failed</dfn>:</td></tr>
+<tr><th id="552">552</th><td>	<i>/* We failed to allocate, mark all the following pnums as not present */</i></td></tr>
+<tr><th id="553">553</th><td>	<a class="macro" href="#209" title="for (pnum = next_present_section_nr(pnum_begin-1); ((pnum != -1) &amp;&amp; (pnum &lt;= __highest_present_section_nr)); pnum = next_present_section_nr(pnum))" data-ref="_M/for_each_present_section_nr">for_each_present_section_nr</a>(<a class="local col3 ref" href="#63pnum_begin" title='pnum_begin' data-ref="63pnum_begin" data-ref-filename="63pnum_begin">pnum_begin</a>, <a class="local col7 ref" href="#67pnum" title='pnum' data-ref="67pnum" data-ref-filename="67pnum">pnum</a>) {</td></tr>
+<tr><th id="554">554</th><td>		<b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#mem_section" title='mem_section' data-ref="mem_section" data-ref-filename="mem_section">mem_section</a> *<dfn class="local col1 decl" id="71ms" title='ms' data-type='struct mem_section *' data-ref="71ms" data-ref-filename="71ms">ms</dfn>;</td></tr>
+<tr><th id="555">555</th><td></td></tr>
+<tr><th id="556">556</th><td>		<b>if</b> (<a class="local col7 ref" href="#67pnum" title='pnum' data-ref="67pnum" data-ref-filename="67pnum">pnum</a> &gt;= <a class="local col4 ref" href="#64pnum_end" title='pnum_end' data-ref="64pnum_end" data-ref-filename="64pnum_end">pnum_end</a>)</td></tr>
+<tr><th id="557">557</th><td>			<b>break</b>;</td></tr>
+<tr><th id="558">558</th><td>		<a class="local col1 ref" href="#71ms" title='ms' data-ref="71ms" data-ref-filename="71ms">ms</a> = <a class="ref fn" href="../include/linux/mmzone.h.html#__nr_to_section" title='__nr_to_section' data-ref="__nr_to_section" data-ref-filename="__nr_to_section">__nr_to_section</a>(<a class="local col7 ref" href="#67pnum" title='pnum' data-ref="67pnum" data-ref-filename="67pnum">pnum</a>);</td></tr>
+<tr><th id="559">559</th><td>		<a class="local col1 ref" href="#71ms" title='ms' data-ref="71ms" data-ref-filename="71ms">ms</a>-&gt;<a class="ref field" href="../include/linux/mmzone.h.html#mem_section::section_mem_map" title='mem_section::section_mem_map' data-ref="mem_section::section_mem_map" data-ref-filename="mem_section..section_mem_map">section_mem_map</a> = <var>0</var>;</td></tr>
+<tr><th id="560">560</th><td>	}</td></tr>
+<tr><th id="561">561</th><td>}</td></tr>
+<tr><th id="562">562</th><td></td></tr>
+<tr><th id="563">563</th><td><i>/*</i></td></tr>
+<tr><th id="564">564</th><td><i> * Allocate the accumulated non-linear sections, allocate a mem_map</i></td></tr>
+<tr><th id="565">565</th><td><i> * for each and record the physical to section mapping.</i></td></tr>
+<tr><th id="566">566</th><td><i> */</i></td></tr>
+<tr><th id="567">567</th><td><em>void</em> <a class="macro" href="../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="decl def fn" id="sparse_init" title='sparse_init' data-ref="sparse_init" data-ref-filename="sparse_init">sparse_init</dfn>(<em>void</em>)</td></tr>
+<tr><th id="568">568</th><td>{</td></tr>
+<tr><th id="569">569</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col2 decl" id="72pnum_begin" title='pnum_begin' data-type='unsigned long' data-ref="72pnum_begin" data-ref-filename="72pnum_begin">pnum_begin</dfn> = <a class="tu ref fn" href="#first_present_section_nr" title='first_present_section_nr' data-use='c' data-ref="first_present_section_nr" data-ref-filename="first_present_section_nr">first_present_section_nr</a>();</td></tr>
+<tr><th id="570">570</th><td>	<em>int</em> <dfn class="local col3 decl" id="73nid_begin" title='nid_begin' data-type='int' data-ref="73nid_begin" data-ref-filename="73nid_begin">nid_begin</dfn> = <a class="tu ref fn" href="#sparse_early_nid" title='sparse_early_nid' data-use='c' data-ref="sparse_early_nid" data-ref-filename="sparse_early_nid">sparse_early_nid</a>(<a class="ref fn" href="../include/linux/mmzone.h.html#__nr_to_section" title='__nr_to_section' data-ref="__nr_to_section" data-ref-filename="__nr_to_section">__nr_to_section</a>(<a class="local col2 ref" href="#72pnum_begin" title='pnum_begin' data-ref="72pnum_begin" data-ref-filename="72pnum_begin">pnum_begin</a>));</td></tr>
+<tr><th id="571">571</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col4 decl" id="74pnum_end" title='pnum_end' data-type='unsigned long' data-ref="74pnum_end" data-ref-filename="74pnum_end">pnum_end</dfn>, <dfn class="local col5 decl" id="75map_count" title='map_count' data-type='unsigned long' data-ref="75map_count" data-ref-filename="75map_count">map_count</dfn> = <var>1</var>;</td></tr>
+<tr><th id="572">572</th><td></td></tr>
+<tr><th id="573">573</th><td>	<i>/* Setup pageblock_order for HUGETLB_PAGE_SIZE_VARIABLE */</i></td></tr>
+<tr><th id="574">574</th><td>	<a class="ref fn" href="internal.h.html#set_pageblock_order" title='set_pageblock_order' data-ref="set_pageblock_order" data-ref-filename="set_pageblock_order">set_pageblock_order</a>();</td></tr>
+<tr><th id="575">575</th><td></td></tr>
+<tr><th id="576">576</th><td>	<a class="macro" href="#209" title="for (pnum_end = next_present_section_nr(pnum_begin + 1-1); ((pnum_end != -1) &amp;&amp; (pnum_end &lt;= __highest_present_section_nr)); pnum_end = next_present_section_nr(pnum_end))" data-ref="_M/for_each_present_section_nr">for_each_present_section_nr</a>(<a class="local col2 ref" href="#72pnum_begin" title='pnum_begin' data-ref="72pnum_begin" data-ref-filename="72pnum_begin">pnum_begin</a> + <var>1</var>, <a class="local col4 ref" href="#74pnum_end" title='pnum_end' data-ref="74pnum_end" data-ref-filename="74pnum_end">pnum_end</a>) {</td></tr>
+<tr><th id="577">577</th><td>		<em>int</em> <dfn class="local col6 decl" id="76nid" title='nid' data-type='int' data-ref="76nid" data-ref-filename="76nid">nid</dfn> = <a class="tu ref fn" href="#sparse_early_nid" title='sparse_early_nid' data-use='c' data-ref="sparse_early_nid" data-ref-filename="sparse_early_nid">sparse_early_nid</a>(<a class="ref fn" href="../include/linux/mmzone.h.html#__nr_to_section" title='__nr_to_section' data-ref="__nr_to_section" data-ref-filename="__nr_to_section">__nr_to_section</a>(<a class="local col4 ref" href="#74pnum_end" title='pnum_end' data-ref="74pnum_end" data-ref-filename="74pnum_end">pnum_end</a>));</td></tr>
+<tr><th id="578">578</th><td></td></tr>
+<tr><th id="579">579</th><td>		<b>if</b> (<a class="local col6 ref" href="#76nid" title='nid' data-ref="76nid" data-ref-filename="76nid">nid</a> == <a class="local col3 ref" href="#73nid_begin" title='nid_begin' data-ref="73nid_begin" data-ref-filename="73nid_begin">nid_begin</a>) {</td></tr>
+<tr><th id="580">580</th><td>			<a class="local col5 ref" href="#75map_count" title='map_count' data-ref="75map_count" data-ref-filename="75map_count">map_count</a>++;</td></tr>
+<tr><th id="581">581</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="582">582</th><td>		}</td></tr>
+<tr><th id="583">583</th><td>		<i>/* Init node with sections in range [pnum_begin, pnum_end) */</i></td></tr>
+<tr><th id="584">584</th><td>		<a class="tu ref fn" href="#sparse_init_nid" title='sparse_init_nid' data-use='c' data-ref="sparse_init_nid" data-ref-filename="sparse_init_nid">sparse_init_nid</a>(<a class="local col3 ref" href="#73nid_begin" title='nid_begin' data-ref="73nid_begin" data-ref-filename="73nid_begin">nid_begin</a>, <a class="local col2 ref" href="#72pnum_begin" title='pnum_begin' data-ref="72pnum_begin" data-ref-filename="72pnum_begin">pnum_begin</a>, <a class="local col4 ref" href="#74pnum_end" title='pnum_end' data-ref="74pnum_end" data-ref-filename="74pnum_end">pnum_end</a>, <a class="local col5 ref" href="#75map_count" title='map_count' data-ref="75map_count" data-ref-filename="75map_count">map_count</a>);</td></tr>
+<tr><th id="585">585</th><td>		<a class="local col3 ref" href="#73nid_begin" title='nid_begin' data-ref="73nid_begin" data-ref-filename="73nid_begin">nid_begin</a> = <a class="local col6 ref" href="#76nid" title='nid' data-ref="76nid" data-ref-filename="76nid">nid</a>;</td></tr>
+<tr><th id="586">586</th><td>		<a class="local col2 ref" href="#72pnum_begin" title='pnum_begin' data-ref="72pnum_begin" data-ref-filename="72pnum_begin">pnum_begin</a> = <a class="local col4 ref" href="#74pnum_end" title='pnum_end' data-ref="74pnum_end" data-ref-filename="74pnum_end">pnum_end</a>;</td></tr>
+<tr><th id="587">587</th><td>		<a class="local col5 ref" href="#75map_count" title='map_count' data-ref="75map_count" data-ref-filename="75map_count">map_count</a> = <var>1</var>;</td></tr>
+<tr><th id="588">588</th><td>	}</td></tr>
+<tr><th id="589">589</th><td>	<i>/* cover the last node */</i></td></tr>
+<tr><th id="590">590</th><td>	<a class="tu ref fn" href="#sparse_init_nid" title='sparse_init_nid' data-use='c' data-ref="sparse_init_nid" data-ref-filename="sparse_init_nid">sparse_init_nid</a>(<a class="local col3 ref" href="#73nid_begin" title='nid_begin' data-ref="73nid_begin" data-ref-filename="73nid_begin">nid_begin</a>, <a class="local col2 ref" href="#72pnum_begin" title='pnum_begin' data-ref="72pnum_begin" data-ref-filename="72pnum_begin">pnum_begin</a>, <a class="local col4 ref" href="#74pnum_end" title='pnum_end' data-ref="74pnum_end" data-ref-filename="74pnum_end">pnum_end</a>, <a class="local col5 ref" href="#75map_count" title='map_count' data-ref="75map_count" data-ref-filename="75map_count">map_count</a>);</td></tr>
+<tr><th id="591">591</th><td>	<a class="ref fn" href="#vmemmap_populate_print_last" title='vmemmap_populate_print_last' data-ref="vmemmap_populate_print_last" data-ref-filename="vmemmap_populate_print_last">vmemmap_populate_print_last</a>();</td></tr>
+<tr><th id="592">592</th><td>}</td></tr>
+<tr><th id="593">593</th><td></td></tr>
+<tr><th id="594">594</th><td><u>#<span data-ppcond="594">ifdef</span> <span class="macro" data-ref="_M/CONFIG_MEMORY_HOTPLUG">CONFIG_MEMORY_HOTPLUG</span></u></td></tr>
+<tr><th id="595">595</th><td></td></tr>
+<tr><th id="596">596</th><td><i>/* Mark all memory sections within the pfn range as online */</i></td></tr>
+<tr><th id="597">597</th><td><em>void</em> online_mem_sections(<em>unsigned</em> <em>long</em> start_pfn, <em>unsigned</em> <em>long</em> end_pfn)</td></tr>
+<tr><th id="598">598</th><td>{</td></tr>
+<tr><th id="599">599</th><td>	<em>unsigned</em> <em>long</em> pfn;</td></tr>
+<tr><th id="600">600</th><td></td></tr>
+<tr><th id="601">601</th><td>	<b>for</b> (pfn = start_pfn; pfn &lt; end_pfn; pfn += PAGES_PER_SECTION) {</td></tr>
+<tr><th id="602">602</th><td>		<em>unsigned</em> <em>long</em> section_nr = pfn_to_section_nr(pfn);</td></tr>
+<tr><th id="603">603</th><td>		<b>struct</b> mem_section *ms;</td></tr>
+<tr><th id="604">604</th><td></td></tr>
+<tr><th id="605">605</th><td>		<i>/* onlining code should never touch invalid ranges */</i></td></tr>
+<tr><th id="606">606</th><td>		<b>if</b> (WARN_ON(!valid_section_nr(section_nr)))</td></tr>
+<tr><th id="607">607</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="608">608</th><td></td></tr>
+<tr><th id="609">609</th><td>		ms = __nr_to_section(section_nr);</td></tr>
+<tr><th id="610">610</th><td>		ms-&gt;section_mem_map |= SECTION_IS_ONLINE;</td></tr>
+<tr><th id="611">611</th><td>	}</td></tr>
+<tr><th id="612">612</th><td>}</td></tr>
+<tr><th id="613">613</th><td></td></tr>
+<tr><th id="614">614</th><td><u>#ifdef CONFIG_MEMORY_HOTREMOVE</u></td></tr>
+<tr><th id="615">615</th><td><i>/* Mark all memory sections within the pfn range as offline */</i></td></tr>
+<tr><th id="616">616</th><td><em>void</em> offline_mem_sections(<em>unsigned</em> <em>long</em> start_pfn, <em>unsigned</em> <em>long</em> end_pfn)</td></tr>
+<tr><th id="617">617</th><td>{</td></tr>
+<tr><th id="618">618</th><td>	<em>unsigned</em> <em>long</em> pfn;</td></tr>
+<tr><th id="619">619</th><td></td></tr>
+<tr><th id="620">620</th><td>	<b>for</b> (pfn = start_pfn; pfn &lt; end_pfn; pfn += PAGES_PER_SECTION) {</td></tr>
+<tr><th id="621">621</th><td>		<em>unsigned</em> <em>long</em> section_nr = pfn_to_section_nr(pfn);</td></tr>
+<tr><th id="622">622</th><td>		<b>struct</b> mem_section *ms;</td></tr>
+<tr><th id="623">623</th><td></td></tr>
+<tr><th id="624">624</th><td>		<i>/*</i></td></tr>
+<tr><th id="625">625</th><td><i>		 * TODO this needs some double checking. Offlining code makes</i></td></tr>
+<tr><th id="626">626</th><td><i>		 * sure to check pfn_valid but those checks might be just bogus</i></td></tr>
+<tr><th id="627">627</th><td><i>		 */</i></td></tr>
+<tr><th id="628">628</th><td>		<b>if</b> (WARN_ON(!valid_section_nr(section_nr)))</td></tr>
+<tr><th id="629">629</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="630">630</th><td></td></tr>
+<tr><th id="631">631</th><td>		ms = __nr_to_section(section_nr);</td></tr>
+<tr><th id="632">632</th><td>		ms-&gt;section_mem_map &amp;= ~SECTION_IS_ONLINE;</td></tr>
+<tr><th id="633">633</th><td>	}</td></tr>
+<tr><th id="634">634</th><td>}</td></tr>
+<tr><th id="635">635</th><td><u>#endif</u></td></tr>
+<tr><th id="636">636</th><td></td></tr>
+<tr><th id="637">637</th><td><u>#ifdef CONFIG_SPARSEMEM_VMEMMAP</u></td></tr>
+<tr><th id="638">638</th><td><em>static</em> <b>struct</b> page *populate_section_memmap(<em>unsigned</em> <em>long</em> pfn,</td></tr>
+<tr><th id="639">639</th><td>		<em>unsigned</em> <em>long</em> nr_pages, <em>int</em> nid, <b>struct</b> vmem_altmap *altmap)</td></tr>
+<tr><th id="640">640</th><td>{</td></tr>
+<tr><th id="641">641</th><td>	<b>return</b> __populate_section_memmap(pfn, nr_pages, nid, altmap);</td></tr>
+<tr><th id="642">642</th><td>}</td></tr>
+<tr><th id="643">643</th><td></td></tr>
+<tr><th id="644">644</th><td><em>static</em> <em>void</em> depopulate_section_memmap(<em>unsigned</em> <em>long</em> pfn, <em>unsigned</em> <em>long</em> nr_pages,</td></tr>
+<tr><th id="645">645</th><td>		<b>struct</b> vmem_altmap *altmap)</td></tr>
+<tr><th id="646">646</th><td>{</td></tr>
+<tr><th id="647">647</th><td>	<em>unsigned</em> <em>long</em> start = (<em>unsigned</em> <em>long</em>) pfn_to_page(pfn);</td></tr>
+<tr><th id="648">648</th><td>	<em>unsigned</em> <em>long</em> end = start + nr_pages * <b>sizeof</b>(<b>struct</b> page);</td></tr>
+<tr><th id="649">649</th><td></td></tr>
+<tr><th id="650">650</th><td>	vmemmap_free(start, end, altmap);</td></tr>
+<tr><th id="651">651</th><td>}</td></tr>
+<tr><th id="652">652</th><td><em>static</em> <em>void</em> free_map_bootmem(<b>struct</b> page *memmap)</td></tr>
+<tr><th id="653">653</th><td>{</td></tr>
+<tr><th id="654">654</th><td>	<em>unsigned</em> <em>long</em> start = (<em>unsigned</em> <em>long</em>)memmap;</td></tr>
+<tr><th id="655">655</th><td>	<em>unsigned</em> <em>long</em> end = (<em>unsigned</em> <em>long</em>)(memmap + PAGES_PER_SECTION);</td></tr>
+<tr><th id="656">656</th><td></td></tr>
+<tr><th id="657">657</th><td>	vmemmap_free(start, end, NULL);</td></tr>
+<tr><th id="658">658</th><td>}</td></tr>
+<tr><th id="659">659</th><td><u>#else</u></td></tr>
+<tr><th id="660">660</th><td><b>struct</b> page *populate_section_memmap(<em>unsigned</em> <em>long</em> pfn,</td></tr>
+<tr><th id="661">661</th><td>		<em>unsigned</em> <em>long</em> nr_pages, <em>int</em> nid, <b>struct</b> vmem_altmap *altmap)</td></tr>
+<tr><th id="662">662</th><td>{</td></tr>
+<tr><th id="663">663</th><td>	<b>struct</b> page *page, *ret;</td></tr>
+<tr><th id="664">664</th><td>	<em>unsigned</em> <em>long</em> memmap_size = <b>sizeof</b>(<b>struct</b> page) * PAGES_PER_SECTION;</td></tr>
+<tr><th id="665">665</th><td></td></tr>
+<tr><th id="666">666</th><td>	page = alloc_pages(GFP_KERNEL|__GFP_NOWARN, get_order(memmap_size));</td></tr>
+<tr><th id="667">667</th><td>	<b>if</b> (page)</td></tr>
+<tr><th id="668">668</th><td>		<b>goto</b> got_map_page;</td></tr>
+<tr><th id="669">669</th><td></td></tr>
+<tr><th id="670">670</th><td>	ret = vmalloc(memmap_size);</td></tr>
+<tr><th id="671">671</th><td>	<b>if</b> (ret)</td></tr>
+<tr><th id="672">672</th><td>		<b>goto</b> got_map_ptr;</td></tr>
+<tr><th id="673">673</th><td></td></tr>
+<tr><th id="674">674</th><td>	<b>return</b> NULL;</td></tr>
+<tr><th id="675">675</th><td>got_map_page:</td></tr>
+<tr><th id="676">676</th><td>	ret = (<b>struct</b> page *)pfn_to_kaddr(page_to_pfn(page));</td></tr>
+<tr><th id="677">677</th><td>got_map_ptr:</td></tr>
+<tr><th id="678">678</th><td></td></tr>
+<tr><th id="679">679</th><td>	<b>return</b> ret;</td></tr>
+<tr><th id="680">680</th><td>}</td></tr>
+<tr><th id="681">681</th><td></td></tr>
+<tr><th id="682">682</th><td><em>static</em> <em>void</em> depopulate_section_memmap(<em>unsigned</em> <em>long</em> pfn, <em>unsigned</em> <em>long</em> nr_pages,</td></tr>
+<tr><th id="683">683</th><td>		<b>struct</b> vmem_altmap *altmap)</td></tr>
+<tr><th id="684">684</th><td>{</td></tr>
+<tr><th id="685">685</th><td>	<b>struct</b> page *memmap = pfn_to_page(pfn);</td></tr>
+<tr><th id="686">686</th><td></td></tr>
+<tr><th id="687">687</th><td>	<b>if</b> (is_vmalloc_addr(memmap))</td></tr>
+<tr><th id="688">688</th><td>		vfree(memmap);</td></tr>
+<tr><th id="689">689</th><td>	<b>else</b></td></tr>
+<tr><th id="690">690</th><td>		free_pages((<em>unsigned</em> <em>long</em>)memmap,</td></tr>
+<tr><th id="691">691</th><td>			   get_order(<b>sizeof</b>(<b>struct</b> page) * PAGES_PER_SECTION));</td></tr>
+<tr><th id="692">692</th><td>}</td></tr>
+<tr><th id="693">693</th><td></td></tr>
+<tr><th id="694">694</th><td><em>static</em> <em>void</em> free_map_bootmem(<b>struct</b> page *memmap)</td></tr>
+<tr><th id="695">695</th><td>{</td></tr>
+<tr><th id="696">696</th><td>	<em>unsigned</em> <em>long</em> maps_section_nr, removing_section_nr, i;</td></tr>
+<tr><th id="697">697</th><td>	<em>unsigned</em> <em>long</em> magic, nr_pages;</td></tr>
+<tr><th id="698">698</th><td>	<b>struct</b> page *page = virt_to_page(memmap);</td></tr>
+<tr><th id="699">699</th><td></td></tr>
+<tr><th id="700">700</th><td>	nr_pages = PAGE_ALIGN(PAGES_PER_SECTION * <b>sizeof</b>(<b>struct</b> page))</td></tr>
+<tr><th id="701">701</th><td>		&gt;&gt; PAGE_SHIFT;</td></tr>
+<tr><th id="702">702</th><td></td></tr>
+<tr><th id="703">703</th><td>	<b>for</b> (i = <var>0</var>; i &lt; nr_pages; i++, page++) {</td></tr>
+<tr><th id="704">704</th><td>		magic = (<em>unsigned</em> <em>long</em>) page-&gt;freelist;</td></tr>
+<tr><th id="705">705</th><td></td></tr>
+<tr><th id="706">706</th><td>		BUG_ON(magic == NODE_INFO);</td></tr>
+<tr><th id="707">707</th><td></td></tr>
+<tr><th id="708">708</th><td>		maps_section_nr = pfn_to_section_nr(page_to_pfn(page));</td></tr>
+<tr><th id="709">709</th><td>		removing_section_nr = page_private(page);</td></tr>
+<tr><th id="710">710</th><td></td></tr>
+<tr><th id="711">711</th><td>		<i>/*</i></td></tr>
+<tr><th id="712">712</th><td><i>		 * When this function is called, the removing section is</i></td></tr>
+<tr><th id="713">713</th><td><i>		 * logical offlined state. This means all pages are isolated</i></td></tr>
+<tr><th id="714">714</th><td><i>		 * from page allocator. If removing section's memmap is placed</i></td></tr>
+<tr><th id="715">715</th><td><i>		 * on the same section, it must not be freed.</i></td></tr>
+<tr><th id="716">716</th><td><i>		 * If it is freed, page allocator may allocate it which will</i></td></tr>
+<tr><th id="717">717</th><td><i>		 * be removed physically soon.</i></td></tr>
+<tr><th id="718">718</th><td><i>		 */</i></td></tr>
+<tr><th id="719">719</th><td>		<b>if</b> (maps_section_nr != removing_section_nr)</td></tr>
+<tr><th id="720">720</th><td>			put_page_bootmem(page);</td></tr>
+<tr><th id="721">721</th><td>	}</td></tr>
+<tr><th id="722">722</th><td>}</td></tr>
+<tr><th id="723">723</th><td><u>#endif /* CONFIG_SPARSEMEM_VMEMMAP */</u></td></tr>
+<tr><th id="724">724</th><td></td></tr>
+<tr><th id="725">725</th><td><em>static</em> <em>void</em> section_deactivate(<em>unsigned</em> <em>long</em> pfn, <em>unsigned</em> <em>long</em> nr_pages,</td></tr>
+<tr><th id="726">726</th><td>		<b>struct</b> vmem_altmap *altmap)</td></tr>
+<tr><th id="727">727</th><td>{</td></tr>
+<tr><th id="728">728</th><td>	DECLARE_BITMAP(map, SUBSECTIONS_PER_SECTION) = { <var>0</var> };</td></tr>
+<tr><th id="729">729</th><td>	DECLARE_BITMAP(tmp, SUBSECTIONS_PER_SECTION) = { <var>0</var> };</td></tr>
+<tr><th id="730">730</th><td>	<b>struct</b> mem_section *ms = __pfn_to_section(pfn);</td></tr>
+<tr><th id="731">731</th><td>	bool section_is_early = early_section(ms);</td></tr>
+<tr><th id="732">732</th><td>	<b>struct</b> page *memmap = NULL;</td></tr>
+<tr><th id="733">733</th><td>	<em>unsigned</em> <em>long</em> *subsection_map = ms-&gt;usage</td></tr>
+<tr><th id="734">734</th><td>		? &amp;ms-&gt;usage-&gt;subsection_map[<var>0</var>] : NULL;</td></tr>
+<tr><th id="735">735</th><td></td></tr>
+<tr><th id="736">736</th><td>	subsection_mask_set(map, pfn, nr_pages);</td></tr>
+<tr><th id="737">737</th><td>	<b>if</b> (subsection_map)</td></tr>
+<tr><th id="738">738</th><td>		bitmap_and(tmp, map, subsection_map, SUBSECTIONS_PER_SECTION);</td></tr>
+<tr><th id="739">739</th><td></td></tr>
+<tr><th id="740">740</th><td>	<b>if</b> (WARN(!subsection_map || !bitmap_equal(tmp, map, SUBSECTIONS_PER_SECTION),</td></tr>
+<tr><th id="741">741</th><td>				<q>"section already deactivated (%#lx + %ld)\n"</q>,</td></tr>
+<tr><th id="742">742</th><td>				pfn, nr_pages))</td></tr>
+<tr><th id="743">743</th><td>		<b>return</b>;</td></tr>
+<tr><th id="744">744</th><td></td></tr>
+<tr><th id="745">745</th><td>	<i>/*</i></td></tr>
+<tr><th id="746">746</th><td><i>	 * There are 3 cases to handle across two configurations</i></td></tr>
+<tr><th id="747">747</th><td><i>	 * (SPARSEMEM_VMEMMAP={y,n}):</i></td></tr>
+<tr><th id="748">748</th><td><i>	 *</i></td></tr>
+<tr><th id="749">749</th><td><i>	 * 1/ deactivation of a partial hot-added section (only possible</i></td></tr>
+<tr><th id="750">750</th><td><i>	 * in the SPARSEMEM_VMEMMAP=y case).</i></td></tr>
+<tr><th id="751">751</th><td><i>	 *    a/ section was present at memory init</i></td></tr>
+<tr><th id="752">752</th><td><i>	 *    b/ section was hot-added post memory init</i></td></tr>
+<tr><th id="753">753</th><td><i>	 * 2/ deactivation of a complete hot-added section</i></td></tr>
+<tr><th id="754">754</th><td><i>	 * 3/ deactivation of a complete section from memory init</i></td></tr>
+<tr><th id="755">755</th><td><i>	 *</i></td></tr>
+<tr><th id="756">756</th><td><i>	 * For 1/, when subsection_map does not empty we will not be</i></td></tr>
+<tr><th id="757">757</th><td><i>	 * freeing the usage map, but still need to free the vmemmap</i></td></tr>
+<tr><th id="758">758</th><td><i>	 * range.</i></td></tr>
+<tr><th id="759">759</th><td><i>	 *</i></td></tr>
+<tr><th id="760">760</th><td><i>	 * For 2/ and 3/ the SPARSEMEM_VMEMMAP={y,n} cases are unified</i></td></tr>
+<tr><th id="761">761</th><td><i>	 */</i></td></tr>
+<tr><th id="762">762</th><td>	bitmap_xor(subsection_map, map, subsection_map, SUBSECTIONS_PER_SECTION);</td></tr>
+<tr><th id="763">763</th><td>	<b>if</b> (bitmap_empty(subsection_map, SUBSECTIONS_PER_SECTION)) {</td></tr>
+<tr><th id="764">764</th><td>		<em>unsigned</em> <em>long</em> section_nr = pfn_to_section_nr(pfn);</td></tr>
+<tr><th id="765">765</th><td></td></tr>
+<tr><th id="766">766</th><td>		<b>if</b> (!section_is_early) {</td></tr>
+<tr><th id="767">767</th><td>			kfree(ms-&gt;usage);</td></tr>
+<tr><th id="768">768</th><td>			ms-&gt;usage = NULL;</td></tr>
+<tr><th id="769">769</th><td>		}</td></tr>
+<tr><th id="770">770</th><td>		memmap = sparse_decode_mem_map(ms-&gt;section_mem_map, section_nr);</td></tr>
+<tr><th id="771">771</th><td>		ms-&gt;section_mem_map = sparse_encode_mem_map(NULL, section_nr);</td></tr>
+<tr><th id="772">772</th><td>	}</td></tr>
+<tr><th id="773">773</th><td></td></tr>
+<tr><th id="774">774</th><td>	<b>if</b> (section_is_early &amp;&amp; memmap)</td></tr>
+<tr><th id="775">775</th><td>		free_map_bootmem(memmap);</td></tr>
+<tr><th id="776">776</th><td>	<b>else</b></td></tr>
+<tr><th id="777">777</th><td>		depopulate_section_memmap(pfn, nr_pages, altmap);</td></tr>
+<tr><th id="778">778</th><td>}</td></tr>
+<tr><th id="779">779</th><td></td></tr>
+<tr><th id="780">780</th><td><em>static</em> <b>struct</b> page * __meminit section_activate(<em>int</em> nid, <em>unsigned</em> <em>long</em> pfn,</td></tr>
+<tr><th id="781">781</th><td>		<em>unsigned</em> <em>long</em> nr_pages, <b>struct</b> vmem_altmap *altmap)</td></tr>
+<tr><th id="782">782</th><td>{</td></tr>
+<tr><th id="783">783</th><td>	DECLARE_BITMAP(map, SUBSECTIONS_PER_SECTION) = { <var>0</var> };</td></tr>
+<tr><th id="784">784</th><td>	<b>struct</b> mem_section *ms = __pfn_to_section(pfn);</td></tr>
+<tr><th id="785">785</th><td>	<b>struct</b> mem_section_usage *usage = NULL;</td></tr>
+<tr><th id="786">786</th><td>	<em>unsigned</em> <em>long</em> *subsection_map;</td></tr>
+<tr><th id="787">787</th><td>	<b>struct</b> page *memmap;</td></tr>
+<tr><th id="788">788</th><td>	<em>int</em> rc = <var>0</var>;</td></tr>
+<tr><th id="789">789</th><td></td></tr>
+<tr><th id="790">790</th><td>	subsection_mask_set(map, pfn, nr_pages);</td></tr>
+<tr><th id="791">791</th><td></td></tr>
+<tr><th id="792">792</th><td>	<b>if</b> (!ms-&gt;usage) {</td></tr>
+<tr><th id="793">793</th><td>		usage = kzalloc(mem_section_usage_size(), GFP_KERNEL);</td></tr>
+<tr><th id="794">794</th><td>		<b>if</b> (!usage)</td></tr>
+<tr><th id="795">795</th><td>			<b>return</b> ERR_PTR(-ENOMEM);</td></tr>
+<tr><th id="796">796</th><td>		ms-&gt;usage = usage;</td></tr>
+<tr><th id="797">797</th><td>	}</td></tr>
+<tr><th id="798">798</th><td>	subsection_map = &amp;ms-&gt;usage-&gt;subsection_map[<var>0</var>];</td></tr>
+<tr><th id="799">799</th><td></td></tr>
+<tr><th id="800">800</th><td>	<b>if</b> (bitmap_empty(map, SUBSECTIONS_PER_SECTION))</td></tr>
+<tr><th id="801">801</th><td>		rc = -EINVAL;</td></tr>
+<tr><th id="802">802</th><td>	<b>else</b> <b>if</b> (bitmap_intersects(map, subsection_map, SUBSECTIONS_PER_SECTION))</td></tr>
+<tr><th id="803">803</th><td>		rc = -EEXIST;</td></tr>
+<tr><th id="804">804</th><td>	<b>else</b></td></tr>
+<tr><th id="805">805</th><td>		bitmap_or(subsection_map, map, subsection_map,</td></tr>
+<tr><th id="806">806</th><td>				SUBSECTIONS_PER_SECTION);</td></tr>
+<tr><th id="807">807</th><td></td></tr>
+<tr><th id="808">808</th><td>	<b>if</b> (rc) {</td></tr>
+<tr><th id="809">809</th><td>		<b>if</b> (usage)</td></tr>
+<tr><th id="810">810</th><td>			ms-&gt;usage = NULL;</td></tr>
+<tr><th id="811">811</th><td>		kfree(usage);</td></tr>
+<tr><th id="812">812</th><td>		<b>return</b> ERR_PTR(rc);</td></tr>
+<tr><th id="813">813</th><td>	}</td></tr>
+<tr><th id="814">814</th><td></td></tr>
+<tr><th id="815">815</th><td>	<i>/*</i></td></tr>
+<tr><th id="816">816</th><td><i>	 * The early init code does not consider partially populated</i></td></tr>
+<tr><th id="817">817</th><td><i>	 * initial sections, it simply assumes that memory will never be</i></td></tr>
+<tr><th id="818">818</th><td><i>	 * referenced.  If we hot-add memory into such a section then we</i></td></tr>
+<tr><th id="819">819</th><td><i>	 * do not need to populate the memmap and can simply reuse what</i></td></tr>
+<tr><th id="820">820</th><td><i>	 * is already there.</i></td></tr>
+<tr><th id="821">821</th><td><i>	 */</i></td></tr>
+<tr><th id="822">822</th><td>	<b>if</b> (nr_pages &lt; PAGES_PER_SECTION &amp;&amp; early_section(ms))</td></tr>
+<tr><th id="823">823</th><td>		<b>return</b> pfn_to_page(pfn);</td></tr>
+<tr><th id="824">824</th><td></td></tr>
+<tr><th id="825">825</th><td>	memmap = populate_section_memmap(pfn, nr_pages, nid, altmap);</td></tr>
+<tr><th id="826">826</th><td>	<b>if</b> (!memmap) {</td></tr>
+<tr><th id="827">827</th><td>		section_deactivate(pfn, nr_pages, altmap);</td></tr>
+<tr><th id="828">828</th><td>		<b>return</b> ERR_PTR(-ENOMEM);</td></tr>
+<tr><th id="829">829</th><td>	}</td></tr>
+<tr><th id="830">830</th><td></td></tr>
+<tr><th id="831">831</th><td>	<b>return</b> memmap;</td></tr>
+<tr><th id="832">832</th><td>}</td></tr>
+<tr><th id="833">833</th><td></td></tr>
+<tr><th id="834">834</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="835">835</th><td><i class="doc"> * sparse_add_section - add a memory section, or populate an existing one</i></td></tr>
+<tr><th id="836">836</th><td><i class="doc"> *<span class="command"> @nid</span>: The node to add section on</i></td></tr>
+<tr><th id="837">837</th><td><i class="doc"> *<span class="command"> @start</span>_pfn: start pfn of the memory range</i></td></tr>
+<tr><th id="838">838</th><td><i class="doc"> *<span class="command"> @nr</span>_pages: number of pfns to add in the section</i></td></tr>
+<tr><th id="839">839</th><td><i class="doc"> *<span class="command"> @altmap</span>: device page map</i></td></tr>
+<tr><th id="840">840</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="841">841</th><td><i class="doc"> * This is only intended for hotplug.</i></td></tr>
+<tr><th id="842">842</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="843">843</th><td><i class="doc"> * Return:</i></td></tr>
+<tr><th id="844">844</th><td><i class="doc"> * * 0		- On success.</i></td></tr>
+<tr><th id="845">845</th><td><i class="doc"> * * -EEXIST	- Section has been present.</i></td></tr>
+<tr><th id="846">846</th><td><i class="doc"> * * -ENOMEM	- Out of memory.</i></td></tr>
+<tr><th id="847">847</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="848">848</th><td><em>int</em> __meminit sparse_add_section(<em>int</em> nid, <em>unsigned</em> <em>long</em> start_pfn,</td></tr>
+<tr><th id="849">849</th><td>		<em>unsigned</em> <em>long</em> nr_pages, <b>struct</b> vmem_altmap *altmap)</td></tr>
+<tr><th id="850">850</th><td>{</td></tr>
+<tr><th id="851">851</th><td>	<em>unsigned</em> <em>long</em> section_nr = pfn_to_section_nr(start_pfn);</td></tr>
+<tr><th id="852">852</th><td>	<b>struct</b> mem_section *ms;</td></tr>
+<tr><th id="853">853</th><td>	<b>struct</b> page *memmap;</td></tr>
+<tr><th id="854">854</th><td>	<em>int</em> ret;</td></tr>
+<tr><th id="855">855</th><td></td></tr>
+<tr><th id="856">856</th><td>	ret = sparse_index_init(section_nr, nid);</td></tr>
+<tr><th id="857">857</th><td>	<b>if</b> (ret &lt; <var>0</var>)</td></tr>
+<tr><th id="858">858</th><td>		<b>return</b> ret;</td></tr>
+<tr><th id="859">859</th><td></td></tr>
+<tr><th id="860">860</th><td>	memmap = section_activate(nid, start_pfn, nr_pages, altmap);</td></tr>
+<tr><th id="861">861</th><td>	<b>if</b> (IS_ERR(memmap))</td></tr>
+<tr><th id="862">862</th><td>		<b>return</b> PTR_ERR(memmap);</td></tr>
+<tr><th id="863">863</th><td></td></tr>
+<tr><th id="864">864</th><td>	<i>/*</i></td></tr>
+<tr><th id="865">865</th><td><i>	 * Poison uninitialized struct pages in order to catch invalid flags</i></td></tr>
+<tr><th id="866">866</th><td><i>	 * combinations.</i></td></tr>
+<tr><th id="867">867</th><td><i>	 */</i></td></tr>
+<tr><th id="868">868</th><td>	page_init_poison(pfn_to_page(start_pfn), <b>sizeof</b>(<b>struct</b> page) * nr_pages);</td></tr>
+<tr><th id="869">869</th><td></td></tr>
+<tr><th id="870">870</th><td>	ms = __pfn_to_section(start_pfn);</td></tr>
+<tr><th id="871">871</th><td>	set_section_nid(section_nr, nid);</td></tr>
+<tr><th id="872">872</th><td>	section_mark_present(ms);</td></tr>
+<tr><th id="873">873</th><td></td></tr>
+<tr><th id="874">874</th><td>	<i>/* Align memmap to section boundary in the subsection case */</i></td></tr>
+<tr><th id="875">875</th><td>	<b>if</b> (section_nr_to_pfn(section_nr) != start_pfn)</td></tr>
+<tr><th id="876">876</th><td>		memmap = pfn_to_kaddr(section_nr_to_pfn(section_nr));</td></tr>
+<tr><th id="877">877</th><td>	sparse_init_one_section(ms, section_nr, memmap, ms-&gt;usage, <var>0</var>);</td></tr>
+<tr><th id="878">878</th><td></td></tr>
+<tr><th id="879">879</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="880">880</th><td>}</td></tr>
+<tr><th id="881">881</th><td></td></tr>
+<tr><th id="882">882</th><td><u>#ifdef CONFIG_MEMORY_FAILURE</u></td></tr>
+<tr><th id="883">883</th><td><em>static</em> <em>void</em> clear_hwpoisoned_pages(<b>struct</b> page *memmap, <em>int</em> nr_pages)</td></tr>
+<tr><th id="884">884</th><td>{</td></tr>
+<tr><th id="885">885</th><td>	<em>int</em> i;</td></tr>
+<tr><th id="886">886</th><td></td></tr>
+<tr><th id="887">887</th><td>	<b>if</b> (!memmap)</td></tr>
+<tr><th id="888">888</th><td>		<b>return</b>;</td></tr>
+<tr><th id="889">889</th><td></td></tr>
+<tr><th id="890">890</th><td>	<i>/*</i></td></tr>
+<tr><th id="891">891</th><td><i>	 * A further optimization is to have per section refcounted</i></td></tr>
+<tr><th id="892">892</th><td><i>	 * num_poisoned_pages.  But that would need more space per memmap, so</i></td></tr>
+<tr><th id="893">893</th><td><i>	 * for now just do a quick global check to speed up this routine in the</i></td></tr>
+<tr><th id="894">894</th><td><i>	 * absence of bad pages.</i></td></tr>
+<tr><th id="895">895</th><td><i>	 */</i></td></tr>
+<tr><th id="896">896</th><td>	<b>if</b> (atomic_long_read(&amp;num_poisoned_pages) == <var>0</var>)</td></tr>
+<tr><th id="897">897</th><td>		<b>return</b>;</td></tr>
+<tr><th id="898">898</th><td></td></tr>
+<tr><th id="899">899</th><td>	<b>for</b> (i = <var>0</var>; i &lt; nr_pages; i++) {</td></tr>
+<tr><th id="900">900</th><td>		<b>if</b> (PageHWPoison(&amp;memmap[i])) {</td></tr>
+<tr><th id="901">901</th><td>			atomic_long_sub(<var>1</var>, &amp;num_poisoned_pages);</td></tr>
+<tr><th id="902">902</th><td>			ClearPageHWPoison(&amp;memmap[i]);</td></tr>
+<tr><th id="903">903</th><td>		}</td></tr>
+<tr><th id="904">904</th><td>	}</td></tr>
+<tr><th id="905">905</th><td>}</td></tr>
+<tr><th id="906">906</th><td><u>#else</u></td></tr>
+<tr><th id="907">907</th><td><em>static</em> <b>inline</b> <em>void</em> clear_hwpoisoned_pages(<b>struct</b> page *memmap, <em>int</em> nr_pages)</td></tr>
+<tr><th id="908">908</th><td>{</td></tr>
+<tr><th id="909">909</th><td>}</td></tr>
+<tr><th id="910">910</th><td><u>#endif</u></td></tr>
+<tr><th id="911">911</th><td></td></tr>
+<tr><th id="912">912</th><td><em>void</em> sparse_remove_section(<b>struct</b> mem_section *ms, <em>unsigned</em> <em>long</em> pfn,</td></tr>
+<tr><th id="913">913</th><td>		<em>unsigned</em> <em>long</em> nr_pages, <em>unsigned</em> <em>long</em> map_offset,</td></tr>
+<tr><th id="914">914</th><td>		<b>struct</b> vmem_altmap *altmap)</td></tr>
+<tr><th id="915">915</th><td>{</td></tr>
+<tr><th id="916">916</th><td>	clear_hwpoisoned_pages(pfn_to_page(pfn) + map_offset,</td></tr>
+<tr><th id="917">917</th><td>			nr_pages - map_offset);</td></tr>
+<tr><th id="918">918</th><td>	section_deactivate(pfn, nr_pages, altmap);</td></tr>
+<tr><th id="919">919</th><td>}</td></tr>
+<tr><th id="920">920</th><td><u>#<span data-ppcond="594">endif</span> /* CONFIG_MEMORY_HOTPLUG */</u></td></tr>
+<tr><th id="921">921</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

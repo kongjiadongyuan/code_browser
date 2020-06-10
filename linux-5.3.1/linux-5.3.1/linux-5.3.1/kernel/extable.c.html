@@ -1,0 +1,182 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>extable.c source code [linux-5.3.1/kernel/extable.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/kernel/extable.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>linux-5.3.1</a>/<a href='./'>kernel</a>/<a href='extable.c.html'>extable.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0-or-later</i></td></tr>
+<tr><th id="2">2</th><td><i>/* Rewritten by Rusty Russell, on the backs of many others...</i></td></tr>
+<tr><th id="3">3</th><td><i>   Copyright (C) 2001 Rusty Russell, 2002 Rusty Russell IBM.</i></td></tr>
+<tr><th id="4">4</th><td><i></i></td></tr>
+<tr><th id="5">5</th><td><i>*/</i></td></tr>
+<tr><th id="6">6</th><td><u>#include <a href="../include/linux/ftrace.h.html">&lt;linux/ftrace.h&gt;</a></u></td></tr>
+<tr><th id="7">7</th><td><u>#include <a href="../include/linux/memory.h.html">&lt;linux/memory.h&gt;</a></u></td></tr>
+<tr><th id="8">8</th><td><u>#include <a href="../include/linux/extable.h.html">&lt;linux/extable.h&gt;</a></u></td></tr>
+<tr><th id="9">9</th><td><u>#include <a href="../include/linux/module.h.html">&lt;linux/module.h&gt;</a></u></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="../include/linux/mutex.h.html">&lt;linux/mutex.h&gt;</a></u></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../include/linux/init.h.html">&lt;linux/init.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="../include/linux/kprobes.h.html">&lt;linux/kprobes.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="../include/linux/filter.h.html">&lt;linux/filter.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td></td></tr>
+<tr><th id="15">15</th><td><u>#include <a href="../arch/x86/include/asm/sections.h.html">&lt;asm/sections.h&gt;</a></u></td></tr>
+<tr><th id="16">16</th><td><u>#include <a href="../include/linux/uaccess.h.html">&lt;linux/uaccess.h&gt;</a></u></td></tr>
+<tr><th id="17">17</th><td></td></tr>
+<tr><th id="18">18</th><td><i>/*</i></td></tr>
+<tr><th id="19">19</th><td><i> * mutex protecting text section modification (dynamic code patching).</i></td></tr>
+<tr><th id="20">20</th><td><i> * some users need to sleep (allocating memory...) while they hold this lock.</i></td></tr>
+<tr><th id="21">21</th><td><i> *</i></td></tr>
+<tr><th id="22">22</th><td><i> * Note: Also protects SMP-alternatives modification on x86.</i></td></tr>
+<tr><th id="23">23</th><td><i> *</i></td></tr>
+<tr><th id="24">24</th><td><i> * NOT exported to modules - patching kernel text is a really delicate matter.</i></td></tr>
+<tr><th id="25">25</th><td><i> */</i></td></tr>
+<tr><th id="26">26</th><td><a class="macro" href="../include/linux/mutex.h.html#135" title="struct mutex text_mutex = { .owner = { (0) } , .wait_lock = (spinlock_t ) { { .rlock = { .raw_lock = { { .val = { (0) } } }, } } } , .wait_list = { &amp;(text_mutex.wait_list), &amp;(text_mutex.wait_list) } }" data-ref="_M/DEFINE_MUTEX">DEFINE_MUTEX</a>(<dfn class="decl def" id="text_mutex" title='text_mutex' data-ref="text_mutex" data-ref-filename="text_mutex"><a class="ref" href="../include/linux/memory.h.html#text_mutex" title='text_mutex' data-ref="text_mutex" data-ref-filename="text_mutex"><a class="ref" href="../include/linux/memory.h.html#text_mutex" title='text_mutex' data-ref="text_mutex" data-ref-filename="text_mutex"><a class="ref" href="../include/linux/memory.h.html#text_mutex" title='text_mutex' data-ref="text_mutex" data-ref-filename="text_mutex"><a class="ref" href="../include/linux/memory.h.html#text_mutex" title='text_mutex' data-ref="text_mutex" data-ref-filename="text_mutex"><a class="ref" href="../include/linux/memory.h.html#text_mutex" title='text_mutex' data-ref="text_mutex" data-ref-filename="text_mutex"><a class="ref" href="../include/linux/memory.h.html#text_mutex" title='text_mutex' data-ref="text_mutex" data-ref-filename="text_mutex"><a class="ref" href="../include/linux/memory.h.html#text_mutex" title='text_mutex' data-ref="text_mutex" data-ref-filename="text_mutex"><a class="ref" href="../include/linux/memory.h.html#text_mutex" title='text_mutex' data-ref="text_mutex" data-ref-filename="text_mutex">text_mutex</a></a></a></a></a></a></a></a></dfn>);</td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td><b>extern</b> <b>struct</b> <a class="type" href="../arch/x86/include/asm/extable.h.html#exception_table_entry" title='exception_table_entry' data-ref="exception_table_entry" data-ref-filename="exception_table_entry">exception_table_entry</a> <dfn class="decl" id="__start___ex_table" title='__start___ex_table' data-ref="__start___ex_table" data-ref-filename="__start___ex_table">__start___ex_table</dfn>[];</td></tr>
+<tr><th id="29">29</th><td><b>extern</b> <b>struct</b> <a class="type" href="../arch/x86/include/asm/extable.h.html#exception_table_entry" title='exception_table_entry' data-ref="exception_table_entry" data-ref-filename="exception_table_entry">exception_table_entry</a> <a class="decl" href="../arch/x86/include/asm/sections.h.html#__stop___ex_table" title='__stop___ex_table' data-ref="__stop___ex_table" data-ref-filename="__stop___ex_table" id="__stop___ex_table">__stop___ex_table</a>[];</td></tr>
+<tr><th id="30">30</th><td></td></tr>
+<tr><th id="31">31</th><td><i>/* Cleared by build time tools if the table is already sorted. */</i></td></tr>
+<tr><th id="32">32</th><td><a class="typedef" href="../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <a class="macro" href="../include/linux/init.h.html#51" title="__attribute__((__section__(&quot;.init.data&quot;)))" data-ref="_M/__initdata">__initdata</a> <a class="macro" href="../include/linux/compiler_attributes.h.html#150" title="" data-ref="_M/__visible">__visible</a> <dfn class="decl def" id="main_extable_sort_needed" title='main_extable_sort_needed' data-ref="main_extable_sort_needed" data-ref-filename="main_extable_sort_needed">main_extable_sort_needed</dfn> = <var>1</var>;</td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td><i>/* Sort the kernel's built-in exception table */</i></td></tr>
+<tr><th id="35">35</th><td><em>void</em> <a class="macro" href="../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="decl def fn" id="sort_main_extable" title='sort_main_extable' data-ref="sort_main_extable" data-ref-filename="sort_main_extable">sort_main_extable</dfn>(<em>void</em>)</td></tr>
+<tr><th id="36">36</th><td>{</td></tr>
+<tr><th id="37">37</th><td>	<b>if</b> (<a class="ref" href="#main_extable_sort_needed" title='main_extable_sort_needed' data-ref="main_extable_sort_needed" data-ref-filename="main_extable_sort_needed">main_extable_sort_needed</a> &amp;&amp; <a class="ref" href="../arch/x86/include/asm/sections.h.html#__stop___ex_table" title='__stop___ex_table' data-ref="__stop___ex_table" data-ref-filename="__stop___ex_table">__stop___ex_table</a> <span class='warning' title="array comparison always evaluates to a constant">&gt;</span> <a class="ref" href="#__start___ex_table" title='__start___ex_table' data-ref="__start___ex_table" data-ref-filename="__start___ex_table">__start___ex_table</a>) {</td></tr>
+<tr><th id="38">38</th><td>		<a class="macro" href="../include/linux/printk.h.html#308" title="printk(&quot;\001&quot; &quot;5&quot; &quot;Sorting __ex_table...\n&quot;)" data-ref="_M/pr_notice">pr_notice</a>(<q>"Sorting __ex_table...\n"</q>);</td></tr>
+<tr><th id="39">39</th><td>		<a class="ref fn" href="../include/linux/extable.h.html#sort_extable" title='sort_extable' data-ref="sort_extable" data-ref-filename="sort_extable">sort_extable</a>(<a class="ref" href="#__start___ex_table" title='__start___ex_table' data-ref="__start___ex_table" data-ref-filename="__start___ex_table">__start___ex_table</a>, <a class="ref" href="../arch/x86/include/asm/sections.h.html#__stop___ex_table" title='__stop___ex_table' data-ref="__stop___ex_table" data-ref-filename="__stop___ex_table">__stop___ex_table</a>);</td></tr>
+<tr><th id="40">40</th><td>	}</td></tr>
+<tr><th id="41">41</th><td>}</td></tr>
+<tr><th id="42">42</th><td></td></tr>
+<tr><th id="43">43</th><td><i>/* Given an address, look for it in the exception tables. */</i></td></tr>
+<tr><th id="44">44</th><td><em>const</em> <b>struct</b> <a class="type" href="../arch/x86/include/asm/extable.h.html#exception_table_entry" title='exception_table_entry' data-ref="exception_table_entry" data-ref-filename="exception_table_entry">exception_table_entry</a> *<dfn class="decl def fn" id="search_exception_tables" title='search_exception_tables' data-ref="search_exception_tables" data-ref-filename="search_exception_tables">search_exception_tables</dfn>(<em>unsigned</em> <em>long</em> <dfn class="local col1 decl" id="1addr" title='addr' data-type='unsigned long' data-ref="1addr" data-ref-filename="1addr">addr</dfn>)</td></tr>
+<tr><th id="45">45</th><td>{</td></tr>
+<tr><th id="46">46</th><td>	<em>const</em> <b>struct</b> <a class="type" href="../arch/x86/include/asm/extable.h.html#exception_table_entry" title='exception_table_entry' data-ref="exception_table_entry" data-ref-filename="exception_table_entry">exception_table_entry</a> *<dfn class="local col2 decl" id="2e" title='e' data-type='const struct exception_table_entry *' data-ref="2e" data-ref-filename="2e">e</dfn>;</td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td>	<a class="local col2 ref" href="#2e" title='e' data-ref="2e" data-ref-filename="2e">e</a> = <a class="ref fn" href="../include/linux/extable.h.html#search_extable" title='search_extable' data-ref="search_extable" data-ref-filename="search_extable">search_extable</a>(<a class="ref" href="#__start___ex_table" title='__start___ex_table' data-ref="__start___ex_table" data-ref-filename="__start___ex_table">__start___ex_table</a>,</td></tr>
+<tr><th id="49">49</th><td>			   <a class="ref" href="../arch/x86/include/asm/sections.h.html#__stop___ex_table" title='__stop___ex_table' data-ref="__stop___ex_table" data-ref-filename="__stop___ex_table">__stop___ex_table</a> - <a class="ref" href="#__start___ex_table" title='__start___ex_table' data-ref="__start___ex_table" data-ref-filename="__start___ex_table">__start___ex_table</a>, <a class="local col1 ref" href="#1addr" title='addr' data-ref="1addr" data-ref-filename="1addr">addr</a>);</td></tr>
+<tr><th id="50">50</th><td>	<b>if</b> (!<a class="local col2 ref" href="#2e" title='e' data-ref="2e" data-ref-filename="2e">e</a>)</td></tr>
+<tr><th id="51">51</th><td>		<a class="local col2 ref" href="#2e" title='e' data-ref="2e" data-ref-filename="2e">e</a> = <a class="ref fn" href="../include/linux/extable.h.html#search_module_extables" title='search_module_extables' data-ref="search_module_extables" data-ref-filename="search_module_extables">search_module_extables</a>(<a class="local col1 ref" href="#1addr" title='addr' data-ref="1addr" data-ref-filename="1addr">addr</a>);</td></tr>
+<tr><th id="52">52</th><td>	<b>return</b> <a class="local col2 ref" href="#2e" title='e' data-ref="2e" data-ref-filename="2e">e</a>;</td></tr>
+<tr><th id="53">53</th><td>}</td></tr>
+<tr><th id="54">54</th><td></td></tr>
+<tr><th id="55">55</th><td><em>int</em> <dfn class="decl def fn" id="init_kernel_text" title='init_kernel_text' data-ref="init_kernel_text" data-ref-filename="init_kernel_text">init_kernel_text</dfn>(<em>unsigned</em> <em>long</em> <dfn class="local col3 decl" id="3addr" title='addr' data-type='unsigned long' data-ref="3addr" data-ref-filename="3addr">addr</dfn>)</td></tr>
+<tr><th id="56">56</th><td>{</td></tr>
+<tr><th id="57">57</th><td>	<b>if</b> (<a class="local col3 ref" href="#3addr" title='addr' data-ref="3addr" data-ref-filename="3addr">addr</a> &gt;= (<em>unsigned</em> <em>long</em>)<a class="ref" href="../include/asm-generic/sections.h.html#_sinittext" title='_sinittext' data-ref="_sinittext" data-ref-filename="_sinittext">_sinittext</a> &amp;&amp;</td></tr>
+<tr><th id="58">58</th><td>	    <a class="local col3 ref" href="#3addr" title='addr' data-ref="3addr" data-ref-filename="3addr">addr</a> &lt; (<em>unsigned</em> <em>long</em>)<a class="ref" href="../include/asm-generic/sections.h.html#_einittext" title='_einittext' data-ref="_einittext" data-ref-filename="_einittext">_einittext</a>)</td></tr>
+<tr><th id="59">59</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="60">60</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="61">61</th><td>}</td></tr>
+<tr><th id="62">62</th><td></td></tr>
+<tr><th id="63">63</th><td><em>int</em> <a class="macro" href="../arch/x86/include/asm/linkage.h.html#8" title="__attribute__((no_instrument_function))" data-ref="_M/notrace">notrace</a> <dfn class="decl def fn" id="core_kernel_text" title='core_kernel_text' data-ref="core_kernel_text" data-ref-filename="core_kernel_text">core_kernel_text</dfn>(<em>unsigned</em> <em>long</em> <dfn class="local col4 decl" id="4addr" title='addr' data-type='unsigned long' data-ref="4addr" data-ref-filename="4addr">addr</dfn>)</td></tr>
+<tr><th id="64">64</th><td>{</td></tr>
+<tr><th id="65">65</th><td>	<b>if</b> (<a class="local col4 ref" href="#4addr" title='addr' data-ref="4addr" data-ref-filename="4addr">addr</a> &gt;= (<em>unsigned</em> <em>long</em>)<a class="ref" href="../include/asm-generic/sections.h.html#_stext" title='_stext' data-ref="_stext" data-ref-filename="_stext">_stext</a> &amp;&amp;</td></tr>
+<tr><th id="66">66</th><td>	    <a class="local col4 ref" href="#4addr" title='addr' data-ref="4addr" data-ref-filename="4addr">addr</a> &lt; (<em>unsigned</em> <em>long</em>)<a class="ref" href="../include/asm-generic/sections.h.html#_etext" title='_etext' data-ref="_etext" data-ref-filename="_etext">_etext</a>)</td></tr>
+<tr><th id="67">67</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td>	<b>if</b> (<a class="ref" href="../include/linux/kernel.h.html#system_state" title='system_state' data-ref="system_state" data-ref-filename="system_state">system_state</a> &lt; <a class="enum" href="../include/linux/kernel.h.html#SYSTEM_RUNNING" title='SYSTEM_RUNNING' data-ref="SYSTEM_RUNNING" data-ref-filename="SYSTEM_RUNNING">SYSTEM_RUNNING</a> &amp;&amp;</td></tr>
+<tr><th id="70">70</th><td>	    <a class="ref fn" href="#init_kernel_text" title='init_kernel_text' data-ref="init_kernel_text" data-ref-filename="init_kernel_text">init_kernel_text</a>(<a class="local col4 ref" href="#4addr" title='addr' data-ref="4addr" data-ref-filename="4addr">addr</a>))</td></tr>
+<tr><th id="71">71</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="72">72</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="73">73</th><td>}</td></tr>
+<tr><th id="74">74</th><td></td></tr>
+<tr><th id="75">75</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="76">76</th><td><i class="doc"> * core_kernel_data - tell if addr points to kernel data</i></td></tr>
+<tr><th id="77">77</th><td><i class="doc"> *<span class="command"> @addr</span>: address to test</i></td></tr>
+<tr><th id="78">78</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="79">79</th><td><i class="doc"> * Returns true if<span class="command"> @addr</span> passed in is from the core kernel data</i></td></tr>
+<tr><th id="80">80</th><td><i class="doc"> * section.</i></td></tr>
+<tr><th id="81">81</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="82">82</th><td><i class="doc"> * Note: On some archs it may return true for core RODATA, and false</i></td></tr>
+<tr><th id="83">83</th><td><i class="doc"> *  for others. But will always be true for core RW data.</i></td></tr>
+<tr><th id="84">84</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="85">85</th><td><em>int</em> <dfn class="decl def fn" id="core_kernel_data" title='core_kernel_data' data-ref="core_kernel_data" data-ref-filename="core_kernel_data">core_kernel_data</dfn>(<em>unsigned</em> <em>long</em> <dfn class="local col5 decl" id="5addr" title='addr' data-type='unsigned long' data-ref="5addr" data-ref-filename="5addr">addr</dfn>)</td></tr>
+<tr><th id="86">86</th><td>{</td></tr>
+<tr><th id="87">87</th><td>	<b>if</b> (<a class="local col5 ref" href="#5addr" title='addr' data-ref="5addr" data-ref-filename="5addr">addr</a> &gt;= (<em>unsigned</em> <em>long</em>)<a class="ref" href="../include/asm-generic/sections.h.html#_sdata" title='_sdata' data-ref="_sdata" data-ref-filename="_sdata">_sdata</a> &amp;&amp;</td></tr>
+<tr><th id="88">88</th><td>	    <a class="local col5 ref" href="#5addr" title='addr' data-ref="5addr" data-ref-filename="5addr">addr</a> &lt; (<em>unsigned</em> <em>long</em>)<a class="ref" href="../include/asm-generic/sections.h.html#_edata" title='_edata' data-ref="_edata" data-ref-filename="_edata">_edata</a>)</td></tr>
+<tr><th id="89">89</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="90">90</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="91">91</th><td>}</td></tr>
+<tr><th id="92">92</th><td></td></tr>
+<tr><th id="93">93</th><td><em>int</em> <dfn class="decl def fn" id="__kernel_text_address" title='__kernel_text_address' data-ref="__kernel_text_address" data-ref-filename="__kernel_text_address">__kernel_text_address</dfn>(<em>unsigned</em> <em>long</em> <dfn class="local col6 decl" id="6addr" title='addr' data-type='unsigned long' data-ref="6addr" data-ref-filename="6addr">addr</dfn>)</td></tr>
+<tr><th id="94">94</th><td>{</td></tr>
+<tr><th id="95">95</th><td>	<b>if</b> (<a class="ref fn" href="#kernel_text_address" title='kernel_text_address' data-ref="kernel_text_address" data-ref-filename="kernel_text_address">kernel_text_address</a>(<a class="local col6 ref" href="#6addr" title='addr' data-ref="6addr" data-ref-filename="6addr">addr</a>))</td></tr>
+<tr><th id="96">96</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="97">97</th><td>	<i>/*</i></td></tr>
+<tr><th id="98">98</th><td><i>	 * There might be init symbols in saved stacktraces.</i></td></tr>
+<tr><th id="99">99</th><td><i>	 * Give those symbols a chance to be printed in</i></td></tr>
+<tr><th id="100">100</th><td><i>	 * backtraces (such as lockdep traces).</i></td></tr>
+<tr><th id="101">101</th><td><i>	 *</i></td></tr>
+<tr><th id="102">102</th><td><i>	 * Since we are after the module-symbols check, there's</i></td></tr>
+<tr><th id="103">103</th><td><i>	 * no danger of address overlap:</i></td></tr>
+<tr><th id="104">104</th><td><i>	 */</i></td></tr>
+<tr><th id="105">105</th><td>	<b>if</b> (<a class="ref fn" href="#init_kernel_text" title='init_kernel_text' data-ref="init_kernel_text" data-ref-filename="init_kernel_text">init_kernel_text</a>(<a class="local col6 ref" href="#6addr" title='addr' data-ref="6addr" data-ref-filename="6addr">addr</a>))</td></tr>
+<tr><th id="106">106</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="107">107</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="108">108</th><td>}</td></tr>
+<tr><th id="109">109</th><td></td></tr>
+<tr><th id="110">110</th><td><em>int</em> <dfn class="decl def fn" id="kernel_text_address" title='kernel_text_address' data-ref="kernel_text_address" data-ref-filename="kernel_text_address">kernel_text_address</dfn>(<em>unsigned</em> <em>long</em> <dfn class="local col7 decl" id="7addr" title='addr' data-type='unsigned long' data-ref="7addr" data-ref-filename="7addr">addr</dfn>)</td></tr>
+<tr><th id="111">111</th><td>{</td></tr>
+<tr><th id="112">112</th><td>	<a class="typedef" href="../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col8 decl" id="8no_rcu" title='no_rcu' data-type='bool' data-ref="8no_rcu" data-ref-filename="8no_rcu">no_rcu</dfn>;</td></tr>
+<tr><th id="113">113</th><td>	<em>int</em> <dfn class="local col9 decl" id="9ret" title='ret' data-type='int' data-ref="9ret" data-ref-filename="9ret">ret</dfn> = <var>1</var>;</td></tr>
+<tr><th id="114">114</th><td></td></tr>
+<tr><th id="115">115</th><td>	<b>if</b> (<a class="ref fn" href="#core_kernel_text" title='core_kernel_text' data-ref="core_kernel_text" data-ref-filename="core_kernel_text">core_kernel_text</a>(<a class="local col7 ref" href="#7addr" title='addr' data-ref="7addr" data-ref-filename="7addr">addr</a>))</td></tr>
+<tr><th id="116">116</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="117">117</th><td></td></tr>
+<tr><th id="118">118</th><td>	<i>/*</i></td></tr>
+<tr><th id="119">119</th><td><i>	 * If a stack dump happens while RCU is not watching, then</i></td></tr>
+<tr><th id="120">120</th><td><i>	 * RCU needs to be notified that it requires to start</i></td></tr>
+<tr><th id="121">121</th><td><i>	 * watching again. This can happen either by tracing that</i></td></tr>
+<tr><th id="122">122</th><td><i>	 * triggers a stack trace, or a WARN() that happens during</i></td></tr>
+<tr><th id="123">123</th><td><i>	 * coming back from idle, or cpu on or offlining.</i></td></tr>
+<tr><th id="124">124</th><td><i>	 *</i></td></tr>
+<tr><th id="125">125</th><td><i>	 * is_module_text_address() as well as the kprobe slots</i></td></tr>
+<tr><th id="126">126</th><td><i>	 * and is_bpf_text_address() require RCU to be watching.</i></td></tr>
+<tr><th id="127">127</th><td><i>	 */</i></td></tr>
+<tr><th id="128">128</th><td>	<a class="local col8 ref" href="#8no_rcu" title='no_rcu' data-ref="8no_rcu" data-ref-filename="8no_rcu">no_rcu</a> = !<a class="ref fn" href="../include/linux/rcutree.h.html#rcu_is_watching" title='rcu_is_watching' data-ref="rcu_is_watching" data-ref-filename="rcu_is_watching">rcu_is_watching</a>();</td></tr>
+<tr><th id="129">129</th><td></td></tr>
+<tr><th id="130">130</th><td>	<i>/* Treat this like an NMI as it can happen anywhere */</i></td></tr>
+<tr><th id="131">131</th><td>	<b>if</b> (<a class="local col8 ref" href="#8no_rcu" title='no_rcu' data-ref="8no_rcu" data-ref-filename="8no_rcu">no_rcu</a>)</td></tr>
+<tr><th id="132">132</th><td>		<a class="ref fn" href="../include/linux/hardirq.h.html#rcu_nmi_enter" title='rcu_nmi_enter' data-ref="rcu_nmi_enter" data-ref-filename="rcu_nmi_enter">rcu_nmi_enter</a>();</td></tr>
+<tr><th id="133">133</th><td></td></tr>
+<tr><th id="134">134</th><td>	<b>if</b> (<a class="ref fn" href="../include/linux/module.h.html#is_module_text_address" title='is_module_text_address' data-ref="is_module_text_address" data-ref-filename="is_module_text_address">is_module_text_address</a>(<a class="local col7 ref" href="#7addr" title='addr' data-ref="7addr" data-ref-filename="7addr">addr</a>))</td></tr>
+<tr><th id="135">135</th><td>		<b>goto</b> <a class="lbl" href="#10out" data-ref="10out" data-ref-filename="10out">out</a>;</td></tr>
+<tr><th id="136">136</th><td>	<b>if</b> (<a class="ref fn" href="../include/linux/ftrace.h.html#is_ftrace_trampoline" title='is_ftrace_trampoline' data-ref="is_ftrace_trampoline" data-ref-filename="is_ftrace_trampoline">is_ftrace_trampoline</a>(<a class="local col7 ref" href="#7addr" title='addr' data-ref="7addr" data-ref-filename="7addr">addr</a>))</td></tr>
+<tr><th id="137">137</th><td>		<b>goto</b> <a class="lbl" href="#10out" data-ref="10out" data-ref-filename="10out">out</a>;</td></tr>
+<tr><th id="138">138</th><td>	<b>if</b> (<a class="ref fn" href="../include/linux/kprobes.h.html#310" title='is_kprobe_optinsn_slot' data-ref="is_kprobe_optinsn_slot" data-ref-filename="is_kprobe_optinsn_slot">is_kprobe_optinsn_slot</a>(<a class="local col7 ref" href="#7addr" title='addr' data-ref="7addr" data-ref-filename="7addr">addr</a>) || <a class="ref fn" href="../include/linux/kprobes.h.html#283" title='is_kprobe_insn_slot' data-ref="is_kprobe_insn_slot" data-ref-filename="is_kprobe_insn_slot">is_kprobe_insn_slot</a>(<a class="local col7 ref" href="#7addr" title='addr' data-ref="7addr" data-ref-filename="7addr">addr</a>))</td></tr>
+<tr><th id="139">139</th><td>		<b>goto</b> <a class="lbl" href="#10out" data-ref="10out" data-ref-filename="10out">out</a>;</td></tr>
+<tr><th id="140">140</th><td>	<b>if</b> (<a class="ref fn" href="../include/linux/filter.h.html#is_bpf_text_address" title='is_bpf_text_address' data-ref="is_bpf_text_address" data-ref-filename="is_bpf_text_address">is_bpf_text_address</a>(<a class="local col7 ref" href="#7addr" title='addr' data-ref="7addr" data-ref-filename="7addr">addr</a>))</td></tr>
+<tr><th id="141">141</th><td>		<b>goto</b> <a class="lbl" href="#10out" data-ref="10out" data-ref-filename="10out">out</a>;</td></tr>
+<tr><th id="142">142</th><td>	<a class="local col9 ref" href="#9ret" title='ret' data-ref="9ret" data-ref-filename="9ret">ret</a> = <var>0</var>;</td></tr>
+<tr><th id="143">143</th><td><dfn class="lbl" id="10out" data-ref="10out" data-ref-filename="10out">out</dfn>:</td></tr>
+<tr><th id="144">144</th><td>	<b>if</b> (<a class="local col8 ref" href="#8no_rcu" title='no_rcu' data-ref="8no_rcu" data-ref-filename="8no_rcu">no_rcu</a>)</td></tr>
+<tr><th id="145">145</th><td>		<a class="ref fn" href="../include/linux/hardirq.h.html#rcu_nmi_exit" title='rcu_nmi_exit' data-ref="rcu_nmi_exit" data-ref-filename="rcu_nmi_exit">rcu_nmi_exit</a>();</td></tr>
+<tr><th id="146">146</th><td></td></tr>
+<tr><th id="147">147</th><td>	<b>return</b> <a class="local col9 ref" href="#9ret" title='ret' data-ref="9ret" data-ref-filename="9ret">ret</a>;</td></tr>
+<tr><th id="148">148</th><td>}</td></tr>
+<tr><th id="149">149</th><td></td></tr>
+<tr><th id="150">150</th><td><i>/*</i></td></tr>
+<tr><th id="151">151</th><td><i> * On some architectures (PPC64, IA64) function pointers</i></td></tr>
+<tr><th id="152">152</th><td><i> * are actually only tokens to some data that then holds the</i></td></tr>
+<tr><th id="153">153</th><td><i> * real function address. As a result, to find if a function</i></td></tr>
+<tr><th id="154">154</th><td><i> * pointer is part of the kernel text, we need to do some</i></td></tr>
+<tr><th id="155">155</th><td><i> * special dereferencing first.</i></td></tr>
+<tr><th id="156">156</th><td><i> */</i></td></tr>
+<tr><th id="157">157</th><td><em>int</em> <dfn class="decl def fn" id="func_ptr_is_kernel_text" title='func_ptr_is_kernel_text' data-ref="func_ptr_is_kernel_text" data-ref-filename="func_ptr_is_kernel_text">func_ptr_is_kernel_text</dfn>(<em>void</em> *<dfn class="local col1 decl" id="11ptr" title='ptr' data-type='void *' data-ref="11ptr" data-ref-filename="11ptr">ptr</dfn>)</td></tr>
+<tr><th id="158">158</th><td>{</td></tr>
+<tr><th id="159">159</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col2 decl" id="12addr" title='addr' data-type='unsigned long' data-ref="12addr" data-ref-filename="12addr">addr</dfn>;</td></tr>
+<tr><th id="160">160</th><td>	<a class="local col2 ref" href="#12addr" title='addr' data-ref="12addr" data-ref-filename="12addr">addr</a> = (<em>unsigned</em> <em>long</em>) <a class="macro" href="../include/asm-generic/sections.h.html#60" title="(ptr)" data-ref="_M/dereference_function_descriptor">dereference_function_descriptor</a>(<a class="local col1 ref" href="#11ptr" title='ptr' data-ref="11ptr" data-ref-filename="11ptr">ptr</a>);</td></tr>
+<tr><th id="161">161</th><td>	<b>if</b> (<a class="ref fn" href="#core_kernel_text" title='core_kernel_text' data-ref="core_kernel_text" data-ref-filename="core_kernel_text">core_kernel_text</a>(<a class="local col2 ref" href="#12addr" title='addr' data-ref="12addr" data-ref-filename="12addr">addr</a>))</td></tr>
+<tr><th id="162">162</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="163">163</th><td>	<b>return</b> <a class="ref fn" href="../include/linux/module.h.html#is_module_text_address" title='is_module_text_address' data-ref="is_module_text_address" data-ref-filename="is_module_text_address">is_module_text_address</a>(<a class="local col2 ref" href="#12addr" title='addr' data-ref="12addr" data-ref-filename="12addr">addr</a>);</td></tr>
+<tr><th id="164">164</th><td>}</td></tr>
+<tr><th id="165">165</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

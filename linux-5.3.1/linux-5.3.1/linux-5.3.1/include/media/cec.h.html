@@ -1,0 +1,568 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>cec.h source code [linux-5.3.1/include/media/cec.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="cec_adap_ops,cec_adapter,cec_connector_info,cec_data,cec_devnode,cec_drm_connector_info,cec_event_entry,cec_fh,cec_msg_entry "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/include/media/cec.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>include</a>/<a href='./'>media</a>/<a href='cec.h.html'>cec.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0-only */</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * cec - HDMI Consumer Electronics Control support header</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * Copyright 2016 Cisco Systems, Inc. and/or its affiliates. All rights reserved.</i></td></tr>
+<tr><th id="6">6</th><td><i> */</i></td></tr>
+<tr><th id="7">7</th><td></td></tr>
+<tr><th id="8">8</th><td><u>#<span data-ppcond="8">ifndef</span> <span class="macro" data-ref="_M/_MEDIA_CEC_H">_MEDIA_CEC_H</span></u></td></tr>
+<tr><th id="9">9</th><td><u>#define <dfn class="macro" id="_M/_MEDIA_CEC_H" data-ref="_M/_MEDIA_CEC_H">_MEDIA_CEC_H</dfn></u></td></tr>
+<tr><th id="10">10</th><td></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../linux/poll.h.html">&lt;linux/poll.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="../linux/fs.h.html">&lt;linux/fs.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="../linux/debugfs.h.html">&lt;linux/debugfs.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="../linux/device.h.html">&lt;linux/device.h&gt;</a></u></td></tr>
+<tr><th id="15">15</th><td><u>#include <a href="../linux/cdev.h.html">&lt;linux/cdev.h&gt;</a></u></td></tr>
+<tr><th id="16">16</th><td><u>#include <a href="../linux/kthread.h.html">&lt;linux/kthread.h&gt;</a></u></td></tr>
+<tr><th id="17">17</th><td><u>#include <a href="../linux/timer.h.html">&lt;linux/timer.h&gt;</a></u></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../uapi/linux/cec-funcs.h.html">&lt;linux/cec-funcs.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="rc-core.h.html">&lt;media/rc-core.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td></td></tr>
+<tr><th id="21">21</th><td><i>/* CEC_ADAP_G_CONNECTOR_INFO is available */</i></td></tr>
+<tr><th id="22">22</th><td><u>#define <dfn class="macro" id="_M/CEC_CAP_CONNECTOR_INFO" data-ref="_M/CEC_CAP_CONNECTOR_INFO">CEC_CAP_CONNECTOR_INFO</dfn>	(1 &lt;&lt; 8)</u></td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td><u>#define <dfn class="macro" id="_M/CEC_CAP_DEFAULTS" data-ref="_M/CEC_CAP_DEFAULTS">CEC_CAP_DEFAULTS</dfn> (CEC_CAP_LOG_ADDRS | CEC_CAP_TRANSMIT | \</u></td></tr>
+<tr><th id="25">25</th><td><u>			  CEC_CAP_PASSTHROUGH | CEC_CAP_RC)</u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="28">28</th><td><i class="doc"> * struct cec_devnode - cec device node</i></td></tr>
+<tr><th id="29">29</th><td><i class="doc"> * <span class="command">@dev</span>:<span class="verb">	cec device</span></i></td></tr>
+<tr><th id="30">30</th><td><i class="doc"> *<span class="command"> @cdev</span>:	cec character device</i></td></tr>
+<tr><th id="31">31</th><td><i class="doc"> *<span class="command"> @minor</span>:	device node minor number</i></td></tr>
+<tr><th id="32">32</th><td><i class="doc"> *<span class="command"> @registered</span>:	the device was correctly registered</i></td></tr>
+<tr><th id="33">33</th><td><i class="doc"> *<span class="command"> @unregistered</span>: the device was unregistered</i></td></tr>
+<tr><th id="34">34</th><td><i class="doc"> *<span class="command"> @fhs</span>_lock:	lock to control access to the filehandle list</i></td></tr>
+<tr><th id="35">35</th><td><i class="doc"> *<span class="command"> @fhs</span>:	the list of open filehandles (cec_fh)</i></td></tr>
+<tr><th id="36">36</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="37">37</th><td><i class="doc"> * This structure represents a cec-related device node.</i></td></tr>
+<tr><th id="38">38</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="39">39</th><td><i class="doc"> * The<span class="command"> @parent</span> is a physical device. It must be set by core or device drivers</i></td></tr>
+<tr><th id="40">40</th><td><i class="doc"> * before registering the node.</i></td></tr>
+<tr><th id="41">41</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="42">42</th><td><b>struct</b> <dfn class="type def" id="cec_devnode" title='cec_devnode' data-ref="cec_devnode" data-ref-filename="cec_devnode">cec_devnode</dfn> {</td></tr>
+<tr><th id="43">43</th><td>	<i>/* sysfs */</i></td></tr>
+<tr><th id="44">44</th><td>	<b>struct</b> <a class="type" href="../linux/device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> <dfn class="decl field" id="cec_devnode::dev" title='cec_devnode::dev' data-ref="cec_devnode::dev" data-ref-filename="cec_devnode..dev">dev</dfn>;</td></tr>
+<tr><th id="45">45</th><td>	<b>struct</b> <a class="type" href="../linux/cdev.h.html#cdev" title='cdev' data-ref="cdev" data-ref-filename="cdev">cdev</a> <dfn class="decl field" id="cec_devnode::cdev" title='cec_devnode::cdev' data-ref="cec_devnode::cdev" data-ref-filename="cec_devnode..cdev">cdev</dfn>;</td></tr>
+<tr><th id="46">46</th><td></td></tr>
+<tr><th id="47">47</th><td>	<i>/* device info */</i></td></tr>
+<tr><th id="48">48</th><td>	<em>int</em> <dfn class="decl field" id="cec_devnode::minor" title='cec_devnode::minor' data-ref="cec_devnode::minor" data-ref-filename="cec_devnode..minor">minor</dfn>;</td></tr>
+<tr><th id="49">49</th><td>	<a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="cec_devnode::registered" title='cec_devnode::registered' data-ref="cec_devnode::registered" data-ref-filename="cec_devnode..registered">registered</dfn>;</td></tr>
+<tr><th id="50">50</th><td>	<a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="cec_devnode::unregistered" title='cec_devnode::unregistered' data-ref="cec_devnode::unregistered" data-ref-filename="cec_devnode..unregistered">unregistered</dfn>;</td></tr>
+<tr><th id="51">51</th><td>	<b>struct</b> <a class="type" href="../linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="cec_devnode::fhs" title='cec_devnode::fhs' data-ref="cec_devnode::fhs" data-ref-filename="cec_devnode..fhs">fhs</dfn>;</td></tr>
+<tr><th id="52">52</th><td>	<b>struct</b> <a class="type" href="../linux/mutex.h.html#mutex" title='mutex' data-ref="mutex" data-ref-filename="mutex">mutex</a> <dfn class="decl field" id="cec_devnode::lock" title='cec_devnode::lock' data-ref="cec_devnode::lock" data-ref-filename="cec_devnode..lock">lock</dfn>;</td></tr>
+<tr><th id="53">53</th><td>};</td></tr>
+<tr><th id="54">54</th><td></td></tr>
+<tr><th id="55">55</th><td><b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a>;</td></tr>
+<tr><th id="56">56</th><td><b>struct</b> <a class="type" href="#cec_data" title='cec_data' data-ref="cec_data" data-ref-filename="cec_data">cec_data</a>;</td></tr>
+<tr><th id="57">57</th><td><b>struct</b> <dfn class="type" id="cec_pin" title='cec_pin' data-ref="cec_pin" data-ref-filename="cec_pin">cec_pin</dfn>;</td></tr>
+<tr><th id="58">58</th><td><b>struct</b> <dfn class="type" id="cec_notifier" title='cec_notifier' data-ref="cec_notifier" data-ref-filename="cec_notifier">cec_notifier</dfn>;</td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td><b>struct</b> <dfn class="type def" id="cec_data" title='cec_data' data-ref="cec_data" data-ref-filename="cec_data">cec_data</dfn> {</td></tr>
+<tr><th id="61">61</th><td>	<b>struct</b> <a class="type" href="../linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="cec_data::list" title='cec_data::list' data-ref="cec_data::list" data-ref-filename="cec_data..list">list</dfn>;</td></tr>
+<tr><th id="62">62</th><td>	<b>struct</b> <a class="type" href="../linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="cec_data::xfer_list" title='cec_data::xfer_list' data-ref="cec_data::xfer_list" data-ref-filename="cec_data..xfer_list">xfer_list</dfn>;</td></tr>
+<tr><th id="63">63</th><td>	<b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="decl field" id="cec_data::adap" title='cec_data::adap' data-ref="cec_data::adap" data-ref-filename="cec_data..adap">adap</dfn>;</td></tr>
+<tr><th id="64">64</th><td>	<b>struct</b> <a class="type" href="../uapi/linux/cec.h.html#cec_msg" title='cec_msg' data-ref="cec_msg" data-ref-filename="cec_msg">cec_msg</a> <dfn class="decl field" id="cec_data::msg" title='cec_data::msg' data-ref="cec_data::msg" data-ref-filename="cec_data..msg">msg</dfn>;</td></tr>
+<tr><th id="65">65</th><td>	<b>struct</b> <a class="type" href="#cec_fh" title='cec_fh' data-ref="cec_fh" data-ref-filename="cec_fh">cec_fh</a> *<dfn class="decl field" id="cec_data::fh" title='cec_data::fh' data-ref="cec_data::fh" data-ref-filename="cec_data..fh">fh</dfn>;</td></tr>
+<tr><th id="66">66</th><td>	<b>struct</b> <a class="type" href="../linux/workqueue.h.html#delayed_work" title='delayed_work' data-ref="delayed_work" data-ref-filename="delayed_work">delayed_work</a> <dfn class="decl field" id="cec_data::work" title='cec_data::work' data-ref="cec_data::work" data-ref-filename="cec_data..work">work</dfn>;</td></tr>
+<tr><th id="67">67</th><td>	<b>struct</b> <a class="type" href="../linux/completion.h.html#completion" title='completion' data-ref="completion" data-ref-filename="completion">completion</a> <dfn class="decl field" id="cec_data::c" title='cec_data::c' data-ref="cec_data::c" data-ref-filename="cec_data..c">c</dfn>;</td></tr>
+<tr><th id="68">68</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="decl field" id="cec_data::attempts" title='cec_data::attempts' data-ref="cec_data::attempts" data-ref-filename="cec_data..attempts">attempts</dfn>;</td></tr>
+<tr><th id="69">69</th><td>	<a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="cec_data::blocking" title='cec_data::blocking' data-ref="cec_data::blocking" data-ref-filename="cec_data..blocking">blocking</dfn>;</td></tr>
+<tr><th id="70">70</th><td>	<a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="cec_data::completed" title='cec_data::completed' data-ref="cec_data::completed" data-ref-filename="cec_data..completed">completed</dfn>;</td></tr>
+<tr><th id="71">71</th><td>};</td></tr>
+<tr><th id="72">72</th><td></td></tr>
+<tr><th id="73">73</th><td><b>struct</b> <dfn class="type def" id="cec_msg_entry" title='cec_msg_entry' data-ref="cec_msg_entry" data-ref-filename="cec_msg_entry">cec_msg_entry</dfn> {</td></tr>
+<tr><th id="74">74</th><td>	<b>struct</b> <a class="type" href="../linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="cec_msg_entry::list" title='cec_msg_entry::list' data-ref="cec_msg_entry::list" data-ref-filename="cec_msg_entry..list">list</dfn>;</td></tr>
+<tr><th id="75">75</th><td>	<b>struct</b> <a class="type" href="../uapi/linux/cec.h.html#cec_msg" title='cec_msg' data-ref="cec_msg" data-ref-filename="cec_msg">cec_msg</a>		<dfn class="decl field" id="cec_msg_entry::msg" title='cec_msg_entry::msg' data-ref="cec_msg_entry::msg" data-ref-filename="cec_msg_entry..msg">msg</dfn>;</td></tr>
+<tr><th id="76">76</th><td>};</td></tr>
+<tr><th id="77">77</th><td></td></tr>
+<tr><th id="78">78</th><td><b>struct</b> <dfn class="type def" id="cec_event_entry" title='cec_event_entry' data-ref="cec_event_entry" data-ref-filename="cec_event_entry">cec_event_entry</dfn> {</td></tr>
+<tr><th id="79">79</th><td>	<b>struct</b> <a class="type" href="../linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="cec_event_entry::list" title='cec_event_entry::list' data-ref="cec_event_entry::list" data-ref-filename="cec_event_entry..list">list</dfn>;</td></tr>
+<tr><th id="80">80</th><td>	<b>struct</b> <a class="type" href="../uapi/linux/cec.h.html#cec_event" title='cec_event' data-ref="cec_event" data-ref-filename="cec_event">cec_event</a>	<dfn class="decl field" id="cec_event_entry::ev" title='cec_event_entry::ev' data-ref="cec_event_entry::ev" data-ref-filename="cec_event_entry..ev">ev</dfn>;</td></tr>
+<tr><th id="81">81</th><td>};</td></tr>
+<tr><th id="82">82</th><td></td></tr>
+<tr><th id="83">83</th><td><u>#define <dfn class="macro" id="_M/CEC_NUM_CORE_EVENTS" data-ref="_M/CEC_NUM_CORE_EVENTS">CEC_NUM_CORE_EVENTS</dfn> 2</u></td></tr>
+<tr><th id="84">84</th><td><u>#define <dfn class="macro" id="_M/CEC_NUM_EVENTS" data-ref="_M/CEC_NUM_EVENTS">CEC_NUM_EVENTS</dfn> CEC_EVENT_PIN_5V_HIGH</u></td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td><b>struct</b> <dfn class="type def" id="cec_fh" title='cec_fh' data-ref="cec_fh" data-ref-filename="cec_fh">cec_fh</dfn> {</td></tr>
+<tr><th id="87">87</th><td>	<b>struct</b> <a class="type" href="../linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="cec_fh::list" title='cec_fh::list' data-ref="cec_fh::list" data-ref-filename="cec_fh..list">list</dfn>;</td></tr>
+<tr><th id="88">88</th><td>	<b>struct</b> <a class="type" href="../linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="cec_fh::xfer_list" title='cec_fh::xfer_list' data-ref="cec_fh::xfer_list" data-ref-filename="cec_fh..xfer_list">xfer_list</dfn>;</td></tr>
+<tr><th id="89">89</th><td>	<b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a>	*<dfn class="decl field" id="cec_fh::adap" title='cec_fh::adap' data-ref="cec_fh::adap" data-ref-filename="cec_fh..adap">adap</dfn>;</td></tr>
+<tr><th id="90">90</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a>			<dfn class="decl field" id="cec_fh::mode_initiator" title='cec_fh::mode_initiator' data-ref="cec_fh::mode_initiator" data-ref-filename="cec_fh..mode_initiator">mode_initiator</dfn>;</td></tr>
+<tr><th id="91">91</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a>			<dfn class="decl field" id="cec_fh::mode_follower" title='cec_fh::mode_follower' data-ref="cec_fh::mode_follower" data-ref-filename="cec_fh..mode_follower">mode_follower</dfn>;</td></tr>
+<tr><th id="92">92</th><td></td></tr>
+<tr><th id="93">93</th><td>	<i>/* Events */</i></td></tr>
+<tr><th id="94">94</th><td>	<a class="typedef" href="../linux/wait.h.html#wait_queue_head_t" title='wait_queue_head_t' data-type='struct wait_queue_head' data-ref="wait_queue_head_t" data-ref-filename="wait_queue_head_t">wait_queue_head_t</a>	<dfn class="decl field" id="cec_fh::wait" title='cec_fh::wait' data-ref="cec_fh::wait" data-ref-filename="cec_fh..wait">wait</dfn>;</td></tr>
+<tr><th id="95">95</th><td>	<b>struct</b> <a class="type" href="../linux/mutex.h.html#mutex" title='mutex' data-ref="mutex" data-ref-filename="mutex">mutex</a>		<dfn class="decl field" id="cec_fh::lock" title='cec_fh::lock' data-ref="cec_fh::lock" data-ref-filename="cec_fh..lock">lock</dfn>;</td></tr>
+<tr><th id="96">96</th><td>	<b>struct</b> <a class="type" href="../linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="cec_fh::events" title='cec_fh::events' data-ref="cec_fh::events" data-ref-filename="cec_fh..events">events</dfn>[<a class="macro" href="#84" title="8" data-ref="_M/CEC_NUM_EVENTS">CEC_NUM_EVENTS</a>]; <i>/* queued events */</i></td></tr>
+<tr><th id="97">97</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a>			<dfn class="decl field" id="cec_fh::queued_events" title='cec_fh::queued_events' data-ref="cec_fh::queued_events" data-ref-filename="cec_fh..queued_events">queued_events</dfn>[<a class="macro" href="#84" title="8" data-ref="_M/CEC_NUM_EVENTS">CEC_NUM_EVENTS</a>];</td></tr>
+<tr><th id="98">98</th><td>	<em>unsigned</em> <em>int</em>		<dfn class="decl field" id="cec_fh::total_queued_events" title='cec_fh::total_queued_events' data-ref="cec_fh::total_queued_events" data-ref-filename="cec_fh..total_queued_events">total_queued_events</dfn>;</td></tr>
+<tr><th id="99">99</th><td>	<b>struct</b> <a class="type" href="#cec_event_entry" title='cec_event_entry' data-ref="cec_event_entry" data-ref-filename="cec_event_entry">cec_event_entry</a>	<dfn class="decl field" id="cec_fh::core_events" title='cec_fh::core_events' data-ref="cec_fh::core_events" data-ref-filename="cec_fh..core_events">core_events</dfn>[<a class="macro" href="#83" title="2" data-ref="_M/CEC_NUM_CORE_EVENTS">CEC_NUM_CORE_EVENTS</a>];</td></tr>
+<tr><th id="100">100</th><td>	<b>struct</b> <a class="type" href="../linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="cec_fh::msgs" title='cec_fh::msgs' data-ref="cec_fh::msgs" data-ref-filename="cec_fh..msgs">msgs</dfn>; <i>/* queued messages */</i></td></tr>
+<tr><th id="101">101</th><td>	<em>unsigned</em> <em>int</em>		<dfn class="decl field" id="cec_fh::queued_msgs" title='cec_fh::queued_msgs' data-ref="cec_fh::queued_msgs" data-ref-filename="cec_fh..queued_msgs">queued_msgs</dfn>;</td></tr>
+<tr><th id="102">102</th><td>};</td></tr>
+<tr><th id="103">103</th><td></td></tr>
+<tr><th id="104">104</th><td><u>#define <dfn class="macro" id="_M/CEC_SIGNAL_FREE_TIME_RETRY" data-ref="_M/CEC_SIGNAL_FREE_TIME_RETRY">CEC_SIGNAL_FREE_TIME_RETRY</dfn>		3</u></td></tr>
+<tr><th id="105">105</th><td><u>#define <dfn class="macro" id="_M/CEC_SIGNAL_FREE_TIME_NEW_INITIATOR" data-ref="_M/CEC_SIGNAL_FREE_TIME_NEW_INITIATOR">CEC_SIGNAL_FREE_TIME_NEW_INITIATOR</dfn>	5</u></td></tr>
+<tr><th id="106">106</th><td><u>#define <dfn class="macro" id="_M/CEC_SIGNAL_FREE_TIME_NEXT_XFER" data-ref="_M/CEC_SIGNAL_FREE_TIME_NEXT_XFER">CEC_SIGNAL_FREE_TIME_NEXT_XFER</dfn>		7</u></td></tr>
+<tr><th id="107">107</th><td></td></tr>
+<tr><th id="108">108</th><td><i>/* The nominal data bit period is 2.4 ms */</i></td></tr>
+<tr><th id="109">109</th><td><u>#define <dfn class="macro" id="_M/CEC_FREE_TIME_TO_USEC" data-ref="_M/CEC_FREE_TIME_TO_USEC">CEC_FREE_TIME_TO_USEC</dfn>(ft)		((ft) * 2400)</u></td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td><b>struct</b> <dfn class="type def" id="cec_adap_ops" title='cec_adap_ops' data-ref="cec_adap_ops" data-ref-filename="cec_adap_ops">cec_adap_ops</dfn> {</td></tr>
+<tr><th id="112">112</th><td>	<i>/* Low-level callbacks */</i></td></tr>
+<tr><th id="113">113</th><td>	<em>int</em> (*<dfn class="decl field" id="cec_adap_ops::adap_enable" title='cec_adap_ops::adap_enable' data-ref="cec_adap_ops::adap_enable" data-ref-filename="cec_adap_ops..adap_enable">adap_enable</dfn>)(<b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="local col8 decl" id="648adap" title='adap' data-type='struct cec_adapter *' data-ref="648adap" data-ref-filename="648adap">adap</dfn>, <a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col9 decl" id="649enable" title='enable' data-type='bool' data-ref="649enable" data-ref-filename="649enable">enable</dfn>);</td></tr>
+<tr><th id="114">114</th><td>	<em>int</em> (*<dfn class="decl field" id="cec_adap_ops::adap_monitor_all_enable" title='cec_adap_ops::adap_monitor_all_enable' data-ref="cec_adap_ops::adap_monitor_all_enable" data-ref-filename="cec_adap_ops..adap_monitor_all_enable">adap_monitor_all_enable</dfn>)(<b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="local col0 decl" id="650adap" title='adap' data-type='struct cec_adapter *' data-ref="650adap" data-ref-filename="650adap">adap</dfn>, <a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col1 decl" id="651enable" title='enable' data-type='bool' data-ref="651enable" data-ref-filename="651enable">enable</dfn>);</td></tr>
+<tr><th id="115">115</th><td>	<em>int</em> (*<dfn class="decl field" id="cec_adap_ops::adap_monitor_pin_enable" title='cec_adap_ops::adap_monitor_pin_enable' data-ref="cec_adap_ops::adap_monitor_pin_enable" data-ref-filename="cec_adap_ops..adap_monitor_pin_enable">adap_monitor_pin_enable</dfn>)(<b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="local col2 decl" id="652adap" title='adap' data-type='struct cec_adapter *' data-ref="652adap" data-ref-filename="652adap">adap</dfn>, <a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col3 decl" id="653enable" title='enable' data-type='bool' data-ref="653enable" data-ref-filename="653enable">enable</dfn>);</td></tr>
+<tr><th id="116">116</th><td>	<em>int</em> (*<dfn class="decl field" id="cec_adap_ops::adap_log_addr" title='cec_adap_ops::adap_log_addr' data-ref="cec_adap_ops::adap_log_addr" data-ref-filename="cec_adap_ops..adap_log_addr">adap_log_addr</dfn>)(<b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="local col4 decl" id="654adap" title='adap' data-type='struct cec_adapter *' data-ref="654adap" data-ref-filename="654adap">adap</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="local col5 decl" id="655logical_addr" title='logical_addr' data-type='u8' data-ref="655logical_addr" data-ref-filename="655logical_addr">logical_addr</dfn>);</td></tr>
+<tr><th id="117">117</th><td>	<em>int</em> (*<dfn class="decl field" id="cec_adap_ops::adap_transmit" title='cec_adap_ops::adap_transmit' data-ref="cec_adap_ops::adap_transmit" data-ref-filename="cec_adap_ops..adap_transmit">adap_transmit</dfn>)(<b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="local col6 decl" id="656adap" title='adap' data-type='struct cec_adapter *' data-ref="656adap" data-ref-filename="656adap">adap</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="local col7 decl" id="657attempts" title='attempts' data-type='u8' data-ref="657attempts" data-ref-filename="657attempts">attempts</dfn>,</td></tr>
+<tr><th id="118">118</th><td>			     <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col8 decl" id="658signal_free_time" title='signal_free_time' data-type='u32' data-ref="658signal_free_time" data-ref-filename="658signal_free_time">signal_free_time</dfn>, <b>struct</b> <a class="type" href="../uapi/linux/cec.h.html#cec_msg" title='cec_msg' data-ref="cec_msg" data-ref-filename="cec_msg">cec_msg</a> *<dfn class="local col9 decl" id="659msg" title='msg' data-type='struct cec_msg *' data-ref="659msg" data-ref-filename="659msg">msg</dfn>);</td></tr>
+<tr><th id="119">119</th><td>	<em>void</em> (*<dfn class="decl field" id="cec_adap_ops::adap_status" title='cec_adap_ops::adap_status' data-ref="cec_adap_ops::adap_status" data-ref-filename="cec_adap_ops..adap_status">adap_status</dfn>)(<b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="local col0 decl" id="660adap" title='adap' data-type='struct cec_adapter *' data-ref="660adap" data-ref-filename="660adap">adap</dfn>, <b>struct</b> <a class="type" href="../linux/seq_file.h.html#seq_file" title='seq_file' data-ref="seq_file" data-ref-filename="seq_file">seq_file</a> *<dfn class="local col1 decl" id="661file" title='file' data-type='struct seq_file *' data-ref="661file" data-ref-filename="661file">file</dfn>);</td></tr>
+<tr><th id="120">120</th><td>	<em>void</em> (*<dfn class="decl field" id="cec_adap_ops::adap_free" title='cec_adap_ops::adap_free' data-ref="cec_adap_ops::adap_free" data-ref-filename="cec_adap_ops..adap_free">adap_free</dfn>)(<b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="local col2 decl" id="662adap" title='adap' data-type='struct cec_adapter *' data-ref="662adap" data-ref-filename="662adap">adap</dfn>);</td></tr>
+<tr><th id="121">121</th><td></td></tr>
+<tr><th id="122">122</th><td>	<i>/* Error injection callbacks */</i></td></tr>
+<tr><th id="123">123</th><td>	<em>int</em> (*<dfn class="decl field" id="cec_adap_ops::error_inj_show" title='cec_adap_ops::error_inj_show' data-ref="cec_adap_ops::error_inj_show" data-ref-filename="cec_adap_ops..error_inj_show">error_inj_show</dfn>)(<b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="local col3 decl" id="663adap" title='adap' data-type='struct cec_adapter *' data-ref="663adap" data-ref-filename="663adap">adap</dfn>, <b>struct</b> <a class="type" href="../linux/seq_file.h.html#seq_file" title='seq_file' data-ref="seq_file" data-ref-filename="seq_file">seq_file</a> *<dfn class="local col4 decl" id="664sf" title='sf' data-type='struct seq_file *' data-ref="664sf" data-ref-filename="664sf">sf</dfn>);</td></tr>
+<tr><th id="124">124</th><td>	<a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> (*<dfn class="decl field" id="cec_adap_ops::error_inj_parse_line" title='cec_adap_ops::error_inj_parse_line' data-ref="cec_adap_ops::error_inj_parse_line" data-ref-filename="cec_adap_ops..error_inj_parse_line">error_inj_parse_line</dfn>)(<b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="local col5 decl" id="665adap" title='adap' data-type='struct cec_adapter *' data-ref="665adap" data-ref-filename="665adap">adap</dfn>, <em>char</em> *<dfn class="local col6 decl" id="666line" title='line' data-type='char *' data-ref="666line" data-ref-filename="666line">line</dfn>);</td></tr>
+<tr><th id="125">125</th><td></td></tr>
+<tr><th id="126">126</th><td>	<i>/* High-level CEC message callback */</i></td></tr>
+<tr><th id="127">127</th><td>	<em>int</em> (*<dfn class="decl field" id="cec_adap_ops::received" title='cec_adap_ops::received' data-ref="cec_adap_ops::received" data-ref-filename="cec_adap_ops..received">received</dfn>)(<b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="local col7 decl" id="667adap" title='adap' data-type='struct cec_adapter *' data-ref="667adap" data-ref-filename="667adap">adap</dfn>, <b>struct</b> <a class="type" href="../uapi/linux/cec.h.html#cec_msg" title='cec_msg' data-ref="cec_msg" data-ref-filename="cec_msg">cec_msg</a> *<dfn class="local col8 decl" id="668msg" title='msg' data-type='struct cec_msg *' data-ref="668msg" data-ref-filename="668msg">msg</dfn>);</td></tr>
+<tr><th id="128">128</th><td>};</td></tr>
+<tr><th id="129">129</th><td></td></tr>
+<tr><th id="130">130</th><td><i>/*</i></td></tr>
+<tr><th id="131">131</th><td><i> * The minimum message length you can receive (excepting poll messages) is 2.</i></td></tr>
+<tr><th id="132">132</th><td><i> * With a transfer rate of at most 36 bytes per second this makes 18 messages</i></td></tr>
+<tr><th id="133">133</th><td><i> * per second worst case.</i></td></tr>
+<tr><th id="134">134</th><td><i> *</i></td></tr>
+<tr><th id="135">135</th><td><i> * We queue at most 3 seconds worth of received messages. The CEC specification</i></td></tr>
+<tr><th id="136">136</th><td><i> * requires that messages are replied to within a second, so 3 seconds should</i></td></tr>
+<tr><th id="137">137</th><td><i> * give more than enough margin. Since most messages are actually more than 2</i></td></tr>
+<tr><th id="138">138</th><td><i> * bytes, this is in practice a lot more than 3 seconds.</i></td></tr>
+<tr><th id="139">139</th><td><i> */</i></td></tr>
+<tr><th id="140">140</th><td><u>#define <dfn class="macro" id="_M/CEC_MAX_MSG_RX_QUEUE_SZ" data-ref="_M/CEC_MAX_MSG_RX_QUEUE_SZ">CEC_MAX_MSG_RX_QUEUE_SZ</dfn>		(18 * 3)</u></td></tr>
+<tr><th id="141">141</th><td></td></tr>
+<tr><th id="142">142</th><td><i>/*</i></td></tr>
+<tr><th id="143">143</th><td><i> * The transmit queue is limited to 1 second worth of messages (worst case).</i></td></tr>
+<tr><th id="144">144</th><td><i> * Messages can be transmitted by userspace and kernel space. But for both it</i></td></tr>
+<tr><th id="145">145</th><td><i> * makes no sense to have a lot of messages queued up. One second seems</i></td></tr>
+<tr><th id="146">146</th><td><i> * reasonable.</i></td></tr>
+<tr><th id="147">147</th><td><i> */</i></td></tr>
+<tr><th id="148">148</th><td><u>#define <dfn class="macro" id="_M/CEC_MAX_MSG_TX_QUEUE_SZ" data-ref="_M/CEC_MAX_MSG_TX_QUEUE_SZ">CEC_MAX_MSG_TX_QUEUE_SZ</dfn>		(18 * 1)</u></td></tr>
+<tr><th id="149">149</th><td></td></tr>
+<tr><th id="150">150</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="151">151</th><td><i class="doc"> * struct cec_drm_connector_info - tells which drm connector is</i></td></tr>
+<tr><th id="152">152</th><td><i class="doc"> * associated with the CEC adapter.</i></td></tr>
+<tr><th id="153">153</th><td><i class="doc"> *<span class="command"> @card</span>_no: drm card number</i></td></tr>
+<tr><th id="154">154</th><td><i class="doc"> *<span class="command"> @connector</span>_id: drm connector ID</i></td></tr>
+<tr><th id="155">155</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="156">156</th><td><b>struct</b> <dfn class="type def" id="cec_drm_connector_info" title='cec_drm_connector_info' data-ref="cec_drm_connector_info" data-ref-filename="cec_drm_connector_info">cec_drm_connector_info</dfn> {</td></tr>
+<tr><th id="157">157</th><td>	<a class="typedef" href="../uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a> <dfn class="decl field" id="cec_drm_connector_info::card_no" title='cec_drm_connector_info::card_no' data-ref="cec_drm_connector_info::card_no" data-ref-filename="cec_drm_connector_info..card_no">card_no</dfn>;</td></tr>
+<tr><th id="158">158</th><td>	<a class="typedef" href="../uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a> <dfn class="decl field" id="cec_drm_connector_info::connector_id" title='cec_drm_connector_info::connector_id' data-ref="cec_drm_connector_info::connector_id" data-ref-filename="cec_drm_connector_info..connector_id">connector_id</dfn>;</td></tr>
+<tr><th id="159">159</th><td>};</td></tr>
+<tr><th id="160">160</th><td></td></tr>
+<tr><th id="161">161</th><td><u>#define <dfn class="macro" id="_M/CEC_CONNECTOR_TYPE_NO_CONNECTOR" data-ref="_M/CEC_CONNECTOR_TYPE_NO_CONNECTOR">CEC_CONNECTOR_TYPE_NO_CONNECTOR</dfn>	0</u></td></tr>
+<tr><th id="162">162</th><td><u>#define <dfn class="macro" id="_M/CEC_CONNECTOR_TYPE_DRM" data-ref="_M/CEC_CONNECTOR_TYPE_DRM">CEC_CONNECTOR_TYPE_DRM</dfn>		1</u></td></tr>
+<tr><th id="163">163</th><td></td></tr>
+<tr><th id="164">164</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="165">165</th><td><i class="doc"> * struct cec_connector_info - tells if and which connector is</i></td></tr>
+<tr><th id="166">166</th><td><i class="doc"> * associated with the CEC adapter.</i></td></tr>
+<tr><th id="167">167</th><td><i class="doc"> *<span class="command"> @type</span>: connector type (if any)</i></td></tr>
+<tr><th id="168">168</th><td><i class="doc"> *<span class="command"> @drm</span>: drm connector info</i></td></tr>
+<tr><th id="169">169</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="170">170</th><td><b>struct</b> <dfn class="type def" id="cec_connector_info" title='cec_connector_info' data-ref="cec_connector_info" data-ref-filename="cec_connector_info">cec_connector_info</dfn> {</td></tr>
+<tr><th id="171">171</th><td>	<a class="typedef" href="../uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a> <dfn class="decl field" id="cec_connector_info::type" title='cec_connector_info::type' data-ref="cec_connector_info::type" data-ref-filename="cec_connector_info..type">type</dfn>;</td></tr>
+<tr><th id="172">172</th><td>	<b>union</b> {</td></tr>
+<tr><th id="173">173</th><td>		<b>struct</b> <a class="type" href="#cec_drm_connector_info" title='cec_drm_connector_info' data-ref="cec_drm_connector_info" data-ref-filename="cec_drm_connector_info">cec_drm_connector_info</a> <dfn class="decl field" id="cec_connector_info::(anonymous)::drm" title='cec_connector_info::(anonymous union)::drm' data-ref="cec_connector_info::(anonymous)::drm" data-ref-filename="cec_connector_info..(anonymous)..drm">drm</dfn>;</td></tr>
+<tr><th id="174">174</th><td>		<a class="typedef" href="../uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a> <dfn class="decl field" id="cec_connector_info::(anonymous)::raw" title='cec_connector_info::(anonymous union)::raw' data-ref="cec_connector_info::(anonymous)::raw" data-ref-filename="cec_connector_info..(anonymous)..raw">raw</dfn>[<var>16</var>];</td></tr>
+<tr><th id="175">175</th><td>	};</td></tr>
+<tr><th id="176">176</th><td>};</td></tr>
+<tr><th id="177">177</th><td></td></tr>
+<tr><th id="178">178</th><td><b>struct</b> <dfn class="type def" id="cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</dfn> {</td></tr>
+<tr><th id="179">179</th><td>	<b>struct</b> <a class="type" href="../linux/module.h.html#module" title='module' data-ref="module" data-ref-filename="module">module</a> *<dfn class="decl field" id="cec_adapter::owner" title='cec_adapter::owner' data-ref="cec_adapter::owner" data-ref-filename="cec_adapter..owner">owner</dfn>;</td></tr>
+<tr><th id="180">180</th><td>	<em>char</em> <dfn class="decl field" id="cec_adapter::name" title='cec_adapter::name' data-ref="cec_adapter::name" data-ref-filename="cec_adapter..name">name</dfn>[<var>32</var>];</td></tr>
+<tr><th id="181">181</th><td>	<b>struct</b> <a class="type" href="#cec_devnode" title='cec_devnode' data-ref="cec_devnode" data-ref-filename="cec_devnode">cec_devnode</a> <dfn class="decl field" id="cec_adapter::devnode" title='cec_adapter::devnode' data-ref="cec_adapter::devnode" data-ref-filename="cec_adapter..devnode">devnode</dfn>;</td></tr>
+<tr><th id="182">182</th><td>	<b>struct</b> <a class="type" href="../linux/mutex.h.html#mutex" title='mutex' data-ref="mutex" data-ref-filename="mutex">mutex</a> <dfn class="decl field" id="cec_adapter::lock" title='cec_adapter::lock' data-ref="cec_adapter::lock" data-ref-filename="cec_adapter..lock">lock</dfn>;</td></tr>
+<tr><th id="183">183</th><td>	<b>struct</b> <a class="type" href="rc-core.h.html#rc_dev" title='rc_dev' data-ref="rc_dev" data-ref-filename="rc_dev">rc_dev</a> *<dfn class="decl field" id="cec_adapter::rc" title='cec_adapter::rc' data-ref="cec_adapter::rc" data-ref-filename="cec_adapter..rc">rc</dfn>;</td></tr>
+<tr><th id="184">184</th><td></td></tr>
+<tr><th id="185">185</th><td>	<b>struct</b> <a class="type" href="../linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="cec_adapter::transmit_queue" title='cec_adapter::transmit_queue' data-ref="cec_adapter::transmit_queue" data-ref-filename="cec_adapter..transmit_queue">transmit_queue</dfn>;</td></tr>
+<tr><th id="186">186</th><td>	<em>unsigned</em> <em>int</em> <dfn class="decl field" id="cec_adapter::transmit_queue_sz" title='cec_adapter::transmit_queue_sz' data-ref="cec_adapter::transmit_queue_sz" data-ref-filename="cec_adapter..transmit_queue_sz">transmit_queue_sz</dfn>;</td></tr>
+<tr><th id="187">187</th><td>	<b>struct</b> <a class="type" href="../linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="cec_adapter::wait_queue" title='cec_adapter::wait_queue' data-ref="cec_adapter::wait_queue" data-ref-filename="cec_adapter..wait_queue">wait_queue</dfn>;</td></tr>
+<tr><th id="188">188</th><td>	<b>struct</b> <a class="type" href="#cec_data" title='cec_data' data-ref="cec_data" data-ref-filename="cec_data">cec_data</a> *<dfn class="decl field" id="cec_adapter::transmitting" title='cec_adapter::transmitting' data-ref="cec_adapter::transmitting" data-ref-filename="cec_adapter..transmitting">transmitting</dfn>;</td></tr>
+<tr><th id="189">189</th><td>	<a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="cec_adapter::transmit_in_progress" title='cec_adapter::transmit_in_progress' data-ref="cec_adapter::transmit_in_progress" data-ref-filename="cec_adapter..transmit_in_progress">transmit_in_progress</dfn>;</td></tr>
+<tr><th id="190">190</th><td></td></tr>
+<tr><th id="191">191</th><td>	<b>struct</b> <a class="type" href="../linux/sched.h.html#task_struct" title='task_struct' data-ref="task_struct" data-ref-filename="task_struct">task_struct</a> *<dfn class="decl field" id="cec_adapter::kthread_config" title='cec_adapter::kthread_config' data-ref="cec_adapter::kthread_config" data-ref-filename="cec_adapter..kthread_config">kthread_config</dfn>;</td></tr>
+<tr><th id="192">192</th><td>	<b>struct</b> <a class="type" href="../linux/completion.h.html#completion" title='completion' data-ref="completion" data-ref-filename="completion">completion</a> <dfn class="decl field" id="cec_adapter::config_completion" title='cec_adapter::config_completion' data-ref="cec_adapter::config_completion" data-ref-filename="cec_adapter..config_completion">config_completion</dfn>;</td></tr>
+<tr><th id="193">193</th><td></td></tr>
+<tr><th id="194">194</th><td>	<b>struct</b> <a class="type" href="../linux/sched.h.html#task_struct" title='task_struct' data-ref="task_struct" data-ref-filename="task_struct">task_struct</a> *<dfn class="decl field" id="cec_adapter::kthread" title='cec_adapter::kthread' data-ref="cec_adapter::kthread" data-ref-filename="cec_adapter..kthread">kthread</dfn>;</td></tr>
+<tr><th id="195">195</th><td>	<a class="typedef" href="../linux/wait.h.html#wait_queue_head_t" title='wait_queue_head_t' data-type='struct wait_queue_head' data-ref="wait_queue_head_t" data-ref-filename="wait_queue_head_t">wait_queue_head_t</a> <dfn class="decl field" id="cec_adapter::kthread_waitq" title='cec_adapter::kthread_waitq' data-ref="cec_adapter::kthread_waitq" data-ref-filename="cec_adapter..kthread_waitq">kthread_waitq</dfn>;</td></tr>
+<tr><th id="196">196</th><td>	<a class="typedef" href="../linux/wait.h.html#wait_queue_head_t" title='wait_queue_head_t' data-type='struct wait_queue_head' data-ref="wait_queue_head_t" data-ref-filename="wait_queue_head_t">wait_queue_head_t</a> <dfn class="decl field" id="cec_adapter::waitq" title='cec_adapter::waitq' data-ref="cec_adapter::waitq" data-ref-filename="cec_adapter..waitq">waitq</dfn>;</td></tr>
+<tr><th id="197">197</th><td></td></tr>
+<tr><th id="198">198</th><td>	<em>const</em> <b>struct</b> <a class="type" href="#cec_adap_ops" title='cec_adap_ops' data-ref="cec_adap_ops" data-ref-filename="cec_adap_ops">cec_adap_ops</a> *<dfn class="decl field" id="cec_adapter::ops" title='cec_adapter::ops' data-ref="cec_adapter::ops" data-ref-filename="cec_adapter..ops">ops</dfn>;</td></tr>
+<tr><th id="199">199</th><td>	<em>void</em> *<dfn class="decl field" id="cec_adapter::priv" title='cec_adapter::priv' data-ref="cec_adapter::priv" data-ref-filename="cec_adapter..priv">priv</dfn>;</td></tr>
+<tr><th id="200">200</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl field" id="cec_adapter::capabilities" title='cec_adapter::capabilities' data-ref="cec_adapter::capabilities" data-ref-filename="cec_adapter..capabilities">capabilities</dfn>;</td></tr>
+<tr><th id="201">201</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="decl field" id="cec_adapter::available_log_addrs" title='cec_adapter::available_log_addrs' data-ref="cec_adapter::available_log_addrs" data-ref-filename="cec_adapter..available_log_addrs">available_log_addrs</dfn>;</td></tr>
+<tr><th id="202">202</th><td></td></tr>
+<tr><th id="203">203</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="decl field" id="cec_adapter::phys_addr" title='cec_adapter::phys_addr' data-ref="cec_adapter::phys_addr" data-ref-filename="cec_adapter..phys_addr">phys_addr</dfn>;</td></tr>
+<tr><th id="204">204</th><td>	<a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="cec_adapter::needs_hpd" title='cec_adapter::needs_hpd' data-ref="cec_adapter::needs_hpd" data-ref-filename="cec_adapter..needs_hpd">needs_hpd</dfn>;</td></tr>
+<tr><th id="205">205</th><td>	<a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="cec_adapter::is_configuring" title='cec_adapter::is_configuring' data-ref="cec_adapter::is_configuring" data-ref-filename="cec_adapter..is_configuring">is_configuring</dfn>;</td></tr>
+<tr><th id="206">206</th><td>	<a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="cec_adapter::is_configured" title='cec_adapter::is_configured' data-ref="cec_adapter::is_configured" data-ref-filename="cec_adapter..is_configured">is_configured</dfn>;</td></tr>
+<tr><th id="207">207</th><td>	<a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="cec_adapter::cec_pin_is_high" title='cec_adapter::cec_pin_is_high' data-ref="cec_adapter::cec_pin_is_high" data-ref-filename="cec_adapter..cec_pin_is_high">cec_pin_is_high</dfn>;</td></tr>
+<tr><th id="208">208</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="decl field" id="cec_adapter::last_initiator" title='cec_adapter::last_initiator' data-ref="cec_adapter::last_initiator" data-ref-filename="cec_adapter..last_initiator">last_initiator</dfn>;</td></tr>
+<tr><th id="209">209</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl field" id="cec_adapter::monitor_all_cnt" title='cec_adapter::monitor_all_cnt' data-ref="cec_adapter::monitor_all_cnt" data-ref-filename="cec_adapter..monitor_all_cnt">monitor_all_cnt</dfn>;</td></tr>
+<tr><th id="210">210</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl field" id="cec_adapter::monitor_pin_cnt" title='cec_adapter::monitor_pin_cnt' data-ref="cec_adapter::monitor_pin_cnt" data-ref-filename="cec_adapter..monitor_pin_cnt">monitor_pin_cnt</dfn>;</td></tr>
+<tr><th id="211">211</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl field" id="cec_adapter::follower_cnt" title='cec_adapter::follower_cnt' data-ref="cec_adapter::follower_cnt" data-ref-filename="cec_adapter..follower_cnt">follower_cnt</dfn>;</td></tr>
+<tr><th id="212">212</th><td>	<b>struct</b> <a class="type" href="#cec_fh" title='cec_fh' data-ref="cec_fh" data-ref-filename="cec_fh">cec_fh</a> *<dfn class="decl field" id="cec_adapter::cec_follower" title='cec_adapter::cec_follower' data-ref="cec_adapter::cec_follower" data-ref-filename="cec_adapter..cec_follower">cec_follower</dfn>;</td></tr>
+<tr><th id="213">213</th><td>	<b>struct</b> <a class="type" href="#cec_fh" title='cec_fh' data-ref="cec_fh" data-ref-filename="cec_fh">cec_fh</a> *<dfn class="decl field" id="cec_adapter::cec_initiator" title='cec_adapter::cec_initiator' data-ref="cec_adapter::cec_initiator" data-ref-filename="cec_adapter..cec_initiator">cec_initiator</dfn>;</td></tr>
+<tr><th id="214">214</th><td>	<a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="cec_adapter::passthrough" title='cec_adapter::passthrough' data-ref="cec_adapter::passthrough" data-ref-filename="cec_adapter..passthrough">passthrough</dfn>;</td></tr>
+<tr><th id="215">215</th><td>	<b>struct</b> <a class="type" href="../uapi/linux/cec.h.html#cec_log_addrs" title='cec_log_addrs' data-ref="cec_log_addrs" data-ref-filename="cec_log_addrs">cec_log_addrs</a> <dfn class="decl field" id="cec_adapter::log_addrs" title='cec_adapter::log_addrs' data-ref="cec_adapter::log_addrs" data-ref-filename="cec_adapter..log_addrs">log_addrs</dfn>;</td></tr>
+<tr><th id="216">216</th><td>	<b>struct</b> <a class="type" href="#cec_connector_info" title='cec_connector_info' data-ref="cec_connector_info" data-ref-filename="cec_connector_info">cec_connector_info</a> <dfn class="decl field" id="cec_adapter::conn_info" title='cec_adapter::conn_info' data-ref="cec_adapter::conn_info" data-ref-filename="cec_adapter..conn_info">conn_info</dfn>;</td></tr>
+<tr><th id="217">217</th><td></td></tr>
+<tr><th id="218">218</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl field" id="cec_adapter::tx_timeouts" title='cec_adapter::tx_timeouts' data-ref="cec_adapter::tx_timeouts" data-ref-filename="cec_adapter..tx_timeouts">tx_timeouts</dfn>;</td></tr>
+<tr><th id="219">219</th><td></td></tr>
+<tr><th id="220">220</th><td><u>#<span data-ppcond="220">ifdef</span> <span class="macro" data-ref="_M/CONFIG_CEC_NOTIFIER">CONFIG_CEC_NOTIFIER</span></u></td></tr>
+<tr><th id="221">221</th><td>	<b>struct</b> cec_notifier *notifier;</td></tr>
+<tr><th id="222">222</th><td><u>#<span data-ppcond="220">endif</span></u></td></tr>
+<tr><th id="223">223</th><td><u>#<span data-ppcond="223">ifdef</span> <span class="macro" data-ref="_M/CONFIG_CEC_PIN">CONFIG_CEC_PIN</span></u></td></tr>
+<tr><th id="224">224</th><td>	<b>struct</b> cec_pin *pin;</td></tr>
+<tr><th id="225">225</th><td><u>#<span data-ppcond="223">endif</span></u></td></tr>
+<tr><th id="226">226</th><td></td></tr>
+<tr><th id="227">227</th><td>	<b>struct</b> <a class="type" href="../linux/dcache.h.html#dentry" title='dentry' data-ref="dentry" data-ref-filename="dentry">dentry</a> *<dfn class="decl field" id="cec_adapter::cec_dir" title='cec_adapter::cec_dir' data-ref="cec_adapter::cec_dir" data-ref-filename="cec_adapter..cec_dir">cec_dir</dfn>;</td></tr>
+<tr><th id="228">228</th><td>	<b>struct</b> <a class="type" href="../linux/dcache.h.html#dentry" title='dentry' data-ref="dentry" data-ref-filename="dentry">dentry</a> *<dfn class="decl field" id="cec_adapter::status_file" title='cec_adapter::status_file' data-ref="cec_adapter::status_file" data-ref-filename="cec_adapter..status_file">status_file</dfn>;</td></tr>
+<tr><th id="229">229</th><td>	<b>struct</b> <a class="type" href="../linux/dcache.h.html#dentry" title='dentry' data-ref="dentry" data-ref-filename="dentry">dentry</a> *<dfn class="decl field" id="cec_adapter::error_inj_file" title='cec_adapter::error_inj_file' data-ref="cec_adapter::error_inj_file" data-ref-filename="cec_adapter..error_inj_file">error_inj_file</dfn>;</td></tr>
+<tr><th id="230">230</th><td></td></tr>
+<tr><th id="231">231</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="decl field" id="cec_adapter::phys_addrs" title='cec_adapter::phys_addrs' data-ref="cec_adapter::phys_addrs" data-ref-filename="cec_adapter..phys_addrs">phys_addrs</dfn>[<var>15</var>];</td></tr>
+<tr><th id="232">232</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl field" id="cec_adapter::sequence" title='cec_adapter::sequence' data-ref="cec_adapter::sequence" data-ref-filename="cec_adapter..sequence">sequence</dfn>;</td></tr>
+<tr><th id="233">233</th><td></td></tr>
+<tr><th id="234">234</th><td>	<em>char</em> <dfn class="decl field" id="cec_adapter::input_phys" title='cec_adapter::input_phys' data-ref="cec_adapter::input_phys" data-ref-filename="cec_adapter..input_phys">input_phys</dfn>[<var>32</var>];</td></tr>
+<tr><th id="235">235</th><td>};</td></tr>
+<tr><th id="236">236</th><td></td></tr>
+<tr><th id="237">237</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> *<dfn class="decl def fn" id="cec_get_drvdata" title='cec_get_drvdata' data-ref="cec_get_drvdata" data-ref-filename="cec_get_drvdata">cec_get_drvdata</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="local col9 decl" id="669adap" title='adap' data-type='const struct cec_adapter *' data-ref="669adap" data-ref-filename="669adap">adap</dfn>)</td></tr>
+<tr><th id="238">238</th><td>{</td></tr>
+<tr><th id="239">239</th><td>	<b>return</b> <a class="local col9 ref" href="#669adap" title='adap' data-ref="669adap" data-ref-filename="669adap">adap</a>-&gt;<a class="ref field" href="#cec_adapter::priv" title='cec_adapter::priv' data-ref="cec_adapter::priv" data-ref-filename="cec_adapter..priv">priv</a>;</td></tr>
+<tr><th id="240">240</th><td>}</td></tr>
+<tr><th id="241">241</th><td></td></tr>
+<tr><th id="242">242</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="cec_has_log_addr" title='cec_has_log_addr' data-ref="cec_has_log_addr" data-ref-filename="cec_has_log_addr">cec_has_log_addr</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="local col0 decl" id="670adap" title='adap' data-type='const struct cec_adapter *' data-ref="670adap" data-ref-filename="670adap">adap</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="local col1 decl" id="671log_addr" title='log_addr' data-type='u8' data-ref="671log_addr" data-ref-filename="671log_addr">log_addr</dfn>)</td></tr>
+<tr><th id="243">243</th><td>{</td></tr>
+<tr><th id="244">244</th><td>	<b>return</b> <a class="local col0 ref" href="#670adap" title='adap' data-ref="670adap" data-ref-filename="670adap">adap</a>-&gt;<a class="ref field" href="#cec_adapter::log_addrs" title='cec_adapter::log_addrs' data-ref="cec_adapter::log_addrs" data-ref-filename="cec_adapter..log_addrs">log_addrs</a>.<a class="ref field" href="../uapi/linux/cec.h.html#cec_log_addrs::log_addr_mask" title='cec_log_addrs::log_addr_mask' data-ref="cec_log_addrs::log_addr_mask" data-ref-filename="cec_log_addrs..log_addr_mask">log_addr_mask</a> &amp; (<var>1</var> &lt;&lt; <a class="local col1 ref" href="#671log_addr" title='log_addr' data-ref="671log_addr" data-ref-filename="671log_addr">log_addr</a>);</td></tr>
+<tr><th id="245">245</th><td>}</td></tr>
+<tr><th id="246">246</th><td></td></tr>
+<tr><th id="247">247</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="cec_is_sink" title='cec_is_sink' data-ref="cec_is_sink" data-ref-filename="cec_is_sink">cec_is_sink</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="local col2 decl" id="672adap" title='adap' data-type='const struct cec_adapter *' data-ref="672adap" data-ref-filename="672adap">adap</dfn>)</td></tr>
+<tr><th id="248">248</th><td>{</td></tr>
+<tr><th id="249">249</th><td>	<b>return</b> <a class="local col2 ref" href="#672adap" title='adap' data-ref="672adap" data-ref-filename="672adap">adap</a>-&gt;<a class="ref field" href="#cec_adapter::phys_addr" title='cec_adapter::phys_addr' data-ref="cec_adapter::phys_addr" data-ref-filename="cec_adapter..phys_addr">phys_addr</a> == <var>0</var>;</td></tr>
+<tr><th id="250">250</th><td>}</td></tr>
+<tr><th id="251">251</th><td></td></tr>
+<tr><th id="252">252</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="253">253</th><td><i class="doc"> * cec_is_registered() - is the CEC adapter registered?</i></td></tr>
+<tr><th id="254">254</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="255">255</th><td><i class="doc"> *<span class="command"> @adap</span>:	the CEC adapter, may be NULL.</i></td></tr>
+<tr><th id="256">256</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="257">257</th><td><i class="doc"> * Return: true if the adapter is registered, false otherwise.</i></td></tr>
+<tr><th id="258">258</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="259">259</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="cec_is_registered" title='cec_is_registered' data-ref="cec_is_registered" data-ref-filename="cec_is_registered">cec_is_registered</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="local col3 decl" id="673adap" title='adap' data-type='const struct cec_adapter *' data-ref="673adap" data-ref-filename="673adap">adap</dfn>)</td></tr>
+<tr><th id="260">260</th><td>{</td></tr>
+<tr><th id="261">261</th><td>	<b>return</b> <a class="local col3 ref" href="#673adap" title='adap' data-ref="673adap" data-ref-filename="673adap">adap</a> &amp;&amp; <a class="local col3 ref" href="#673adap" title='adap' data-ref="673adap" data-ref-filename="673adap">adap</a>-&gt;<a class="ref field" href="#cec_adapter::devnode" title='cec_adapter::devnode' data-ref="cec_adapter::devnode" data-ref-filename="cec_adapter..devnode">devnode</a>.<a class="ref field" href="#cec_devnode::registered" title='cec_devnode::registered' data-ref="cec_devnode::registered" data-ref-filename="cec_devnode..registered">registered</a>;</td></tr>
+<tr><th id="262">262</th><td>}</td></tr>
+<tr><th id="263">263</th><td></td></tr>
+<tr><th id="264">264</th><td><u>#define <dfn class="macro" id="_M/cec_phys_addr_exp" data-ref="_M/cec_phys_addr_exp">cec_phys_addr_exp</dfn>(pa) \</u></td></tr>
+<tr><th id="265">265</th><td><u>	((pa) &gt;&gt; 12), ((pa) &gt;&gt; 8) &amp; 0xf, ((pa) &gt;&gt; 4) &amp; 0xf, (pa) &amp; 0xf</u></td></tr>
+<tr><th id="266">266</th><td></td></tr>
+<tr><th id="267">267</th><td><b>struct</b> <a class="type" href="../drm/drm_edid.h.html#edid" title='edid' data-ref="edid" data-ref-filename="edid" id="edid">edid</a>;</td></tr>
+<tr><th id="268">268</th><td><b>struct</b> <a class="type" href="../drm/drm_connector.h.html#drm_connector" title='drm_connector' data-ref="drm_connector" data-ref-filename="drm_connector" id="drm_connector">drm_connector</a>;</td></tr>
+<tr><th id="269">269</th><td></td></tr>
+<tr><th id="270">270</th><td><u>#<span data-ppcond="270">if</span> <a class="macro" href="../linux/kconfig.h.html#64" title="0" data-ref="_M/IS_REACHABLE">IS_REACHABLE</a>(CONFIG_CEC_CORE)</u></td></tr>
+<tr><th id="271">271</th><td><b>struct</b> cec_adapter *cec_allocate_adapter(<em>const</em> <b>struct</b> cec_adap_ops *ops,</td></tr>
+<tr><th id="272">272</th><td>		<em>void</em> *priv, <em>const</em> <em>char</em> *name, u32 caps, u8 available_las);</td></tr>
+<tr><th id="273">273</th><td><em>int</em> cec_register_adapter(<b>struct</b> cec_adapter *adap, <b>struct</b> device *parent);</td></tr>
+<tr><th id="274">274</th><td><em>void</em> cec_unregister_adapter(<b>struct</b> cec_adapter *adap);</td></tr>
+<tr><th id="275">275</th><td><em>void</em> cec_delete_adapter(<b>struct</b> cec_adapter *adap);</td></tr>
+<tr><th id="276">276</th><td></td></tr>
+<tr><th id="277">277</th><td><em>int</em> cec_s_log_addrs(<b>struct</b> cec_adapter *adap, <b>struct</b> cec_log_addrs *log_addrs,</td></tr>
+<tr><th id="278">278</th><td>		    bool block);</td></tr>
+<tr><th id="279">279</th><td><em>void</em> cec_s_phys_addr(<b>struct</b> cec_adapter *adap, u16 phys_addr,</td></tr>
+<tr><th id="280">280</th><td>		     bool block);</td></tr>
+<tr><th id="281">281</th><td><em>void</em> cec_s_phys_addr_from_edid(<b>struct</b> cec_adapter *adap,</td></tr>
+<tr><th id="282">282</th><td>			       <em>const</em> <b>struct</b> edid *edid);</td></tr>
+<tr><th id="283">283</th><td><em>void</em> cec_s_conn_info(<b>struct</b> cec_adapter *adap,</td></tr>
+<tr><th id="284">284</th><td>		     <em>const</em> <b>struct</b> cec_connector_info *conn_info);</td></tr>
+<tr><th id="285">285</th><td><em>int</em> cec_transmit_msg(<b>struct</b> cec_adapter *adap, <b>struct</b> cec_msg *msg,</td></tr>
+<tr><th id="286">286</th><td>		     bool block);</td></tr>
+<tr><th id="287">287</th><td></td></tr>
+<tr><th id="288">288</th><td><i>/* Called by the adapter */</i></td></tr>
+<tr><th id="289">289</th><td><em>void</em> cec_transmit_done_ts(<b>struct</b> cec_adapter *adap, u8 status,</td></tr>
+<tr><th id="290">290</th><td>			  u8 arb_lost_cnt, u8 nack_cnt, u8 low_drive_cnt,</td></tr>
+<tr><th id="291">291</th><td>			  u8 error_cnt, ktime_t ts);</td></tr>
+<tr><th id="292">292</th><td></td></tr>
+<tr><th id="293">293</th><td><em>static</em> <b>inline</b> <em>void</em> cec_transmit_done(<b>struct</b> cec_adapter *adap, u8 status,</td></tr>
+<tr><th id="294">294</th><td>				     u8 arb_lost_cnt, u8 nack_cnt,</td></tr>
+<tr><th id="295">295</th><td>				     u8 low_drive_cnt, u8 error_cnt)</td></tr>
+<tr><th id="296">296</th><td>{</td></tr>
+<tr><th id="297">297</th><td>	cec_transmit_done_ts(adap, status, arb_lost_cnt, nack_cnt,</td></tr>
+<tr><th id="298">298</th><td>			     low_drive_cnt, error_cnt, ktime_get());</td></tr>
+<tr><th id="299">299</th><td>}</td></tr>
+<tr><th id="300">300</th><td><i>/*</i></td></tr>
+<tr><th id="301">301</th><td><i> * Simplified version of cec_transmit_done for hardware that doesn't retry</i></td></tr>
+<tr><th id="302">302</th><td><i> * failed transmits. So this is always just one attempt in which case</i></td></tr>
+<tr><th id="303">303</th><td><i> * the status is sufficient.</i></td></tr>
+<tr><th id="304">304</th><td><i> */</i></td></tr>
+<tr><th id="305">305</th><td><em>void</em> cec_transmit_attempt_done_ts(<b>struct</b> cec_adapter *adap,</td></tr>
+<tr><th id="306">306</th><td>				  u8 status, ktime_t ts);</td></tr>
+<tr><th id="307">307</th><td></td></tr>
+<tr><th id="308">308</th><td><em>static</em> <b>inline</b> <em>void</em> cec_transmit_attempt_done(<b>struct</b> cec_adapter *adap,</td></tr>
+<tr><th id="309">309</th><td>					     u8 status)</td></tr>
+<tr><th id="310">310</th><td>{</td></tr>
+<tr><th id="311">311</th><td>	cec_transmit_attempt_done_ts(adap, status, ktime_get());</td></tr>
+<tr><th id="312">312</th><td>}</td></tr>
+<tr><th id="313">313</th><td></td></tr>
+<tr><th id="314">314</th><td><em>void</em> cec_received_msg_ts(<b>struct</b> cec_adapter *adap,</td></tr>
+<tr><th id="315">315</th><td>			 <b>struct</b> cec_msg *msg, ktime_t ts);</td></tr>
+<tr><th id="316">316</th><td></td></tr>
+<tr><th id="317">317</th><td><em>static</em> <b>inline</b> <em>void</em> cec_received_msg(<b>struct</b> cec_adapter *adap,</td></tr>
+<tr><th id="318">318</th><td>				    <b>struct</b> cec_msg *msg)</td></tr>
+<tr><th id="319">319</th><td>{</td></tr>
+<tr><th id="320">320</th><td>	cec_received_msg_ts(adap, msg, ktime_get());</td></tr>
+<tr><th id="321">321</th><td>}</td></tr>
+<tr><th id="322">322</th><td></td></tr>
+<tr><th id="323">323</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="324">324</th><td><i class="doc"> * cec_queue_pin_cec_event() - queue a CEC pin event with a given timestamp.</i></td></tr>
+<tr><th id="325">325</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="326">326</th><td><i class="doc"> *<span class="command"> @adap</span>:	pointer to the cec adapter</i></td></tr>
+<tr><th id="327">327</th><td><i class="doc"> *<span class="command"> @is</span>_high:	when true the CEC pin is high, otherwise it is low</i></td></tr>
+<tr><th id="328">328</th><td><i class="doc"> *<span class="command"> @dropped</span>_events: when true some events were dropped</i></td></tr>
+<tr><th id="329">329</th><td><i class="doc"> *<span class="command"> @ts</span>:		the timestamp for this event</i></td></tr>
+<tr><th id="330">330</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="331">331</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="332">332</th><td><em>void</em> cec_queue_pin_cec_event(<b>struct</b> cec_adapter *adap, bool is_high,</td></tr>
+<tr><th id="333">333</th><td>			     bool dropped_events, ktime_t ts);</td></tr>
+<tr><th id="334">334</th><td></td></tr>
+<tr><th id="335">335</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="336">336</th><td><i class="doc"> * cec_queue_pin_hpd_event() - queue a pin event with a given timestamp.</i></td></tr>
+<tr><th id="337">337</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="338">338</th><td><i class="doc"> *<span class="command"> @adap</span>:	pointer to the cec adapter</i></td></tr>
+<tr><th id="339">339</th><td><i class="doc"> *<span class="command"> @is</span>_high:	when true the HPD pin is high, otherwise it is low</i></td></tr>
+<tr><th id="340">340</th><td><i class="doc"> *<span class="command"> @ts</span>:		the timestamp for this event</i></td></tr>
+<tr><th id="341">341</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="342">342</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="343">343</th><td><em>void</em> cec_queue_pin_hpd_event(<b>struct</b> cec_adapter *adap, bool is_high, ktime_t ts);</td></tr>
+<tr><th id="344">344</th><td></td></tr>
+<tr><th id="345">345</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="346">346</th><td><i class="doc"> * cec_queue_pin_5v_event() - queue a pin event with a given timestamp.</i></td></tr>
+<tr><th id="347">347</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="348">348</th><td><i class="doc"> *<span class="command"> @adap</span>:	pointer to the cec adapter</i></td></tr>
+<tr><th id="349">349</th><td><i class="doc"> *<span class="command"> @is</span>_high:	when true the 5V pin is high, otherwise it is low</i></td></tr>
+<tr><th id="350">350</th><td><i class="doc"> *<span class="command"> @ts</span>:		the timestamp for this event</i></td></tr>
+<tr><th id="351">351</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="352">352</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="353">353</th><td><em>void</em> cec_queue_pin_5v_event(<b>struct</b> cec_adapter *adap, bool is_high, ktime_t ts);</td></tr>
+<tr><th id="354">354</th><td></td></tr>
+<tr><th id="355">355</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="356">356</th><td><i class="doc"> * cec_get_edid_phys_addr() - find and return the physical address</i></td></tr>
+<tr><th id="357">357</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="358">358</th><td><i class="doc"> *<span class="command"> @edid</span>:	pointer to the EDID data</i></td></tr>
+<tr><th id="359">359</th><td><i class="doc"> *<span class="command"> @size</span>:	size in bytes of the EDID data</i></td></tr>
+<tr><th id="360">360</th><td><i class="doc"> *<span class="command"> @offset</span>:	If not %NULL then the location of the physical address</i></td></tr>
+<tr><th id="361">361</th><td><i class="doc"> *		bytes in the EDID will be returned here. This is set to 0</i></td></tr>
+<tr><th id="362">362</th><td><i class="doc"> *		if there is no physical address found.</i></td></tr>
+<tr><th id="363">363</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="364">364</th><td><i class="doc"> * Return: the physical address or CEC_PHYS_ADDR_INVALID if there is none.</i></td></tr>
+<tr><th id="365">365</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="366">366</th><td>u16 cec_get_edid_phys_addr(<em>const</em> u8 *edid, <em>unsigned</em> <em>int</em> size,</td></tr>
+<tr><th id="367">367</th><td>			   <em>unsigned</em> <em>int</em> *offset);</td></tr>
+<tr><th id="368">368</th><td></td></tr>
+<tr><th id="369">369</th><td><em>void</em> cec_fill_conn_info_from_drm(<b>struct</b> cec_connector_info *conn_info,</td></tr>
+<tr><th id="370">370</th><td>				 <em>const</em> <b>struct</b> drm_connector *connector);</td></tr>
+<tr><th id="371">371</th><td></td></tr>
+<tr><th id="372">372</th><td><u>#<span data-ppcond="270">else</span></u></td></tr>
+<tr><th id="373">373</th><td></td></tr>
+<tr><th id="374">374</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="cec_register_adapter" title='cec_register_adapter' data-ref="cec_register_adapter" data-ref-filename="cec_register_adapter">cec_register_adapter</dfn>(<b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="local col4 decl" id="674adap" title='adap' data-type='struct cec_adapter *' data-ref="674adap" data-ref-filename="674adap">adap</dfn>,</td></tr>
+<tr><th id="375">375</th><td>				       <b>struct</b> <a class="type" href="../linux/device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col5 decl" id="675parent" title='parent' data-type='struct device *' data-ref="675parent" data-ref-filename="675parent">parent</dfn>)</td></tr>
+<tr><th id="376">376</th><td>{</td></tr>
+<tr><th id="377">377</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="378">378</th><td>}</td></tr>
+<tr><th id="379">379</th><td></td></tr>
+<tr><th id="380">380</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="cec_unregister_adapter" title='cec_unregister_adapter' data-ref="cec_unregister_adapter" data-ref-filename="cec_unregister_adapter">cec_unregister_adapter</dfn>(<b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="local col6 decl" id="676adap" title='adap' data-type='struct cec_adapter *' data-ref="676adap" data-ref-filename="676adap">adap</dfn>)</td></tr>
+<tr><th id="381">381</th><td>{</td></tr>
+<tr><th id="382">382</th><td>}</td></tr>
+<tr><th id="383">383</th><td></td></tr>
+<tr><th id="384">384</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="cec_delete_adapter" title='cec_delete_adapter' data-ref="cec_delete_adapter" data-ref-filename="cec_delete_adapter">cec_delete_adapter</dfn>(<b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="local col7 decl" id="677adap" title='adap' data-type='struct cec_adapter *' data-ref="677adap" data-ref-filename="677adap">adap</dfn>)</td></tr>
+<tr><th id="385">385</th><td>{</td></tr>
+<tr><th id="386">386</th><td>}</td></tr>
+<tr><th id="387">387</th><td></td></tr>
+<tr><th id="388">388</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="cec_s_phys_addr" title='cec_s_phys_addr' data-ref="cec_s_phys_addr" data-ref-filename="cec_s_phys_addr">cec_s_phys_addr</dfn>(<b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="local col8 decl" id="678adap" title='adap' data-type='struct cec_adapter *' data-ref="678adap" data-ref-filename="678adap">adap</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col9 decl" id="679phys_addr" title='phys_addr' data-type='u16' data-ref="679phys_addr" data-ref-filename="679phys_addr">phys_addr</dfn>,</td></tr>
+<tr><th id="389">389</th><td>				   <a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col0 decl" id="680block" title='block' data-type='bool' data-ref="680block" data-ref-filename="680block">block</dfn>)</td></tr>
+<tr><th id="390">390</th><td>{</td></tr>
+<tr><th id="391">391</th><td>}</td></tr>
+<tr><th id="392">392</th><td></td></tr>
+<tr><th id="393">393</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="cec_s_phys_addr_from_edid" title='cec_s_phys_addr_from_edid' data-ref="cec_s_phys_addr_from_edid" data-ref-filename="cec_s_phys_addr_from_edid">cec_s_phys_addr_from_edid</dfn>(<b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="local col1 decl" id="681adap" title='adap' data-type='struct cec_adapter *' data-ref="681adap" data-ref-filename="681adap">adap</dfn>,</td></tr>
+<tr><th id="394">394</th><td>					     <em>const</em> <b>struct</b> <a class="type" href="../drm/drm_edid.h.html#edid" title='edid' data-ref="edid" data-ref-filename="edid">edid</a> *<dfn class="local col2 decl" id="682edid" title='edid' data-type='const struct edid *' data-ref="682edid" data-ref-filename="682edid">edid</dfn>)</td></tr>
+<tr><th id="395">395</th><td>{</td></tr>
+<tr><th id="396">396</th><td>}</td></tr>
+<tr><th id="397">397</th><td></td></tr>
+<tr><th id="398">398</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="decl def fn" id="cec_get_edid_phys_addr" title='cec_get_edid_phys_addr' data-ref="cec_get_edid_phys_addr" data-ref-filename="cec_get_edid_phys_addr">cec_get_edid_phys_addr</dfn>(<em>const</em> <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col3 decl" id="683edid" title='edid' data-type='const u8 *' data-ref="683edid" data-ref-filename="683edid">edid</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col4 decl" id="684size" title='size' data-type='unsigned int' data-ref="684size" data-ref-filename="684size">size</dfn>,</td></tr>
+<tr><th id="399">399</th><td>					 <em>unsigned</em> <em>int</em> *<dfn class="local col5 decl" id="685offset" title='offset' data-type='unsigned int *' data-ref="685offset" data-ref-filename="685offset">offset</dfn>)</td></tr>
+<tr><th id="400">400</th><td>{</td></tr>
+<tr><th id="401">401</th><td>	<b>if</b> (<a class="local col5 ref" href="#685offset" title='offset' data-ref="685offset" data-ref-filename="685offset">offset</a>)</td></tr>
+<tr><th id="402">402</th><td>		*<a class="local col5 ref" href="#685offset" title='offset' data-ref="685offset" data-ref-filename="685offset">offset</a> = <var>0</var>;</td></tr>
+<tr><th id="403">403</th><td>	<b>return</b> <a class="macro" href="../uapi/linux/cec.h.html#176" title="0xffff" data-ref="_M/CEC_PHYS_ADDR_INVALID">CEC_PHYS_ADDR_INVALID</a>;</td></tr>
+<tr><th id="404">404</th><td>}</td></tr>
+<tr><th id="405">405</th><td></td></tr>
+<tr><th id="406">406</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="cec_s_conn_info" title='cec_s_conn_info' data-ref="cec_s_conn_info" data-ref-filename="cec_s_conn_info">cec_s_conn_info</dfn>(<b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="local col6 decl" id="686adap" title='adap' data-type='struct cec_adapter *' data-ref="686adap" data-ref-filename="686adap">adap</dfn>,</td></tr>
+<tr><th id="407">407</th><td>				   <em>const</em> <b>struct</b> <a class="type" href="#cec_connector_info" title='cec_connector_info' data-ref="cec_connector_info" data-ref-filename="cec_connector_info">cec_connector_info</a> *<dfn class="local col7 decl" id="687conn_info" title='conn_info' data-type='const struct cec_connector_info *' data-ref="687conn_info" data-ref-filename="687conn_info">conn_info</dfn>)</td></tr>
+<tr><th id="408">408</th><td>{</td></tr>
+<tr><th id="409">409</th><td>}</td></tr>
+<tr><th id="410">410</th><td></td></tr>
+<tr><th id="411">411</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em></td></tr>
+<tr><th id="412">412</th><td><dfn class="decl def fn" id="cec_fill_conn_info_from_drm" title='cec_fill_conn_info_from_drm' data-ref="cec_fill_conn_info_from_drm" data-ref-filename="cec_fill_conn_info_from_drm">cec_fill_conn_info_from_drm</dfn>(<b>struct</b> <a class="type" href="#cec_connector_info" title='cec_connector_info' data-ref="cec_connector_info" data-ref-filename="cec_connector_info">cec_connector_info</a> *<dfn class="local col8 decl" id="688conn_info" title='conn_info' data-type='struct cec_connector_info *' data-ref="688conn_info" data-ref-filename="688conn_info">conn_info</dfn>,</td></tr>
+<tr><th id="413">413</th><td>			    <em>const</em> <b>struct</b> <a class="type" href="../drm/drm_connector.h.html#drm_connector" title='drm_connector' data-ref="drm_connector" data-ref-filename="drm_connector">drm_connector</a> *<dfn class="local col9 decl" id="689connector" title='connector' data-type='const struct drm_connector *' data-ref="689connector" data-ref-filename="689connector">connector</dfn>)</td></tr>
+<tr><th id="414">414</th><td>{</td></tr>
+<tr><th id="415">415</th><td>	<a class="ref fn" href="../../arch/x86/include/asm/string_64.h.html#memset" title='memset' data-ref="memset" data-ref-filename="memset">memset</a>(<a class="local col8 ref" href="#688conn_info" title='conn_info' data-ref="688conn_info" data-ref-filename="688conn_info">conn_info</a>, <var>0</var>, <b>sizeof</b>(*<a class="local col8 ref" href="#688conn_info" title='conn_info' data-ref="688conn_info" data-ref-filename="688conn_info">conn_info</a>));</td></tr>
+<tr><th id="416">416</th><td>}</td></tr>
+<tr><th id="417">417</th><td></td></tr>
+<tr><th id="418">418</th><td><u>#<span data-ppcond="270">endif</span></u></td></tr>
+<tr><th id="419">419</th><td></td></tr>
+<tr><th id="420">420</th><td><u>#<span data-ppcond="420">if</span> <a class="macro" href="../linux/kconfig.h.html#64" title="0" data-ref="_M/IS_REACHABLE">IS_REACHABLE</a>(CONFIG_CEC_CORE) &amp;&amp; <a class="macro" href="../linux/kconfig.h.html#71" title="0" data-ref="_M/IS_ENABLED">IS_ENABLED</a>(CONFIG_CEC_NOTIFIER)</u></td></tr>
+<tr><th id="421">421</th><td></td></tr>
+<tr><th id="422">422</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="423">423</th><td><i class="doc"> * cec_notifier_register - register a callback with the notifier</i></td></tr>
+<tr><th id="424">424</th><td><i class="doc"> *<span class="command"> @n</span>: the CEC notifier</i></td></tr>
+<tr><th id="425">425</th><td><i class="doc"> *<span class="command"> @adap</span>: the CEC adapter, passed as argument to the callback function</i></td></tr>
+<tr><th id="426">426</th><td><i class="doc"> * <span class="command">@callback</span>:<span class="verb"> the callback function</span></i></td></tr>
+<tr><th id="427">427</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="428">428</th><td><em>void</em> cec_notifier_register(<b>struct</b> cec_notifier *n,</td></tr>
+<tr><th id="429">429</th><td>			   <b>struct</b> cec_adapter *adap,</td></tr>
+<tr><th id="430">430</th><td>			   <em>void</em> (*callback)(<b>struct</b> cec_adapter *adap, u16 pa));</td></tr>
+<tr><th id="431">431</th><td></td></tr>
+<tr><th id="432">432</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="433">433</th><td><i class="doc"> * cec_notifier_unregister - unregister the callback from the notifier.</i></td></tr>
+<tr><th id="434">434</th><td><i class="doc"> *<span class="command"> @n</span>: the CEC notifier</i></td></tr>
+<tr><th id="435">435</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="436">436</th><td><em>void</em> cec_notifier_unregister(<b>struct</b> cec_notifier *n);</td></tr>
+<tr><th id="437">437</th><td></td></tr>
+<tr><th id="438">438</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="439">439</th><td><i class="doc"> * cec_register_cec_notifier - register the notifier with the cec adapter.</i></td></tr>
+<tr><th id="440">440</th><td><i class="doc"> *<span class="command"> @adap</span>: the CEC adapter</i></td></tr>
+<tr><th id="441">441</th><td><i class="doc"> *<span class="command"> @notifier</span>: the CEC notifier</i></td></tr>
+<tr><th id="442">442</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="443">443</th><td><em>void</em> cec_register_cec_notifier(<b>struct</b> cec_adapter *adap,</td></tr>
+<tr><th id="444">444</th><td>			       <b>struct</b> cec_notifier *notifier);</td></tr>
+<tr><th id="445">445</th><td></td></tr>
+<tr><th id="446">446</th><td><u>#<span data-ppcond="420">else</span></u></td></tr>
+<tr><th id="447">447</th><td></td></tr>
+<tr><th id="448">448</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em></td></tr>
+<tr><th id="449">449</th><td><dfn class="decl def fn" id="cec_notifier_register" title='cec_notifier_register' data-ref="cec_notifier_register" data-ref-filename="cec_notifier_register">cec_notifier_register</dfn>(<b>struct</b> <a class="type" href="#cec_notifier" title='cec_notifier' data-ref="cec_notifier" data-ref-filename="cec_notifier">cec_notifier</a> *<dfn class="local col0 decl" id="690n" title='n' data-type='struct cec_notifier *' data-ref="690n" data-ref-filename="690n">n</dfn>,</td></tr>
+<tr><th id="450">450</th><td>		      <b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="local col1 decl" id="691adap" title='adap' data-type='struct cec_adapter *' data-ref="691adap" data-ref-filename="691adap">adap</dfn>,</td></tr>
+<tr><th id="451">451</th><td>		      <em>void</em> (*<dfn class="local col2 decl" id="692callback" title='callback' data-type='void (*)(struct cec_adapter *, u16)' data-ref="692callback" data-ref-filename="692callback">callback</dfn>)(<b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="local col3 decl" id="693adap" title='adap' data-type='struct cec_adapter *' data-ref="693adap" data-ref-filename="693adap">adap</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col4 decl" id="694pa" title='pa' data-type='u16' data-ref="694pa" data-ref-filename="694pa">pa</dfn>))</td></tr>
+<tr><th id="452">452</th><td>{</td></tr>
+<tr><th id="453">453</th><td>}</td></tr>
+<tr><th id="454">454</th><td></td></tr>
+<tr><th id="455">455</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="cec_notifier_unregister" title='cec_notifier_unregister' data-ref="cec_notifier_unregister" data-ref-filename="cec_notifier_unregister">cec_notifier_unregister</dfn>(<b>struct</b> <a class="type" href="#cec_notifier" title='cec_notifier' data-ref="cec_notifier" data-ref-filename="cec_notifier">cec_notifier</a> *<dfn class="local col5 decl" id="695n" title='n' data-type='struct cec_notifier *' data-ref="695n" data-ref-filename="695n">n</dfn>)</td></tr>
+<tr><th id="456">456</th><td>{</td></tr>
+<tr><th id="457">457</th><td>}</td></tr>
+<tr><th id="458">458</th><td></td></tr>
+<tr><th id="459">459</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="cec_register_cec_notifier" title='cec_register_cec_notifier' data-ref="cec_register_cec_notifier" data-ref-filename="cec_register_cec_notifier">cec_register_cec_notifier</dfn>(<b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="local col6 decl" id="696adap" title='adap' data-type='struct cec_adapter *' data-ref="696adap" data-ref-filename="696adap">adap</dfn>,</td></tr>
+<tr><th id="460">460</th><td>					     <b>struct</b> <a class="type" href="#cec_notifier" title='cec_notifier' data-ref="cec_notifier" data-ref-filename="cec_notifier">cec_notifier</a> *<dfn class="local col7 decl" id="697notifier" title='notifier' data-type='struct cec_notifier *' data-ref="697notifier" data-ref-filename="697notifier">notifier</dfn>)</td></tr>
+<tr><th id="461">461</th><td>{</td></tr>
+<tr><th id="462">462</th><td>}</td></tr>
+<tr><th id="463">463</th><td></td></tr>
+<tr><th id="464">464</th><td><u>#<span data-ppcond="420">endif</span></u></td></tr>
+<tr><th id="465">465</th><td></td></tr>
+<tr><th id="466">466</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="467">467</th><td><i class="doc"> * cec_phys_addr_invalidate() - set the physical address to INVALID</i></td></tr>
+<tr><th id="468">468</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="469">469</th><td><i class="doc"> *<span class="command"> @adap</span>:	the CEC adapter</i></td></tr>
+<tr><th id="470">470</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="471">471</th><td><i class="doc"> * This is a simple helper function to invalidate the physical</i></td></tr>
+<tr><th id="472">472</th><td><i class="doc"> * address.</i></td></tr>
+<tr><th id="473">473</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="474">474</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="cec_phys_addr_invalidate" title='cec_phys_addr_invalidate' data-ref="cec_phys_addr_invalidate" data-ref-filename="cec_phys_addr_invalidate">cec_phys_addr_invalidate</dfn>(<b>struct</b> <a class="type" href="#cec_adapter" title='cec_adapter' data-ref="cec_adapter" data-ref-filename="cec_adapter">cec_adapter</a> *<dfn class="local col8 decl" id="698adap" title='adap' data-type='struct cec_adapter *' data-ref="698adap" data-ref-filename="698adap">adap</dfn>)</td></tr>
+<tr><th id="475">475</th><td>{</td></tr>
+<tr><th id="476">476</th><td>	<a class="ref fn" href="#cec_s_phys_addr" title='cec_s_phys_addr' data-ref="cec_s_phys_addr" data-ref-filename="cec_s_phys_addr">cec_s_phys_addr</a>(<a class="local col8 ref" href="#698adap" title='adap' data-ref="698adap" data-ref-filename="698adap">adap</a>, <a class="macro" href="../uapi/linux/cec.h.html#176" title="0xffff" data-ref="_M/CEC_PHYS_ADDR_INVALID">CEC_PHYS_ADDR_INVALID</a>, <a class="enum" href="../linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>);</td></tr>
+<tr><th id="477">477</th><td>}</td></tr>
+<tr><th id="478">478</th><td></td></tr>
+<tr><th id="479">479</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="480">480</th><td><i class="doc"> * cec_get_edid_spa_location() - find location of the Source Physical Address</i></td></tr>
+<tr><th id="481">481</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="482">482</th><td><i class="doc"> *<span class="command"> @edid</span>: the EDID</i></td></tr>
+<tr><th id="483">483</th><td><i class="doc"> *<span class="command"> @size</span>: the size of the EDID</i></td></tr>
+<tr><th id="484">484</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="485">485</th><td><i class="doc"> * This EDID is expected to be a CEA-861 compliant, which means that there are</i></td></tr>
+<tr><th id="486">486</th><td><i class="doc"> * at least two blocks and one or more of the extensions blocks are CEA-861</i></td></tr>
+<tr><th id="487">487</th><td><i class="doc"> * blocks.</i></td></tr>
+<tr><th id="488">488</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="489">489</th><td><i class="doc"> * The returned location is guaranteed to be &lt;= size-2.</i></td></tr>
+<tr><th id="490">490</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="491">491</th><td><i class="doc"> * This is an inline function since it is used by both CEC and V4L2.</i></td></tr>
+<tr><th id="492">492</th><td><i class="doc"> * Ideally this would go in a module shared by both, but it is overkill to do</i></td></tr>
+<tr><th id="493">493</th><td><i class="doc"> * that for just a single function.</i></td></tr>
+<tr><th id="494">494</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="495">495</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>int</em> <dfn class="decl def fn" id="cec_get_edid_spa_location" title='cec_get_edid_spa_location' data-ref="cec_get_edid_spa_location" data-ref-filename="cec_get_edid_spa_location">cec_get_edid_spa_location</dfn>(<em>const</em> <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col9 decl" id="699edid" title='edid' data-type='const u8 *' data-ref="699edid" data-ref-filename="699edid">edid</dfn>,</td></tr>
+<tr><th id="496">496</th><td>						     <em>unsigned</em> <em>int</em> <dfn class="local col0 decl" id="700size" title='size' data-type='unsigned int' data-ref="700size" data-ref-filename="700size">size</dfn>)</td></tr>
+<tr><th id="497">497</th><td>{</td></tr>
+<tr><th id="498">498</th><td>	<em>unsigned</em> <em>int</em> <dfn class="local col1 decl" id="701blocks" title='blocks' data-type='unsigned int' data-ref="701blocks" data-ref-filename="701blocks">blocks</dfn> = <a class="local col0 ref" href="#700size" title='size' data-ref="700size" data-ref-filename="700size">size</a> / <var>128</var>;</td></tr>
+<tr><th id="499">499</th><td>	<em>unsigned</em> <em>int</em> <dfn class="local col2 decl" id="702block" title='block' data-type='unsigned int' data-ref="702block" data-ref-filename="702block">block</dfn>;</td></tr>
+<tr><th id="500">500</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="local col3 decl" id="703d" title='d' data-type='u8' data-ref="703d" data-ref-filename="703d">d</dfn>;</td></tr>
+<tr><th id="501">501</th><td></td></tr>
+<tr><th id="502">502</th><td>	<i>/* Sanity check: at least 2 blocks and a multiple of the block size */</i></td></tr>
+<tr><th id="503">503</th><td>	<b>if</b> (<a class="local col1 ref" href="#701blocks" title='blocks' data-ref="701blocks" data-ref-filename="701blocks">blocks</a> &lt; <var>2</var> || <a class="local col0 ref" href="#700size" title='size' data-ref="700size" data-ref-filename="700size">size</a> % <var>128</var>)</td></tr>
+<tr><th id="504">504</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="505">505</th><td></td></tr>
+<tr><th id="506">506</th><td>	<i>/*</i></td></tr>
+<tr><th id="507">507</th><td><i>	 * If there are fewer extension blocks than the size, then update</i></td></tr>
+<tr><th id="508">508</th><td><i>	 * 'blocks'. It is allowed to have more extension blocks than the size,</i></td></tr>
+<tr><th id="509">509</th><td><i>	 * since some hardware can only read e.g. 256 bytes of the EDID, even</i></td></tr>
+<tr><th id="510">510</th><td><i>	 * though more blocks are present. The first CEA-861 extension block</i></td></tr>
+<tr><th id="511">511</th><td><i>	 * should normally be in block 1 anyway.</i></td></tr>
+<tr><th id="512">512</th><td><i>	 */</i></td></tr>
+<tr><th id="513">513</th><td>	<b>if</b> (<a class="local col9 ref" href="#699edid" title='edid' data-ref="699edid" data-ref-filename="699edid">edid</a>[<var>0x7e</var>] + <var>1</var> &lt; <a class="local col1 ref" href="#701blocks" title='blocks' data-ref="701blocks" data-ref-filename="701blocks">blocks</a>)</td></tr>
+<tr><th id="514">514</th><td>		<a class="local col1 ref" href="#701blocks" title='blocks' data-ref="701blocks" data-ref-filename="701blocks">blocks</a> = <a class="local col9 ref" href="#699edid" title='edid' data-ref="699edid" data-ref-filename="699edid">edid</a>[<var>0x7e</var>] + <var>1</var>;</td></tr>
+<tr><th id="515">515</th><td></td></tr>
+<tr><th id="516">516</th><td>	<b>for</b> (<a class="local col2 ref" href="#702block" title='block' data-ref="702block" data-ref-filename="702block">block</a> = <var>1</var>; <a class="local col2 ref" href="#702block" title='block' data-ref="702block" data-ref-filename="702block">block</a> &lt; <a class="local col1 ref" href="#701blocks" title='blocks' data-ref="701blocks" data-ref-filename="701blocks">blocks</a>; <a class="local col2 ref" href="#702block" title='block' data-ref="702block" data-ref-filename="702block">block</a>++) {</td></tr>
+<tr><th id="517">517</th><td>		<em>unsigned</em> <em>int</em> <dfn class="local col4 decl" id="704offset" title='offset' data-type='unsigned int' data-ref="704offset" data-ref-filename="704offset">offset</dfn> = <a class="local col2 ref" href="#702block" title='block' data-ref="702block" data-ref-filename="702block">block</a> * <var>128</var>;</td></tr>
+<tr><th id="518">518</th><td></td></tr>
+<tr><th id="519">519</th><td>		<i>/* Skip any non-CEA-861 extension blocks */</i></td></tr>
+<tr><th id="520">520</th><td>		<b>if</b> (<a class="local col9 ref" href="#699edid" title='edid' data-ref="699edid" data-ref-filename="699edid">edid</a>[<a class="local col4 ref" href="#704offset" title='offset' data-ref="704offset" data-ref-filename="704offset">offset</a>] != <var>0x02</var> || <a class="local col9 ref" href="#699edid" title='edid' data-ref="699edid" data-ref-filename="699edid">edid</a>[<a class="local col4 ref" href="#704offset" title='offset' data-ref="704offset" data-ref-filename="704offset">offset</a> + <var>1</var>] != <var>0x03</var>)</td></tr>
+<tr><th id="521">521</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="522">522</th><td></td></tr>
+<tr><th id="523">523</th><td>		<i>/* search Vendor Specific Data Block (tag 3) */</i></td></tr>
+<tr><th id="524">524</th><td>		<a class="local col3 ref" href="#703d" title='d' data-ref="703d" data-ref-filename="703d">d</a> = <a class="local col9 ref" href="#699edid" title='edid' data-ref="699edid" data-ref-filename="699edid">edid</a>[<a class="local col4 ref" href="#704offset" title='offset' data-ref="704offset" data-ref-filename="704offset">offset</a> + <var>2</var>] &amp; <var>0x7f</var>;</td></tr>
+<tr><th id="525">525</th><td>		<i>/* Check if there are Data Blocks */</i></td></tr>
+<tr><th id="526">526</th><td>		<b>if</b> (<a class="local col3 ref" href="#703d" title='d' data-ref="703d" data-ref-filename="703d">d</a> &lt;= <var>4</var>)</td></tr>
+<tr><th id="527">527</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="528">528</th><td>		<b>if</b> (<a class="local col3 ref" href="#703d" title='d' data-ref="703d" data-ref-filename="703d">d</a> &gt; <var>4</var>) {</td></tr>
+<tr><th id="529">529</th><td>			<em>unsigned</em> <em>int</em> <dfn class="local col5 decl" id="705i" title='i' data-type='unsigned int' data-ref="705i" data-ref-filename="705i">i</dfn> = <a class="local col4 ref" href="#704offset" title='offset' data-ref="704offset" data-ref-filename="704offset">offset</a> + <var>4</var>;</td></tr>
+<tr><th id="530">530</th><td>			<em>unsigned</em> <em>int</em> <dfn class="local col6 decl" id="706end" title='end' data-type='unsigned int' data-ref="706end" data-ref-filename="706end">end</dfn> = <a class="local col4 ref" href="#704offset" title='offset' data-ref="704offset" data-ref-filename="704offset">offset</a> + <a class="local col3 ref" href="#703d" title='d' data-ref="703d" data-ref-filename="703d">d</a>;</td></tr>
+<tr><th id="531">531</th><td></td></tr>
+<tr><th id="532">532</th><td>			<i>/* Note: 'end' is always &lt; 'size' */</i></td></tr>
+<tr><th id="533">533</th><td>			<b>do</b> {</td></tr>
+<tr><th id="534">534</th><td>				<a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="local col7 decl" id="707tag" title='tag' data-type='u8' data-ref="707tag" data-ref-filename="707tag">tag</dfn> = <a class="local col9 ref" href="#699edid" title='edid' data-ref="699edid" data-ref-filename="699edid">edid</a>[<a class="local col5 ref" href="#705i" title='i' data-ref="705i" data-ref-filename="705i">i</a>] &gt;&gt; <var>5</var>;</td></tr>
+<tr><th id="535">535</th><td>				<a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="local col8 decl" id="708len" title='len' data-type='u8' data-ref="708len" data-ref-filename="708len">len</dfn> = <a class="local col9 ref" href="#699edid" title='edid' data-ref="699edid" data-ref-filename="699edid">edid</a>[<a class="local col5 ref" href="#705i" title='i' data-ref="705i" data-ref-filename="705i">i</a>] &amp; <var>0x1f</var>;</td></tr>
+<tr><th id="536">536</th><td></td></tr>
+<tr><th id="537">537</th><td>				<b>if</b> (<a class="local col7 ref" href="#707tag" title='tag' data-ref="707tag" data-ref-filename="707tag">tag</a> == <var>3</var> &amp;&amp; <a class="local col8 ref" href="#708len" title='len' data-ref="708len" data-ref-filename="708len">len</a> &gt;= <var>5</var> &amp;&amp; <a class="local col5 ref" href="#705i" title='i' data-ref="705i" data-ref-filename="705i">i</a> + <a class="local col8 ref" href="#708len" title='len' data-ref="708len" data-ref-filename="708len">len</a> &lt;= <a class="local col6 ref" href="#706end" title='end' data-ref="706end" data-ref-filename="706end">end</a> &amp;&amp;</td></tr>
+<tr><th id="538">538</th><td>				    <a class="local col9 ref" href="#699edid" title='edid' data-ref="699edid" data-ref-filename="699edid">edid</a>[<a class="local col5 ref" href="#705i" title='i' data-ref="705i" data-ref-filename="705i">i</a> + <var>1</var>] == <var>0x03</var> &amp;&amp;</td></tr>
+<tr><th id="539">539</th><td>				    <a class="local col9 ref" href="#699edid" title='edid' data-ref="699edid" data-ref-filename="699edid">edid</a>[<a class="local col5 ref" href="#705i" title='i' data-ref="705i" data-ref-filename="705i">i</a> + <var>2</var>] == <var>0x0c</var> &amp;&amp;</td></tr>
+<tr><th id="540">540</th><td>				    <a class="local col9 ref" href="#699edid" title='edid' data-ref="699edid" data-ref-filename="699edid">edid</a>[<a class="local col5 ref" href="#705i" title='i' data-ref="705i" data-ref-filename="705i">i</a> + <var>3</var>] == <var>0x00</var>)</td></tr>
+<tr><th id="541">541</th><td>					<b>return</b> <a class="local col5 ref" href="#705i" title='i' data-ref="705i" data-ref-filename="705i">i</a> + <var>4</var>;</td></tr>
+<tr><th id="542">542</th><td>				<a class="local col5 ref" href="#705i" title='i' data-ref="705i" data-ref-filename="705i">i</a> += <a class="local col8 ref" href="#708len" title='len' data-ref="708len" data-ref-filename="708len">len</a> + <var>1</var>;</td></tr>
+<tr><th id="543">543</th><td>			} <b>while</b> (<a class="local col5 ref" href="#705i" title='i' data-ref="705i" data-ref-filename="705i">i</a> &lt; <a class="local col6 ref" href="#706end" title='end' data-ref="706end" data-ref-filename="706end">end</a>);</td></tr>
+<tr><th id="544">544</th><td>		}</td></tr>
+<tr><th id="545">545</th><td>	}</td></tr>
+<tr><th id="546">546</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="547">547</th><td>}</td></tr>
+<tr><th id="548">548</th><td></td></tr>
+<tr><th id="549">549</th><td><u>#<span data-ppcond="8">endif</span> /* _MEDIA_CEC_H */</u></td></tr>
+<tr><th id="550">550</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../drivers/gpu/drm/i915/display/dvo_ch7017.c.html'>linux-5.3.1/drivers/gpu/drm/i915/display/dvo_ch7017.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

@@ -1,0 +1,158 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>stacktrace.c source code [linux-5.3.1/arch/x86/kernel/stacktrace.c] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="stack_frame_user "/>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/arch/x86/kernel/stacktrace.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>linux-5.3.1</a>/<a href='../..'>arch</a>/<a href='..'>x86</a>/<a href='./'>kernel</a>/<a href='stacktrace.c.html'>stacktrace.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*</i></td></tr>
+<tr><th id="2">2</th><td><i> * Stack trace management functions</i></td></tr>
+<tr><th id="3">3</th><td><i> *</i></td></tr>
+<tr><th id="4">4</th><td><i> *  Copyright (C) 2006-2009 Red Hat, Inc., Ingo Molnar &lt;mingo@redhat.com&gt;</i></td></tr>
+<tr><th id="5">5</th><td><i> */</i></td></tr>
+<tr><th id="6">6</th><td><u>#include <a href="../../../include/linux/sched.h.html">&lt;linux/sched.h&gt;</a></u></td></tr>
+<tr><th id="7">7</th><td><u>#include <a href="../../../include/linux/sched/debug.h.html">&lt;linux/sched/debug.h&gt;</a></u></td></tr>
+<tr><th id="8">8</th><td><u>#include <a href="../../../include/linux/sched/task_stack.h.html">&lt;linux/sched/task_stack.h&gt;</a></u></td></tr>
+<tr><th id="9">9</th><td><u>#include <a href="../../../include/linux/stacktrace.h.html">&lt;linux/stacktrace.h&gt;</a></u></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="../../../include/linux/export.h.html">&lt;linux/export.h&gt;</a></u></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../../../include/linux/uaccess.h.html">&lt;linux/uaccess.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="../include/asm/stacktrace.h.html">&lt;asm/stacktrace.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="../include/asm/unwind.h.html">&lt;asm/unwind.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td></td></tr>
+<tr><th id="15">15</th><td><em>void</em> <dfn class="decl def fn" id="arch_stack_walk" title='arch_stack_walk' data-ref="arch_stack_walk" data-ref-filename="arch_stack_walk">arch_stack_walk</dfn>(<a class="typedef" href="../../../include/linux/stacktrace.h.html#stack_trace_consume_fn" title='stack_trace_consume_fn' data-type='bool (*)(void *, unsigned long, bool)' data-ref="stack_trace_consume_fn" data-ref-filename="stack_trace_consume_fn">stack_trace_consume_fn</a> <dfn class="local col1 decl" id="1consume_entry" title='consume_entry' data-type='stack_trace_consume_fn' data-ref="1consume_entry" data-ref-filename="1consume_entry">consume_entry</dfn>, <em>void</em> *<dfn class="local col2 decl" id="2cookie" title='cookie' data-type='void *' data-ref="2cookie" data-ref-filename="2cookie">cookie</dfn>,</td></tr>
+<tr><th id="16">16</th><td>		     <b>struct</b> <a class="type" href="../../../include/linux/sched.h.html#task_struct" title='task_struct' data-ref="task_struct" data-ref-filename="task_struct">task_struct</a> *<dfn class="local col3 decl" id="3task" title='task' data-type='struct task_struct *' data-ref="3task" data-ref-filename="3task">task</dfn>, <b>struct</b> <a class="type" href="../include/asm/ptrace.h.html#pt_regs" title='pt_regs' data-ref="pt_regs" data-ref-filename="pt_regs">pt_regs</a> *<dfn class="local col4 decl" id="4regs" title='regs' data-type='struct pt_regs *' data-ref="4regs" data-ref-filename="4regs">regs</dfn>)</td></tr>
+<tr><th id="17">17</th><td>{</td></tr>
+<tr><th id="18">18</th><td>	<b>struct</b> <a class="type" href="../include/asm/unwind.h.html#unwind_state" title='unwind_state' data-ref="unwind_state" data-ref-filename="unwind_state">unwind_state</a> <dfn class="local col5 decl" id="5state" title='state' data-type='struct unwind_state' data-ref="5state" data-ref-filename="5state">state</dfn>;</td></tr>
+<tr><th id="19">19</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col6 decl" id="6addr" title='addr' data-type='unsigned long' data-ref="6addr" data-ref-filename="6addr">addr</dfn>;</td></tr>
+<tr><th id="20">20</th><td></td></tr>
+<tr><th id="21">21</th><td>	<b>if</b> (<a class="local col4 ref" href="#4regs" title='regs' data-ref="4regs" data-ref-filename="4regs">regs</a> &amp;&amp; !<a class="local col1 ref" href="#1consume_entry" title='consume_entry' data-ref="1consume_entry" data-ref-filename="1consume_entry">consume_entry</a>(<a class="local col2 ref" href="#2cookie" title='cookie' data-ref="2cookie" data-ref-filename="2cookie">cookie</a>, <a class="local col4 ref" href="#4regs" title='regs' data-ref="4regs" data-ref-filename="4regs">regs</a>-&gt;<a class="ref field" href="../include/asm/ptrace.h.html#pt_regs::ip" title='pt_regs::ip' data-ref="pt_regs::ip" data-ref-filename="pt_regs..ip">ip</a>, <a class="enum" href="../../../include/linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>))</td></tr>
+<tr><th id="22">22</th><td>		<b>return</b>;</td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td>	<b>for</b> (<a class="ref fn" href="../include/asm/unwind.h.html#unwind_start" title='unwind_start' data-ref="unwind_start" data-ref-filename="unwind_start">unwind_start</a>(&amp;<a class="local col5 ref" href="#5state" title='state' data-ref="5state" data-ref-filename="5state">state</a>, <a class="local col3 ref" href="#3task" title='task' data-ref="3task" data-ref-filename="3task">task</a>, <a class="local col4 ref" href="#4regs" title='regs' data-ref="4regs" data-ref-filename="4regs">regs</a>, <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>); !<a class="ref fn" href="../include/asm/unwind.h.html#unwind_done" title='unwind_done' data-ref="unwind_done" data-ref-filename="unwind_done">unwind_done</a>(&amp;<a class="local col5 ref" href="#5state" title='state' data-ref="5state" data-ref-filename="5state">state</a>);</td></tr>
+<tr><th id="25">25</th><td>	     <a class="ref fn" href="../include/asm/unwind.h.html#unwind_next_frame" title='unwind_next_frame' data-ref="unwind_next_frame" data-ref-filename="unwind_next_frame">unwind_next_frame</a>(&amp;<a class="local col5 ref" href="#5state" title='state' data-ref="5state" data-ref-filename="5state">state</a>)) {</td></tr>
+<tr><th id="26">26</th><td>		<a class="local col6 ref" href="#6addr" title='addr' data-ref="6addr" data-ref-filename="6addr">addr</a> = <a class="ref fn" href="../include/asm/unwind.h.html#unwind_get_return_address" title='unwind_get_return_address' data-ref="unwind_get_return_address" data-ref-filename="unwind_get_return_address">unwind_get_return_address</a>(&amp;<a class="local col5 ref" href="#5state" title='state' data-ref="5state" data-ref-filename="5state">state</a>);</td></tr>
+<tr><th id="27">27</th><td>		<b>if</b> (!<a class="local col6 ref" href="#6addr" title='addr' data-ref="6addr" data-ref-filename="6addr">addr</a> || !<a class="local col1 ref" href="#1consume_entry" title='consume_entry' data-ref="1consume_entry" data-ref-filename="1consume_entry">consume_entry</a>(<a class="local col2 ref" href="#2cookie" title='cookie' data-ref="2cookie" data-ref-filename="2cookie">cookie</a>, <a class="local col6 ref" href="#6addr" title='addr' data-ref="6addr" data-ref-filename="6addr">addr</a>, <a class="enum" href="../../../include/linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>))</td></tr>
+<tr><th id="28">28</th><td>			<b>break</b>;</td></tr>
+<tr><th id="29">29</th><td>	}</td></tr>
+<tr><th id="30">30</th><td>}</td></tr>
+<tr><th id="31">31</th><td></td></tr>
+<tr><th id="32">32</th><td><i>/*</i></td></tr>
+<tr><th id="33">33</th><td><i> * This function returns an error if it detects any unreliable features of the</i></td></tr>
+<tr><th id="34">34</th><td><i> * stack.  Otherwise it guarantees that the stack trace is reliable.</i></td></tr>
+<tr><th id="35">35</th><td><i> *</i></td></tr>
+<tr><th id="36">36</th><td><i> * If the task is not 'current', the caller *must* ensure the task is inactive.</i></td></tr>
+<tr><th id="37">37</th><td><i> */</i></td></tr>
+<tr><th id="38">38</th><td><em>int</em> <dfn class="decl def fn" id="arch_stack_walk_reliable" title='arch_stack_walk_reliable' data-ref="arch_stack_walk_reliable" data-ref-filename="arch_stack_walk_reliable">arch_stack_walk_reliable</dfn>(<a class="typedef" href="../../../include/linux/stacktrace.h.html#stack_trace_consume_fn" title='stack_trace_consume_fn' data-type='bool (*)(void *, unsigned long, bool)' data-ref="stack_trace_consume_fn" data-ref-filename="stack_trace_consume_fn">stack_trace_consume_fn</a> <dfn class="local col7 decl" id="7consume_entry" title='consume_entry' data-type='stack_trace_consume_fn' data-ref="7consume_entry" data-ref-filename="7consume_entry">consume_entry</dfn>,</td></tr>
+<tr><th id="39">39</th><td>			     <em>void</em> *<dfn class="local col8 decl" id="8cookie" title='cookie' data-type='void *' data-ref="8cookie" data-ref-filename="8cookie">cookie</dfn>, <b>struct</b> <a class="type" href="../../../include/linux/sched.h.html#task_struct" title='task_struct' data-ref="task_struct" data-ref-filename="task_struct">task_struct</a> *<dfn class="local col9 decl" id="9task" title='task' data-type='struct task_struct *' data-ref="9task" data-ref-filename="9task">task</dfn>)</td></tr>
+<tr><th id="40">40</th><td>{</td></tr>
+<tr><th id="41">41</th><td>	<b>struct</b> <a class="type" href="../include/asm/unwind.h.html#unwind_state" title='unwind_state' data-ref="unwind_state" data-ref-filename="unwind_state">unwind_state</a> <dfn class="local col0 decl" id="10state" title='state' data-type='struct unwind_state' data-ref="10state" data-ref-filename="10state">state</dfn>;</td></tr>
+<tr><th id="42">42</th><td>	<b>struct</b> <a class="type" href="../include/asm/ptrace.h.html#pt_regs" title='pt_regs' data-ref="pt_regs" data-ref-filename="pt_regs">pt_regs</a> *<dfn class="local col1 decl" id="11regs" title='regs' data-type='struct pt_regs *' data-ref="11regs" data-ref-filename="11regs">regs</dfn>;</td></tr>
+<tr><th id="43">43</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col2 decl" id="12addr" title='addr' data-type='unsigned long' data-ref="12addr" data-ref-filename="12addr">addr</dfn>;</td></tr>
+<tr><th id="44">44</th><td></td></tr>
+<tr><th id="45">45</th><td>	<b>for</b> (<a class="ref fn" href="../include/asm/unwind.h.html#unwind_start" title='unwind_start' data-ref="unwind_start" data-ref-filename="unwind_start">unwind_start</a>(&amp;<a class="local col0 ref" href="#10state" title='state' data-ref="10state" data-ref-filename="10state">state</a>, <a class="local col9 ref" href="#9task" title='task' data-ref="9task" data-ref-filename="9task">task</a>, <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>, <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>);</td></tr>
+<tr><th id="46">46</th><td>	     !<a class="ref fn" href="../include/asm/unwind.h.html#unwind_done" title='unwind_done' data-ref="unwind_done" data-ref-filename="unwind_done">unwind_done</a>(&amp;<a class="local col0 ref" href="#10state" title='state' data-ref="10state" data-ref-filename="10state">state</a>) &amp;&amp; !<a class="ref fn" href="../include/asm/unwind.h.html#unwind_error" title='unwind_error' data-ref="unwind_error" data-ref-filename="unwind_error">unwind_error</a>(&amp;<a class="local col0 ref" href="#10state" title='state' data-ref="10state" data-ref-filename="10state">state</a>);</td></tr>
+<tr><th id="47">47</th><td>	     <a class="ref fn" href="../include/asm/unwind.h.html#unwind_next_frame" title='unwind_next_frame' data-ref="unwind_next_frame" data-ref-filename="unwind_next_frame">unwind_next_frame</a>(&amp;<a class="local col0 ref" href="#10state" title='state' data-ref="10state" data-ref-filename="10state">state</a>)) {</td></tr>
+<tr><th id="48">48</th><td></td></tr>
+<tr><th id="49">49</th><td>		<a class="local col1 ref" href="#11regs" title='regs' data-ref="11regs" data-ref-filename="11regs">regs</a> = <a class="ref fn" href="../include/asm/unwind.h.html#unwind_get_entry_regs" title='unwind_get_entry_regs' data-ref="unwind_get_entry_regs" data-ref-filename="unwind_get_entry_regs">unwind_get_entry_regs</a>(&amp;<a class="local col0 ref" href="#10state" title='state' data-ref="10state" data-ref-filename="10state">state</a>, <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>);</td></tr>
+<tr><th id="50">50</th><td>		<b>if</b> (<a class="local col1 ref" href="#11regs" title='regs' data-ref="11regs" data-ref-filename="11regs">regs</a>) {</td></tr>
+<tr><th id="51">51</th><td>			<i>/* Success path for user tasks */</i></td></tr>
+<tr><th id="52">52</th><td>			<b>if</b> (<a class="ref fn" href="../include/asm/ptrace.h.html#user_mode" title='user_mode' data-ref="user_mode" data-ref-filename="user_mode">user_mode</a>(<a class="local col1 ref" href="#11regs" title='regs' data-ref="11regs" data-ref-filename="11regs">regs</a>))</td></tr>
+<tr><th id="53">53</th><td>				<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="54">54</th><td></td></tr>
+<tr><th id="55">55</th><td>			<i>/*</i></td></tr>
+<tr><th id="56">56</th><td><i>			 * Kernel mode registers on the stack indicate an</i></td></tr>
+<tr><th id="57">57</th><td><i>			 * in-kernel interrupt or exception (e.g., preemption</i></td></tr>
+<tr><th id="58">58</th><td><i>			 * or a page fault), which can make frame pointers</i></td></tr>
+<tr><th id="59">59</th><td><i>			 * unreliable.</i></td></tr>
+<tr><th id="60">60</th><td><i>			 */</i></td></tr>
+<tr><th id="61">61</th><td></td></tr>
+<tr><th id="62">62</th><td>			<b>if</b> (<a class="macro" href="../../../include/linux/kconfig.h.html#71" title="0" data-ref="_M/IS_ENABLED">IS_ENABLED</a>(CONFIG_FRAME_POINTER))</td></tr>
+<tr><th id="63">63</th><td>				<b>return</b> -<a class="macro" href="../../../include/uapi/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="64">64</th><td>		}</td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td>		<a class="local col2 ref" href="#12addr" title='addr' data-ref="12addr" data-ref-filename="12addr">addr</a> = <a class="ref fn" href="../include/asm/unwind.h.html#unwind_get_return_address" title='unwind_get_return_address' data-ref="unwind_get_return_address" data-ref-filename="unwind_get_return_address">unwind_get_return_address</a>(&amp;<a class="local col0 ref" href="#10state" title='state' data-ref="10state" data-ref-filename="10state">state</a>);</td></tr>
+<tr><th id="67">67</th><td></td></tr>
+<tr><th id="68">68</th><td>		<i>/*</i></td></tr>
+<tr><th id="69">69</th><td><i>		 * A NULL or invalid return address probably means there's some</i></td></tr>
+<tr><th id="70">70</th><td><i>		 * generated code which __kernel_text_address() doesn't know</i></td></tr>
+<tr><th id="71">71</th><td><i>		 * about.</i></td></tr>
+<tr><th id="72">72</th><td><i>		 */</i></td></tr>
+<tr><th id="73">73</th><td>		<b>if</b> (!<a class="local col2 ref" href="#12addr" title='addr' data-ref="12addr" data-ref-filename="12addr">addr</a>)</td></tr>
+<tr><th id="74">74</th><td>			<b>return</b> -<a class="macro" href="../../../include/uapi/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td>		<b>if</b> (!<a class="local col7 ref" href="#7consume_entry" title='consume_entry' data-ref="7consume_entry" data-ref-filename="7consume_entry">consume_entry</a>(<a class="local col8 ref" href="#8cookie" title='cookie' data-ref="8cookie" data-ref-filename="8cookie">cookie</a>, <a class="local col2 ref" href="#12addr" title='addr' data-ref="12addr" data-ref-filename="12addr">addr</a>, <a class="enum" href="../../../include/linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>))</td></tr>
+<tr><th id="77">77</th><td>			<b>return</b> -<a class="macro" href="../../../include/uapi/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="78">78</th><td>	}</td></tr>
+<tr><th id="79">79</th><td></td></tr>
+<tr><th id="80">80</th><td>	<i>/* Check for stack corruption */</i></td></tr>
+<tr><th id="81">81</th><td>	<b>if</b> (<a class="ref fn" href="../include/asm/unwind.h.html#unwind_error" title='unwind_error' data-ref="unwind_error" data-ref-filename="unwind_error">unwind_error</a>(&amp;<a class="local col0 ref" href="#10state" title='state' data-ref="10state" data-ref-filename="10state">state</a>))</td></tr>
+<tr><th id="82">82</th><td>		<b>return</b> -<a class="macro" href="../../../include/uapi/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="83">83</th><td></td></tr>
+<tr><th id="84">84</th><td>	<i>/* Success path for non-user tasks, i.e. kthreads and idle tasks */</i></td></tr>
+<tr><th id="85">85</th><td>	<b>if</b> (!(<a class="local col9 ref" href="#9task" title='task' data-ref="9task" data-ref-filename="9task">task</a>-&gt;<a class="ref field" href="../../../include/linux/sched.h.html#task_struct::flags" title='task_struct::flags' data-ref="task_struct::flags" data-ref-filename="task_struct..flags">flags</a> &amp; (<a class="macro" href="../../../include/linux/sched.h.html#1471" title="0x00200000" data-ref="_M/PF_KTHREAD">PF_KTHREAD</a> | <a class="macro" href="../../../include/linux/sched.h.html#1451" title="0x00000002" data-ref="_M/PF_IDLE">PF_IDLE</a>)))</td></tr>
+<tr><th id="86">86</th><td>		<b>return</b> -<a class="macro" href="../../../include/uapi/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="87">87</th><td></td></tr>
+<tr><th id="88">88</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="89">89</th><td>}</td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td><i>/* Userspace stacktrace - based on kernel/trace/trace_sysprof.c */</i></td></tr>
+<tr><th id="92">92</th><td></td></tr>
+<tr><th id="93">93</th><td><b>struct</b> <dfn class="type def" id="stack_frame_user" title='stack_frame_user' data-ref="stack_frame_user" data-ref-filename="stack_frame_user">stack_frame_user</dfn> {</td></tr>
+<tr><th id="94">94</th><td>	<em>const</em> <em>void</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a>	*<dfn class="tu decl field" id="stack_frame_user::next_fp" title='stack_frame_user::next_fp' data-type='const void *' data-ref="stack_frame_user::next_fp" data-ref-filename="stack_frame_user..next_fp">next_fp</dfn>;</td></tr>
+<tr><th id="95">95</th><td>	<em>unsigned</em> <em>long</em>		<dfn class="tu decl field" id="stack_frame_user::ret_addr" title='stack_frame_user::ret_addr' data-type='unsigned long' data-ref="stack_frame_user::ret_addr" data-ref-filename="stack_frame_user..ret_addr">ret_addr</dfn>;</td></tr>
+<tr><th id="96">96</th><td>};</td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="99">99</th><td><dfn class="tu decl def fn" id="copy_stack_frame" title='copy_stack_frame' data-type='int copy_stack_frame(const void * fp, struct stack_frame_user * frame)' data-ref="copy_stack_frame" data-ref-filename="copy_stack_frame">copy_stack_frame</dfn>(<em>const</em> <em>void</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *<dfn class="local col3 decl" id="13fp" title='fp' data-type='const void *' data-ref="13fp" data-ref-filename="13fp">fp</dfn>, <b>struct</b> <a class="type" href="#stack_frame_user" title='stack_frame_user' data-ref="stack_frame_user" data-ref-filename="stack_frame_user">stack_frame_user</a> *<dfn class="local col4 decl" id="14frame" title='frame' data-type='struct stack_frame_user *' data-ref="14frame" data-ref-filename="14frame">frame</dfn>)</td></tr>
+<tr><th id="100">100</th><td>{</td></tr>
+<tr><th id="101">101</th><td>	<em>int</em> <dfn class="local col5 decl" id="15ret" title='ret' data-type='int' data-ref="15ret" data-ref-filename="15ret">ret</dfn>;</td></tr>
+<tr><th id="102">102</th><td></td></tr>
+<tr><th id="103">103</th><td>	<b>if</b> (<a class="macro" href="../include/asm/uaccess.h.html#62" title="({ (void)0; __chk_range_not_ok((unsigned long )(fp), sizeof(*frame), (test_ti_thread_flag(((struct thread_info *)get_current()), 29) ? ((get_current()-&gt;personality &amp; ADDR_LIMIT_3GB) ? 0xc0000000 : 0xFFFFe000) : ((1UL &lt;&lt; 47) - ((1UL) &lt;&lt; 12)))); })" data-ref="_M/__range_not_ok">__range_not_ok</a>(<a class="local col3 ref" href="#13fp" title='fp' data-ref="13fp" data-ref-filename="13fp">fp</a>, <b>sizeof</b>(*<a class="local col4 ref" href="#14frame" title='frame' data-ref="14frame" data-ref-filename="14frame">frame</a>), <a class="macro" href="../include/asm/processor.h.html#881" title="(test_ti_thread_flag(((struct thread_info *)get_current()), 29) ? ((get_current()-&gt;personality &amp; ADDR_LIMIT_3GB) ? 0xc0000000 : 0xFFFFe000) : ((1UL &lt;&lt; 47) - ((1UL) &lt;&lt; 12)))" data-ref="_M/TASK_SIZE">TASK_SIZE</a>))</td></tr>
+<tr><th id="104">104</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="105">105</th><td></td></tr>
+<tr><th id="106">106</th><td>	<a class="local col5 ref" href="#15ret" title='ret' data-ref="15ret" data-ref-filename="15ret">ret</a> = <var>1</var>;</td></tr>
+<tr><th id="107">107</th><td>	<a class="ref fn" href="../../../include/linux/uaccess.h.html#pagefault_disable" title='pagefault_disable' data-ref="pagefault_disable" data-ref-filename="pagefault_disable">pagefault_disable</a>();</td></tr>
+<tr><th id="108">108</th><td>	<b>if</b> (<a class="ref fn" href="../../../include/linux/uaccess.h.html#__copy_from_user_inatomic" title='__copy_from_user_inatomic' data-ref="__copy_from_user_inatomic" data-ref-filename="__copy_from_user_inatomic">__copy_from_user_inatomic</a>(<a class="local col4 ref" href="#14frame" title='frame' data-ref="14frame" data-ref-filename="14frame">frame</a>, <a class="local col3 ref" href="#13fp" title='fp' data-ref="13fp" data-ref-filename="13fp">fp</a>, <b>sizeof</b>(*<a class="local col4 ref" href="#14frame" title='frame' data-ref="14frame" data-ref-filename="14frame">frame</a>)))</td></tr>
+<tr><th id="109">109</th><td>		<a class="local col5 ref" href="#15ret" title='ret' data-ref="15ret" data-ref-filename="15ret">ret</a> = <var>0</var>;</td></tr>
+<tr><th id="110">110</th><td>	<a class="ref fn" href="../../../include/linux/uaccess.h.html#pagefault_enable" title='pagefault_enable' data-ref="pagefault_enable" data-ref-filename="pagefault_enable">pagefault_enable</a>();</td></tr>
+<tr><th id="111">111</th><td></td></tr>
+<tr><th id="112">112</th><td>	<b>return</b> <a class="local col5 ref" href="#15ret" title='ret' data-ref="15ret" data-ref-filename="15ret">ret</a>;</td></tr>
+<tr><th id="113">113</th><td>}</td></tr>
+<tr><th id="114">114</th><td></td></tr>
+<tr><th id="115">115</th><td><em>void</em> <dfn class="decl def fn" id="arch_stack_walk_user" title='arch_stack_walk_user' data-ref="arch_stack_walk_user" data-ref-filename="arch_stack_walk_user">arch_stack_walk_user</dfn>(<a class="typedef" href="../../../include/linux/stacktrace.h.html#stack_trace_consume_fn" title='stack_trace_consume_fn' data-type='bool (*)(void *, unsigned long, bool)' data-ref="stack_trace_consume_fn" data-ref-filename="stack_trace_consume_fn">stack_trace_consume_fn</a> <dfn class="local col6 decl" id="16consume_entry" title='consume_entry' data-type='stack_trace_consume_fn' data-ref="16consume_entry" data-ref-filename="16consume_entry">consume_entry</dfn>, <em>void</em> *<dfn class="local col7 decl" id="17cookie" title='cookie' data-type='void *' data-ref="17cookie" data-ref-filename="17cookie">cookie</dfn>,</td></tr>
+<tr><th id="116">116</th><td>			  <em>const</em> <b>struct</b> <a class="type" href="../include/asm/ptrace.h.html#pt_regs" title='pt_regs' data-ref="pt_regs" data-ref-filename="pt_regs">pt_regs</a> *<dfn class="local col8 decl" id="18regs" title='regs' data-type='const struct pt_regs *' data-ref="18regs" data-ref-filename="18regs">regs</dfn>)</td></tr>
+<tr><th id="117">117</th><td>{</td></tr>
+<tr><th id="118">118</th><td>	<em>const</em> <em>void</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *<dfn class="local col9 decl" id="19fp" title='fp' data-type='const void *' data-ref="19fp" data-ref-filename="19fp">fp</dfn> = (<em>const</em> <em>void</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *)<a class="local col8 ref" href="#18regs" title='regs' data-ref="18regs" data-ref-filename="18regs">regs</a>-&gt;<a class="ref field" href="../include/asm/ptrace.h.html#pt_regs::bp" title='pt_regs::bp' data-ref="pt_regs::bp" data-ref-filename="pt_regs..bp">bp</a>;</td></tr>
+<tr><th id="119">119</th><td></td></tr>
+<tr><th id="120">120</th><td>	<b>if</b> (!<a class="local col6 ref" href="#16consume_entry" title='consume_entry' data-ref="16consume_entry" data-ref-filename="16consume_entry">consume_entry</a>(<a class="local col7 ref" href="#17cookie" title='cookie' data-ref="17cookie" data-ref-filename="17cookie">cookie</a>, <a class="local col8 ref" href="#18regs" title='regs' data-ref="18regs" data-ref-filename="18regs">regs</a>-&gt;<a class="ref field" href="../include/asm/ptrace.h.html#pt_regs::ip" title='pt_regs::ip' data-ref="pt_regs::ip" data-ref-filename="pt_regs..ip">ip</a>, <a class="enum" href="../../../include/linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>))</td></tr>
+<tr><th id="121">121</th><td>		<b>return</b>;</td></tr>
+<tr><th id="122">122</th><td></td></tr>
+<tr><th id="123">123</th><td>	<b>while</b> (<var>1</var>) {</td></tr>
+<tr><th id="124">124</th><td>		<b>struct</b> <a class="type" href="#stack_frame_user" title='stack_frame_user' data-ref="stack_frame_user" data-ref-filename="stack_frame_user">stack_frame_user</a> <dfn class="local col0 decl" id="20frame" title='frame' data-type='struct stack_frame_user' data-ref="20frame" data-ref-filename="20frame">frame</dfn>;</td></tr>
+<tr><th id="125">125</th><td></td></tr>
+<tr><th id="126">126</th><td>		<a class="local col0 ref" href="#20frame" title='frame' data-ref="20frame" data-ref-filename="20frame">frame</a>.<a class="tu ref field" href="#stack_frame_user::next_fp" title='stack_frame_user::next_fp' data-use='w' data-ref="stack_frame_user::next_fp" data-ref-filename="stack_frame_user..next_fp">next_fp</a> = <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="127">127</th><td>		<a class="local col0 ref" href="#20frame" title='frame' data-ref="20frame" data-ref-filename="20frame">frame</a>.<a class="tu ref field" href="#stack_frame_user::ret_addr" title='stack_frame_user::ret_addr' data-use='w' data-ref="stack_frame_user::ret_addr" data-ref-filename="stack_frame_user..ret_addr">ret_addr</a> = <var>0</var>;</td></tr>
+<tr><th id="128">128</th><td>		<b>if</b> (!<a class="tu ref fn" href="#copy_stack_frame" title='copy_stack_frame' data-use='c' data-ref="copy_stack_frame" data-ref-filename="copy_stack_frame">copy_stack_frame</a>(<a class="local col9 ref" href="#19fp" title='fp' data-ref="19fp" data-ref-filename="19fp">fp</a>, &amp;<a class="local col0 ref" href="#20frame" title='frame' data-ref="20frame" data-ref-filename="20frame">frame</a>))</td></tr>
+<tr><th id="129">129</th><td>			<b>break</b>;</td></tr>
+<tr><th id="130">130</th><td>		<b>if</b> ((<em>unsigned</em> <em>long</em>)<a class="local col9 ref" href="#19fp" title='fp' data-ref="19fp" data-ref-filename="19fp">fp</a> &lt; <a class="local col8 ref" href="#18regs" title='regs' data-ref="18regs" data-ref-filename="18regs">regs</a>-&gt;<a class="ref field" href="../include/asm/ptrace.h.html#pt_regs::sp" title='pt_regs::sp' data-ref="pt_regs::sp" data-ref-filename="pt_regs..sp">sp</a>)</td></tr>
+<tr><th id="131">131</th><td>			<b>break</b>;</td></tr>
+<tr><th id="132">132</th><td>		<b>if</b> (!<a class="local col0 ref" href="#20frame" title='frame' data-ref="20frame" data-ref-filename="20frame">frame</a>.<a class="tu ref field" href="#stack_frame_user::ret_addr" title='stack_frame_user::ret_addr' data-use='r' data-ref="stack_frame_user::ret_addr" data-ref-filename="stack_frame_user..ret_addr">ret_addr</a>)</td></tr>
+<tr><th id="133">133</th><td>			<b>break</b>;</td></tr>
+<tr><th id="134">134</th><td>		<b>if</b> (!<a class="local col6 ref" href="#16consume_entry" title='consume_entry' data-ref="16consume_entry" data-ref-filename="16consume_entry">consume_entry</a>(<a class="local col7 ref" href="#17cookie" title='cookie' data-ref="17cookie" data-ref-filename="17cookie">cookie</a>, <a class="local col0 ref" href="#20frame" title='frame' data-ref="20frame" data-ref-filename="20frame">frame</a>.<a class="tu ref field" href="#stack_frame_user::ret_addr" title='stack_frame_user::ret_addr' data-use='r' data-ref="stack_frame_user::ret_addr" data-ref-filename="stack_frame_user..ret_addr">ret_addr</a>, <a class="enum" href="../../../include/linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>))</td></tr>
+<tr><th id="135">135</th><td>			<b>break</b>;</td></tr>
+<tr><th id="136">136</th><td>		<a class="local col9 ref" href="#19fp" title='fp' data-ref="19fp" data-ref-filename="19fp">fp</a> = <a class="local col0 ref" href="#20frame" title='frame' data-ref="20frame" data-ref-filename="20frame">frame</a>.<a class="tu ref field" href="#stack_frame_user::next_fp" title='stack_frame_user::next_fp' data-use='r' data-ref="stack_frame_user::next_fp" data-ref-filename="stack_frame_user..next_fp">next_fp</a>;</td></tr>
+<tr><th id="137">137</th><td>	}</td></tr>
+<tr><th id="138">138</th><td>}</td></tr>
+<tr><th id="139">139</th><td></td></tr>
+<tr><th id="140">140</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

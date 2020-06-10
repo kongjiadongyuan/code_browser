@@ -1,0 +1,408 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>sigcontext.h source code [linux-5.3.1/arch/x86/include/uapi/asm/sigcontext.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="_fpreg,_fpstate_32,_fpstate_64,_fpx_sw_bytes,_fpxreg,_header,_xmmreg,_xstate,_ymmh_state,sigcontext_32,sigcontext_64 "/>
+<link rel="stylesheet" href="../../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/arch/x86/include/uapi/asm/sigcontext.h'; var root_path = '../../../../../..'; var data_path = '../../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../../..'>linux-5.3.1</a>/<a href='../../../..'>arch</a>/<a href='../../..'>x86</a>/<a href='../..'>include</a>/<a href='..'>uapi</a>/<a href='./'>asm</a>/<a href='sigcontext.h.html'>sigcontext.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0 WITH Linux-syscall-note */</i></td></tr>
+<tr><th id="2">2</th><td><u>#<span data-ppcond="2">ifndef</span> <span class="macro" data-ref="_M/_UAPI_ASM_X86_SIGCONTEXT_H">_UAPI_ASM_X86_SIGCONTEXT_H</span></u></td></tr>
+<tr><th id="3">3</th><td><u>#define <dfn class="macro" id="_M/_UAPI_ASM_X86_SIGCONTEXT_H" data-ref="_M/_UAPI_ASM_X86_SIGCONTEXT_H">_UAPI_ASM_X86_SIGCONTEXT_H</dfn></u></td></tr>
+<tr><th id="4">4</th><td></td></tr>
+<tr><th id="5">5</th><td><i>/*</i></td></tr>
+<tr><th id="6">6</th><td><i> * Linux signal context definitions. The sigcontext includes a complex</i></td></tr>
+<tr><th id="7">7</th><td><i> * hierarchy of CPU and FPU state, available to user-space (on the stack) when</i></td></tr>
+<tr><th id="8">8</th><td><i> * a signal handler is executed.</i></td></tr>
+<tr><th id="9">9</th><td><i> *</i></td></tr>
+<tr><th id="10">10</th><td><i> * As over the years this ABI grew from its very simple roots towards</i></td></tr>
+<tr><th id="11">11</th><td><i> * supporting more and more CPU state organically, some of the details (which</i></td></tr>
+<tr><th id="12">12</th><td><i> * were rather clever hacks back in the days) became a bit quirky by today.</i></td></tr>
+<tr><th id="13">13</th><td><i> *</i></td></tr>
+<tr><th id="14">14</th><td><i> * The current ABI includes flexible provisions for future extensions, so we</i></td></tr>
+<tr><th id="15">15</th><td><i> * won't have to grow new quirks for quite some time. Promise!</i></td></tr>
+<tr><th id="16">16</th><td><i> */</i></td></tr>
+<tr><th id="17">17</th><td></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../../../../../include/linux/compiler.h.html">&lt;linux/compiler.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../../../../include/linux/types.h.html">&lt;linux/types.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td></td></tr>
+<tr><th id="21">21</th><td><u>#define <dfn class="macro" id="_M/FP_XSTATE_MAGIC1" data-ref="_M/FP_XSTATE_MAGIC1">FP_XSTATE_MAGIC1</dfn>		0x46505853U</u></td></tr>
+<tr><th id="22">22</th><td><u>#define <dfn class="macro" id="_M/FP_XSTATE_MAGIC2" data-ref="_M/FP_XSTATE_MAGIC2">FP_XSTATE_MAGIC2</dfn>		0x46505845U</u></td></tr>
+<tr><th id="23">23</th><td><u>#define <dfn class="macro" id="_M/FP_XSTATE_MAGIC2_SIZE" data-ref="_M/FP_XSTATE_MAGIC2_SIZE">FP_XSTATE_MAGIC2_SIZE</dfn>		sizeof(FP_XSTATE_MAGIC2)</u></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><i>/*</i></td></tr>
+<tr><th id="26">26</th><td><i> * Bytes 464..511 in the current 512-byte layout of the FXSAVE/FXRSTOR frame</i></td></tr>
+<tr><th id="27">27</th><td><i> * are reserved for SW usage. On CPUs supporting XSAVE/XRSTOR, these bytes are</i></td></tr>
+<tr><th id="28">28</th><td><i> * used to extend the fpstate pointer in the sigcontext, which now includes the</i></td></tr>
+<tr><th id="29">29</th><td><i> * extended state information along with fpstate information.</i></td></tr>
+<tr><th id="30">30</th><td><i> *</i></td></tr>
+<tr><th id="31">31</th><td><i> * If sw_reserved.magic1 == FP_XSTATE_MAGIC1 then there's a</i></td></tr>
+<tr><th id="32">32</th><td><i> * sw_reserved.extended_size bytes large extended context area present. (The</i></td></tr>
+<tr><th id="33">33</th><td><i> * last 32-bit word of this extended area (at the</i></td></tr>
+<tr><th id="34">34</th><td><i> * fpstate+extended_size-FP_XSTATE_MAGIC2_SIZE address) is set to</i></td></tr>
+<tr><th id="35">35</th><td><i> * FP_XSTATE_MAGIC2 so that you can sanity check your size calculations.)</i></td></tr>
+<tr><th id="36">36</th><td><i> *</i></td></tr>
+<tr><th id="37">37</th><td><i> * This extended area typically grows with newer CPUs that have larger and</i></td></tr>
+<tr><th id="38">38</th><td><i> * larger XSAVE areas.</i></td></tr>
+<tr><th id="39">39</th><td><i> */</i></td></tr>
+<tr><th id="40">40</th><td><b>struct</b> <dfn class="type def" id="_fpx_sw_bytes" title='_fpx_sw_bytes' data-ref="_fpx_sw_bytes" data-ref-filename="_fpx_sw_bytes">_fpx_sw_bytes</dfn> {</td></tr>
+<tr><th id="41">41</th><td>	<i>/*</i></td></tr>
+<tr><th id="42">42</th><td><i>	 * If set to FP_XSTATE_MAGIC1 then this is an xstate context.</i></td></tr>
+<tr><th id="43">43</th><td><i>	 * 0 if a legacy frame.</i></td></tr>
+<tr><th id="44">44</th><td><i>	 */</i></td></tr>
+<tr><th id="45">45</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="_fpx_sw_bytes::magic1" title='_fpx_sw_bytes::magic1' data-ref="_fpx_sw_bytes::magic1" data-ref-filename="_fpx_sw_bytes..magic1">magic1</dfn>;</td></tr>
+<tr><th id="46">46</th><td></td></tr>
+<tr><th id="47">47</th><td>	<i>/*</i></td></tr>
+<tr><th id="48">48</th><td><i>	 * Total size of the fpstate area:</i></td></tr>
+<tr><th id="49">49</th><td><i>	 *</i></td></tr>
+<tr><th id="50">50</th><td><i>	 *  - if magic1 == 0 then it's sizeof(struct _fpstate)</i></td></tr>
+<tr><th id="51">51</th><td><i>	 *  - if magic1 == FP_XSTATE_MAGIC1 then it's sizeof(struct _xstate)</i></td></tr>
+<tr><th id="52">52</th><td><i>	 *    plus extensions (if any)</i></td></tr>
+<tr><th id="53">53</th><td><i>	 */</i></td></tr>
+<tr><th id="54">54</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="_fpx_sw_bytes::extended_size" title='_fpx_sw_bytes::extended_size' data-ref="_fpx_sw_bytes::extended_size" data-ref-filename="_fpx_sw_bytes..extended_size">extended_size</dfn>;</td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td>	<i>/*</i></td></tr>
+<tr><th id="57">57</th><td><i>	 * Feature bit mask (including FP/SSE/extended state) that is present</i></td></tr>
+<tr><th id="58">58</th><td><i>	 * in the memory layout:</i></td></tr>
+<tr><th id="59">59</th><td><i>	 */</i></td></tr>
+<tr><th id="60">60</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="_fpx_sw_bytes::xfeatures" title='_fpx_sw_bytes::xfeatures' data-ref="_fpx_sw_bytes::xfeatures" data-ref-filename="_fpx_sw_bytes..xfeatures">xfeatures</dfn>;</td></tr>
+<tr><th id="61">61</th><td></td></tr>
+<tr><th id="62">62</th><td>	<i>/*</i></td></tr>
+<tr><th id="63">63</th><td><i>	 * Actual XSAVE state size, based on the xfeatures saved in the layout.</i></td></tr>
+<tr><th id="64">64</th><td><i>	 * 'extended_size' is greater than 'xstate_size':</i></td></tr>
+<tr><th id="65">65</th><td><i>	 */</i></td></tr>
+<tr><th id="66">66</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="_fpx_sw_bytes::xstate_size" title='_fpx_sw_bytes::xstate_size' data-ref="_fpx_sw_bytes::xstate_size" data-ref-filename="_fpx_sw_bytes..xstate_size">xstate_size</dfn>;</td></tr>
+<tr><th id="67">67</th><td></td></tr>
+<tr><th id="68">68</th><td>	<i>/* For future use: */</i></td></tr>
+<tr><th id="69">69</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="_fpx_sw_bytes::padding" title='_fpx_sw_bytes::padding' data-ref="_fpx_sw_bytes::padding" data-ref-filename="_fpx_sw_bytes..padding">padding</dfn>[<var>7</var>];</td></tr>
+<tr><th id="70">70</th><td>};</td></tr>
+<tr><th id="71">71</th><td></td></tr>
+<tr><th id="72">72</th><td><i>/*</i></td></tr>
+<tr><th id="73">73</th><td><i> * As documented in the iBCS2 standard:</i></td></tr>
+<tr><th id="74">74</th><td><i> *</i></td></tr>
+<tr><th id="75">75</th><td><i> * The first part of "struct _fpstate" is just the normal i387 hardware setup,</i></td></tr>
+<tr><th id="76">76</th><td><i> * the extra "status" word is used to save the coprocessor status word before</i></td></tr>
+<tr><th id="77">77</th><td><i> * entering the handler.</i></td></tr>
+<tr><th id="78">78</th><td><i> *</i></td></tr>
+<tr><th id="79">79</th><td><i> * The FPU state data structure has had to grow to accommodate the extended FPU</i></td></tr>
+<tr><th id="80">80</th><td><i> * state required by the Streaming SIMD Extensions.  There is no documented</i></td></tr>
+<tr><th id="81">81</th><td><i> * standard to accomplish this at the moment.</i></td></tr>
+<tr><th id="82">82</th><td><i> */</i></td></tr>
+<tr><th id="83">83</th><td></td></tr>
+<tr><th id="84">84</th><td><i>/* 10-byte legacy floating point register: */</i></td></tr>
+<tr><th id="85">85</th><td><b>struct</b> <dfn class="type def" id="_fpreg" title='_fpreg' data-ref="_fpreg" data-ref-filename="_fpreg">_fpreg</dfn> {</td></tr>
+<tr><th id="86">86</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a>				<dfn class="decl field" id="_fpreg::significand" title='_fpreg::significand' data-ref="_fpreg::significand" data-ref-filename="_fpreg..significand">significand</dfn>[<var>4</var>];</td></tr>
+<tr><th id="87">87</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a>				<dfn class="decl field" id="_fpreg::exponent" title='_fpreg::exponent' data-ref="_fpreg::exponent" data-ref-filename="_fpreg..exponent">exponent</dfn>;</td></tr>
+<tr><th id="88">88</th><td>};</td></tr>
+<tr><th id="89">89</th><td></td></tr>
+<tr><th id="90">90</th><td><i>/* 16-byte floating point register: */</i></td></tr>
+<tr><th id="91">91</th><td><b>struct</b> <dfn class="type def" id="_fpxreg" title='_fpxreg' data-ref="_fpxreg" data-ref-filename="_fpxreg">_fpxreg</dfn> {</td></tr>
+<tr><th id="92">92</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a>				<dfn class="decl field" id="_fpxreg::significand" title='_fpxreg::significand' data-ref="_fpxreg::significand" data-ref-filename="_fpxreg..significand">significand</dfn>[<var>4</var>];</td></tr>
+<tr><th id="93">93</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a>				<dfn class="decl field" id="_fpxreg::exponent" title='_fpxreg::exponent' data-ref="_fpxreg::exponent" data-ref-filename="_fpxreg..exponent">exponent</dfn>;</td></tr>
+<tr><th id="94">94</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a>				<dfn class="decl field" id="_fpxreg::padding" title='_fpxreg::padding' data-ref="_fpxreg::padding" data-ref-filename="_fpxreg..padding">padding</dfn>[<var>3</var>];</td></tr>
+<tr><th id="95">95</th><td>};</td></tr>
+<tr><th id="96">96</th><td></td></tr>
+<tr><th id="97">97</th><td><i>/* 16-byte XMM register: */</i></td></tr>
+<tr><th id="98">98</th><td><b>struct</b> <dfn class="type def" id="_xmmreg" title='_xmmreg' data-ref="_xmmreg" data-ref-filename="_xmmreg">_xmmreg</dfn> {</td></tr>
+<tr><th id="99">99</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="_xmmreg::element" title='_xmmreg::element' data-ref="_xmmreg::element" data-ref-filename="_xmmreg..element">element</dfn>[<var>4</var>];</td></tr>
+<tr><th id="100">100</th><td>};</td></tr>
+<tr><th id="101">101</th><td></td></tr>
+<tr><th id="102">102</th><td><u>#define <dfn class="macro" id="_M/X86_FXSR_MAGIC" data-ref="_M/X86_FXSR_MAGIC">X86_FXSR_MAGIC</dfn>			0x0000</u></td></tr>
+<tr><th id="103">103</th><td></td></tr>
+<tr><th id="104">104</th><td><i>/*</i></td></tr>
+<tr><th id="105">105</th><td><i> * The 32-bit FPU frame:</i></td></tr>
+<tr><th id="106">106</th><td><i> */</i></td></tr>
+<tr><th id="107">107</th><td><b>struct</b> <dfn class="type def" id="_fpstate_32" title='_fpstate_32' data-ref="_fpstate_32" data-ref-filename="_fpstate_32">_fpstate_32</dfn> {</td></tr>
+<tr><th id="108">108</th><td>	<i>/* Legacy FPU environment: */</i></td></tr>
+<tr><th id="109">109</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="_fpstate_32::cw" title='_fpstate_32::cw' data-ref="_fpstate_32::cw" data-ref-filename="_fpstate_32..cw">cw</dfn>;</td></tr>
+<tr><th id="110">110</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="_fpstate_32::sw" title='_fpstate_32::sw' data-ref="_fpstate_32::sw" data-ref-filename="_fpstate_32..sw">sw</dfn>;</td></tr>
+<tr><th id="111">111</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="_fpstate_32::tag" title='_fpstate_32::tag' data-ref="_fpstate_32::tag" data-ref-filename="_fpstate_32..tag">tag</dfn>;</td></tr>
+<tr><th id="112">112</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="_fpstate_32::ipoff" title='_fpstate_32::ipoff' data-ref="_fpstate_32::ipoff" data-ref-filename="_fpstate_32..ipoff">ipoff</dfn>;</td></tr>
+<tr><th id="113">113</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="_fpstate_32::cssel" title='_fpstate_32::cssel' data-ref="_fpstate_32::cssel" data-ref-filename="_fpstate_32..cssel">cssel</dfn>;</td></tr>
+<tr><th id="114">114</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="_fpstate_32::dataoff" title='_fpstate_32::dataoff' data-ref="_fpstate_32::dataoff" data-ref-filename="_fpstate_32..dataoff">dataoff</dfn>;</td></tr>
+<tr><th id="115">115</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="_fpstate_32::datasel" title='_fpstate_32::datasel' data-ref="_fpstate_32::datasel" data-ref-filename="_fpstate_32..datasel">datasel</dfn>;</td></tr>
+<tr><th id="116">116</th><td>	<b>struct</b> <a class="type" href="#_fpreg" title='_fpreg' data-ref="_fpreg" data-ref-filename="_fpreg">_fpreg</a>			<dfn class="decl field" id="_fpstate_32::_st" title='_fpstate_32::_st' data-ref="_fpstate_32::_st" data-ref-filename="_fpstate_32.._st">_st</dfn>[<var>8</var>];</td></tr>
+<tr><th id="117">117</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a>				<dfn class="decl field" id="_fpstate_32::status" title='_fpstate_32::status' data-ref="_fpstate_32::status" data-ref-filename="_fpstate_32..status">status</dfn>;</td></tr>
+<tr><th id="118">118</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a>				<dfn class="decl field" id="_fpstate_32::magic" title='_fpstate_32::magic' data-ref="_fpstate_32::magic" data-ref-filename="_fpstate_32..magic">magic</dfn>;		<i>/* 0xffff: regular FPU data only */</i></td></tr>
+<tr><th id="119">119</th><td>							<i>/* 0x0000: FXSR FPU data */</i></td></tr>
+<tr><th id="120">120</th><td></td></tr>
+<tr><th id="121">121</th><td>	<i>/* FXSR FPU environment */</i></td></tr>
+<tr><th id="122">122</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="_fpstate_32::_fxsr_env" title='_fpstate_32::_fxsr_env' data-ref="_fpstate_32::_fxsr_env" data-ref-filename="_fpstate_32.._fxsr_env">_fxsr_env</dfn>[<var>6</var>];	<i>/* FXSR FPU env is ignored */</i></td></tr>
+<tr><th id="123">123</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="_fpstate_32::mxcsr" title='_fpstate_32::mxcsr' data-ref="_fpstate_32::mxcsr" data-ref-filename="_fpstate_32..mxcsr">mxcsr</dfn>;</td></tr>
+<tr><th id="124">124</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="_fpstate_32::reserved" title='_fpstate_32::reserved' data-ref="_fpstate_32::reserved" data-ref-filename="_fpstate_32..reserved">reserved</dfn>;</td></tr>
+<tr><th id="125">125</th><td>	<b>struct</b> <a class="type" href="#_fpxreg" title='_fpxreg' data-ref="_fpxreg" data-ref-filename="_fpxreg">_fpxreg</a>			<dfn class="decl field" id="_fpstate_32::_fxsr_st" title='_fpstate_32::_fxsr_st' data-ref="_fpstate_32::_fxsr_st" data-ref-filename="_fpstate_32.._fxsr_st">_fxsr_st</dfn>[<var>8</var>];	<i>/* FXSR FPU reg data is ignored */</i></td></tr>
+<tr><th id="126">126</th><td>	<b>struct</b> <a class="type" href="#_xmmreg" title='_xmmreg' data-ref="_xmmreg" data-ref-filename="_xmmreg">_xmmreg</a>			<dfn class="decl field" id="_fpstate_32::_xmm" title='_fpstate_32::_xmm' data-ref="_fpstate_32::_xmm" data-ref-filename="_fpstate_32.._xmm">_xmm</dfn>[<var>8</var>];	<i>/* First 8 XMM registers */</i></td></tr>
+<tr><th id="127">127</th><td>	<b>union</b> {</td></tr>
+<tr><th id="128">128</th><td>		<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>			<dfn class="decl field" id="_fpstate_32::(anonymous)::padding1" title='_fpstate_32::(anonymous union)::padding1' data-ref="_fpstate_32::(anonymous)::padding1" data-ref-filename="_fpstate_32..(anonymous)..padding1">padding1</dfn>[<var>44</var>];	<i>/* Second 8 XMM registers plus padding */</i></td></tr>
+<tr><th id="129">129</th><td>		<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>			<dfn class="decl field" id="_fpstate_32::(anonymous)::padding" title='_fpstate_32::(anonymous union)::padding' data-ref="_fpstate_32::(anonymous)::padding" data-ref-filename="_fpstate_32..(anonymous)..padding">padding</dfn>[<var>44</var>];	<i>/* Alias name for old user-space */</i></td></tr>
+<tr><th id="130">130</th><td>	};</td></tr>
+<tr><th id="131">131</th><td></td></tr>
+<tr><th id="132">132</th><td>	<b>union</b> {</td></tr>
+<tr><th id="133">133</th><td>		<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>			<dfn class="decl field" id="_fpstate_32::(anonymous)::padding2" title='_fpstate_32::(anonymous union)::padding2' data-ref="_fpstate_32::(anonymous)::padding2" data-ref-filename="_fpstate_32..(anonymous)..padding2">padding2</dfn>[<var>12</var>];</td></tr>
+<tr><th id="134">134</th><td>		<b>struct</b> <a class="type" href="#_fpx_sw_bytes" title='_fpx_sw_bytes' data-ref="_fpx_sw_bytes" data-ref-filename="_fpx_sw_bytes">_fpx_sw_bytes</a>	<dfn class="decl field" id="_fpstate_32::(anonymous)::sw_reserved" title='_fpstate_32::(anonymous union)::sw_reserved' data-ref="_fpstate_32::(anonymous)::sw_reserved" data-ref-filename="_fpstate_32..(anonymous)..sw_reserved">sw_reserved</dfn>;	<i>/* Potential extended state is encoded here */</i></td></tr>
+<tr><th id="135">135</th><td>	};</td></tr>
+<tr><th id="136">136</th><td>};</td></tr>
+<tr><th id="137">137</th><td></td></tr>
+<tr><th id="138">138</th><td><i>/*</i></td></tr>
+<tr><th id="139">139</th><td><i> * The 64-bit FPU frame. (FXSAVE format and later)</i></td></tr>
+<tr><th id="140">140</th><td><i> *</i></td></tr>
+<tr><th id="141">141</th><td><i> * Note1: If sw_reserved.magic1 == FP_XSTATE_MAGIC1 then the structure is</i></td></tr>
+<tr><th id="142">142</th><td><i> *        larger: 'struct _xstate'. Note that 'struct _xstate' embedds</i></td></tr>
+<tr><th id="143">143</th><td><i> *        'struct _fpstate' so that you can always assume the _fpstate portion</i></td></tr>
+<tr><th id="144">144</th><td><i> *        exists so that you can check the magic value.</i></td></tr>
+<tr><th id="145">145</th><td><i> *</i></td></tr>
+<tr><th id="146">146</th><td><i> * Note2: Reserved fields may someday contain valuable data. Always</i></td></tr>
+<tr><th id="147">147</th><td><i> *	  save/restore them when you change signal frames.</i></td></tr>
+<tr><th id="148">148</th><td><i> */</i></td></tr>
+<tr><th id="149">149</th><td><b>struct</b> <dfn class="type def" id="_fpstate_64" title='_fpstate_64' data-ref="_fpstate_64" data-ref-filename="_fpstate_64">_fpstate_64</dfn> {</td></tr>
+<tr><th id="150">150</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a>				<dfn class="decl field" id="_fpstate_64::cwd" title='_fpstate_64::cwd' data-ref="_fpstate_64::cwd" data-ref-filename="_fpstate_64..cwd">cwd</dfn>;</td></tr>
+<tr><th id="151">151</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a>				<dfn class="decl field" id="_fpstate_64::swd" title='_fpstate_64::swd' data-ref="_fpstate_64::swd" data-ref-filename="_fpstate_64..swd">swd</dfn>;</td></tr>
+<tr><th id="152">152</th><td>	<i>/* Note this is not the same as the 32-bit/x87/FSAVE twd: */</i></td></tr>
+<tr><th id="153">153</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a>				<dfn class="decl field" id="_fpstate_64::twd" title='_fpstate_64::twd' data-ref="_fpstate_64::twd" data-ref-filename="_fpstate_64..twd">twd</dfn>;</td></tr>
+<tr><th id="154">154</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a>				<dfn class="decl field" id="_fpstate_64::fop" title='_fpstate_64::fop' data-ref="_fpstate_64::fop" data-ref-filename="_fpstate_64..fop">fop</dfn>;</td></tr>
+<tr><th id="155">155</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="_fpstate_64::rip" title='_fpstate_64::rip' data-ref="_fpstate_64::rip" data-ref-filename="_fpstate_64..rip">rip</dfn>;</td></tr>
+<tr><th id="156">156</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="_fpstate_64::rdp" title='_fpstate_64::rdp' data-ref="_fpstate_64::rdp" data-ref-filename="_fpstate_64..rdp">rdp</dfn>;</td></tr>
+<tr><th id="157">157</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="_fpstate_64::mxcsr" title='_fpstate_64::mxcsr' data-ref="_fpstate_64::mxcsr" data-ref-filename="_fpstate_64..mxcsr">mxcsr</dfn>;</td></tr>
+<tr><th id="158">158</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="_fpstate_64::mxcsr_mask" title='_fpstate_64::mxcsr_mask' data-ref="_fpstate_64::mxcsr_mask" data-ref-filename="_fpstate_64..mxcsr_mask">mxcsr_mask</dfn>;</td></tr>
+<tr><th id="159">159</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="_fpstate_64::st_space" title='_fpstate_64::st_space' data-ref="_fpstate_64::st_space" data-ref-filename="_fpstate_64..st_space">st_space</dfn>[<var>32</var>];	<i>/*  8x  FP registers, 16 bytes each */</i></td></tr>
+<tr><th id="160">160</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="_fpstate_64::xmm_space" title='_fpstate_64::xmm_space' data-ref="_fpstate_64::xmm_space" data-ref-filename="_fpstate_64..xmm_space">xmm_space</dfn>[<var>64</var>];	<i>/* 16x XMM registers, 16 bytes each */</i></td></tr>
+<tr><th id="161">161</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="_fpstate_64::reserved2" title='_fpstate_64::reserved2' data-ref="_fpstate_64::reserved2" data-ref-filename="_fpstate_64..reserved2">reserved2</dfn>[<var>12</var>];</td></tr>
+<tr><th id="162">162</th><td>	<b>union</b> {</td></tr>
+<tr><th id="163">163</th><td>		<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>			<dfn class="decl field" id="_fpstate_64::(anonymous)::reserved3" title='_fpstate_64::(anonymous union)::reserved3' data-ref="_fpstate_64::(anonymous)::reserved3" data-ref-filename="_fpstate_64..(anonymous)..reserved3">reserved3</dfn>[<var>12</var>];</td></tr>
+<tr><th id="164">164</th><td>		<b>struct</b> <a class="type" href="#_fpx_sw_bytes" title='_fpx_sw_bytes' data-ref="_fpx_sw_bytes" data-ref-filename="_fpx_sw_bytes">_fpx_sw_bytes</a>	<dfn class="decl field" id="_fpstate_64::(anonymous)::sw_reserved" title='_fpstate_64::(anonymous union)::sw_reserved' data-ref="_fpstate_64::(anonymous)::sw_reserved" data-ref-filename="_fpstate_64..(anonymous)..sw_reserved">sw_reserved</dfn>;	<i>/* Potential extended state is encoded here */</i></td></tr>
+<tr><th id="165">165</th><td>	};</td></tr>
+<tr><th id="166">166</th><td>};</td></tr>
+<tr><th id="167">167</th><td></td></tr>
+<tr><th id="168">168</th><td><u>#<span data-ppcond="168">ifdef</span> <span class="macro" data-ref="_M/__i386__">__i386__</span></u></td></tr>
+<tr><th id="169">169</th><td><u># define _fpstate _fpstate_32</u></td></tr>
+<tr><th id="170">170</th><td><u>#<span data-ppcond="168">else</span></u></td></tr>
+<tr><th id="171">171</th><td><u># define <dfn class="macro" id="_M/_fpstate" data-ref="_M/_fpstate">_fpstate</dfn> <a class="type" href="#_fpstate_64" title='_fpstate_64' data-ref="_fpstate_64" data-ref-filename="_fpstate_64">_fpstate_64</a></u></td></tr>
+<tr><th id="172">172</th><td><u>#<span data-ppcond="168">endif</span></u></td></tr>
+<tr><th id="173">173</th><td></td></tr>
+<tr><th id="174">174</th><td><b>struct</b> <dfn class="type def" id="_header" title='_header' data-ref="_header" data-ref-filename="_header">_header</dfn> {</td></tr>
+<tr><th id="175">175</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="_header::xfeatures" title='_header::xfeatures' data-ref="_header::xfeatures" data-ref-filename="_header..xfeatures">xfeatures</dfn>;</td></tr>
+<tr><th id="176">176</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="_header::reserved1" title='_header::reserved1' data-ref="_header::reserved1" data-ref-filename="_header..reserved1">reserved1</dfn>[<var>2</var>];</td></tr>
+<tr><th id="177">177</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="_header::reserved2" title='_header::reserved2' data-ref="_header::reserved2" data-ref-filename="_header..reserved2">reserved2</dfn>[<var>5</var>];</td></tr>
+<tr><th id="178">178</th><td>};</td></tr>
+<tr><th id="179">179</th><td></td></tr>
+<tr><th id="180">180</th><td><b>struct</b> <dfn class="type def" id="_ymmh_state" title='_ymmh_state' data-ref="_ymmh_state" data-ref-filename="_ymmh_state">_ymmh_state</dfn> {</td></tr>
+<tr><th id="181">181</th><td>	<i>/* 16x YMM registers, 16 bytes each: */</i></td></tr>
+<tr><th id="182">182</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="_ymmh_state::ymmh_space" title='_ymmh_state::ymmh_space' data-ref="_ymmh_state::ymmh_space" data-ref-filename="_ymmh_state..ymmh_space">ymmh_space</dfn>[<var>64</var>];</td></tr>
+<tr><th id="183">183</th><td>};</td></tr>
+<tr><th id="184">184</th><td></td></tr>
+<tr><th id="185">185</th><td><i>/*</i></td></tr>
+<tr><th id="186">186</th><td><i> * Extended state pointed to by sigcontext::fpstate.</i></td></tr>
+<tr><th id="187">187</th><td><i> *</i></td></tr>
+<tr><th id="188">188</th><td><i> * In addition to the fpstate, information encoded in _xstate::xstate_hdr</i></td></tr>
+<tr><th id="189">189</th><td><i> * indicates the presence of other extended state information supported</i></td></tr>
+<tr><th id="190">190</th><td><i> * by the CPU and kernel:</i></td></tr>
+<tr><th id="191">191</th><td><i> */</i></td></tr>
+<tr><th id="192">192</th><td><b>struct</b> <dfn class="type def" id="_xstate" title='_xstate' data-ref="_xstate" data-ref-filename="_xstate">_xstate</dfn> {</td></tr>
+<tr><th id="193">193</th><td>	<b>struct</b> <a class="macro" href="#171" title="_fpstate_64" data-ref="_M/_fpstate">_fpstate</a>			<dfn class="decl field" id="_xstate::fpstate" title='_xstate::fpstate' data-ref="_xstate::fpstate" data-ref-filename="_xstate..fpstate">fpstate</dfn>;</td></tr>
+<tr><th id="194">194</th><td>	<b>struct</b> <a class="type" href="#_header" title='_header' data-ref="_header" data-ref-filename="_header">_header</a>			<dfn class="decl field" id="_xstate::xstate_hdr" title='_xstate::xstate_hdr' data-ref="_xstate::xstate_hdr" data-ref-filename="_xstate..xstate_hdr">xstate_hdr</dfn>;</td></tr>
+<tr><th id="195">195</th><td>	<b>struct</b> <a class="type" href="#_ymmh_state" title='_ymmh_state' data-ref="_ymmh_state" data-ref-filename="_ymmh_state">_ymmh_state</a>		<dfn class="decl field" id="_xstate::ymmh" title='_xstate::ymmh' data-ref="_xstate::ymmh" data-ref-filename="_xstate..ymmh">ymmh</dfn>;</td></tr>
+<tr><th id="196">196</th><td>	<i>/* New processor state extensions go here: */</i></td></tr>
+<tr><th id="197">197</th><td>};</td></tr>
+<tr><th id="198">198</th><td></td></tr>
+<tr><th id="199">199</th><td><i>/*</i></td></tr>
+<tr><th id="200">200</th><td><i> * The 32-bit signal frame:</i></td></tr>
+<tr><th id="201">201</th><td><i> */</i></td></tr>
+<tr><th id="202">202</th><td><b>struct</b> <dfn class="type def" id="sigcontext_32" title='sigcontext_32' data-ref="sigcontext_32" data-ref-filename="sigcontext_32">sigcontext_32</dfn> {</td></tr>
+<tr><th id="203">203</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a>				<dfn class="decl field" id="sigcontext_32::gs" title='sigcontext_32::gs' data-ref="sigcontext_32::gs" data-ref-filename="sigcontext_32..gs">gs</dfn>, <dfn class="decl field" id="sigcontext_32::__gsh" title='sigcontext_32::__gsh' data-ref="sigcontext_32::__gsh" data-ref-filename="sigcontext_32..__gsh">__gsh</dfn>;</td></tr>
+<tr><th id="204">204</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a>				<dfn class="decl field" id="sigcontext_32::fs" title='sigcontext_32::fs' data-ref="sigcontext_32::fs" data-ref-filename="sigcontext_32..fs">fs</dfn>, <dfn class="decl field" id="sigcontext_32::__fsh" title='sigcontext_32::__fsh' data-ref="sigcontext_32::__fsh" data-ref-filename="sigcontext_32..__fsh">__fsh</dfn>;</td></tr>
+<tr><th id="205">205</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a>				<dfn class="decl field" id="sigcontext_32::es" title='sigcontext_32::es' data-ref="sigcontext_32::es" data-ref-filename="sigcontext_32..es">es</dfn>, <dfn class="decl field" id="sigcontext_32::__esh" title='sigcontext_32::__esh' data-ref="sigcontext_32::__esh" data-ref-filename="sigcontext_32..__esh">__esh</dfn>;</td></tr>
+<tr><th id="206">206</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a>				<dfn class="decl field" id="sigcontext_32::ds" title='sigcontext_32::ds' data-ref="sigcontext_32::ds" data-ref-filename="sigcontext_32..ds">ds</dfn>, <dfn class="decl field" id="sigcontext_32::__dsh" title='sigcontext_32::__dsh' data-ref="sigcontext_32::__dsh" data-ref-filename="sigcontext_32..__dsh">__dsh</dfn>;</td></tr>
+<tr><th id="207">207</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="sigcontext_32::di" title='sigcontext_32::di' data-ref="sigcontext_32::di" data-ref-filename="sigcontext_32..di">di</dfn>;</td></tr>
+<tr><th id="208">208</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="sigcontext_32::si" title='sigcontext_32::si' data-ref="sigcontext_32::si" data-ref-filename="sigcontext_32..si">si</dfn>;</td></tr>
+<tr><th id="209">209</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="sigcontext_32::bp" title='sigcontext_32::bp' data-ref="sigcontext_32::bp" data-ref-filename="sigcontext_32..bp">bp</dfn>;</td></tr>
+<tr><th id="210">210</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="sigcontext_32::sp" title='sigcontext_32::sp' data-ref="sigcontext_32::sp" data-ref-filename="sigcontext_32..sp">sp</dfn>;</td></tr>
+<tr><th id="211">211</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="sigcontext_32::bx" title='sigcontext_32::bx' data-ref="sigcontext_32::bx" data-ref-filename="sigcontext_32..bx">bx</dfn>;</td></tr>
+<tr><th id="212">212</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="sigcontext_32::dx" title='sigcontext_32::dx' data-ref="sigcontext_32::dx" data-ref-filename="sigcontext_32..dx">dx</dfn>;</td></tr>
+<tr><th id="213">213</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="sigcontext_32::cx" title='sigcontext_32::cx' data-ref="sigcontext_32::cx" data-ref-filename="sigcontext_32..cx">cx</dfn>;</td></tr>
+<tr><th id="214">214</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="sigcontext_32::ax" title='sigcontext_32::ax' data-ref="sigcontext_32::ax" data-ref-filename="sigcontext_32..ax">ax</dfn>;</td></tr>
+<tr><th id="215">215</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="sigcontext_32::trapno" title='sigcontext_32::trapno' data-ref="sigcontext_32::trapno" data-ref-filename="sigcontext_32..trapno">trapno</dfn>;</td></tr>
+<tr><th id="216">216</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="sigcontext_32::err" title='sigcontext_32::err' data-ref="sigcontext_32::err" data-ref-filename="sigcontext_32..err">err</dfn>;</td></tr>
+<tr><th id="217">217</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="sigcontext_32::ip" title='sigcontext_32::ip' data-ref="sigcontext_32::ip" data-ref-filename="sigcontext_32..ip">ip</dfn>;</td></tr>
+<tr><th id="218">218</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a>				<dfn class="decl field" id="sigcontext_32::cs" title='sigcontext_32::cs' data-ref="sigcontext_32::cs" data-ref-filename="sigcontext_32..cs">cs</dfn>, <dfn class="decl field" id="sigcontext_32::__csh" title='sigcontext_32::__csh' data-ref="sigcontext_32::__csh" data-ref-filename="sigcontext_32..__csh">__csh</dfn>;</td></tr>
+<tr><th id="219">219</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="sigcontext_32::flags" title='sigcontext_32::flags' data-ref="sigcontext_32::flags" data-ref-filename="sigcontext_32..flags">flags</dfn>;</td></tr>
+<tr><th id="220">220</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="sigcontext_32::sp_at_signal" title='sigcontext_32::sp_at_signal' data-ref="sigcontext_32::sp_at_signal" data-ref-filename="sigcontext_32..sp_at_signal">sp_at_signal</dfn>;</td></tr>
+<tr><th id="221">221</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a>				<dfn class="decl field" id="sigcontext_32::ss" title='sigcontext_32::ss' data-ref="sigcontext_32::ss" data-ref-filename="sigcontext_32..ss">ss</dfn>, <dfn class="decl field" id="sigcontext_32::__ssh" title='sigcontext_32::__ssh' data-ref="sigcontext_32::__ssh" data-ref-filename="sigcontext_32..__ssh">__ssh</dfn>;</td></tr>
+<tr><th id="222">222</th><td></td></tr>
+<tr><th id="223">223</th><td>	<i>/*</i></td></tr>
+<tr><th id="224">224</th><td><i>	 * fpstate is really (struct _fpstate *) or (struct _xstate *)</i></td></tr>
+<tr><th id="225">225</th><td><i>	 * depending on the FP_XSTATE_MAGIC1 encoded in the SW reserved</i></td></tr>
+<tr><th id="226">226</th><td><i>	 * bytes of (struct _fpstate) and FP_XSTATE_MAGIC2 present at the end</i></td></tr>
+<tr><th id="227">227</th><td><i>	 * of extended memory layout. See comments at the definition of</i></td></tr>
+<tr><th id="228">228</th><td><i>	 * (struct _fpx_sw_bytes)</i></td></tr>
+<tr><th id="229">229</th><td><i>	 */</i></td></tr>
+<tr><th id="230">230</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="sigcontext_32::fpstate" title='sigcontext_32::fpstate' data-ref="sigcontext_32::fpstate" data-ref-filename="sigcontext_32..fpstate">fpstate</dfn>; <i>/* Zero when no FPU/extended context */</i></td></tr>
+<tr><th id="231">231</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="sigcontext_32::oldmask" title='sigcontext_32::oldmask' data-ref="sigcontext_32::oldmask" data-ref-filename="sigcontext_32..oldmask">oldmask</dfn>;</td></tr>
+<tr><th id="232">232</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u32" title='__u32' data-type='unsigned int' data-ref="__u32" data-ref-filename="__u32">__u32</a>				<dfn class="decl field" id="sigcontext_32::cr2" title='sigcontext_32::cr2' data-ref="sigcontext_32::cr2" data-ref-filename="sigcontext_32..cr2">cr2</dfn>;</td></tr>
+<tr><th id="233">233</th><td>};</td></tr>
+<tr><th id="234">234</th><td></td></tr>
+<tr><th id="235">235</th><td><i>/*</i></td></tr>
+<tr><th id="236">236</th><td><i> * The 64-bit signal frame:</i></td></tr>
+<tr><th id="237">237</th><td><i> */</i></td></tr>
+<tr><th id="238">238</th><td><b>struct</b> <dfn class="type def" id="sigcontext_64" title='sigcontext_64' data-ref="sigcontext_64" data-ref-filename="sigcontext_64">sigcontext_64</dfn> {</td></tr>
+<tr><th id="239">239</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="sigcontext_64::r8" title='sigcontext_64::r8' data-ref="sigcontext_64::r8" data-ref-filename="sigcontext_64..r8">r8</dfn>;</td></tr>
+<tr><th id="240">240</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="sigcontext_64::r9" title='sigcontext_64::r9' data-ref="sigcontext_64::r9" data-ref-filename="sigcontext_64..r9">r9</dfn>;</td></tr>
+<tr><th id="241">241</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="sigcontext_64::r10" title='sigcontext_64::r10' data-ref="sigcontext_64::r10" data-ref-filename="sigcontext_64..r10">r10</dfn>;</td></tr>
+<tr><th id="242">242</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="sigcontext_64::r11" title='sigcontext_64::r11' data-ref="sigcontext_64::r11" data-ref-filename="sigcontext_64..r11">r11</dfn>;</td></tr>
+<tr><th id="243">243</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="sigcontext_64::r12" title='sigcontext_64::r12' data-ref="sigcontext_64::r12" data-ref-filename="sigcontext_64..r12">r12</dfn>;</td></tr>
+<tr><th id="244">244</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="sigcontext_64::r13" title='sigcontext_64::r13' data-ref="sigcontext_64::r13" data-ref-filename="sigcontext_64..r13">r13</dfn>;</td></tr>
+<tr><th id="245">245</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="sigcontext_64::r14" title='sigcontext_64::r14' data-ref="sigcontext_64::r14" data-ref-filename="sigcontext_64..r14">r14</dfn>;</td></tr>
+<tr><th id="246">246</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="sigcontext_64::r15" title='sigcontext_64::r15' data-ref="sigcontext_64::r15" data-ref-filename="sigcontext_64..r15">r15</dfn>;</td></tr>
+<tr><th id="247">247</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="sigcontext_64::di" title='sigcontext_64::di' data-ref="sigcontext_64::di" data-ref-filename="sigcontext_64..di">di</dfn>;</td></tr>
+<tr><th id="248">248</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="sigcontext_64::si" title='sigcontext_64::si' data-ref="sigcontext_64::si" data-ref-filename="sigcontext_64..si">si</dfn>;</td></tr>
+<tr><th id="249">249</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="sigcontext_64::bp" title='sigcontext_64::bp' data-ref="sigcontext_64::bp" data-ref-filename="sigcontext_64..bp">bp</dfn>;</td></tr>
+<tr><th id="250">250</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="sigcontext_64::bx" title='sigcontext_64::bx' data-ref="sigcontext_64::bx" data-ref-filename="sigcontext_64..bx">bx</dfn>;</td></tr>
+<tr><th id="251">251</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="sigcontext_64::dx" title='sigcontext_64::dx' data-ref="sigcontext_64::dx" data-ref-filename="sigcontext_64..dx">dx</dfn>;</td></tr>
+<tr><th id="252">252</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="sigcontext_64::ax" title='sigcontext_64::ax' data-ref="sigcontext_64::ax" data-ref-filename="sigcontext_64..ax">ax</dfn>;</td></tr>
+<tr><th id="253">253</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="sigcontext_64::cx" title='sigcontext_64::cx' data-ref="sigcontext_64::cx" data-ref-filename="sigcontext_64..cx">cx</dfn>;</td></tr>
+<tr><th id="254">254</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="sigcontext_64::sp" title='sigcontext_64::sp' data-ref="sigcontext_64::sp" data-ref-filename="sigcontext_64..sp">sp</dfn>;</td></tr>
+<tr><th id="255">255</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="sigcontext_64::ip" title='sigcontext_64::ip' data-ref="sigcontext_64::ip" data-ref-filename="sigcontext_64..ip">ip</dfn>;</td></tr>
+<tr><th id="256">256</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="sigcontext_64::flags" title='sigcontext_64::flags' data-ref="sigcontext_64::flags" data-ref-filename="sigcontext_64..flags">flags</dfn>;</td></tr>
+<tr><th id="257">257</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a>				<dfn class="decl field" id="sigcontext_64::cs" title='sigcontext_64::cs' data-ref="sigcontext_64::cs" data-ref-filename="sigcontext_64..cs">cs</dfn>;</td></tr>
+<tr><th id="258">258</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a>				<dfn class="decl field" id="sigcontext_64::gs" title='sigcontext_64::gs' data-ref="sigcontext_64::gs" data-ref-filename="sigcontext_64..gs">gs</dfn>;</td></tr>
+<tr><th id="259">259</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a>				<dfn class="decl field" id="sigcontext_64::fs" title='sigcontext_64::fs' data-ref="sigcontext_64::fs" data-ref-filename="sigcontext_64..fs">fs</dfn>;</td></tr>
+<tr><th id="260">260</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a>				<dfn class="decl field" id="sigcontext_64::ss" title='sigcontext_64::ss' data-ref="sigcontext_64::ss" data-ref-filename="sigcontext_64..ss">ss</dfn>;</td></tr>
+<tr><th id="261">261</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="sigcontext_64::err" title='sigcontext_64::err' data-ref="sigcontext_64::err" data-ref-filename="sigcontext_64..err">err</dfn>;</td></tr>
+<tr><th id="262">262</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="sigcontext_64::trapno" title='sigcontext_64::trapno' data-ref="sigcontext_64::trapno" data-ref-filename="sigcontext_64..trapno">trapno</dfn>;</td></tr>
+<tr><th id="263">263</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="sigcontext_64::oldmask" title='sigcontext_64::oldmask' data-ref="sigcontext_64::oldmask" data-ref-filename="sigcontext_64..oldmask">oldmask</dfn>;</td></tr>
+<tr><th id="264">264</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="sigcontext_64::cr2" title='sigcontext_64::cr2' data-ref="sigcontext_64::cr2" data-ref-filename="sigcontext_64..cr2">cr2</dfn>;</td></tr>
+<tr><th id="265">265</th><td></td></tr>
+<tr><th id="266">266</th><td>	<i>/*</i></td></tr>
+<tr><th id="267">267</th><td><i>	 * fpstate is really (struct _fpstate *) or (struct _xstate *)</i></td></tr>
+<tr><th id="268">268</th><td><i>	 * depending on the FP_XSTATE_MAGIC1 encoded in the SW reserved</i></td></tr>
+<tr><th id="269">269</th><td><i>	 * bytes of (struct _fpstate) and FP_XSTATE_MAGIC2 present at the end</i></td></tr>
+<tr><th id="270">270</th><td><i>	 * of extended memory layout. See comments at the definition of</i></td></tr>
+<tr><th id="271">271</th><td><i>	 * (struct _fpx_sw_bytes)</i></td></tr>
+<tr><th id="272">272</th><td><i>	 */</i></td></tr>
+<tr><th id="273">273</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="sigcontext_64::fpstate" title='sigcontext_64::fpstate' data-ref="sigcontext_64::fpstate" data-ref-filename="sigcontext_64..fpstate">fpstate</dfn>; <i>/* Zero when no FPU/extended context */</i></td></tr>
+<tr><th id="274">274</th><td>	<a class="typedef" href="../../../../../include/uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>				<dfn class="decl field" id="sigcontext_64::reserved1" title='sigcontext_64::reserved1' data-ref="sigcontext_64::reserved1" data-ref-filename="sigcontext_64..reserved1">reserved1</dfn>[<var>8</var>];</td></tr>
+<tr><th id="275">275</th><td>};</td></tr>
+<tr><th id="276">276</th><td></td></tr>
+<tr><th id="277">277</th><td><i>/*</i></td></tr>
+<tr><th id="278">278</th><td><i> * Create the real 'struct sigcontext' type:</i></td></tr>
+<tr><th id="279">279</th><td><i> */</i></td></tr>
+<tr><th id="280">280</th><td><u>#<span data-ppcond="280">ifdef</span> <span class="macro" data-ref="_M/__KERNEL__">__KERNEL__</span></u></td></tr>
+<tr><th id="281">281</th><td><u># <span data-ppcond="281">ifdef</span> <span class="macro" data-ref="_M/__i386__">__i386__</span></u></td></tr>
+<tr><th id="282">282</th><td><u>#  define sigcontext sigcontext_32</u></td></tr>
+<tr><th id="283">283</th><td><u># <span data-ppcond="281">else</span></u></td></tr>
+<tr><th id="284">284</th><td><u>#  define <dfn class="macro" id="_M/sigcontext" data-ref="_M/sigcontext">sigcontext</dfn> sigcontext_64</u></td></tr>
+<tr><th id="285">285</th><td><u># <span data-ppcond="281">endif</span></u></td></tr>
+<tr><th id="286">286</th><td><u>#<span data-ppcond="280">endif</span></u></td></tr>
+<tr><th id="287">287</th><td></td></tr>
+<tr><th id="288">288</th><td><i>/*</i></td></tr>
+<tr><th id="289">289</th><td><i> * The old user-space sigcontext definition, just in case user-space still</i></td></tr>
+<tr><th id="290">290</th><td><i> * relies on it. The kernel definition (in asm/sigcontext.h) has unified</i></td></tr>
+<tr><th id="291">291</th><td><i> * field names but otherwise the same layout.</i></td></tr>
+<tr><th id="292">292</th><td><i> */</i></td></tr>
+<tr><th id="293">293</th><td><u>#<span data-ppcond="293">ifndef</span> <span class="macro" data-ref="_M/__KERNEL__">__KERNEL__</span></u></td></tr>
+<tr><th id="294">294</th><td></td></tr>
+<tr><th id="295">295</th><td><u>#define _fpstate_ia32			_fpstate_32</u></td></tr>
+<tr><th id="296">296</th><td><u>#define sigcontext_ia32			sigcontext_32</u></td></tr>
+<tr><th id="297">297</th><td></td></tr>
+<tr><th id="298">298</th><td></td></tr>
+<tr><th id="299">299</th><td><u># ifdef __i386__</u></td></tr>
+<tr><th id="300">300</th><td><b>struct</b> sigcontext {</td></tr>
+<tr><th id="301">301</th><td>	__u16				gs, __gsh;</td></tr>
+<tr><th id="302">302</th><td>	__u16				fs, __fsh;</td></tr>
+<tr><th id="303">303</th><td>	__u16				es, __esh;</td></tr>
+<tr><th id="304">304</th><td>	__u16				ds, __dsh;</td></tr>
+<tr><th id="305">305</th><td>	__u32				edi;</td></tr>
+<tr><th id="306">306</th><td>	__u32				esi;</td></tr>
+<tr><th id="307">307</th><td>	__u32				ebp;</td></tr>
+<tr><th id="308">308</th><td>	__u32				esp;</td></tr>
+<tr><th id="309">309</th><td>	__u32				ebx;</td></tr>
+<tr><th id="310">310</th><td>	__u32				edx;</td></tr>
+<tr><th id="311">311</th><td>	__u32				ecx;</td></tr>
+<tr><th id="312">312</th><td>	__u32				eax;</td></tr>
+<tr><th id="313">313</th><td>	__u32				trapno;</td></tr>
+<tr><th id="314">314</th><td>	__u32				err;</td></tr>
+<tr><th id="315">315</th><td>	__u32				eip;</td></tr>
+<tr><th id="316">316</th><td>	__u16				cs, __csh;</td></tr>
+<tr><th id="317">317</th><td>	__u32				eflags;</td></tr>
+<tr><th id="318">318</th><td>	__u32				esp_at_signal;</td></tr>
+<tr><th id="319">319</th><td>	__u16				ss, __ssh;</td></tr>
+<tr><th id="320">320</th><td>	<b>struct</b> _fpstate __user		*fpstate;</td></tr>
+<tr><th id="321">321</th><td>	__u32				oldmask;</td></tr>
+<tr><th id="322">322</th><td>	__u32				cr2;</td></tr>
+<tr><th id="323">323</th><td>};</td></tr>
+<tr><th id="324">324</th><td><u># else /* __x86_64__: */</u></td></tr>
+<tr><th id="325">325</th><td><b>struct</b> sigcontext {</td></tr>
+<tr><th id="326">326</th><td>	__u64				r8;</td></tr>
+<tr><th id="327">327</th><td>	__u64				r9;</td></tr>
+<tr><th id="328">328</th><td>	__u64				r10;</td></tr>
+<tr><th id="329">329</th><td>	__u64				r11;</td></tr>
+<tr><th id="330">330</th><td>	__u64				r12;</td></tr>
+<tr><th id="331">331</th><td>	__u64				r13;</td></tr>
+<tr><th id="332">332</th><td>	__u64				r14;</td></tr>
+<tr><th id="333">333</th><td>	__u64				r15;</td></tr>
+<tr><th id="334">334</th><td>	__u64				rdi;</td></tr>
+<tr><th id="335">335</th><td>	__u64				rsi;</td></tr>
+<tr><th id="336">336</th><td>	__u64				rbp;</td></tr>
+<tr><th id="337">337</th><td>	__u64				rbx;</td></tr>
+<tr><th id="338">338</th><td>	__u64				rdx;</td></tr>
+<tr><th id="339">339</th><td>	__u64				rax;</td></tr>
+<tr><th id="340">340</th><td>	__u64				rcx;</td></tr>
+<tr><th id="341">341</th><td>	__u64				rsp;</td></tr>
+<tr><th id="342">342</th><td>	__u64				rip;</td></tr>
+<tr><th id="343">343</th><td>	__u64				eflags;		<i>/* RFLAGS */</i></td></tr>
+<tr><th id="344">344</th><td>	__u16				cs;</td></tr>
+<tr><th id="345">345</th><td></td></tr>
+<tr><th id="346">346</th><td>	<i>/*</i></td></tr>
+<tr><th id="347">347</th><td><i>	 * Prior to 2.5.64 ("[PATCH] x86-64 updates for 2.5.64-bk3"),</i></td></tr>
+<tr><th id="348">348</th><td><i>	 * Linux saved and restored fs and gs in these slots.  This</i></td></tr>
+<tr><th id="349">349</th><td><i>	 * was counterproductive, as fsbase and gsbase were never</i></td></tr>
+<tr><th id="350">350</th><td><i>	 * saved, so arch_prctl was presumably unreliable.</i></td></tr>
+<tr><th id="351">351</th><td><i>	 *</i></td></tr>
+<tr><th id="352">352</th><td><i>	 * These slots should never be reused without extreme caution:</i></td></tr>
+<tr><th id="353">353</th><td><i>	 *</i></td></tr>
+<tr><th id="354">354</th><td><i>	 *  - Some DOSEMU versions stash fs and gs in these slots manually,</i></td></tr>
+<tr><th id="355">355</th><td><i>	 *    thus overwriting anything the kernel expects to be preserved</i></td></tr>
+<tr><th id="356">356</th><td><i>	 *    in these slots.</i></td></tr>
+<tr><th id="357">357</th><td><i>	 *</i></td></tr>
+<tr><th id="358">358</th><td><i>	 *  - If these slots are ever needed for any other purpose,</i></td></tr>
+<tr><th id="359">359</th><td><i>	 *    there is some risk that very old 64-bit binaries could get</i></td></tr>
+<tr><th id="360">360</th><td><i>	 *    confused.  I doubt that many such binaries still work,</i></td></tr>
+<tr><th id="361">361</th><td><i>	 *    though, since the same patch in 2.5.64 also removed the</i></td></tr>
+<tr><th id="362">362</th><td><i>	 *    64-bit set_thread_area syscall, so it appears that there</i></td></tr>
+<tr><th id="363">363</th><td><i>	 *    is no TLS API beyond modify_ldt that works in both pre-</i></td></tr>
+<tr><th id="364">364</th><td><i>	 *    and post-2.5.64 kernels.</i></td></tr>
+<tr><th id="365">365</th><td><i>	 *</i></td></tr>
+<tr><th id="366">366</th><td><i>	 * If the kernel ever adds explicit fs, gs, fsbase, and gsbase</i></td></tr>
+<tr><th id="367">367</th><td><i>	 * save/restore, it will most likely need to be opt-in and use</i></td></tr>
+<tr><th id="368">368</th><td><i>	 * different context slots.</i></td></tr>
+<tr><th id="369">369</th><td><i>	 */</i></td></tr>
+<tr><th id="370">370</th><td>	__u16				gs;</td></tr>
+<tr><th id="371">371</th><td>	__u16				fs;</td></tr>
+<tr><th id="372">372</th><td>	<b>union</b> {</td></tr>
+<tr><th id="373">373</th><td>		__u16			ss;	<i>/* If UC_SIGCONTEXT_SS */</i></td></tr>
+<tr><th id="374">374</th><td>		__u16			__pad0;	<i>/* Alias name for old (!UC_SIGCONTEXT_SS) user-space */</i></td></tr>
+<tr><th id="375">375</th><td>	};</td></tr>
+<tr><th id="376">376</th><td>	__u64				err;</td></tr>
+<tr><th id="377">377</th><td>	__u64				trapno;</td></tr>
+<tr><th id="378">378</th><td>	__u64				oldmask;</td></tr>
+<tr><th id="379">379</th><td>	__u64				cr2;</td></tr>
+<tr><th id="380">380</th><td>	<b>struct</b> _fpstate __user		*fpstate;	<i>/* Zero when no FPU context */</i></td></tr>
+<tr><th id="381">381</th><td><u>#  ifdef __ILP32__</u></td></tr>
+<tr><th id="382">382</th><td>	__u32				__fpstate_pad;</td></tr>
+<tr><th id="383">383</th><td><u>#  endif</u></td></tr>
+<tr><th id="384">384</th><td>	__u64				reserved1[<var>8</var>];</td></tr>
+<tr><th id="385">385</th><td>};</td></tr>
+<tr><th id="386">386</th><td><u># endif /* __x86_64__ */</u></td></tr>
+<tr><th id="387">387</th><td><u>#<span data-ppcond="293">endif</span> /* !__KERNEL__ */</u></td></tr>
+<tr><th id="388">388</th><td></td></tr>
+<tr><th id="389">389</th><td><u>#<span data-ppcond="2">endif</span> /* _UAPI_ASM_X86_SIGCONTEXT_H */</u></td></tr>
+<tr><th id="390">390</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../../boot/compressed/acpi.c.html'>linux-5.3.1/arch/x86/boot/compressed/acpi.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

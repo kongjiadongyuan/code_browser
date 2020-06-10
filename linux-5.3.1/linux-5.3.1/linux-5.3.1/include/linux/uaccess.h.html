@@ -1,0 +1,319 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>uaccess.h source code [linux-5.3.1/include/linux/uaccess.h] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/include/linux/uaccess.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>include</a>/<a href='./'>linux</a>/<a href='uaccess.h.html'>uaccess.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0 */</i></td></tr>
+<tr><th id="2">2</th><td><u>#<span data-ppcond="2">ifndef</span> <span class="macro" data-ref="_M/__LINUX_UACCESS_H__">__LINUX_UACCESS_H__</span></u></td></tr>
+<tr><th id="3">3</th><td><u>#define <dfn class="macro" id="_M/__LINUX_UACCESS_H__" data-ref="_M/__LINUX_UACCESS_H__">__LINUX_UACCESS_H__</dfn></u></td></tr>
+<tr><th id="4">4</th><td></td></tr>
+<tr><th id="5">5</th><td><u>#include <a href="sched.h.html">&lt;linux/sched.h&gt;</a></u></td></tr>
+<tr><th id="6">6</th><td><u>#include <a href="thread_info.h.html">&lt;linux/thread_info.h&gt;</a></u></td></tr>
+<tr><th id="7">7</th><td><u>#include <a href="kasan-checks.h.html">&lt;linux/kasan-checks.h&gt;</a></u></td></tr>
+<tr><th id="8">8</th><td></td></tr>
+<tr><th id="9">9</th><td><u>#define <dfn class="macro" id="_M/uaccess_kernel" data-ref="_M/uaccess_kernel">uaccess_kernel</dfn>() segment_eq(get_fs(), KERNEL_DS)</u></td></tr>
+<tr><th id="10">10</th><td></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../../arch/x86/include/asm/uaccess.h.html">&lt;asm/uaccess.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td></td></tr>
+<tr><th id="13">13</th><td><i>/*</i></td></tr>
+<tr><th id="14">14</th><td><i> * Architectures should provide two primitives (raw_copy_{to,from}_user())</i></td></tr>
+<tr><th id="15">15</th><td><i> * and get rid of their private instances of copy_{to,from}_user() and</i></td></tr>
+<tr><th id="16">16</th><td><i> * __copy_{to,from}_user{,_inatomic}().</i></td></tr>
+<tr><th id="17">17</th><td><i> *</i></td></tr>
+<tr><th id="18">18</th><td><i> * raw_copy_{to,from}_user(to, from, size) should copy up to size bytes and</i></td></tr>
+<tr><th id="19">19</th><td><i> * return the amount left to copy.  They should assume that access_ok() has</i></td></tr>
+<tr><th id="20">20</th><td><i> * already been checked (and succeeded); they should *not* zero-pad anything.</i></td></tr>
+<tr><th id="21">21</th><td><i> * No KASAN or object size checks either - those belong here.</i></td></tr>
+<tr><th id="22">22</th><td><i> *</i></td></tr>
+<tr><th id="23">23</th><td><i> * Both of these functions should attempt to copy size bytes starting at from</i></td></tr>
+<tr><th id="24">24</th><td><i> * into the area starting at to.  They must not fetch or store anything</i></td></tr>
+<tr><th id="25">25</th><td><i> * outside of those areas.  Return value must be between 0 (everything</i></td></tr>
+<tr><th id="26">26</th><td><i> * copied successfully) and size (nothing copied).</i></td></tr>
+<tr><th id="27">27</th><td><i> *</i></td></tr>
+<tr><th id="28">28</th><td><i> * If raw_copy_{to,from}_user(to, from, size) returns N, size - N bytes starting</i></td></tr>
+<tr><th id="29">29</th><td><i> * at to must become equal to the bytes fetched from the corresponding area</i></td></tr>
+<tr><th id="30">30</th><td><i> * starting at from.  All data past to + size - N must be left unmodified.</i></td></tr>
+<tr><th id="31">31</th><td><i> *</i></td></tr>
+<tr><th id="32">32</th><td><i> * If copying succeeds, the return value must be 0.  If some data cannot be</i></td></tr>
+<tr><th id="33">33</th><td><i> * fetched, it is permitted to copy less than had been fetched; the only</i></td></tr>
+<tr><th id="34">34</th><td><i> * hard requirement is that not storing anything at all (i.e. returning size)</i></td></tr>
+<tr><th id="35">35</th><td><i> * should happen only when nothing could be copied.  In other words, you don't</i></td></tr>
+<tr><th id="36">36</th><td><i> * have to squeeze as much as possible - it is allowed, but not necessary.</i></td></tr>
+<tr><th id="37">37</th><td><i> *</i></td></tr>
+<tr><th id="38">38</th><td><i> * For raw_copy_from_user() to always points to kernel memory and no faults</i></td></tr>
+<tr><th id="39">39</th><td><i> * on store should happen.  Interpretation of from is affected by set_fs().</i></td></tr>
+<tr><th id="40">40</th><td><i> * For raw_copy_to_user() it's the other way round.</i></td></tr>
+<tr><th id="41">41</th><td><i> *</i></td></tr>
+<tr><th id="42">42</th><td><i> * Both can be inlined - it's up to architectures whether it wants to bother</i></td></tr>
+<tr><th id="43">43</th><td><i> * with that.  They should not be used directly; they are used to implement</i></td></tr>
+<tr><th id="44">44</th><td><i> * the 6 functions (copy_{to,from}_user(), __copy_{to,from}_user_inatomic())</i></td></tr>
+<tr><th id="45">45</th><td><i> * that are used instead.  Out of those, __... ones are inlined.  Plain</i></td></tr>
+<tr><th id="46">46</th><td><i> * copy_{to,from}_user() might or might not be inlined.  If you want them</i></td></tr>
+<tr><th id="47">47</th><td><i> * inlined, have asm/uaccess.h define INLINE_COPY_{TO,FROM}_USER.</i></td></tr>
+<tr><th id="48">48</th><td><i> *</i></td></tr>
+<tr><th id="49">49</th><td><i> * NOTE: only copy_from_user() zero-pads the destination in case of short copy.</i></td></tr>
+<tr><th id="50">50</th><td><i> * Neither __copy_from_user() nor __copy_from_user_inatomic() zero anything</i></td></tr>
+<tr><th id="51">51</th><td><i> * at all; their callers absolutely must check the return value.</i></td></tr>
+<tr><th id="52">52</th><td><i> *</i></td></tr>
+<tr><th id="53">53</th><td><i> * Biarch ones should also provide raw_copy_in_user() - similar to the above,</i></td></tr>
+<tr><th id="54">54</th><td><i> * but both source and destination are __user pointers (affected by set_fs()</i></td></tr>
+<tr><th id="55">55</th><td><i> * as usual) and both source and destination can trigger faults.</i></td></tr>
+<tr><th id="56">56</th><td><i> */</i></td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td><em>static</em> <a class="macro" href="compiler_attributes.h.html#67" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function)) __attribute__((__always_inline__))" data-ref="_M/__always_inline">__always_inline</a> <em>unsigned</em> <em>long</em></td></tr>
+<tr><th id="59">59</th><td><dfn class="decl def fn" id="__copy_from_user_inatomic" title='__copy_from_user_inatomic' data-ref="__copy_from_user_inatomic" data-ref-filename="__copy_from_user_inatomic">__copy_from_user_inatomic</dfn>(<em>void</em> *<dfn class="local col4 decl" id="9974to" title='to' data-type='void *' data-ref="9974to" data-ref-filename="9974to">to</dfn>, <em>const</em> <em>void</em> <a class="macro" href="compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *<dfn class="local col5 decl" id="9975from" title='from' data-type='const void *' data-ref="9975from" data-ref-filename="9975from">from</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col6 decl" id="9976n" title='n' data-type='unsigned long' data-ref="9976n" data-ref-filename="9976n">n</dfn>)</td></tr>
+<tr><th id="60">60</th><td>{</td></tr>
+<tr><th id="61">61</th><td>	<a class="ref fn" href="kasan-checks.h.html#kasan_check_write" title='kasan_check_write' data-ref="kasan_check_write" data-ref-filename="kasan_check_write">kasan_check_write</a>(<a class="local col4 ref" href="#9974to" title='to' data-ref="9974to" data-ref-filename="9974to">to</a>, <a class="local col6 ref" href="#9976n" title='n' data-ref="9976n" data-ref-filename="9976n">n</a>);</td></tr>
+<tr><th id="62">62</th><td>	<a class="ref fn" href="thread_info.h.html#check_object_size" title='check_object_size' data-ref="check_object_size" data-ref-filename="check_object_size">check_object_size</a>(<a class="local col4 ref" href="#9974to" title='to' data-ref="9974to" data-ref-filename="9974to">to</a>, <a class="local col6 ref" href="#9976n" title='n' data-ref="9976n" data-ref-filename="9976n">n</a>, <a class="enum" href="stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>);</td></tr>
+<tr><th id="63">63</th><td>	<b>return</b> <a class="ref fn" href="../../arch/x86/include/asm/uaccess_64.h.html#raw_copy_from_user" title='raw_copy_from_user' data-ref="raw_copy_from_user" data-ref-filename="raw_copy_from_user">raw_copy_from_user</a>(<a class="local col4 ref" href="#9974to" title='to' data-ref="9974to" data-ref-filename="9974to">to</a>, <a class="local col5 ref" href="#9975from" title='from' data-ref="9975from" data-ref-filename="9975from">from</a>, <a class="local col6 ref" href="#9976n" title='n' data-ref="9976n" data-ref-filename="9976n">n</a>);</td></tr>
+<tr><th id="64">64</th><td>}</td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td><em>static</em> <a class="macro" href="compiler_attributes.h.html#67" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function)) __attribute__((__always_inline__))" data-ref="_M/__always_inline">__always_inline</a> <em>unsigned</em> <em>long</em></td></tr>
+<tr><th id="67">67</th><td><dfn class="decl def fn" id="__copy_from_user" title='__copy_from_user' data-ref="__copy_from_user" data-ref-filename="__copy_from_user">__copy_from_user</dfn>(<em>void</em> *<dfn class="local col7 decl" id="9977to" title='to' data-type='void *' data-ref="9977to" data-ref-filename="9977to">to</dfn>, <em>const</em> <em>void</em> <a class="macro" href="compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *<dfn class="local col8 decl" id="9978from" title='from' data-type='const void *' data-ref="9978from" data-ref-filename="9978from">from</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col9 decl" id="9979n" title='n' data-type='unsigned long' data-ref="9979n" data-ref-filename="9979n">n</dfn>)</td></tr>
+<tr><th id="68">68</th><td>{</td></tr>
+<tr><th id="69">69</th><td>	<a class="ref fn" href="kernel.h.html#might_fault" title='might_fault' data-ref="might_fault" data-ref-filename="might_fault">might_fault</a>();</td></tr>
+<tr><th id="70">70</th><td>	<a class="ref fn" href="kasan-checks.h.html#kasan_check_write" title='kasan_check_write' data-ref="kasan_check_write" data-ref-filename="kasan_check_write">kasan_check_write</a>(<a class="local col7 ref" href="#9977to" title='to' data-ref="9977to" data-ref-filename="9977to">to</a>, <a class="local col9 ref" href="#9979n" title='n' data-ref="9979n" data-ref-filename="9979n">n</a>);</td></tr>
+<tr><th id="71">71</th><td>	<a class="ref fn" href="thread_info.h.html#check_object_size" title='check_object_size' data-ref="check_object_size" data-ref-filename="check_object_size">check_object_size</a>(<a class="local col7 ref" href="#9977to" title='to' data-ref="9977to" data-ref-filename="9977to">to</a>, <a class="local col9 ref" href="#9979n" title='n' data-ref="9979n" data-ref-filename="9979n">n</a>, <a class="enum" href="stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>);</td></tr>
+<tr><th id="72">72</th><td>	<b>return</b> <a class="ref fn" href="../../arch/x86/include/asm/uaccess_64.h.html#raw_copy_from_user" title='raw_copy_from_user' data-ref="raw_copy_from_user" data-ref-filename="raw_copy_from_user">raw_copy_from_user</a>(<a class="local col7 ref" href="#9977to" title='to' data-ref="9977to" data-ref-filename="9977to">to</a>, <a class="local col8 ref" href="#9978from" title='from' data-ref="9978from" data-ref-filename="9978from">from</a>, <a class="local col9 ref" href="#9979n" title='n' data-ref="9979n" data-ref-filename="9979n">n</a>);</td></tr>
+<tr><th id="73">73</th><td>}</td></tr>
+<tr><th id="74">74</th><td></td></tr>
+<tr><th id="75">75</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="76">76</th><td><i class="doc"> * __copy_to_user_inatomic: - Copy a block of data into user space, with less checking.</i></td></tr>
+<tr><th id="77">77</th><td><i class="doc"> *<span class="command"> @to</span>:   Destination address, in user space.</i></td></tr>
+<tr><th id="78">78</th><td><i class="doc"> *<span class="command"> @from</span>: Source address, in kernel space.</i></td></tr>
+<tr><th id="79">79</th><td><i class="doc"> *<span class="command"> @n</span>:    Number of bytes to copy.</i></td></tr>
+<tr><th id="80">80</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="81">81</th><td><i class="doc"> * Context: User context only.</i></td></tr>
+<tr><th id="82">82</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="83">83</th><td><i class="doc"> * Copy data from kernel space to user space.  Caller must check</i></td></tr>
+<tr><th id="84">84</th><td><i class="doc"> * the specified block with access_ok() before calling this function.</i></td></tr>
+<tr><th id="85">85</th><td><i class="doc"> * The caller should also make sure he pins the user space address</i></td></tr>
+<tr><th id="86">86</th><td><i class="doc"> * so that we don't result in page fault and sleep.</i></td></tr>
+<tr><th id="87">87</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="88">88</th><td><em>static</em> <a class="macro" href="compiler_attributes.h.html#67" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function)) __attribute__((__always_inline__))" data-ref="_M/__always_inline">__always_inline</a> <em>unsigned</em> <em>long</em></td></tr>
+<tr><th id="89">89</th><td><dfn class="decl def fn" id="__copy_to_user_inatomic" title='__copy_to_user_inatomic' data-ref="__copy_to_user_inatomic" data-ref-filename="__copy_to_user_inatomic">__copy_to_user_inatomic</dfn>(<em>void</em> <a class="macro" href="compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *<dfn class="local col0 decl" id="9980to" title='to' data-type='void *' data-ref="9980to" data-ref-filename="9980to">to</dfn>, <em>const</em> <em>void</em> *<dfn class="local col1 decl" id="9981from" title='from' data-type='const void *' data-ref="9981from" data-ref-filename="9981from">from</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col2 decl" id="9982n" title='n' data-type='unsigned long' data-ref="9982n" data-ref-filename="9982n">n</dfn>)</td></tr>
+<tr><th id="90">90</th><td>{</td></tr>
+<tr><th id="91">91</th><td>	<a class="ref fn" href="kasan-checks.h.html#kasan_check_read" title='kasan_check_read' data-ref="kasan_check_read" data-ref-filename="kasan_check_read">kasan_check_read</a>(<a class="local col1 ref" href="#9981from" title='from' data-ref="9981from" data-ref-filename="9981from">from</a>, <a class="local col2 ref" href="#9982n" title='n' data-ref="9982n" data-ref-filename="9982n">n</a>);</td></tr>
+<tr><th id="92">92</th><td>	<a class="ref fn" href="thread_info.h.html#check_object_size" title='check_object_size' data-ref="check_object_size" data-ref-filename="check_object_size">check_object_size</a>(<a class="local col1 ref" href="#9981from" title='from' data-ref="9981from" data-ref-filename="9981from">from</a>, <a class="local col2 ref" href="#9982n" title='n' data-ref="9982n" data-ref-filename="9982n">n</a>, <a class="enum" href="stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>);</td></tr>
+<tr><th id="93">93</th><td>	<b>return</b> <a class="ref fn" href="../../arch/x86/include/asm/uaccess_64.h.html#raw_copy_to_user" title='raw_copy_to_user' data-ref="raw_copy_to_user" data-ref-filename="raw_copy_to_user">raw_copy_to_user</a>(<a class="local col0 ref" href="#9980to" title='to' data-ref="9980to" data-ref-filename="9980to">to</a>, <a class="local col1 ref" href="#9981from" title='from' data-ref="9981from" data-ref-filename="9981from">from</a>, <a class="local col2 ref" href="#9982n" title='n' data-ref="9982n" data-ref-filename="9982n">n</a>);</td></tr>
+<tr><th id="94">94</th><td>}</td></tr>
+<tr><th id="95">95</th><td></td></tr>
+<tr><th id="96">96</th><td><em>static</em> <a class="macro" href="compiler_attributes.h.html#67" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function)) __attribute__((__always_inline__))" data-ref="_M/__always_inline">__always_inline</a> <em>unsigned</em> <em>long</em></td></tr>
+<tr><th id="97">97</th><td><dfn class="decl def fn" id="__copy_to_user" title='__copy_to_user' data-ref="__copy_to_user" data-ref-filename="__copy_to_user">__copy_to_user</dfn>(<em>void</em> <a class="macro" href="compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *<dfn class="local col3 decl" id="9983to" title='to' data-type='void *' data-ref="9983to" data-ref-filename="9983to">to</dfn>, <em>const</em> <em>void</em> *<dfn class="local col4 decl" id="9984from" title='from' data-type='const void *' data-ref="9984from" data-ref-filename="9984from">from</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col5 decl" id="9985n" title='n' data-type='unsigned long' data-ref="9985n" data-ref-filename="9985n">n</dfn>)</td></tr>
+<tr><th id="98">98</th><td>{</td></tr>
+<tr><th id="99">99</th><td>	<a class="ref fn" href="kernel.h.html#might_fault" title='might_fault' data-ref="might_fault" data-ref-filename="might_fault">might_fault</a>();</td></tr>
+<tr><th id="100">100</th><td>	<a class="ref fn" href="kasan-checks.h.html#kasan_check_read" title='kasan_check_read' data-ref="kasan_check_read" data-ref-filename="kasan_check_read">kasan_check_read</a>(<a class="local col4 ref" href="#9984from" title='from' data-ref="9984from" data-ref-filename="9984from">from</a>, <a class="local col5 ref" href="#9985n" title='n' data-ref="9985n" data-ref-filename="9985n">n</a>);</td></tr>
+<tr><th id="101">101</th><td>	<a class="ref fn" href="thread_info.h.html#check_object_size" title='check_object_size' data-ref="check_object_size" data-ref-filename="check_object_size">check_object_size</a>(<a class="local col4 ref" href="#9984from" title='from' data-ref="9984from" data-ref-filename="9984from">from</a>, <a class="local col5 ref" href="#9985n" title='n' data-ref="9985n" data-ref-filename="9985n">n</a>, <a class="enum" href="stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>);</td></tr>
+<tr><th id="102">102</th><td>	<b>return</b> <a class="ref fn" href="../../arch/x86/include/asm/uaccess_64.h.html#raw_copy_to_user" title='raw_copy_to_user' data-ref="raw_copy_to_user" data-ref-filename="raw_copy_to_user">raw_copy_to_user</a>(<a class="local col3 ref" href="#9983to" title='to' data-ref="9983to" data-ref-filename="9983to">to</a>, <a class="local col4 ref" href="#9984from" title='from' data-ref="9984from" data-ref-filename="9984from">from</a>, <a class="local col5 ref" href="#9985n" title='n' data-ref="9985n" data-ref-filename="9985n">n</a>);</td></tr>
+<tr><th id="103">103</th><td>}</td></tr>
+<tr><th id="104">104</th><td></td></tr>
+<tr><th id="105">105</th><td><u>#<span data-ppcond="105">ifdef</span> <span class="macro" data-ref="_M/INLINE_COPY_FROM_USER">INLINE_COPY_FROM_USER</span></u></td></tr>
+<tr><th id="106">106</th><td><em>static</em> <b>inline</b> <em>unsigned</em> <em>long</em></td></tr>
+<tr><th id="107">107</th><td>_copy_from_user(<em>void</em> *to, <em>const</em> <em>void</em> __user *from, <em>unsigned</em> <em>long</em> n)</td></tr>
+<tr><th id="108">108</th><td>{</td></tr>
+<tr><th id="109">109</th><td>	<em>unsigned</em> <em>long</em> res = n;</td></tr>
+<tr><th id="110">110</th><td>	might_fault();</td></tr>
+<tr><th id="111">111</th><td>	<b>if</b> (likely(access_ok(from, n))) {</td></tr>
+<tr><th id="112">112</th><td>		kasan_check_write(to, n);</td></tr>
+<tr><th id="113">113</th><td>		res = raw_copy_from_user(to, from, n);</td></tr>
+<tr><th id="114">114</th><td>	}</td></tr>
+<tr><th id="115">115</th><td>	<b>if</b> (unlikely(res))</td></tr>
+<tr><th id="116">116</th><td>		memset(to + (n - res), <var>0</var>, res);</td></tr>
+<tr><th id="117">117</th><td>	<b>return</b> res;</td></tr>
+<tr><th id="118">118</th><td>}</td></tr>
+<tr><th id="119">119</th><td><u>#<span data-ppcond="105">else</span></u></td></tr>
+<tr><th id="120">120</th><td><b>extern</b> <em>unsigned</em> <em>long</em></td></tr>
+<tr><th id="121">121</th><td><dfn class="decl fn" id="_copy_from_user" title='_copy_from_user' data-ref="_copy_from_user" data-ref-filename="_copy_from_user">_copy_from_user</dfn>(<em>void</em> *, <em>const</em> <em>void</em> <a class="macro" href="compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *, <em>unsigned</em> <em>long</em>);</td></tr>
+<tr><th id="122">122</th><td><u>#<span data-ppcond="105">endif</span></u></td></tr>
+<tr><th id="123">123</th><td></td></tr>
+<tr><th id="124">124</th><td><u>#<span data-ppcond="124">ifdef</span> <span class="macro" data-ref="_M/INLINE_COPY_TO_USER">INLINE_COPY_TO_USER</span></u></td></tr>
+<tr><th id="125">125</th><td><em>static</em> <b>inline</b> <em>unsigned</em> <em>long</em></td></tr>
+<tr><th id="126">126</th><td>_copy_to_user(<em>void</em> __user *to, <em>const</em> <em>void</em> *from, <em>unsigned</em> <em>long</em> n)</td></tr>
+<tr><th id="127">127</th><td>{</td></tr>
+<tr><th id="128">128</th><td>	might_fault();</td></tr>
+<tr><th id="129">129</th><td>	<b>if</b> (access_ok(to, n)) {</td></tr>
+<tr><th id="130">130</th><td>		kasan_check_read(from, n);</td></tr>
+<tr><th id="131">131</th><td>		n = raw_copy_to_user(to, from, n);</td></tr>
+<tr><th id="132">132</th><td>	}</td></tr>
+<tr><th id="133">133</th><td>	<b>return</b> n;</td></tr>
+<tr><th id="134">134</th><td>}</td></tr>
+<tr><th id="135">135</th><td><u>#<span data-ppcond="124">else</span></u></td></tr>
+<tr><th id="136">136</th><td><b>extern</b> <em>unsigned</em> <em>long</em></td></tr>
+<tr><th id="137">137</th><td><dfn class="decl fn" id="_copy_to_user" title='_copy_to_user' data-ref="_copy_to_user" data-ref-filename="_copy_to_user">_copy_to_user</dfn>(<em>void</em> <a class="macro" href="compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *, <em>const</em> <em>void</em> *, <em>unsigned</em> <em>long</em>);</td></tr>
+<tr><th id="138">138</th><td><u>#<span data-ppcond="124">endif</span></u></td></tr>
+<tr><th id="139">139</th><td></td></tr>
+<tr><th id="140">140</th><td><em>static</em> <a class="macro" href="compiler_attributes.h.html#67" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function)) __attribute__((__always_inline__))" data-ref="_M/__always_inline">__always_inline</a> <em>unsigned</em> <em>long</em> <a class="macro" href="compiler_types.h.html#108" title="__attribute__((__warn_unused_result__))" data-ref="_M/__must_check">__must_check</a></td></tr>
+<tr><th id="141">141</th><td><dfn class="decl def fn" id="copy_from_user" title='copy_from_user' data-ref="copy_from_user" data-ref-filename="copy_from_user">copy_from_user</dfn>(<em>void</em> *<dfn class="local col6 decl" id="9986to" title='to' data-type='void *' data-ref="9986to" data-ref-filename="9986to">to</dfn>, <em>const</em> <em>void</em> <a class="macro" href="compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *<dfn class="local col7 decl" id="9987from" title='from' data-type='const void *' data-ref="9987from" data-ref-filename="9987from">from</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col8 decl" id="9988n" title='n' data-type='unsigned long' data-ref="9988n" data-ref-filename="9988n">n</dfn>)</td></tr>
+<tr><th id="142">142</th><td>{</td></tr>
+<tr><th id="143">143</th><td>	<b>if</b> (<a class="macro" href="compiler.h.html#77" title="__builtin_expect(!!(check_copy_size(to, n, false)), 1)" data-ref="_M/likely">likely</a>(<a class="ref fn" href="thread_info.h.html#check_copy_size" title='check_copy_size' data-ref="check_copy_size" data-ref-filename="check_copy_size">check_copy_size</a>(<a class="local col6 ref" href="#9986to" title='to' data-ref="9986to" data-ref-filename="9986to">to</a>, <a class="local col8 ref" href="#9988n" title='n' data-ref="9988n" data-ref-filename="9988n">n</a>, <a class="enum" href="stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>)))</td></tr>
+<tr><th id="144">144</th><td>		<a class="local col8 ref" href="#9988n" title='n' data-ref="9988n" data-ref-filename="9988n">n</a> = <a class="ref fn" href="#_copy_from_user" title='_copy_from_user' data-ref="_copy_from_user" data-ref-filename="_copy_from_user">_copy_from_user</a>(<a class="local col6 ref" href="#9986to" title='to' data-ref="9986to" data-ref-filename="9986to">to</a>, <a class="local col7 ref" href="#9987from" title='from' data-ref="9987from" data-ref-filename="9987from">from</a>, <a class="local col8 ref" href="#9988n" title='n' data-ref="9988n" data-ref-filename="9988n">n</a>);</td></tr>
+<tr><th id="145">145</th><td>	<b>return</b> <a class="local col8 ref" href="#9988n" title='n' data-ref="9988n" data-ref-filename="9988n">n</a>;</td></tr>
+<tr><th id="146">146</th><td>}</td></tr>
+<tr><th id="147">147</th><td></td></tr>
+<tr><th id="148">148</th><td><em>static</em> <a class="macro" href="compiler_attributes.h.html#67" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function)) __attribute__((__always_inline__))" data-ref="_M/__always_inline">__always_inline</a> <em>unsigned</em> <em>long</em> <a class="macro" href="compiler_types.h.html#108" title="__attribute__((__warn_unused_result__))" data-ref="_M/__must_check">__must_check</a></td></tr>
+<tr><th id="149">149</th><td><dfn class="decl def fn" id="copy_to_user" title='copy_to_user' data-ref="copy_to_user" data-ref-filename="copy_to_user">copy_to_user</dfn>(<em>void</em> <a class="macro" href="compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *<dfn class="local col9 decl" id="9989to" title='to' data-type='void *' data-ref="9989to" data-ref-filename="9989to">to</dfn>, <em>const</em> <em>void</em> *<dfn class="local col0 decl" id="9990from" title='from' data-type='const void *' data-ref="9990from" data-ref-filename="9990from">from</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col1 decl" id="9991n" title='n' data-type='unsigned long' data-ref="9991n" data-ref-filename="9991n">n</dfn>)</td></tr>
+<tr><th id="150">150</th><td>{</td></tr>
+<tr><th id="151">151</th><td>	<b>if</b> (<a class="macro" href="compiler.h.html#77" title="__builtin_expect(!!(check_copy_size(from, n, true)), 1)" data-ref="_M/likely">likely</a>(<a class="ref fn" href="thread_info.h.html#check_copy_size" title='check_copy_size' data-ref="check_copy_size" data-ref-filename="check_copy_size">check_copy_size</a>(<a class="local col0 ref" href="#9990from" title='from' data-ref="9990from" data-ref-filename="9990from">from</a>, <a class="local col1 ref" href="#9991n" title='n' data-ref="9991n" data-ref-filename="9991n">n</a>, <a class="enum" href="stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>)))</td></tr>
+<tr><th id="152">152</th><td>		<a class="local col1 ref" href="#9991n" title='n' data-ref="9991n" data-ref-filename="9991n">n</a> = <a class="ref fn" href="#_copy_to_user" title='_copy_to_user' data-ref="_copy_to_user" data-ref-filename="_copy_to_user">_copy_to_user</a>(<a class="local col9 ref" href="#9989to" title='to' data-ref="9989to" data-ref-filename="9989to">to</a>, <a class="local col0 ref" href="#9990from" title='from' data-ref="9990from" data-ref-filename="9990from">from</a>, <a class="local col1 ref" href="#9991n" title='n' data-ref="9991n" data-ref-filename="9991n">n</a>);</td></tr>
+<tr><th id="153">153</th><td>	<b>return</b> <a class="local col1 ref" href="#9991n" title='n' data-ref="9991n" data-ref-filename="9991n">n</a>;</td></tr>
+<tr><th id="154">154</th><td>}</td></tr>
+<tr><th id="155">155</th><td><u>#<span data-ppcond="155">ifdef</span> <a class="macro" href="../generated/autoconf.h.html#86" data-ref="_M/CONFIG_COMPAT">CONFIG_COMPAT</a></u></td></tr>
+<tr><th id="156">156</th><td><em>static</em> <a class="macro" href="compiler_attributes.h.html#67" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function)) __attribute__((__always_inline__))" data-ref="_M/__always_inline">__always_inline</a> <em>unsigned</em> <em>long</em> <a class="macro" href="compiler_types.h.html#108" title="__attribute__((__warn_unused_result__))" data-ref="_M/__must_check">__must_check</a></td></tr>
+<tr><th id="157">157</th><td><dfn class="decl def fn" id="copy_in_user" title='copy_in_user' data-ref="copy_in_user" data-ref-filename="copy_in_user">copy_in_user</dfn>(<em>void</em> <a class="macro" href="compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *<dfn class="local col2 decl" id="9992to" title='to' data-type='void *' data-ref="9992to" data-ref-filename="9992to">to</dfn>, <em>const</em> <em>void</em> <a class="macro" href="compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *<dfn class="local col3 decl" id="9993from" title='from' data-type='const void *' data-ref="9993from" data-ref-filename="9993from">from</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col4 decl" id="9994n" title='n' data-type='unsigned long' data-ref="9994n" data-ref-filename="9994n">n</dfn>)</td></tr>
+<tr><th id="158">158</th><td>{</td></tr>
+<tr><th id="159">159</th><td>	<a class="ref fn" href="kernel.h.html#might_fault" title='might_fault' data-ref="might_fault" data-ref-filename="might_fault">might_fault</a>();</td></tr>
+<tr><th id="160">160</th><td>	<b>if</b> (<a class="macro" href="../../arch/x86/include/asm/uaccess.h.html#93" title="({ ; __builtin_expect(!!(!({ (void)0; __chk_range_not_ok((unsigned long )(to), n, (get_current()-&gt;thread.addr_limit.seg)); })), 1); })" data-ref="_M/access_ok">access_ok</a>(<a class="local col2 ref" href="#9992to" title='to' data-ref="9992to" data-ref-filename="9992to">to</a>, <a class="local col4 ref" href="#9994n" title='n' data-ref="9994n" data-ref-filename="9994n">n</a>) &amp;&amp; <a class="macro" href="../../arch/x86/include/asm/uaccess.h.html#93" title="({ ; __builtin_expect(!!(!({ (void)0; __chk_range_not_ok((unsigned long )(from), n, (get_current()-&gt;thread.addr_limit.seg)); })), 1); })" data-ref="_M/access_ok">access_ok</a>(<a class="local col3 ref" href="#9993from" title='from' data-ref="9993from" data-ref-filename="9993from">from</a>, <a class="local col4 ref" href="#9994n" title='n' data-ref="9994n" data-ref-filename="9994n">n</a>))</td></tr>
+<tr><th id="161">161</th><td>		<a class="local col4 ref" href="#9994n" title='n' data-ref="9994n" data-ref-filename="9994n">n</a> = <a class="ref fn" href="../../arch/x86/include/asm/uaccess_64.h.html#raw_copy_in_user" title='raw_copy_in_user' data-ref="raw_copy_in_user" data-ref-filename="raw_copy_in_user">raw_copy_in_user</a>(<a class="local col2 ref" href="#9992to" title='to' data-ref="9992to" data-ref-filename="9992to">to</a>, <a class="local col3 ref" href="#9993from" title='from' data-ref="9993from" data-ref-filename="9993from">from</a>, <a class="local col4 ref" href="#9994n" title='n' data-ref="9994n" data-ref-filename="9994n">n</a>);</td></tr>
+<tr><th id="162">162</th><td>	<b>return</b> <a class="local col4 ref" href="#9994n" title='n' data-ref="9994n" data-ref-filename="9994n">n</a>;</td></tr>
+<tr><th id="163">163</th><td>}</td></tr>
+<tr><th id="164">164</th><td><u>#<span data-ppcond="155">endif</span></u></td></tr>
+<tr><th id="165">165</th><td></td></tr>
+<tr><th id="166">166</th><td><em>static</em> <a class="macro" href="compiler_attributes.h.html#67" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function)) __attribute__((__always_inline__))" data-ref="_M/__always_inline">__always_inline</a> <em>void</em> <dfn class="decl def fn" id="pagefault_disabled_inc" title='pagefault_disabled_inc' data-ref="pagefault_disabled_inc" data-ref-filename="pagefault_disabled_inc">pagefault_disabled_inc</dfn>(<em>void</em>)</td></tr>
+<tr><th id="167">167</th><td>{</td></tr>
+<tr><th id="168">168</th><td>	<a class="macro" href="../../arch/x86/include/asm/current.h.html#18" title="get_current()" data-ref="_M/current">current</a>-&gt;<a class="ref field" href="sched.h.html#task_struct::pagefault_disabled" title='task_struct::pagefault_disabled' data-ref="task_struct::pagefault_disabled" data-ref-filename="task_struct..pagefault_disabled">pagefault_disabled</a>++;</td></tr>
+<tr><th id="169">169</th><td>}</td></tr>
+<tr><th id="170">170</th><td></td></tr>
+<tr><th id="171">171</th><td><em>static</em> <a class="macro" href="compiler_attributes.h.html#67" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function)) __attribute__((__always_inline__))" data-ref="_M/__always_inline">__always_inline</a> <em>void</em> <dfn class="decl def fn" id="pagefault_disabled_dec" title='pagefault_disabled_dec' data-ref="pagefault_disabled_dec" data-ref-filename="pagefault_disabled_dec">pagefault_disabled_dec</dfn>(<em>void</em>)</td></tr>
+<tr><th id="172">172</th><td>{</td></tr>
+<tr><th id="173">173</th><td>	<a class="macro" href="../../arch/x86/include/asm/current.h.html#18" title="get_current()" data-ref="_M/current">current</a>-&gt;<a class="ref field" href="sched.h.html#task_struct::pagefault_disabled" title='task_struct::pagefault_disabled' data-ref="task_struct::pagefault_disabled" data-ref-filename="task_struct..pagefault_disabled">pagefault_disabled</a>--;</td></tr>
+<tr><th id="174">174</th><td>}</td></tr>
+<tr><th id="175">175</th><td></td></tr>
+<tr><th id="176">176</th><td><i>/*</i></td></tr>
+<tr><th id="177">177</th><td><i> * These routines enable/disable the pagefault handler. If disabled, it will</i></td></tr>
+<tr><th id="178">178</th><td><i> * not take any locks and go straight to the fixup table.</i></td></tr>
+<tr><th id="179">179</th><td><i> *</i></td></tr>
+<tr><th id="180">180</th><td><i> * User access methods will not sleep when called from a pagefault_disabled()</i></td></tr>
+<tr><th id="181">181</th><td><i> * environment.</i></td></tr>
+<tr><th id="182">182</th><td><i> */</i></td></tr>
+<tr><th id="183">183</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="pagefault_disable" title='pagefault_disable' data-ref="pagefault_disable" data-ref-filename="pagefault_disable">pagefault_disable</dfn>(<em>void</em>)</td></tr>
+<tr><th id="184">184</th><td>{</td></tr>
+<tr><th id="185">185</th><td>	<a class="ref fn" href="#pagefault_disabled_inc" title='pagefault_disabled_inc' data-ref="pagefault_disabled_inc" data-ref-filename="pagefault_disabled_inc">pagefault_disabled_inc</a>();</td></tr>
+<tr><th id="186">186</th><td>	<i>/*</i></td></tr>
+<tr><th id="187">187</th><td><i>	 * make sure to have issued the store before a pagefault</i></td></tr>
+<tr><th id="188">188</th><td><i>	 * can hit.</i></td></tr>
+<tr><th id="189">189</th><td><i>	 */</i></td></tr>
+<tr><th id="190">190</th><td>	<a class="macro" href="compiler-clang.h.html#44" title="__asm__ __volatile__(&quot;&quot; : : : &quot;memory&quot;)" data-ref="_M/barrier">barrier</a>();</td></tr>
+<tr><th id="191">191</th><td>}</td></tr>
+<tr><th id="192">192</th><td></td></tr>
+<tr><th id="193">193</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="pagefault_enable" title='pagefault_enable' data-ref="pagefault_enable" data-ref-filename="pagefault_enable">pagefault_enable</dfn>(<em>void</em>)</td></tr>
+<tr><th id="194">194</th><td>{</td></tr>
+<tr><th id="195">195</th><td>	<i>/*</i></td></tr>
+<tr><th id="196">196</th><td><i>	 * make sure to issue those last loads/stores before enabling</i></td></tr>
+<tr><th id="197">197</th><td><i>	 * the pagefault handler again.</i></td></tr>
+<tr><th id="198">198</th><td><i>	 */</i></td></tr>
+<tr><th id="199">199</th><td>	<a class="macro" href="compiler-clang.h.html#44" title="__asm__ __volatile__(&quot;&quot; : : : &quot;memory&quot;)" data-ref="_M/barrier">barrier</a>();</td></tr>
+<tr><th id="200">200</th><td>	<a class="ref fn" href="#pagefault_disabled_dec" title='pagefault_disabled_dec' data-ref="pagefault_disabled_dec" data-ref-filename="pagefault_disabled_dec">pagefault_disabled_dec</a>();</td></tr>
+<tr><th id="201">201</th><td>}</td></tr>
+<tr><th id="202">202</th><td></td></tr>
+<tr><th id="203">203</th><td><i>/*</i></td></tr>
+<tr><th id="204">204</th><td><i> * Is the pagefault handler disabled? If so, user access methods will not sleep.</i></td></tr>
+<tr><th id="205">205</th><td><i> */</i></td></tr>
+<tr><th id="206">206</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="pagefault_disabled" title='pagefault_disabled' data-ref="pagefault_disabled" data-ref-filename="pagefault_disabled">pagefault_disabled</dfn>(<em>void</em>)</td></tr>
+<tr><th id="207">207</th><td>{</td></tr>
+<tr><th id="208">208</th><td>	<b>return</b> <a class="macro" href="../../arch/x86/include/asm/current.h.html#18" title="get_current()" data-ref="_M/current">current</a>-&gt;<a class="ref field" href="sched.h.html#task_struct::pagefault_disabled" title='task_struct::pagefault_disabled' data-ref="task_struct::pagefault_disabled" data-ref-filename="task_struct..pagefault_disabled">pagefault_disabled</a> != <var>0</var>;</td></tr>
+<tr><th id="209">209</th><td>}</td></tr>
+<tr><th id="210">210</th><td></td></tr>
+<tr><th id="211">211</th><td><i>/*</i></td></tr>
+<tr><th id="212">212</th><td><i> * The pagefault handler is in general disabled by pagefault_disable() or</i></td></tr>
+<tr><th id="213">213</th><td><i> * when in irq context (via in_atomic()).</i></td></tr>
+<tr><th id="214">214</th><td><i> *</i></td></tr>
+<tr><th id="215">215</th><td><i> * This function should only be used by the fault handlers. Other users should</i></td></tr>
+<tr><th id="216">216</th><td><i> * stick to pagefault_disabled().</i></td></tr>
+<tr><th id="217">217</th><td><i> * Please NEVER use preempt_disable() to disable the fault handler. With</i></td></tr>
+<tr><th id="218">218</th><td><i> * !CONFIG_PREEMPT_COUNT, this is like a NOP. So the handler won't be disabled.</i></td></tr>
+<tr><th id="219">219</th><td><i> * in_atomic() will report different values based on !CONFIG_PREEMPT_COUNT.</i></td></tr>
+<tr><th id="220">220</th><td><i> */</i></td></tr>
+<tr><th id="221">221</th><td><u>#define <dfn class="macro" id="_M/faulthandler_disabled" data-ref="_M/faulthandler_disabled">faulthandler_disabled</dfn>() (pagefault_disabled() || in_atomic())</u></td></tr>
+<tr><th id="222">222</th><td></td></tr>
+<tr><th id="223">223</th><td><u>#<span data-ppcond="223">ifndef</span> <a class="macro" href="../../arch/x86/include/asm/uaccess.h.html#689" data-ref="_M/ARCH_HAS_NOCACHE_UACCESS">ARCH_HAS_NOCACHE_UACCESS</a></u></td></tr>
+<tr><th id="224">224</th><td></td></tr>
+<tr><th id="225">225</th><td><em>static</em> <b>inline</b> <em>unsigned</em> <em>long</em> __copy_from_user_inatomic_nocache(<em>void</em> *to,</td></tr>
+<tr><th id="226">226</th><td>				<em>const</em> <em>void</em> __user *from, <em>unsigned</em> <em>long</em> n)</td></tr>
+<tr><th id="227">227</th><td>{</td></tr>
+<tr><th id="228">228</th><td>	<b>return</b> __copy_from_user_inatomic(to, from, n);</td></tr>
+<tr><th id="229">229</th><td>}</td></tr>
+<tr><th id="230">230</th><td></td></tr>
+<tr><th id="231">231</th><td><u>#<span data-ppcond="223">endif</span>		/* ARCH_HAS_NOCACHE_UACCESS */</u></td></tr>
+<tr><th id="232">232</th><td></td></tr>
+<tr><th id="233">233</th><td><i>/*</i></td></tr>
+<tr><th id="234">234</th><td><i> * probe_kernel_read(): safely attempt to read from a location</i></td></tr>
+<tr><th id="235">235</th><td><i> * @dst: pointer to the buffer that shall take the data</i></td></tr>
+<tr><th id="236">236</th><td><i> * @src: address to read from</i></td></tr>
+<tr><th id="237">237</th><td><i> * @size: size of the data chunk</i></td></tr>
+<tr><th id="238">238</th><td><i> *</i></td></tr>
+<tr><th id="239">239</th><td><i> * Safely read from address @src to the buffer at @dst.  If a kernel fault</i></td></tr>
+<tr><th id="240">240</th><td><i> * happens, handle that and return -EFAULT.</i></td></tr>
+<tr><th id="241">241</th><td><i> */</i></td></tr>
+<tr><th id="242">242</th><td><b>extern</b> <em>long</em> <a class="decl fn" href="../../arch/x86/include/asm/ptrace.h.html#probe_kernel_read" title='probe_kernel_read' data-ref="probe_kernel_read" data-ref-filename="probe_kernel_read" id="probe_kernel_read">probe_kernel_read</a>(<em>void</em> *<dfn class="local col5 decl" id="9995dst" title='dst' data-type='void *' data-ref="9995dst" data-ref-filename="9995dst">dst</dfn>, <em>const</em> <em>void</em> *<dfn class="local col6 decl" id="9996src" title='src' data-type='const void *' data-ref="9996src" data-ref-filename="9996src">src</dfn>, <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col7 decl" id="9997size" title='size' data-type='size_t' data-ref="9997size" data-ref-filename="9997size">size</dfn>);</td></tr>
+<tr><th id="243">243</th><td><b>extern</b> <em>long</em> <dfn class="decl fn" id="__probe_kernel_read" title='__probe_kernel_read' data-ref="__probe_kernel_read" data-ref-filename="__probe_kernel_read">__probe_kernel_read</dfn>(<em>void</em> *<dfn class="local col8 decl" id="9998dst" title='dst' data-type='void *' data-ref="9998dst" data-ref-filename="9998dst">dst</dfn>, <em>const</em> <em>void</em> *<dfn class="local col9 decl" id="9999src" title='src' data-type='const void *' data-ref="9999src" data-ref-filename="9999src">src</dfn>, <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col0 decl" id="10000size" title='size' data-type='size_t' data-ref="10000size" data-ref-filename="10000size">size</dfn>);</td></tr>
+<tr><th id="244">244</th><td></td></tr>
+<tr><th id="245">245</th><td><i>/*</i></td></tr>
+<tr><th id="246">246</th><td><i> * probe_user_read(): safely attempt to read from a location in user space</i></td></tr>
+<tr><th id="247">247</th><td><i> * @dst: pointer to the buffer that shall take the data</i></td></tr>
+<tr><th id="248">248</th><td><i> * @src: address to read from</i></td></tr>
+<tr><th id="249">249</th><td><i> * @size: size of the data chunk</i></td></tr>
+<tr><th id="250">250</th><td><i> *</i></td></tr>
+<tr><th id="251">251</th><td><i> * Safely read from address @src to the buffer at @dst.  If a kernel fault</i></td></tr>
+<tr><th id="252">252</th><td><i> * happens, handle that and return -EFAULT.</i></td></tr>
+<tr><th id="253">253</th><td><i> */</i></td></tr>
+<tr><th id="254">254</th><td><b>extern</b> <em>long</em> <dfn class="decl fn" id="probe_user_read" title='probe_user_read' data-ref="probe_user_read" data-ref-filename="probe_user_read">probe_user_read</dfn>(<em>void</em> *<dfn class="local col1 decl" id="10001dst" title='dst' data-type='void *' data-ref="10001dst" data-ref-filename="10001dst">dst</dfn>, <em>const</em> <em>void</em> <a class="macro" href="compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *<dfn class="local col2 decl" id="10002src" title='src' data-type='const void *' data-ref="10002src" data-ref-filename="10002src">src</dfn>, <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col3 decl" id="10003size" title='size' data-type='size_t' data-ref="10003size" data-ref-filename="10003size">size</dfn>);</td></tr>
+<tr><th id="255">255</th><td><b>extern</b> <em>long</em> <dfn class="decl fn" id="__probe_user_read" title='__probe_user_read' data-ref="__probe_user_read" data-ref-filename="__probe_user_read">__probe_user_read</dfn>(<em>void</em> *<dfn class="local col4 decl" id="10004dst" title='dst' data-type='void *' data-ref="10004dst" data-ref-filename="10004dst">dst</dfn>, <em>const</em> <em>void</em> <a class="macro" href="compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *<dfn class="local col5 decl" id="10005src" title='src' data-type='const void *' data-ref="10005src" data-ref-filename="10005src">src</dfn>, <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col6 decl" id="10006size" title='size' data-type='size_t' data-ref="10006size" data-ref-filename="10006size">size</dfn>);</td></tr>
+<tr><th id="256">256</th><td></td></tr>
+<tr><th id="257">257</th><td><i>/*</i></td></tr>
+<tr><th id="258">258</th><td><i> * probe_kernel_write(): safely attempt to write to a location</i></td></tr>
+<tr><th id="259">259</th><td><i> * @dst: address to write to</i></td></tr>
+<tr><th id="260">260</th><td><i> * @src: pointer to the data that shall be written</i></td></tr>
+<tr><th id="261">261</th><td><i> * @size: size of the data chunk</i></td></tr>
+<tr><th id="262">262</th><td><i> *</i></td></tr>
+<tr><th id="263">263</th><td><i> * Safely write to address @dst from the buffer at @src.  If a kernel fault</i></td></tr>
+<tr><th id="264">264</th><td><i> * happens, handle that and return -EFAULT.</i></td></tr>
+<tr><th id="265">265</th><td><i> */</i></td></tr>
+<tr><th id="266">266</th><td><b>extern</b> <em>long</em> <a class="macro" href="../../arch/x86/include/asm/linkage.h.html#8" title="__attribute__((no_instrument_function))" data-ref="_M/notrace">notrace</a> <dfn class="decl fn" id="probe_kernel_write" title='probe_kernel_write' data-ref="probe_kernel_write" data-ref-filename="probe_kernel_write">probe_kernel_write</dfn>(<em>void</em> *<dfn class="local col7 decl" id="10007dst" title='dst' data-type='void *' data-ref="10007dst" data-ref-filename="10007dst">dst</dfn>, <em>const</em> <em>void</em> *<dfn class="local col8 decl" id="10008src" title='src' data-type='const void *' data-ref="10008src" data-ref-filename="10008src">src</dfn>, <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col9 decl" id="10009size" title='size' data-type='size_t' data-ref="10009size" data-ref-filename="10009size">size</dfn>);</td></tr>
+<tr><th id="267">267</th><td><b>extern</b> <em>long</em> <a class="macro" href="../../arch/x86/include/asm/linkage.h.html#8" title="__attribute__((no_instrument_function))" data-ref="_M/notrace">notrace</a> <dfn class="decl fn" id="__probe_kernel_write" title='__probe_kernel_write' data-ref="__probe_kernel_write" data-ref-filename="__probe_kernel_write">__probe_kernel_write</dfn>(<em>void</em> *<dfn class="local col0 decl" id="10010dst" title='dst' data-type='void *' data-ref="10010dst" data-ref-filename="10010dst">dst</dfn>, <em>const</em> <em>void</em> *<dfn class="local col1 decl" id="10011src" title='src' data-type='const void *' data-ref="10011src" data-ref-filename="10011src">src</dfn>, <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col2 decl" id="10012size" title='size' data-type='size_t' data-ref="10012size" data-ref-filename="10012size">size</dfn>);</td></tr>
+<tr><th id="268">268</th><td></td></tr>
+<tr><th id="269">269</th><td><b>extern</b> <em>long</em> <dfn class="decl fn" id="strncpy_from_unsafe" title='strncpy_from_unsafe' data-ref="strncpy_from_unsafe" data-ref-filename="strncpy_from_unsafe">strncpy_from_unsafe</dfn>(<em>char</em> *<dfn class="local col3 decl" id="10013dst" title='dst' data-type='char *' data-ref="10013dst" data-ref-filename="10013dst">dst</dfn>, <em>const</em> <em>void</em> *<dfn class="local col4 decl" id="10014unsafe_addr" title='unsafe_addr' data-type='const void *' data-ref="10014unsafe_addr" data-ref-filename="10014unsafe_addr">unsafe_addr</dfn>, <em>long</em> <dfn class="local col5 decl" id="10015count" title='count' data-type='long' data-ref="10015count" data-ref-filename="10015count">count</dfn>);</td></tr>
+<tr><th id="270">270</th><td><b>extern</b> <em>long</em> <dfn class="decl fn" id="strncpy_from_unsafe_user" title='strncpy_from_unsafe_user' data-ref="strncpy_from_unsafe_user" data-ref-filename="strncpy_from_unsafe_user">strncpy_from_unsafe_user</dfn>(<em>char</em> *<dfn class="local col6 decl" id="10016dst" title='dst' data-type='char *' data-ref="10016dst" data-ref-filename="10016dst">dst</dfn>, <em>const</em> <em>void</em> <a class="macro" href="compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *<dfn class="local col7 decl" id="10017unsafe_addr" title='unsafe_addr' data-type='const void *' data-ref="10017unsafe_addr" data-ref-filename="10017unsafe_addr">unsafe_addr</dfn>,</td></tr>
+<tr><th id="271">271</th><td>				     <em>long</em> <dfn class="local col8 decl" id="10018count" title='count' data-type='long' data-ref="10018count" data-ref-filename="10018count">count</dfn>);</td></tr>
+<tr><th id="272">272</th><td><b>extern</b> <em>long</em> <dfn class="decl fn" id="strnlen_unsafe_user" title='strnlen_unsafe_user' data-ref="strnlen_unsafe_user" data-ref-filename="strnlen_unsafe_user">strnlen_unsafe_user</dfn>(<em>const</em> <em>void</em> <a class="macro" href="compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *<dfn class="local col9 decl" id="10019unsafe_addr" title='unsafe_addr' data-type='const void *' data-ref="10019unsafe_addr" data-ref-filename="10019unsafe_addr">unsafe_addr</dfn>, <em>long</em> <dfn class="local col0 decl" id="10020count" title='count' data-type='long' data-ref="10020count" data-ref-filename="10020count">count</dfn>);</td></tr>
+<tr><th id="273">273</th><td></td></tr>
+<tr><th id="274">274</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="275">275</th><td><i class="doc"> * probe_kernel_address(): safely attempt to read from a location</i></td></tr>
+<tr><th id="276">276</th><td><i class="doc"> *<span class="command"> @addr</span>: address to read from</i></td></tr>
+<tr><th id="277">277</th><td><i class="doc"> *<span class="command"> @retval</span>: read into this variable</i></td></tr>
+<tr><th id="278">278</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="279">279</th><td><i class="doc"> * Returns 0 on success, or -EFAULT.</i></td></tr>
+<tr><th id="280">280</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="281">281</th><td><u>#define <dfn class="macro" id="_M/probe_kernel_address" data-ref="_M/probe_kernel_address">probe_kernel_address</dfn>(addr, retval)		\</u></td></tr>
+<tr><th id="282">282</th><td><u>	probe_kernel_read(&amp;retval, addr, sizeof(retval))</u></td></tr>
+<tr><th id="283">283</th><td></td></tr>
+<tr><th id="284">284</th><td><u>#<span data-ppcond="284">ifndef</span> <a class="macro" href="../../arch/x86/include/asm/uaccess.h.html#719" data-ref="_M/user_access_begin">user_access_begin</a></u></td></tr>
+<tr><th id="285">285</th><td><u>#define user_access_begin(ptr,len) access_ok(ptr, len)</u></td></tr>
+<tr><th id="286">286</th><td><u>#define user_access_end() do { } while (0)</u></td></tr>
+<tr><th id="287">287</th><td><u>#define unsafe_get_user(x, ptr, err) do { if (unlikely(__get_user(x, ptr))) goto err; } while (0)</u></td></tr>
+<tr><th id="288">288</th><td><u>#define unsafe_put_user(x, ptr, err) do { if (unlikely(__put_user(x, ptr))) goto err; } while (0)</u></td></tr>
+<tr><th id="289">289</th><td><em>static</em> <b>inline</b> <em>unsigned</em> <em>long</em> user_access_save(<em>void</em>) { <b>return</b> <var>0UL</var>; }</td></tr>
+<tr><th id="290">290</th><td><em>static</em> <b>inline</b> <em>void</em> user_access_restore(<em>unsigned</em> <em>long</em> flags) { }</td></tr>
+<tr><th id="291">291</th><td><u>#<span data-ppcond="284">endif</span></u></td></tr>
+<tr><th id="292">292</th><td></td></tr>
+<tr><th id="293">293</th><td><u>#<span data-ppcond="293">ifdef</span> <span class="macro" data-ref="_M/CONFIG_HARDENED_USERCOPY">CONFIG_HARDENED_USERCOPY</span></u></td></tr>
+<tr><th id="294">294</th><td><em>void</em> usercopy_warn(<em>const</em> <em>char</em> *name, <em>const</em> <em>char</em> *detail, bool to_user,</td></tr>
+<tr><th id="295">295</th><td>		   <em>unsigned</em> <em>long</em> offset, <em>unsigned</em> <em>long</em> len);</td></tr>
+<tr><th id="296">296</th><td><em>void</em> __noreturn usercopy_abort(<em>const</em> <em>char</em> *name, <em>const</em> <em>char</em> *detail,</td></tr>
+<tr><th id="297">297</th><td>			       bool to_user, <em>unsigned</em> <em>long</em> offset,</td></tr>
+<tr><th id="298">298</th><td>			       <em>unsigned</em> <em>long</em> len);</td></tr>
+<tr><th id="299">299</th><td><u>#<span data-ppcond="293">endif</span></u></td></tr>
+<tr><th id="300">300</th><td></td></tr>
+<tr><th id="301">301</th><td><u>#<span data-ppcond="2">endif</span>		/* __LINUX_UACCESS_H__ */</u></td></tr>
+<tr><th id="302">302</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../arch/x86/boot/compressed/acpi.c.html'>linux-5.3.1/arch/x86/boot/compressed/acpi.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

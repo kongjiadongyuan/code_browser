@@ -1,0 +1,6 @@
+<dec f='linux-5.3.1/include/trace/events/mce.h' l='33' type='u8'/>
+<use f='linux-5.3.1/include/trace/events/mce.h' l='64' u='r' c='trace_raw_output_mce_record'/>
+<use f='linux-5.3.1/include/trace/events/mce.h' l='33' u='r' c='trace_event_define_fields_mce_record'/>
+<use f='linux-5.3.1/include/trace/events/mce.h' l='53' u='w' c='trace_event_raw_event_mce_record'/>
+<use f='linux-5.3.1/include/trace/events/mce.h' l='53' u='w' c='perf_trace_mce_record'/>
+<offset>832</offset>

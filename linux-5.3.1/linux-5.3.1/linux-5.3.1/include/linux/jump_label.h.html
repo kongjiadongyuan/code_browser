@@ -1,0 +1,524 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>jump_label.h source code [linux-5.3.1/include/linux/jump_label.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="jump_entry,jump_label_type,static_key,static_key_false,static_key_true "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/include/linux/jump_label.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>include</a>/<a href='./'>linux</a>/<a href='jump_label.h.html'>jump_label.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0 */</i></td></tr>
+<tr><th id="2">2</th><td><u>#<span data-ppcond="2">ifndef</span> <span class="macro" data-ref="_M/_LINUX_JUMP_LABEL_H">_LINUX_JUMP_LABEL_H</span></u></td></tr>
+<tr><th id="3">3</th><td><u>#define <dfn class="macro" id="_M/_LINUX_JUMP_LABEL_H" data-ref="_M/_LINUX_JUMP_LABEL_H">_LINUX_JUMP_LABEL_H</dfn></u></td></tr>
+<tr><th id="4">4</th><td></td></tr>
+<tr><th id="5">5</th><td><i>/*</i></td></tr>
+<tr><th id="6">6</th><td><i> * Jump label support</i></td></tr>
+<tr><th id="7">7</th><td><i> *</i></td></tr>
+<tr><th id="8">8</th><td><i> * Copyright (C) 2009-2012 Jason Baron &lt;jbaron@redhat.com&gt;</i></td></tr>
+<tr><th id="9">9</th><td><i> * Copyright (C) 2011-2012 Red Hat, Inc., Peter Zijlstra</i></td></tr>
+<tr><th id="10">10</th><td><i> *</i></td></tr>
+<tr><th id="11">11</th><td><i> * DEPRECATED API:</i></td></tr>
+<tr><th id="12">12</th><td><i> *</i></td></tr>
+<tr><th id="13">13</th><td><i> * The use of 'struct static_key' directly, is now DEPRECATED. In addition</i></td></tr>
+<tr><th id="14">14</th><td><i> * static_key_{true,false}() is also DEPRECATED. IE DO NOT use the following:</i></td></tr>
+<tr><th id="15">15</th><td><i> *</i></td></tr>
+<tr><th id="16">16</th><td><i> * struct static_key false = STATIC_KEY_INIT_FALSE;</i></td></tr>
+<tr><th id="17">17</th><td><i> * struct static_key true = STATIC_KEY_INIT_TRUE;</i></td></tr>
+<tr><th id="18">18</th><td><i> * static_key_true()</i></td></tr>
+<tr><th id="19">19</th><td><i> * static_key_false()</i></td></tr>
+<tr><th id="20">20</th><td><i> *</i></td></tr>
+<tr><th id="21">21</th><td><i> * The updated API replacements are:</i></td></tr>
+<tr><th id="22">22</th><td><i> *</i></td></tr>
+<tr><th id="23">23</th><td><i> * DEFINE_STATIC_KEY_TRUE(key);</i></td></tr>
+<tr><th id="24">24</th><td><i> * DEFINE_STATIC_KEY_FALSE(key);</i></td></tr>
+<tr><th id="25">25</th><td><i> * DEFINE_STATIC_KEY_ARRAY_TRUE(keys, count);</i></td></tr>
+<tr><th id="26">26</th><td><i> * DEFINE_STATIC_KEY_ARRAY_FALSE(keys, count);</i></td></tr>
+<tr><th id="27">27</th><td><i> * static_branch_likely()</i></td></tr>
+<tr><th id="28">28</th><td><i> * static_branch_unlikely()</i></td></tr>
+<tr><th id="29">29</th><td><i> *</i></td></tr>
+<tr><th id="30">30</th><td><i> * Jump labels provide an interface to generate dynamic branches using</i></td></tr>
+<tr><th id="31">31</th><td><i> * self-modifying code. Assuming toolchain and architecture support, if we</i></td></tr>
+<tr><th id="32">32</th><td><i> * define a "key" that is initially false via "DEFINE_STATIC_KEY_FALSE(key)",</i></td></tr>
+<tr><th id="33">33</th><td><i> * an "if (static_branch_unlikely(&amp;key))" statement is an unconditional branch</i></td></tr>
+<tr><th id="34">34</th><td><i> * (which defaults to false - and the true block is placed out of line).</i></td></tr>
+<tr><th id="35">35</th><td><i> * Similarly, we can define an initially true key via</i></td></tr>
+<tr><th id="36">36</th><td><i> * "DEFINE_STATIC_KEY_TRUE(key)", and use it in the same</i></td></tr>
+<tr><th id="37">37</th><td><i> * "if (static_branch_unlikely(&amp;key))", in which case we will generate an</i></td></tr>
+<tr><th id="38">38</th><td><i> * unconditional branch to the out-of-line true branch. Keys that are</i></td></tr>
+<tr><th id="39">39</th><td><i> * initially true or false can be using in both static_branch_unlikely()</i></td></tr>
+<tr><th id="40">40</th><td><i> * and static_branch_likely() statements.</i></td></tr>
+<tr><th id="41">41</th><td><i> *</i></td></tr>
+<tr><th id="42">42</th><td><i> * At runtime we can change the branch target by setting the key</i></td></tr>
+<tr><th id="43">43</th><td><i> * to true via a call to static_branch_enable(), or false using</i></td></tr>
+<tr><th id="44">44</th><td><i> * static_branch_disable(). If the direction of the branch is switched by</i></td></tr>
+<tr><th id="45">45</th><td><i> * these calls then we run-time modify the branch target via a</i></td></tr>
+<tr><th id="46">46</th><td><i> * no-op -&gt; jump or jump -&gt; no-op conversion. For example, for an</i></td></tr>
+<tr><th id="47">47</th><td><i> * initially false key that is used in an "if (static_branch_unlikely(&amp;key))"</i></td></tr>
+<tr><th id="48">48</th><td><i> * statement, setting the key to true requires us to patch in a jump</i></td></tr>
+<tr><th id="49">49</th><td><i> * to the out-of-line of true branch.</i></td></tr>
+<tr><th id="50">50</th><td><i> *</i></td></tr>
+<tr><th id="51">51</th><td><i> * In addition to static_branch_{enable,disable}, we can also reference count</i></td></tr>
+<tr><th id="52">52</th><td><i> * the key or branch direction via static_branch_{inc,dec}. Thus,</i></td></tr>
+<tr><th id="53">53</th><td><i> * static_branch_inc() can be thought of as a 'make more true' and</i></td></tr>
+<tr><th id="54">54</th><td><i> * static_branch_dec() as a 'make more false'.</i></td></tr>
+<tr><th id="55">55</th><td><i> *</i></td></tr>
+<tr><th id="56">56</th><td><i> * Since this relies on modifying code, the branch modifying functions</i></td></tr>
+<tr><th id="57">57</th><td><i> * must be considered absolute slow paths (machine wide synchronization etc.).</i></td></tr>
+<tr><th id="58">58</th><td><i> * OTOH, since the affected branches are unconditional, their runtime overhead</i></td></tr>
+<tr><th id="59">59</th><td><i> * will be absolutely minimal, esp. in the default (off) case where the total</i></td></tr>
+<tr><th id="60">60</th><td><i> * effect is a single NOP of appropriate size. The on case will patch in a jump</i></td></tr>
+<tr><th id="61">61</th><td><i> * to the out-of-line block.</i></td></tr>
+<tr><th id="62">62</th><td><i> *</i></td></tr>
+<tr><th id="63">63</th><td><i> * When the control is directly exposed to userspace, it is prudent to delay the</i></td></tr>
+<tr><th id="64">64</th><td><i> * decrement to avoid high frequency code modifications which can (and do)</i></td></tr>
+<tr><th id="65">65</th><td><i> * cause significant performance degradation. Struct static_key_deferred and</i></td></tr>
+<tr><th id="66">66</th><td><i> * static_key_slow_dec_deferred() provide for this.</i></td></tr>
+<tr><th id="67">67</th><td><i> *</i></td></tr>
+<tr><th id="68">68</th><td><i> * Lacking toolchain and or architecture support, static keys fall back to a</i></td></tr>
+<tr><th id="69">69</th><td><i> * simple conditional branch.</i></td></tr>
+<tr><th id="70">70</th><td><i> *</i></td></tr>
+<tr><th id="71">71</th><td><i> * Additional babbling in: Documentation/static-keys.txt</i></td></tr>
+<tr><th id="72">72</th><td><i> */</i></td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td><u>#<span data-ppcond="74">ifndef</span> <span class="macro" data-ref="_M/__ASSEMBLY__">__ASSEMBLY__</span></u></td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td><u>#include <a href="types.h.html">&lt;linux/types.h&gt;</a></u></td></tr>
+<tr><th id="77">77</th><td><u>#include <a href="compiler.h.html">&lt;linux/compiler.h&gt;</a></u></td></tr>
+<tr><th id="78">78</th><td></td></tr>
+<tr><th id="79">79</th><td><b>extern</b> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl" id="static_key_initialized" title='static_key_initialized' data-ref="static_key_initialized" data-ref-filename="static_key_initialized">static_key_initialized</dfn>;</td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td><u>#define <dfn class="macro" id="_M/STATIC_KEY_CHECK_USE" data-ref="_M/STATIC_KEY_CHECK_USE">STATIC_KEY_CHECK_USE</dfn>(key) WARN(!static_key_initialized,		      \</u></td></tr>
+<tr><th id="82">82</th><td><u>				    "%s(): static key '%pS' used before call to jump_label_init()", \</u></td></tr>
+<tr><th id="83">83</th><td><u>				    __func__, (key))</u></td></tr>
+<tr><th id="84">84</th><td></td></tr>
+<tr><th id="85">85</th><td><u>#<span data-ppcond="85">ifdef</span> <a class="macro" href="../generated/autoconf.h.html#352" data-ref="_M/CONFIG_JUMP_LABEL">CONFIG_JUMP_LABEL</a></u></td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td><b>struct</b> <dfn class="type def" id="static_key" title='static_key' data-ref="static_key" data-ref-filename="static_key">static_key</dfn> {</td></tr>
+<tr><th id="88">88</th><td>	<a class="typedef" href="types.h.html#atomic_t" title='atomic_t' data-type='struct atomic_t' data-ref="atomic_t" data-ref-filename="atomic_t">atomic_t</a> <dfn class="decl field" id="static_key::enabled" title='static_key::enabled' data-ref="static_key::enabled" data-ref-filename="static_key..enabled">enabled</dfn>;</td></tr>
+<tr><th id="89">89</th><td><i>/*</i></td></tr>
+<tr><th id="90">90</th><td><i> * Note:</i></td></tr>
+<tr><th id="91">91</th><td><i> *   To make anonymous unions work with old compilers, the static</i></td></tr>
+<tr><th id="92">92</th><td><i> *   initialization of them requires brackets. This creates a dependency</i></td></tr>
+<tr><th id="93">93</th><td><i> *   on the order of the struct with the initializers. If any fields</i></td></tr>
+<tr><th id="94">94</th><td><i> *   are added, STATIC_KEY_INIT_TRUE and STATIC_KEY_INIT_FALSE may need</i></td></tr>
+<tr><th id="95">95</th><td><i> *   to be modified.</i></td></tr>
+<tr><th id="96">96</th><td><i> *</i></td></tr>
+<tr><th id="97">97</th><td><i> * bit 0 =&gt; 1 if key is initially true</i></td></tr>
+<tr><th id="98">98</th><td><i> *	    0 if initially false</i></td></tr>
+<tr><th id="99">99</th><td><i> * bit 1 =&gt; 1 if points to struct static_key_mod</i></td></tr>
+<tr><th id="100">100</th><td><i> *	    0 if points to struct jump_entry</i></td></tr>
+<tr><th id="101">101</th><td><i> */</i></td></tr>
+<tr><th id="102">102</th><td>	<b>union</b> {</td></tr>
+<tr><th id="103">103</th><td>		<em>unsigned</em> <em>long</em> <dfn class="decl field" id="static_key::(anonymous)::type" title='static_key::(anonymous union)::type' data-ref="static_key::(anonymous)::type" data-ref-filename="static_key..(anonymous)..type">type</dfn>;</td></tr>
+<tr><th id="104">104</th><td>		<b>struct</b> <a class="type" href="#jump_entry" title='jump_entry' data-ref="jump_entry" data-ref-filename="jump_entry">jump_entry</a> *<dfn class="decl field" id="static_key::(anonymous)::entries" title='static_key::(anonymous union)::entries' data-ref="static_key::(anonymous)::entries" data-ref-filename="static_key..(anonymous)..entries">entries</dfn>;</td></tr>
+<tr><th id="105">105</th><td>		<b>struct</b> <dfn class="type" id="static_key_mod" title='static_key_mod' data-ref="static_key_mod" data-ref-filename="static_key_mod"><a class="type" href="#static_key_mod" title='static_key_mod' data-ref="static_key_mod" data-ref-filename="static_key_mod">static_key_mod</a></dfn> *<dfn class="decl field" id="static_key::(anonymous)::next" title='static_key::(anonymous union)::next' data-ref="static_key::(anonymous)::next" data-ref-filename="static_key..(anonymous)..next">next</dfn>;</td></tr>
+<tr><th id="106">106</th><td>	};</td></tr>
+<tr><th id="107">107</th><td>};</td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td><u>#<span data-ppcond="85">else</span></u></td></tr>
+<tr><th id="110">110</th><td><b>struct</b> static_key {</td></tr>
+<tr><th id="111">111</th><td>	atomic_t enabled;</td></tr>
+<tr><th id="112">112</th><td>};</td></tr>
+<tr><th id="113">113</th><td><u>#<span data-ppcond="85">endif</span>	/* CONFIG_JUMP_LABEL */</u></td></tr>
+<tr><th id="114">114</th><td><u>#<span data-ppcond="74">endif</span> /* __ASSEMBLY__ */</u></td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td><u>#<span data-ppcond="116">ifdef</span> <a class="macro" href="../generated/autoconf.h.html#352" data-ref="_M/CONFIG_JUMP_LABEL">CONFIG_JUMP_LABEL</a></u></td></tr>
+<tr><th id="117">117</th><td><u>#include <a href="../../arch/x86/include/asm/jump_label.h.html">&lt;asm/jump_label.h&gt;</a></u></td></tr>
+<tr><th id="118">118</th><td></td></tr>
+<tr><th id="119">119</th><td><u>#<span data-ppcond="119">ifndef</span> <span class="macro" data-ref="_M/__ASSEMBLY__">__ASSEMBLY__</span></u></td></tr>
+<tr><th id="120">120</th><td><u>#<span data-ppcond="120">ifdef</span> <a class="macro" href="../generated/autoconf.h.html#919" data-ref="_M/CONFIG_HAVE_ARCH_JUMP_LABEL_RELATIVE">CONFIG_HAVE_ARCH_JUMP_LABEL_RELATIVE</a></u></td></tr>
+<tr><th id="121">121</th><td></td></tr>
+<tr><th id="122">122</th><td><b>struct</b> <dfn class="type def" id="jump_entry" title='jump_entry' data-ref="jump_entry" data-ref-filename="jump_entry">jump_entry</dfn> {</td></tr>
+<tr><th id="123">123</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#s32" title='s32' data-type='__s32' data-ref="s32" data-ref-filename="s32">s32</a> <dfn class="decl field" id="jump_entry::code" title='jump_entry::code' data-ref="jump_entry::code" data-ref-filename="jump_entry..code">code</dfn>;</td></tr>
+<tr><th id="124">124</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#s32" title='s32' data-type='__s32' data-ref="s32" data-ref-filename="s32">s32</a> <dfn class="decl field" id="jump_entry::target" title='jump_entry::target' data-ref="jump_entry::target" data-ref-filename="jump_entry..target">target</dfn>;</td></tr>
+<tr><th id="125">125</th><td>	<em>long</em> <dfn class="decl field" id="jump_entry::key" title='jump_entry::key' data-ref="jump_entry::key" data-ref-filename="jump_entry..key">key</dfn>;	<i>// key may be far away from the core kernel under KASLR</i></td></tr>
+<tr><th id="126">126</th><td>};</td></tr>
+<tr><th id="127">127</th><td></td></tr>
+<tr><th id="128">128</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>long</em> <dfn class="decl def fn" id="jump_entry_code" title='jump_entry_code' data-ref="jump_entry_code" data-ref-filename="jump_entry_code">jump_entry_code</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#jump_entry" title='jump_entry' data-ref="jump_entry" data-ref-filename="jump_entry">jump_entry</a> *<dfn class="local col2 decl" id="742entry" title='entry' data-type='const struct jump_entry *' data-ref="742entry" data-ref-filename="742entry">entry</dfn>)</td></tr>
+<tr><th id="129">129</th><td>{</td></tr>
+<tr><th id="130">130</th><td>	<b>return</b> (<em>unsigned</em> <em>long</em>)&amp;<a class="local col2 ref" href="#742entry" title='entry' data-ref="742entry" data-ref-filename="742entry">entry</a>-&gt;<a class="ref field" href="#jump_entry::code" title='jump_entry::code' data-ref="jump_entry::code" data-ref-filename="jump_entry..code">code</a> + <a class="local col2 ref" href="#742entry" title='entry' data-ref="742entry" data-ref-filename="742entry">entry</a>-&gt;<a class="ref field" href="#jump_entry::code" title='jump_entry::code' data-ref="jump_entry::code" data-ref-filename="jump_entry..code">code</a>;</td></tr>
+<tr><th id="131">131</th><td>}</td></tr>
+<tr><th id="132">132</th><td></td></tr>
+<tr><th id="133">133</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>long</em> <dfn class="decl def fn" id="jump_entry_target" title='jump_entry_target' data-ref="jump_entry_target" data-ref-filename="jump_entry_target">jump_entry_target</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#jump_entry" title='jump_entry' data-ref="jump_entry" data-ref-filename="jump_entry">jump_entry</a> *<dfn class="local col3 decl" id="743entry" title='entry' data-type='const struct jump_entry *' data-ref="743entry" data-ref-filename="743entry">entry</dfn>)</td></tr>
+<tr><th id="134">134</th><td>{</td></tr>
+<tr><th id="135">135</th><td>	<b>return</b> (<em>unsigned</em> <em>long</em>)&amp;<a class="local col3 ref" href="#743entry" title='entry' data-ref="743entry" data-ref-filename="743entry">entry</a>-&gt;<a class="ref field" href="#jump_entry::target" title='jump_entry::target' data-ref="jump_entry::target" data-ref-filename="jump_entry..target">target</a> + <a class="local col3 ref" href="#743entry" title='entry' data-ref="743entry" data-ref-filename="743entry">entry</a>-&gt;<a class="ref field" href="#jump_entry::target" title='jump_entry::target' data-ref="jump_entry::target" data-ref-filename="jump_entry..target">target</a>;</td></tr>
+<tr><th id="136">136</th><td>}</td></tr>
+<tr><th id="137">137</th><td></td></tr>
+<tr><th id="138">138</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="#static_key" title='static_key' data-ref="static_key" data-ref-filename="static_key">static_key</a> *<dfn class="decl def fn" id="jump_entry_key" title='jump_entry_key' data-ref="jump_entry_key" data-ref-filename="jump_entry_key">jump_entry_key</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#jump_entry" title='jump_entry' data-ref="jump_entry" data-ref-filename="jump_entry">jump_entry</a> *<dfn class="local col4 decl" id="744entry" title='entry' data-type='const struct jump_entry *' data-ref="744entry" data-ref-filename="744entry">entry</dfn>)</td></tr>
+<tr><th id="139">139</th><td>{</td></tr>
+<tr><th id="140">140</th><td>	<em>long</em> <dfn class="local col5 decl" id="745offset" title='offset' data-type='long' data-ref="745offset" data-ref-filename="745offset">offset</dfn> = <a class="local col4 ref" href="#744entry" title='entry' data-ref="744entry" data-ref-filename="744entry">entry</a>-&gt;<a class="ref field" href="#jump_entry::key" title='jump_entry::key' data-ref="jump_entry::key" data-ref-filename="jump_entry..key">key</a> &amp; ~<var>3L</var>;</td></tr>
+<tr><th id="141">141</th><td></td></tr>
+<tr><th id="142">142</th><td>	<b>return</b> (<b>struct</b> <a class="type" href="#static_key" title='static_key' data-ref="static_key" data-ref-filename="static_key">static_key</a> *)((<em>unsigned</em> <em>long</em>)&amp;<a class="local col4 ref" href="#744entry" title='entry' data-ref="744entry" data-ref-filename="744entry">entry</a>-&gt;<a class="ref field" href="#jump_entry::key" title='jump_entry::key' data-ref="jump_entry::key" data-ref-filename="jump_entry..key">key</a> + <a class="local col5 ref" href="#745offset" title='offset' data-ref="745offset" data-ref-filename="745offset">offset</a>);</td></tr>
+<tr><th id="143">143</th><td>}</td></tr>
+<tr><th id="144">144</th><td></td></tr>
+<tr><th id="145">145</th><td><u>#<span data-ppcond="120">else</span></u></td></tr>
+<tr><th id="146">146</th><td></td></tr>
+<tr><th id="147">147</th><td><em>static</em> <b>inline</b> <em>unsigned</em> <em>long</em> jump_entry_code(<em>const</em> <b>struct</b> jump_entry *entry)</td></tr>
+<tr><th id="148">148</th><td>{</td></tr>
+<tr><th id="149">149</th><td>	<b>return</b> entry-&gt;code;</td></tr>
+<tr><th id="150">150</th><td>}</td></tr>
+<tr><th id="151">151</th><td></td></tr>
+<tr><th id="152">152</th><td><em>static</em> <b>inline</b> <em>unsigned</em> <em>long</em> jump_entry_target(<em>const</em> <b>struct</b> jump_entry *entry)</td></tr>
+<tr><th id="153">153</th><td>{</td></tr>
+<tr><th id="154">154</th><td>	<b>return</b> entry-&gt;target;</td></tr>
+<tr><th id="155">155</th><td>}</td></tr>
+<tr><th id="156">156</th><td></td></tr>
+<tr><th id="157">157</th><td><em>static</em> <b>inline</b> <b>struct</b> static_key *jump_entry_key(<em>const</em> <b>struct</b> jump_entry *entry)</td></tr>
+<tr><th id="158">158</th><td>{</td></tr>
+<tr><th id="159">159</th><td>	<b>return</b> (<b>struct</b> static_key *)((<em>unsigned</em> <em>long</em>)entry-&gt;key &amp; ~<var>3UL</var>);</td></tr>
+<tr><th id="160">160</th><td>}</td></tr>
+<tr><th id="161">161</th><td></td></tr>
+<tr><th id="162">162</th><td><u>#<span data-ppcond="120">endif</span></u></td></tr>
+<tr><th id="163">163</th><td></td></tr>
+<tr><th id="164">164</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="jump_entry_is_branch" title='jump_entry_is_branch' data-ref="jump_entry_is_branch" data-ref-filename="jump_entry_is_branch">jump_entry_is_branch</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#jump_entry" title='jump_entry' data-ref="jump_entry" data-ref-filename="jump_entry">jump_entry</a> *<dfn class="local col6 decl" id="746entry" title='entry' data-type='const struct jump_entry *' data-ref="746entry" data-ref-filename="746entry">entry</dfn>)</td></tr>
+<tr><th id="165">165</th><td>{</td></tr>
+<tr><th id="166">166</th><td>	<b>return</b> (<em>unsigned</em> <em>long</em>)<a class="local col6 ref" href="#746entry" title='entry' data-ref="746entry" data-ref-filename="746entry">entry</a>-&gt;<a class="ref field" href="#jump_entry::key" title='jump_entry::key' data-ref="jump_entry::key" data-ref-filename="jump_entry..key">key</a> &amp; <var>1UL</var>;</td></tr>
+<tr><th id="167">167</th><td>}</td></tr>
+<tr><th id="168">168</th><td></td></tr>
+<tr><th id="169">169</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="jump_entry_is_init" title='jump_entry_is_init' data-ref="jump_entry_is_init" data-ref-filename="jump_entry_is_init">jump_entry_is_init</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#jump_entry" title='jump_entry' data-ref="jump_entry" data-ref-filename="jump_entry">jump_entry</a> *<dfn class="local col7 decl" id="747entry" title='entry' data-type='const struct jump_entry *' data-ref="747entry" data-ref-filename="747entry">entry</dfn>)</td></tr>
+<tr><th id="170">170</th><td>{</td></tr>
+<tr><th id="171">171</th><td>	<b>return</b> (<em>unsigned</em> <em>long</em>)<a class="local col7 ref" href="#747entry" title='entry' data-ref="747entry" data-ref-filename="747entry">entry</a>-&gt;<a class="ref field" href="#jump_entry::key" title='jump_entry::key' data-ref="jump_entry::key" data-ref-filename="jump_entry..key">key</a> &amp; <var>2UL</var>;</td></tr>
+<tr><th id="172">172</th><td>}</td></tr>
+<tr><th id="173">173</th><td></td></tr>
+<tr><th id="174">174</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="jump_entry_set_init" title='jump_entry_set_init' data-ref="jump_entry_set_init" data-ref-filename="jump_entry_set_init">jump_entry_set_init</dfn>(<b>struct</b> <a class="type" href="#jump_entry" title='jump_entry' data-ref="jump_entry" data-ref-filename="jump_entry">jump_entry</a> *<dfn class="local col8 decl" id="748entry" title='entry' data-type='struct jump_entry *' data-ref="748entry" data-ref-filename="748entry">entry</dfn>)</td></tr>
+<tr><th id="175">175</th><td>{</td></tr>
+<tr><th id="176">176</th><td>	<a class="local col8 ref" href="#748entry" title='entry' data-ref="748entry" data-ref-filename="748entry">entry</a>-&gt;<a class="ref field" href="#jump_entry::key" title='jump_entry::key' data-ref="jump_entry::key" data-ref-filename="jump_entry..key">key</a> |= <var>2</var>;</td></tr>
+<tr><th id="177">177</th><td>}</td></tr>
+<tr><th id="178">178</th><td></td></tr>
+<tr><th id="179">179</th><td><u>#<span data-ppcond="119">endif</span></u></td></tr>
+<tr><th id="180">180</th><td><u>#<span data-ppcond="116">endif</span></u></td></tr>
+<tr><th id="181">181</th><td></td></tr>
+<tr><th id="182">182</th><td><u>#<span data-ppcond="182">ifndef</span> <span class="macro" data-ref="_M/__ASSEMBLY__">__ASSEMBLY__</span></u></td></tr>
+<tr><th id="183">183</th><td></td></tr>
+<tr><th id="184">184</th><td><b>enum</b> <dfn class="type def" id="jump_label_type" title='jump_label_type' data-ref="jump_label_type" data-ref-filename="jump_label_type">jump_label_type</dfn> {</td></tr>
+<tr><th id="185">185</th><td>	<dfn class="enum" id="JUMP_LABEL_NOP" title='JUMP_LABEL_NOP' data-ref="JUMP_LABEL_NOP" data-ref-filename="JUMP_LABEL_NOP">JUMP_LABEL_NOP</dfn> = <var>0</var>,</td></tr>
+<tr><th id="186">186</th><td>	<dfn class="enum" id="JUMP_LABEL_JMP" title='JUMP_LABEL_JMP' data-ref="JUMP_LABEL_JMP" data-ref-filename="JUMP_LABEL_JMP">JUMP_LABEL_JMP</dfn>,</td></tr>
+<tr><th id="187">187</th><td>};</td></tr>
+<tr><th id="188">188</th><td></td></tr>
+<tr><th id="189">189</th><td><b>struct</b> <a class="type" href="module.h.html#module" title='module' data-ref="module" data-ref-filename="module" id="module">module</a>;</td></tr>
+<tr><th id="190">190</th><td></td></tr>
+<tr><th id="191">191</th><td><u>#<span data-ppcond="191">ifdef</span> <a class="macro" href="../generated/autoconf.h.html#352" data-ref="_M/CONFIG_JUMP_LABEL">CONFIG_JUMP_LABEL</a></u></td></tr>
+<tr><th id="192">192</th><td></td></tr>
+<tr><th id="193">193</th><td><u>#define <dfn class="macro" id="_M/JUMP_TYPE_FALSE" data-ref="_M/JUMP_TYPE_FALSE">JUMP_TYPE_FALSE</dfn>		0UL</u></td></tr>
+<tr><th id="194">194</th><td><u>#define <dfn class="macro" id="_M/JUMP_TYPE_TRUE" data-ref="_M/JUMP_TYPE_TRUE">JUMP_TYPE_TRUE</dfn>		1UL</u></td></tr>
+<tr><th id="195">195</th><td><u>#define <dfn class="macro" id="_M/JUMP_TYPE_LINKED" data-ref="_M/JUMP_TYPE_LINKED">JUMP_TYPE_LINKED</dfn>	2UL</u></td></tr>
+<tr><th id="196">196</th><td><u>#define <dfn class="macro" id="_M/JUMP_TYPE_MASK" data-ref="_M/JUMP_TYPE_MASK">JUMP_TYPE_MASK</dfn>		3UL</u></td></tr>
+<tr><th id="197">197</th><td></td></tr>
+<tr><th id="198">198</th><td><em>static</em> <a class="macro" href="compiler_attributes.h.html#67" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function)) __attribute__((__always_inline__))" data-ref="_M/__always_inline">__always_inline</a> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="static_key_false" title='static_key_false' data-ref="static_key_false" data-ref-filename="static_key_false">static_key_false</dfn>(<b>struct</b> <a class="type" href="#static_key" title='static_key' data-ref="static_key" data-ref-filename="static_key">static_key</a> *<dfn class="local col9 decl" id="749key" title='key' data-type='struct static_key *' data-ref="749key" data-ref-filename="749key">key</dfn>)</td></tr>
+<tr><th id="199">199</th><td>{</td></tr>
+<tr><th id="200">200</th><td>	<b>return</b> <a class="ref fn" href="../../arch/x86/include/asm/jump_label.h.html#arch_static_branch" title='arch_static_branch' data-ref="arch_static_branch" data-ref-filename="arch_static_branch">arch_static_branch</a>(<a class="local col9 ref" href="#749key" title='key' data-ref="749key" data-ref-filename="749key">key</a>, <a class="enum" href="stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>);</td></tr>
+<tr><th id="201">201</th><td>}</td></tr>
+<tr><th id="202">202</th><td></td></tr>
+<tr><th id="203">203</th><td><em>static</em> <a class="macro" href="compiler_attributes.h.html#67" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function)) __attribute__((__always_inline__))" data-ref="_M/__always_inline">__always_inline</a> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="static_key_true" title='static_key_true' data-ref="static_key_true" data-ref-filename="static_key_true">static_key_true</dfn>(<b>struct</b> <a class="type" href="#static_key" title='static_key' data-ref="static_key" data-ref-filename="static_key">static_key</a> *<dfn class="local col0 decl" id="750key" title='key' data-type='struct static_key *' data-ref="750key" data-ref-filename="750key">key</dfn>)</td></tr>
+<tr><th id="204">204</th><td>{</td></tr>
+<tr><th id="205">205</th><td>	<b>return</b> !<a class="ref fn" href="../../arch/x86/include/asm/jump_label.h.html#arch_static_branch" title='arch_static_branch' data-ref="arch_static_branch" data-ref-filename="arch_static_branch">arch_static_branch</a>(<a class="local col0 ref" href="#750key" title='key' data-ref="750key" data-ref-filename="750key">key</a>, <a class="enum" href="stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>);</td></tr>
+<tr><th id="206">206</th><td>}</td></tr>
+<tr><th id="207">207</th><td></td></tr>
+<tr><th id="208">208</th><td><b>extern</b> <b>struct</b> <a class="type" href="#jump_entry" title='jump_entry' data-ref="jump_entry" data-ref-filename="jump_entry">jump_entry</a> <dfn class="decl" id="__start___jump_table" title='__start___jump_table' data-ref="__start___jump_table" data-ref-filename="__start___jump_table">__start___jump_table</dfn>[];</td></tr>
+<tr><th id="209">209</th><td><b>extern</b> <b>struct</b> <a class="type" href="#jump_entry" title='jump_entry' data-ref="jump_entry" data-ref-filename="jump_entry">jump_entry</a> <dfn class="decl" id="__stop___jump_table" title='__stop___jump_table' data-ref="__stop___jump_table" data-ref-filename="__stop___jump_table">__stop___jump_table</dfn>[];</td></tr>
+<tr><th id="210">210</th><td></td></tr>
+<tr><th id="211">211</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="jump_label_init" title='jump_label_init' data-ref="jump_label_init" data-ref-filename="jump_label_init">jump_label_init</dfn>(<em>void</em>);</td></tr>
+<tr><th id="212">212</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="jump_label_lock" title='jump_label_lock' data-ref="jump_label_lock" data-ref-filename="jump_label_lock">jump_label_lock</dfn>(<em>void</em>);</td></tr>
+<tr><th id="213">213</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="jump_label_unlock" title='jump_label_unlock' data-ref="jump_label_unlock" data-ref-filename="jump_label_unlock">jump_label_unlock</dfn>(<em>void</em>);</td></tr>
+<tr><th id="214">214</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="arch_jump_label_transform" title='arch_jump_label_transform' data-ref="arch_jump_label_transform" data-ref-filename="arch_jump_label_transform">arch_jump_label_transform</dfn>(<b>struct</b> <a class="type" href="#jump_entry" title='jump_entry' data-ref="jump_entry" data-ref-filename="jump_entry">jump_entry</a> *<dfn class="local col1 decl" id="751entry" title='entry' data-type='struct jump_entry *' data-ref="751entry" data-ref-filename="751entry">entry</dfn>,</td></tr>
+<tr><th id="215">215</th><td>				      <b>enum</b> <a class="type" href="#jump_label_type" title='jump_label_type' data-ref="jump_label_type" data-ref-filename="jump_label_type">jump_label_type</a> <dfn class="local col2 decl" id="752type" title='type' data-type='enum jump_label_type' data-ref="752type" data-ref-filename="752type">type</dfn>);</td></tr>
+<tr><th id="216">216</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="arch_jump_label_transform_static" title='arch_jump_label_transform_static' data-ref="arch_jump_label_transform_static" data-ref-filename="arch_jump_label_transform_static">arch_jump_label_transform_static</dfn>(<b>struct</b> <a class="type" href="#jump_entry" title='jump_entry' data-ref="jump_entry" data-ref-filename="jump_entry">jump_entry</a> *<dfn class="local col3 decl" id="753entry" title='entry' data-type='struct jump_entry *' data-ref="753entry" data-ref-filename="753entry">entry</dfn>,</td></tr>
+<tr><th id="217">217</th><td>					     <b>enum</b> <a class="type" href="#jump_label_type" title='jump_label_type' data-ref="jump_label_type" data-ref-filename="jump_label_type">jump_label_type</a> <dfn class="local col4 decl" id="754type" title='type' data-type='enum jump_label_type' data-ref="754type" data-ref-filename="754type">type</dfn>);</td></tr>
+<tr><th id="218">218</th><td><b>extern</b> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl fn" id="arch_jump_label_transform_queue" title='arch_jump_label_transform_queue' data-ref="arch_jump_label_transform_queue" data-ref-filename="arch_jump_label_transform_queue">arch_jump_label_transform_queue</dfn>(<b>struct</b> <a class="type" href="#jump_entry" title='jump_entry' data-ref="jump_entry" data-ref-filename="jump_entry">jump_entry</a> *<dfn class="local col5 decl" id="755entry" title='entry' data-type='struct jump_entry *' data-ref="755entry" data-ref-filename="755entry">entry</dfn>,</td></tr>
+<tr><th id="219">219</th><td>					    <b>enum</b> <a class="type" href="#jump_label_type" title='jump_label_type' data-ref="jump_label_type" data-ref-filename="jump_label_type">jump_label_type</a> <dfn class="local col6 decl" id="756type" title='type' data-type='enum jump_label_type' data-ref="756type" data-ref-filename="756type">type</dfn>);</td></tr>
+<tr><th id="220">220</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="arch_jump_label_transform_apply" title='arch_jump_label_transform_apply' data-ref="arch_jump_label_transform_apply" data-ref-filename="arch_jump_label_transform_apply">arch_jump_label_transform_apply</dfn>(<em>void</em>);</td></tr>
+<tr><th id="221">221</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="jump_label_text_reserved" title='jump_label_text_reserved' data-ref="jump_label_text_reserved" data-ref-filename="jump_label_text_reserved">jump_label_text_reserved</dfn>(<em>void</em> *<dfn class="local col7 decl" id="757start" title='start' data-type='void *' data-ref="757start" data-ref-filename="757start">start</dfn>, <em>void</em> *<dfn class="local col8 decl" id="758end" title='end' data-type='void *' data-ref="758end" data-ref-filename="758end">end</dfn>);</td></tr>
+<tr><th id="222">222</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="static_key_slow_inc" title='static_key_slow_inc' data-ref="static_key_slow_inc" data-ref-filename="static_key_slow_inc">static_key_slow_inc</dfn>(<b>struct</b> <a class="type" href="#static_key" title='static_key' data-ref="static_key" data-ref-filename="static_key">static_key</a> *<dfn class="local col9 decl" id="759key" title='key' data-type='struct static_key *' data-ref="759key" data-ref-filename="759key">key</dfn>);</td></tr>
+<tr><th id="223">223</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="static_key_slow_dec" title='static_key_slow_dec' data-ref="static_key_slow_dec" data-ref-filename="static_key_slow_dec">static_key_slow_dec</dfn>(<b>struct</b> <a class="type" href="#static_key" title='static_key' data-ref="static_key" data-ref-filename="static_key">static_key</a> *<dfn class="local col0 decl" id="760key" title='key' data-type='struct static_key *' data-ref="760key" data-ref-filename="760key">key</dfn>);</td></tr>
+<tr><th id="224">224</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="static_key_slow_inc_cpuslocked" title='static_key_slow_inc_cpuslocked' data-ref="static_key_slow_inc_cpuslocked" data-ref-filename="static_key_slow_inc_cpuslocked">static_key_slow_inc_cpuslocked</dfn>(<b>struct</b> <a class="type" href="#static_key" title='static_key' data-ref="static_key" data-ref-filename="static_key">static_key</a> *<dfn class="local col1 decl" id="761key" title='key' data-type='struct static_key *' data-ref="761key" data-ref-filename="761key">key</dfn>);</td></tr>
+<tr><th id="225">225</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="static_key_slow_dec_cpuslocked" title='static_key_slow_dec_cpuslocked' data-ref="static_key_slow_dec_cpuslocked" data-ref-filename="static_key_slow_dec_cpuslocked">static_key_slow_dec_cpuslocked</dfn>(<b>struct</b> <a class="type" href="#static_key" title='static_key' data-ref="static_key" data-ref-filename="static_key">static_key</a> *<dfn class="local col2 decl" id="762key" title='key' data-type='struct static_key *' data-ref="762key" data-ref-filename="762key">key</dfn>);</td></tr>
+<tr><th id="226">226</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="jump_label_apply_nops" title='jump_label_apply_nops' data-ref="jump_label_apply_nops" data-ref-filename="jump_label_apply_nops">jump_label_apply_nops</dfn>(<b>struct</b> <a class="type" href="module.h.html#module" title='module' data-ref="module" data-ref-filename="module">module</a> *<dfn class="local col3 decl" id="763mod" title='mod' data-type='struct module *' data-ref="763mod" data-ref-filename="763mod">mod</dfn>);</td></tr>
+<tr><th id="227">227</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="static_key_count" title='static_key_count' data-ref="static_key_count" data-ref-filename="static_key_count">static_key_count</dfn>(<b>struct</b> <a class="type" href="#static_key" title='static_key' data-ref="static_key" data-ref-filename="static_key">static_key</a> *<dfn class="local col4 decl" id="764key" title='key' data-type='struct static_key *' data-ref="764key" data-ref-filename="764key">key</dfn>);</td></tr>
+<tr><th id="228">228</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="static_key_enable" title='static_key_enable' data-ref="static_key_enable" data-ref-filename="static_key_enable">static_key_enable</dfn>(<b>struct</b> <a class="type" href="#static_key" title='static_key' data-ref="static_key" data-ref-filename="static_key">static_key</a> *<dfn class="local col5 decl" id="765key" title='key' data-type='struct static_key *' data-ref="765key" data-ref-filename="765key">key</dfn>);</td></tr>
+<tr><th id="229">229</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="static_key_disable" title='static_key_disable' data-ref="static_key_disable" data-ref-filename="static_key_disable">static_key_disable</dfn>(<b>struct</b> <a class="type" href="#static_key" title='static_key' data-ref="static_key" data-ref-filename="static_key">static_key</a> *<dfn class="local col6 decl" id="766key" title='key' data-type='struct static_key *' data-ref="766key" data-ref-filename="766key">key</dfn>);</td></tr>
+<tr><th id="230">230</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="static_key_enable_cpuslocked" title='static_key_enable_cpuslocked' data-ref="static_key_enable_cpuslocked" data-ref-filename="static_key_enable_cpuslocked">static_key_enable_cpuslocked</dfn>(<b>struct</b> <a class="type" href="#static_key" title='static_key' data-ref="static_key" data-ref-filename="static_key">static_key</a> *<dfn class="local col7 decl" id="767key" title='key' data-type='struct static_key *' data-ref="767key" data-ref-filename="767key">key</dfn>);</td></tr>
+<tr><th id="231">231</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="static_key_disable_cpuslocked" title='static_key_disable_cpuslocked' data-ref="static_key_disable_cpuslocked" data-ref-filename="static_key_disable_cpuslocked">static_key_disable_cpuslocked</dfn>(<b>struct</b> <a class="type" href="#static_key" title='static_key' data-ref="static_key" data-ref-filename="static_key">static_key</a> *<dfn class="local col8 decl" id="768key" title='key' data-type='struct static_key *' data-ref="768key" data-ref-filename="768key">key</dfn>);</td></tr>
+<tr><th id="232">232</th><td></td></tr>
+<tr><th id="233">233</th><td><i>/*</i></td></tr>
+<tr><th id="234">234</th><td><i> * We should be using ATOMIC_INIT() for initializing .enabled, but</i></td></tr>
+<tr><th id="235">235</th><td><i> * the inclusion of atomic.h is problematic for inclusion of jump_label.h</i></td></tr>
+<tr><th id="236">236</th><td><i> * in 'low-level' headers. Thus, we are initializing .enabled with a</i></td></tr>
+<tr><th id="237">237</th><td><i> * raw value, but have added a BUILD_BUG_ON() to catch any issues in</i></td></tr>
+<tr><th id="238">238</th><td><i> * jump_label_init() see: kernel/jump_label.c.</i></td></tr>
+<tr><th id="239">239</th><td><i> */</i></td></tr>
+<tr><th id="240">240</th><td><u>#define <dfn class="macro" id="_M/STATIC_KEY_INIT_TRUE" data-ref="_M/STATIC_KEY_INIT_TRUE">STATIC_KEY_INIT_TRUE</dfn>					\</u></td></tr>
+<tr><th id="241">241</th><td><u>	{ .enabled = { 1 },					\</u></td></tr>
+<tr><th id="242">242</th><td><u>	  { .entries = (void *)JUMP_TYPE_TRUE } }</u></td></tr>
+<tr><th id="243">243</th><td><u>#define <dfn class="macro" id="_M/STATIC_KEY_INIT_FALSE" data-ref="_M/STATIC_KEY_INIT_FALSE">STATIC_KEY_INIT_FALSE</dfn>					\</u></td></tr>
+<tr><th id="244">244</th><td><u>	{ .enabled = { 0 },					\</u></td></tr>
+<tr><th id="245">245</th><td><u>	  { .entries = (void *)JUMP_TYPE_FALSE } }</u></td></tr>
+<tr><th id="246">246</th><td></td></tr>
+<tr><th id="247">247</th><td><u>#<span data-ppcond="191">else</span>  /* !CONFIG_JUMP_LABEL */</u></td></tr>
+<tr><th id="248">248</th><td></td></tr>
+<tr><th id="249">249</th><td><u>#include &lt;linux/atomic.h&gt;</u></td></tr>
+<tr><th id="250">250</th><td><u>#include &lt;linux/bug.h&gt;</u></td></tr>
+<tr><th id="251">251</th><td></td></tr>
+<tr><th id="252">252</th><td><em>static</em> <b>inline</b> <em>int</em> static_key_count(<b>struct</b> static_key *key)</td></tr>
+<tr><th id="253">253</th><td>{</td></tr>
+<tr><th id="254">254</th><td>	<b>return</b> atomic_read(&amp;key-&gt;enabled);</td></tr>
+<tr><th id="255">255</th><td>}</td></tr>
+<tr><th id="256">256</th><td></td></tr>
+<tr><th id="257">257</th><td><em>static</em> __always_inline <em>void</em> jump_label_init(<em>void</em>)</td></tr>
+<tr><th id="258">258</th><td>{</td></tr>
+<tr><th id="259">259</th><td>	static_key_initialized = true;</td></tr>
+<tr><th id="260">260</th><td>}</td></tr>
+<tr><th id="261">261</th><td></td></tr>
+<tr><th id="262">262</th><td><em>static</em> __always_inline bool static_key_false(<b>struct</b> static_key *key)</td></tr>
+<tr><th id="263">263</th><td>{</td></tr>
+<tr><th id="264">264</th><td>	<b>if</b> (unlikely(static_key_count(key) &gt; <var>0</var>))</td></tr>
+<tr><th id="265">265</th><td>		<b>return</b> true;</td></tr>
+<tr><th id="266">266</th><td>	<b>return</b> false;</td></tr>
+<tr><th id="267">267</th><td>}</td></tr>
+<tr><th id="268">268</th><td></td></tr>
+<tr><th id="269">269</th><td><em>static</em> __always_inline bool static_key_true(<b>struct</b> static_key *key)</td></tr>
+<tr><th id="270">270</th><td>{</td></tr>
+<tr><th id="271">271</th><td>	<b>if</b> (likely(static_key_count(key) &gt; <var>0</var>))</td></tr>
+<tr><th id="272">272</th><td>		<b>return</b> true;</td></tr>
+<tr><th id="273">273</th><td>	<b>return</b> false;</td></tr>
+<tr><th id="274">274</th><td>}</td></tr>
+<tr><th id="275">275</th><td></td></tr>
+<tr><th id="276">276</th><td><em>static</em> <b>inline</b> <em>void</em> static_key_slow_inc(<b>struct</b> static_key *key)</td></tr>
+<tr><th id="277">277</th><td>{</td></tr>
+<tr><th id="278">278</th><td>	STATIC_KEY_CHECK_USE(key);</td></tr>
+<tr><th id="279">279</th><td>	atomic_inc(&amp;key-&gt;enabled);</td></tr>
+<tr><th id="280">280</th><td>}</td></tr>
+<tr><th id="281">281</th><td></td></tr>
+<tr><th id="282">282</th><td><em>static</em> <b>inline</b> <em>void</em> static_key_slow_dec(<b>struct</b> static_key *key)</td></tr>
+<tr><th id="283">283</th><td>{</td></tr>
+<tr><th id="284">284</th><td>	STATIC_KEY_CHECK_USE(key);</td></tr>
+<tr><th id="285">285</th><td>	atomic_dec(&amp;key-&gt;enabled);</td></tr>
+<tr><th id="286">286</th><td>}</td></tr>
+<tr><th id="287">287</th><td></td></tr>
+<tr><th id="288">288</th><td><u>#define static_key_slow_inc_cpuslocked(key) static_key_slow_inc(key)</u></td></tr>
+<tr><th id="289">289</th><td><u>#define static_key_slow_dec_cpuslocked(key) static_key_slow_dec(key)</u></td></tr>
+<tr><th id="290">290</th><td></td></tr>
+<tr><th id="291">291</th><td><em>static</em> <b>inline</b> <em>int</em> jump_label_text_reserved(<em>void</em> *start, <em>void</em> *end)</td></tr>
+<tr><th id="292">292</th><td>{</td></tr>
+<tr><th id="293">293</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="294">294</th><td>}</td></tr>
+<tr><th id="295">295</th><td></td></tr>
+<tr><th id="296">296</th><td><em>static</em> <b>inline</b> <em>void</em> jump_label_lock(<em>void</em>) {}</td></tr>
+<tr><th id="297">297</th><td><em>static</em> <b>inline</b> <em>void</em> jump_label_unlock(<em>void</em>) {}</td></tr>
+<tr><th id="298">298</th><td></td></tr>
+<tr><th id="299">299</th><td><em>static</em> <b>inline</b> <em>int</em> jump_label_apply_nops(<b>struct</b> module *mod)</td></tr>
+<tr><th id="300">300</th><td>{</td></tr>
+<tr><th id="301">301</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="302">302</th><td>}</td></tr>
+<tr><th id="303">303</th><td></td></tr>
+<tr><th id="304">304</th><td><em>static</em> <b>inline</b> <em>void</em> static_key_enable(<b>struct</b> static_key *key)</td></tr>
+<tr><th id="305">305</th><td>{</td></tr>
+<tr><th id="306">306</th><td>	STATIC_KEY_CHECK_USE(key);</td></tr>
+<tr><th id="307">307</th><td></td></tr>
+<tr><th id="308">308</th><td>	<b>if</b> (atomic_read(&amp;key-&gt;enabled) != <var>0</var>) {</td></tr>
+<tr><th id="309">309</th><td>		WARN_ON_ONCE(atomic_read(&amp;key-&gt;enabled) != <var>1</var>);</td></tr>
+<tr><th id="310">310</th><td>		<b>return</b>;</td></tr>
+<tr><th id="311">311</th><td>	}</td></tr>
+<tr><th id="312">312</th><td>	atomic_set(&amp;key-&gt;enabled, <var>1</var>);</td></tr>
+<tr><th id="313">313</th><td>}</td></tr>
+<tr><th id="314">314</th><td></td></tr>
+<tr><th id="315">315</th><td><em>static</em> <b>inline</b> <em>void</em> static_key_disable(<b>struct</b> static_key *key)</td></tr>
+<tr><th id="316">316</th><td>{</td></tr>
+<tr><th id="317">317</th><td>	STATIC_KEY_CHECK_USE(key);</td></tr>
+<tr><th id="318">318</th><td></td></tr>
+<tr><th id="319">319</th><td>	<b>if</b> (atomic_read(&amp;key-&gt;enabled) != <var>1</var>) {</td></tr>
+<tr><th id="320">320</th><td>		WARN_ON_ONCE(atomic_read(&amp;key-&gt;enabled) != <var>0</var>);</td></tr>
+<tr><th id="321">321</th><td>		<b>return</b>;</td></tr>
+<tr><th id="322">322</th><td>	}</td></tr>
+<tr><th id="323">323</th><td>	atomic_set(&amp;key-&gt;enabled, <var>0</var>);</td></tr>
+<tr><th id="324">324</th><td>}</td></tr>
+<tr><th id="325">325</th><td></td></tr>
+<tr><th id="326">326</th><td><u>#define static_key_enable_cpuslocked(k)		static_key_enable((k))</u></td></tr>
+<tr><th id="327">327</th><td><u>#define static_key_disable_cpuslocked(k)	static_key_disable((k))</u></td></tr>
+<tr><th id="328">328</th><td></td></tr>
+<tr><th id="329">329</th><td><u>#define STATIC_KEY_INIT_TRUE	{ .enabled = ATOMIC_INIT(1) }</u></td></tr>
+<tr><th id="330">330</th><td><u>#define STATIC_KEY_INIT_FALSE	{ .enabled = ATOMIC_INIT(0) }</u></td></tr>
+<tr><th id="331">331</th><td></td></tr>
+<tr><th id="332">332</th><td><u>#<span data-ppcond="191">endif</span>	/* CONFIG_JUMP_LABEL */</u></td></tr>
+<tr><th id="333">333</th><td></td></tr>
+<tr><th id="334">334</th><td><u>#define <dfn class="macro" id="_M/STATIC_KEY_INIT" data-ref="_M/STATIC_KEY_INIT">STATIC_KEY_INIT</dfn> STATIC_KEY_INIT_FALSE</u></td></tr>
+<tr><th id="335">335</th><td><u>#define <dfn class="macro" id="_M/jump_label_enabled" data-ref="_M/jump_label_enabled">jump_label_enabled</dfn> static_key_enabled</u></td></tr>
+<tr><th id="336">336</th><td></td></tr>
+<tr><th id="337">337</th><td><i>/* -------------------------------------------------------------------------- */</i></td></tr>
+<tr><th id="338">338</th><td></td></tr>
+<tr><th id="339">339</th><td><i>/*</i></td></tr>
+<tr><th id="340">340</th><td><i> * Two type wrappers around static_key, such that we can use compile time</i></td></tr>
+<tr><th id="341">341</th><td><i> * type differentiation to emit the right code.</i></td></tr>
+<tr><th id="342">342</th><td><i> *</i></td></tr>
+<tr><th id="343">343</th><td><i> * All the below code is macros in order to play type games.</i></td></tr>
+<tr><th id="344">344</th><td><i> */</i></td></tr>
+<tr><th id="345">345</th><td></td></tr>
+<tr><th id="346">346</th><td><b>struct</b> <dfn class="type def" id="static_key_true" title='static_key_true' data-ref="static_key_true" data-ref-filename="static_key_true">static_key_true</dfn> {</td></tr>
+<tr><th id="347">347</th><td>	<b>struct</b> <a class="type" href="#static_key" title='static_key' data-ref="static_key" data-ref-filename="static_key">static_key</a> <dfn class="decl field" id="static_key_true::key" title='static_key_true::key' data-ref="static_key_true::key" data-ref-filename="static_key_true..key">key</dfn>;</td></tr>
+<tr><th id="348">348</th><td>};</td></tr>
+<tr><th id="349">349</th><td></td></tr>
+<tr><th id="350">350</th><td><b>struct</b> <dfn class="type def" id="static_key_false" title='static_key_false' data-ref="static_key_false" data-ref-filename="static_key_false">static_key_false</dfn> {</td></tr>
+<tr><th id="351">351</th><td>	<b>struct</b> <a class="type" href="#static_key" title='static_key' data-ref="static_key" data-ref-filename="static_key">static_key</a> <dfn class="decl field" id="static_key_false::key" title='static_key_false::key' data-ref="static_key_false::key" data-ref-filename="static_key_false..key">key</dfn>;</td></tr>
+<tr><th id="352">352</th><td>};</td></tr>
+<tr><th id="353">353</th><td></td></tr>
+<tr><th id="354">354</th><td><u>#define <dfn class="macro" id="_M/STATIC_KEY_TRUE_INIT" data-ref="_M/STATIC_KEY_TRUE_INIT">STATIC_KEY_TRUE_INIT</dfn>  (struct static_key_true) { .key = STATIC_KEY_INIT_TRUE,  }</u></td></tr>
+<tr><th id="355">355</th><td><u>#define <dfn class="macro" id="_M/STATIC_KEY_FALSE_INIT" data-ref="_M/STATIC_KEY_FALSE_INIT">STATIC_KEY_FALSE_INIT</dfn> (struct static_key_false){ .key = STATIC_KEY_INIT_FALSE, }</u></td></tr>
+<tr><th id="356">356</th><td></td></tr>
+<tr><th id="357">357</th><td><u>#define <dfn class="macro" id="_M/DEFINE_STATIC_KEY_TRUE" data-ref="_M/DEFINE_STATIC_KEY_TRUE">DEFINE_STATIC_KEY_TRUE</dfn>(name)	\</u></td></tr>
+<tr><th id="358">358</th><td><u>	struct static_key_true name = STATIC_KEY_TRUE_INIT</u></td></tr>
+<tr><th id="359">359</th><td></td></tr>
+<tr><th id="360">360</th><td><u>#define <dfn class="macro" id="_M/DEFINE_STATIC_KEY_TRUE_RO" data-ref="_M/DEFINE_STATIC_KEY_TRUE_RO">DEFINE_STATIC_KEY_TRUE_RO</dfn>(name)	\</u></td></tr>
+<tr><th id="361">361</th><td><u>	struct static_key_true name __ro_after_init = STATIC_KEY_TRUE_INIT</u></td></tr>
+<tr><th id="362">362</th><td></td></tr>
+<tr><th id="363">363</th><td><u>#define <dfn class="macro" id="_M/DECLARE_STATIC_KEY_TRUE" data-ref="_M/DECLARE_STATIC_KEY_TRUE">DECLARE_STATIC_KEY_TRUE</dfn>(name)	\</u></td></tr>
+<tr><th id="364">364</th><td><u>	extern struct static_key_true name</u></td></tr>
+<tr><th id="365">365</th><td></td></tr>
+<tr><th id="366">366</th><td><u>#define <dfn class="macro" id="_M/DEFINE_STATIC_KEY_FALSE" data-ref="_M/DEFINE_STATIC_KEY_FALSE">DEFINE_STATIC_KEY_FALSE</dfn>(name)	\</u></td></tr>
+<tr><th id="367">367</th><td><u>	struct static_key_false name = STATIC_KEY_FALSE_INIT</u></td></tr>
+<tr><th id="368">368</th><td></td></tr>
+<tr><th id="369">369</th><td><u>#define <dfn class="macro" id="_M/DEFINE_STATIC_KEY_FALSE_RO" data-ref="_M/DEFINE_STATIC_KEY_FALSE_RO">DEFINE_STATIC_KEY_FALSE_RO</dfn>(name)	\</u></td></tr>
+<tr><th id="370">370</th><td><u>	struct static_key_false name __ro_after_init = STATIC_KEY_FALSE_INIT</u></td></tr>
+<tr><th id="371">371</th><td></td></tr>
+<tr><th id="372">372</th><td><u>#define <dfn class="macro" id="_M/DECLARE_STATIC_KEY_FALSE" data-ref="_M/DECLARE_STATIC_KEY_FALSE">DECLARE_STATIC_KEY_FALSE</dfn>(name)	\</u></td></tr>
+<tr><th id="373">373</th><td><u>	extern struct static_key_false name</u></td></tr>
+<tr><th id="374">374</th><td></td></tr>
+<tr><th id="375">375</th><td><u>#define <dfn class="macro" id="_M/DEFINE_STATIC_KEY_ARRAY_TRUE" data-ref="_M/DEFINE_STATIC_KEY_ARRAY_TRUE">DEFINE_STATIC_KEY_ARRAY_TRUE</dfn>(name, count)		\</u></td></tr>
+<tr><th id="376">376</th><td><u>	struct static_key_true name[count] = {			\</u></td></tr>
+<tr><th id="377">377</th><td><u>		[0 ... (count) - 1] = STATIC_KEY_TRUE_INIT,	\</u></td></tr>
+<tr><th id="378">378</th><td><u>	}</u></td></tr>
+<tr><th id="379">379</th><td></td></tr>
+<tr><th id="380">380</th><td><u>#define <dfn class="macro" id="_M/DEFINE_STATIC_KEY_ARRAY_FALSE" data-ref="_M/DEFINE_STATIC_KEY_ARRAY_FALSE">DEFINE_STATIC_KEY_ARRAY_FALSE</dfn>(name, count)		\</u></td></tr>
+<tr><th id="381">381</th><td><u>	struct static_key_false name[count] = {			\</u></td></tr>
+<tr><th id="382">382</th><td><u>		[0 ... (count) - 1] = STATIC_KEY_FALSE_INIT,	\</u></td></tr>
+<tr><th id="383">383</th><td><u>	}</u></td></tr>
+<tr><th id="384">384</th><td></td></tr>
+<tr><th id="385">385</th><td><b>extern</b> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl fn" id="____wrong_branch_error" title='____wrong_branch_error' data-ref="____wrong_branch_error" data-ref-filename="____wrong_branch_error">____wrong_branch_error</dfn>(<em>void</em>);</td></tr>
+<tr><th id="386">386</th><td></td></tr>
+<tr><th id="387">387</th><td><u>#define <dfn class="macro" id="_M/static_key_enabled" data-ref="_M/static_key_enabled">static_key_enabled</dfn>(x)							\</u></td></tr>
+<tr><th id="388">388</th><td><u>({										\</u></td></tr>
+<tr><th id="389">389</th><td><u>	if (!__builtin_types_compatible_p(typeof(*x), struct static_key) &amp;&amp;	\</u></td></tr>
+<tr><th id="390">390</th><td><u>	    !__builtin_types_compatible_p(typeof(*x), struct static_key_true) &amp;&amp;\</u></td></tr>
+<tr><th id="391">391</th><td><u>	    !__builtin_types_compatible_p(typeof(*x), struct static_key_false))	\</u></td></tr>
+<tr><th id="392">392</th><td><u>		____wrong_branch_error();					\</u></td></tr>
+<tr><th id="393">393</th><td><u>	static_key_count((struct static_key *)x) &gt; 0;				\</u></td></tr>
+<tr><th id="394">394</th><td><u>})</u></td></tr>
+<tr><th id="395">395</th><td></td></tr>
+<tr><th id="396">396</th><td><u>#<span data-ppcond="396">ifdef</span> <a class="macro" href="../generated/autoconf.h.html#352" data-ref="_M/CONFIG_JUMP_LABEL">CONFIG_JUMP_LABEL</a></u></td></tr>
+<tr><th id="397">397</th><td></td></tr>
+<tr><th id="398">398</th><td><i>/*</i></td></tr>
+<tr><th id="399">399</th><td><i> * Combine the right initial value (type) with the right branch order</i></td></tr>
+<tr><th id="400">400</th><td><i> * to generate the desired result.</i></td></tr>
+<tr><th id="401">401</th><td><i> *</i></td></tr>
+<tr><th id="402">402</th><td><i> *</i></td></tr>
+<tr><th id="403">403</th><td><i> * type\branch|	likely (1)	      |	unlikely (0)</i></td></tr>
+<tr><th id="404">404</th><td><i> * -----------+-----------------------+------------------</i></td></tr>
+<tr><th id="405">405</th><td><i> *            |                       |</i></td></tr>
+<tr><th id="406">406</th><td><i> *  true (1)  |	   ...		      |	   ...</i></td></tr>
+<tr><th id="407">407</th><td><i> *            |    NOP		      |	   JMP L</i></td></tr>
+<tr><th id="408">408</th><td><i> *            |    &lt;br-stmts&gt;	      |	1: ...</i></td></tr>
+<tr><th id="409">409</th><td><i> *            |	L: ...		      |</i></td></tr>
+<tr><th id="410">410</th><td><i> *            |			      |</i></td></tr>
+<tr><th id="411">411</th><td><i> *            |			      |	L: &lt;br-stmts&gt;</i></td></tr>
+<tr><th id="412">412</th><td><i> *            |			      |	   jmp 1b</i></td></tr>
+<tr><th id="413">413</th><td><i> *            |                       |</i></td></tr>
+<tr><th id="414">414</th><td><i> * -----------+-----------------------+------------------</i></td></tr>
+<tr><th id="415">415</th><td><i> *            |                       |</i></td></tr>
+<tr><th id="416">416</th><td><i> *  false (0) |	   ...		      |	   ...</i></td></tr>
+<tr><th id="417">417</th><td><i> *            |    JMP L	      |	   NOP</i></td></tr>
+<tr><th id="418">418</th><td><i> *            |    &lt;br-stmts&gt;	      |	1: ...</i></td></tr>
+<tr><th id="419">419</th><td><i> *            |	L: ...		      |</i></td></tr>
+<tr><th id="420">420</th><td><i> *            |			      |</i></td></tr>
+<tr><th id="421">421</th><td><i> *            |			      |	L: &lt;br-stmts&gt;</i></td></tr>
+<tr><th id="422">422</th><td><i> *            |			      |	   jmp 1b</i></td></tr>
+<tr><th id="423">423</th><td><i> *            |                       |</i></td></tr>
+<tr><th id="424">424</th><td><i> * -----------+-----------------------+------------------</i></td></tr>
+<tr><th id="425">425</th><td><i> *</i></td></tr>
+<tr><th id="426">426</th><td><i> * The initial value is encoded in the LSB of static_key::entries,</i></td></tr>
+<tr><th id="427">427</th><td><i> * type: 0 = false, 1 = true.</i></td></tr>
+<tr><th id="428">428</th><td><i> *</i></td></tr>
+<tr><th id="429">429</th><td><i> * The branch type is encoded in the LSB of jump_entry::key,</i></td></tr>
+<tr><th id="430">430</th><td><i> * branch: 0 = unlikely, 1 = likely.</i></td></tr>
+<tr><th id="431">431</th><td><i> *</i></td></tr>
+<tr><th id="432">432</th><td><i> * This gives the following logic table:</i></td></tr>
+<tr><th id="433">433</th><td><i> *</i></td></tr>
+<tr><th id="434">434</th><td><i> *	enabled	type	branch	  instuction</i></td></tr>
+<tr><th id="435">435</th><td><i> * -----------------------------+-----------</i></td></tr>
+<tr><th id="436">436</th><td><i> *	0	0	0	| NOP</i></td></tr>
+<tr><th id="437">437</th><td><i> *	0	0	1	| JMP</i></td></tr>
+<tr><th id="438">438</th><td><i> *	0	1	0	| NOP</i></td></tr>
+<tr><th id="439">439</th><td><i> *	0	1	1	| JMP</i></td></tr>
+<tr><th id="440">440</th><td><i> *</i></td></tr>
+<tr><th id="441">441</th><td><i> *	1	0	0	| JMP</i></td></tr>
+<tr><th id="442">442</th><td><i> *	1	0	1	| NOP</i></td></tr>
+<tr><th id="443">443</th><td><i> *	1	1	0	| JMP</i></td></tr>
+<tr><th id="444">444</th><td><i> *	1	1	1	| NOP</i></td></tr>
+<tr><th id="445">445</th><td><i> *</i></td></tr>
+<tr><th id="446">446</th><td><i> * Which gives the following functions:</i></td></tr>
+<tr><th id="447">447</th><td><i> *</i></td></tr>
+<tr><th id="448">448</th><td><i> *   dynamic: instruction = enabled ^ branch</i></td></tr>
+<tr><th id="449">449</th><td><i> *   static:  instruction = type ^ branch</i></td></tr>
+<tr><th id="450">450</th><td><i> *</i></td></tr>
+<tr><th id="451">451</th><td><i> * See jump_label_type() / jump_label_init_type().</i></td></tr>
+<tr><th id="452">452</th><td><i> */</i></td></tr>
+<tr><th id="453">453</th><td></td></tr>
+<tr><th id="454">454</th><td><u>#define <dfn class="macro" id="_M/static_branch_likely" data-ref="_M/static_branch_likely">static_branch_likely</dfn>(x)							\</u></td></tr>
+<tr><th id="455">455</th><td><u>({										\</u></td></tr>
+<tr><th id="456">456</th><td><u>	bool branch;								\</u></td></tr>
+<tr><th id="457">457</th><td><u>	if (__builtin_types_compatible_p(typeof(*x), struct static_key_true))	\</u></td></tr>
+<tr><th id="458">458</th><td><u>		branch = !arch_static_branch(&amp;(x)-&gt;key, true);			\</u></td></tr>
+<tr><th id="459">459</th><td><u>	else if (__builtin_types_compatible_p(typeof(*x), struct static_key_false)) \</u></td></tr>
+<tr><th id="460">460</th><td><u>		branch = !arch_static_branch_jump(&amp;(x)-&gt;key, true);		\</u></td></tr>
+<tr><th id="461">461</th><td><u>	else									\</u></td></tr>
+<tr><th id="462">462</th><td><u>		branch = ____wrong_branch_error();				\</u></td></tr>
+<tr><th id="463">463</th><td><u>	likely(branch);								\</u></td></tr>
+<tr><th id="464">464</th><td><u>})</u></td></tr>
+<tr><th id="465">465</th><td></td></tr>
+<tr><th id="466">466</th><td><u>#define <dfn class="macro" id="_M/static_branch_unlikely" data-ref="_M/static_branch_unlikely">static_branch_unlikely</dfn>(x)						\</u></td></tr>
+<tr><th id="467">467</th><td><u>({										\</u></td></tr>
+<tr><th id="468">468</th><td><u>	bool branch;								\</u></td></tr>
+<tr><th id="469">469</th><td><u>	if (__builtin_types_compatible_p(typeof(*x), struct static_key_true))	\</u></td></tr>
+<tr><th id="470">470</th><td><u>		branch = arch_static_branch_jump(&amp;(x)-&gt;key, false);		\</u></td></tr>
+<tr><th id="471">471</th><td><u>	else if (__builtin_types_compatible_p(typeof(*x), struct static_key_false)) \</u></td></tr>
+<tr><th id="472">472</th><td><u>		branch = arch_static_branch(&amp;(x)-&gt;key, false);			\</u></td></tr>
+<tr><th id="473">473</th><td><u>	else									\</u></td></tr>
+<tr><th id="474">474</th><td><u>		branch = ____wrong_branch_error();				\</u></td></tr>
+<tr><th id="475">475</th><td><u>	unlikely(branch);							\</u></td></tr>
+<tr><th id="476">476</th><td><u>})</u></td></tr>
+<tr><th id="477">477</th><td></td></tr>
+<tr><th id="478">478</th><td><u>#<span data-ppcond="396">else</span> /* !CONFIG_JUMP_LABEL */</u></td></tr>
+<tr><th id="479">479</th><td></td></tr>
+<tr><th id="480">480</th><td><u>#define static_branch_likely(x)		likely(static_key_enabled(&amp;(x)-&gt;key))</u></td></tr>
+<tr><th id="481">481</th><td><u>#define static_branch_unlikely(x)	unlikely(static_key_enabled(&amp;(x)-&gt;key))</u></td></tr>
+<tr><th id="482">482</th><td></td></tr>
+<tr><th id="483">483</th><td><u>#<span data-ppcond="396">endif</span> /* CONFIG_JUMP_LABEL */</u></td></tr>
+<tr><th id="484">484</th><td></td></tr>
+<tr><th id="485">485</th><td><i>/*</i></td></tr>
+<tr><th id="486">486</th><td><i> * Advanced usage; refcount, branch is enabled when: count != 0</i></td></tr>
+<tr><th id="487">487</th><td><i> */</i></td></tr>
+<tr><th id="488">488</th><td></td></tr>
+<tr><th id="489">489</th><td><u>#define <dfn class="macro" id="_M/static_branch_inc" data-ref="_M/static_branch_inc">static_branch_inc</dfn>(x)		static_key_slow_inc(&amp;(x)-&gt;key)</u></td></tr>
+<tr><th id="490">490</th><td><u>#define <dfn class="macro" id="_M/static_branch_dec" data-ref="_M/static_branch_dec">static_branch_dec</dfn>(x)		static_key_slow_dec(&amp;(x)-&gt;key)</u></td></tr>
+<tr><th id="491">491</th><td><u>#define <dfn class="macro" id="_M/static_branch_inc_cpuslocked" data-ref="_M/static_branch_inc_cpuslocked">static_branch_inc_cpuslocked</dfn>(x)	static_key_slow_inc_cpuslocked(&amp;(x)-&gt;key)</u></td></tr>
+<tr><th id="492">492</th><td><u>#define <dfn class="macro" id="_M/static_branch_dec_cpuslocked" data-ref="_M/static_branch_dec_cpuslocked">static_branch_dec_cpuslocked</dfn>(x)	static_key_slow_dec_cpuslocked(&amp;(x)-&gt;key)</u></td></tr>
+<tr><th id="493">493</th><td></td></tr>
+<tr><th id="494">494</th><td><i>/*</i></td></tr>
+<tr><th id="495">495</th><td><i> * Normal usage; boolean enable/disable.</i></td></tr>
+<tr><th id="496">496</th><td><i> */</i></td></tr>
+<tr><th id="497">497</th><td></td></tr>
+<tr><th id="498">498</th><td><u>#define <dfn class="macro" id="_M/static_branch_enable" data-ref="_M/static_branch_enable">static_branch_enable</dfn>(x)			static_key_enable(&amp;(x)-&gt;key)</u></td></tr>
+<tr><th id="499">499</th><td><u>#define <dfn class="macro" id="_M/static_branch_disable" data-ref="_M/static_branch_disable">static_branch_disable</dfn>(x)		static_key_disable(&amp;(x)-&gt;key)</u></td></tr>
+<tr><th id="500">500</th><td><u>#define <dfn class="macro" id="_M/static_branch_enable_cpuslocked" data-ref="_M/static_branch_enable_cpuslocked">static_branch_enable_cpuslocked</dfn>(x)	static_key_enable_cpuslocked(&amp;(x)-&gt;key)</u></td></tr>
+<tr><th id="501">501</th><td><u>#define <dfn class="macro" id="_M/static_branch_disable_cpuslocked" data-ref="_M/static_branch_disable_cpuslocked">static_branch_disable_cpuslocked</dfn>(x)	static_key_disable_cpuslocked(&amp;(x)-&gt;key)</u></td></tr>
+<tr><th id="502">502</th><td></td></tr>
+<tr><th id="503">503</th><td><u>#<span data-ppcond="182">endif</span> /* __ASSEMBLY__ */</u></td></tr>
+<tr><th id="504">504</th><td></td></tr>
+<tr><th id="505">505</th><td><u>#<span data-ppcond="2">endif</span>	/* _LINUX_JUMP_LABEL_H */</u></td></tr>
+<tr><th id="506">506</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../arch/x86/boot/compressed/acpi.c.html'>linux-5.3.1/arch/x86/boot/compressed/acpi.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

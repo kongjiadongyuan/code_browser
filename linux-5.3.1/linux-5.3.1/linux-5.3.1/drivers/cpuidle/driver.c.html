@@ -1,0 +1,374 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>driver.c source code [linux-5.3.1/drivers/cpuidle/driver.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/drivers/cpuidle/driver.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>drivers</a>/<a href='./'>cpuidle</a>/<a href='driver.c.html'>driver.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*</i></td></tr>
+<tr><th id="2">2</th><td><i> * driver.c - driver support</i></td></tr>
+<tr><th id="3">3</th><td><i> *</i></td></tr>
+<tr><th id="4">4</th><td><i> * (C) 2006-2007 Venkatesh Pallipadi &lt;venkatesh.pallipadi@intel.com&gt;</i></td></tr>
+<tr><th id="5">5</th><td><i> *               Shaohua Li &lt;shaohua.li@intel.com&gt;</i></td></tr>
+<tr><th id="6">6</th><td><i> *               Adam Belay &lt;abelay@novell.com&gt;</i></td></tr>
+<tr><th id="7">7</th><td><i> *</i></td></tr>
+<tr><th id="8">8</th><td><i> * This code is licenced under the GPL.</i></td></tr>
+<tr><th id="9">9</th><td><i> */</i></td></tr>
+<tr><th id="10">10</th><td></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../../include/linux/mutex.h.html">&lt;linux/mutex.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="../../include/linux/module.h.html">&lt;linux/module.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="../../include/linux/sched.h.html">&lt;linux/sched.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="../../include/linux/sched/idle.h.html">&lt;linux/sched/idle.h&gt;</a></u></td></tr>
+<tr><th id="15">15</th><td><u>#include <a href="../../include/linux/cpuidle.h.html">&lt;linux/cpuidle.h&gt;</a></u></td></tr>
+<tr><th id="16">16</th><td><u>#include <a href="../../include/linux/cpumask.h.html">&lt;linux/cpumask.h&gt;</a></u></td></tr>
+<tr><th id="17">17</th><td><u>#include <a href="../../include/linux/tick.h.html">&lt;linux/tick.h&gt;</a></u></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../../include/linux/cpu.h.html">&lt;linux/cpu.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="cpuidle.h.html">"cpuidle.h"</a></u></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td><a class="macro" href="../../include/linux/spinlock_types.h.html#81" title="spinlock_t cpuidle_driver_lock = (spinlock_t ) { { .rlock = { .raw_lock = { { .val = { (0) } } }, } } }" data-ref="_M/DEFINE_SPINLOCK">DEFINE_SPINLOCK</a>(<dfn class="decl def" id="cpuidle_driver_lock" title='cpuidle_driver_lock' data-ref="cpuidle_driver_lock" data-ref-filename="cpuidle_driver_lock">cpuidle_driver_lock</dfn>);</td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td><u>#<span data-ppcond="24">ifdef</span> <span class="macro" data-ref="_M/CONFIG_CPU_IDLE_MULTIPLE_DRIVERS">CONFIG_CPU_IDLE_MULTIPLE_DRIVERS</span></u></td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td><em>static</em> DEFINE_PER_CPU(<b>struct</b> cpuidle_driver *, cpuidle_drivers);</td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="29">29</th><td><i class="doc"> * __cpuidle_get_cpu_driver - return the cpuidle driver tied to a CPU.</i></td></tr>
+<tr><th id="30">30</th><td><i class="doc"> *<span class="command"> @cpu</span>: the CPU handled by the driver</i></td></tr>
+<tr><th id="31">31</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="32">32</th><td><i class="doc"> * Returns a pointer to struct cpuidle_driver or NULL if no driver has been</i></td></tr>
+<tr><th id="33">33</th><td><i class="doc"> * registered for<span class="command"> @cpu</span>.</i></td></tr>
+<tr><th id="34">34</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="35">35</th><td><em>static</em> <b>struct</b> cpuidle_driver *__cpuidle_get_cpu_driver(<em>int</em> cpu)</td></tr>
+<tr><th id="36">36</th><td>{</td></tr>
+<tr><th id="37">37</th><td>	<b>return</b> per_cpu(cpuidle_drivers, cpu);</td></tr>
+<tr><th id="38">38</th><td>}</td></tr>
+<tr><th id="39">39</th><td></td></tr>
+<tr><th id="40">40</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="41">41</th><td><i class="doc"> * __cpuidle_unset_driver - unset per CPU driver variables.</i></td></tr>
+<tr><th id="42">42</th><td><i class="doc"> *<span class="command"> @drv</span>: a valid pointer to a struct cpuidle_driver</i></td></tr>
+<tr><th id="43">43</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="44">44</th><td><i class="doc"> * For each CPU in the driver's CPU mask, unset the registered driver per CPU</i></td></tr>
+<tr><th id="45">45</th><td><i class="doc"> * variable. If<span class="command"> @drv</span> is different from the registered driver, the corresponding</i></td></tr>
+<tr><th id="46">46</th><td><i class="doc"> * variable is not cleared.</i></td></tr>
+<tr><th id="47">47</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="48">48</th><td><em>static</em> <b>inline</b> <em>void</em> __cpuidle_unset_driver(<b>struct</b> cpuidle_driver *drv)</td></tr>
+<tr><th id="49">49</th><td>{</td></tr>
+<tr><th id="50">50</th><td>	<em>int</em> cpu;</td></tr>
+<tr><th id="51">51</th><td></td></tr>
+<tr><th id="52">52</th><td>	for_each_cpu(cpu, drv-&gt;cpumask) {</td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td>		<b>if</b> (drv != __cpuidle_get_cpu_driver(cpu))</td></tr>
+<tr><th id="55">55</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="56">56</th><td></td></tr>
+<tr><th id="57">57</th><td>		per_cpu(cpuidle_drivers, cpu) = NULL;</td></tr>
+<tr><th id="58">58</th><td>	}</td></tr>
+<tr><th id="59">59</th><td>}</td></tr>
+<tr><th id="60">60</th><td></td></tr>
+<tr><th id="61">61</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="62">62</th><td><i class="doc"> * __cpuidle_set_driver - set per CPU driver variables for the given driver.</i></td></tr>
+<tr><th id="63">63</th><td><i class="doc"> *<span class="command"> @drv</span>: a valid pointer to a struct cpuidle_driver</i></td></tr>
+<tr><th id="64">64</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="65">65</th><td><i class="doc"> * For each CPU in the driver's cpumask, unset the registered driver per CPU</i></td></tr>
+<tr><th id="66">66</th><td><i class="doc"> * to<span class="command"> @drv</span>.</i></td></tr>
+<tr><th id="67">67</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="68">68</th><td><i class="doc"> * Returns 0 on success, -EBUSY if the CPUs have driver(s) already.</i></td></tr>
+<tr><th id="69">69</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="70">70</th><td><em>static</em> <b>inline</b> <em>int</em> __cpuidle_set_driver(<b>struct</b> cpuidle_driver *drv)</td></tr>
+<tr><th id="71">71</th><td>{</td></tr>
+<tr><th id="72">72</th><td>	<em>int</em> cpu;</td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td>	for_each_cpu(cpu, drv-&gt;cpumask) {</td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td>		<b>if</b> (__cpuidle_get_cpu_driver(cpu)) {</td></tr>
+<tr><th id="77">77</th><td>			__cpuidle_unset_driver(drv);</td></tr>
+<tr><th id="78">78</th><td>			<b>return</b> -EBUSY;</td></tr>
+<tr><th id="79">79</th><td>		}</td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td>		per_cpu(cpuidle_drivers, cpu) = drv;</td></tr>
+<tr><th id="82">82</th><td>	}</td></tr>
+<tr><th id="83">83</th><td></td></tr>
+<tr><th id="84">84</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="85">85</th><td>}</td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td><u>#<span data-ppcond="24">else</span></u></td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td><em>static</em> <b>struct</b> <a class="type" href="../../include/linux/cpuidle.h.html#cpuidle_driver" title='cpuidle_driver' data-ref="cpuidle_driver" data-ref-filename="cpuidle_driver">cpuidle_driver</a> *<dfn class="tu decl def" id="cpuidle_curr_driver" title='cpuidle_curr_driver' data-type='struct cpuidle_driver *' data-ref="cpuidle_curr_driver" data-ref-filename="cpuidle_curr_driver">cpuidle_curr_driver</dfn>;</td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td><i class="doc" data-doc="__cpuidle_get_cpu_driver">/**</i></td></tr>
+<tr><th id="92">92</th><td><i class="doc" data-doc="__cpuidle_get_cpu_driver"> * __cpuidle_get_cpu_driver - return the global cpuidle driver pointer.</i></td></tr>
+<tr><th id="93">93</th><td><i class="doc" data-doc="__cpuidle_get_cpu_driver"> *<span class="command"> @cpu</span>: ignored without the multiple driver support</i></td></tr>
+<tr><th id="94">94</th><td><i class="doc" data-doc="__cpuidle_get_cpu_driver"> *</i></td></tr>
+<tr><th id="95">95</th><td><i class="doc" data-doc="__cpuidle_get_cpu_driver"> * Return a pointer to a struct cpuidle_driver object or NULL if no driver was</i></td></tr>
+<tr><th id="96">96</th><td><i class="doc" data-doc="__cpuidle_get_cpu_driver"> * previously registered.</i></td></tr>
+<tr><th id="97">97</th><td><i class="doc" data-doc="__cpuidle_get_cpu_driver"> */</i></td></tr>
+<tr><th id="98">98</th><td><em>static</em> <a class="macro" href="../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="../../include/linux/cpuidle.h.html#cpuidle_driver" title='cpuidle_driver' data-ref="cpuidle_driver" data-ref-filename="cpuidle_driver">cpuidle_driver</a> *<dfn class="tu decl def fn" id="__cpuidle_get_cpu_driver" title='__cpuidle_get_cpu_driver' data-type='struct cpuidle_driver * __cpuidle_get_cpu_driver(int cpu)' data-ref="__cpuidle_get_cpu_driver" data-ref-filename="__cpuidle_get_cpu_driver">__cpuidle_get_cpu_driver</dfn>(<em>int</em> <dfn class="local col1 decl" id="1cpu" title='cpu' data-type='int' data-ref="1cpu" data-ref-filename="1cpu">cpu</dfn>)</td></tr>
+<tr><th id="99">99</th><td>{</td></tr>
+<tr><th id="100">100</th><td>	<b>return</b> <a class="tu ref" href="#cpuidle_curr_driver" title='cpuidle_curr_driver' data-use='r' data-ref="cpuidle_curr_driver" data-ref-filename="cpuidle_curr_driver">cpuidle_curr_driver</a>;</td></tr>
+<tr><th id="101">101</th><td>}</td></tr>
+<tr><th id="102">102</th><td></td></tr>
+<tr><th id="103">103</th><td><i class="doc" data-doc="__cpuidle_set_driver">/**</i></td></tr>
+<tr><th id="104">104</th><td><i class="doc" data-doc="__cpuidle_set_driver"> * __cpuidle_set_driver - assign the global cpuidle driver variable.</i></td></tr>
+<tr><th id="105">105</th><td><i class="doc" data-doc="__cpuidle_set_driver"> *<span class="command"> @drv</span>: pointer to a struct cpuidle_driver object</i></td></tr>
+<tr><th id="106">106</th><td><i class="doc" data-doc="__cpuidle_set_driver"> *</i></td></tr>
+<tr><th id="107">107</th><td><i class="doc" data-doc="__cpuidle_set_driver"> * Returns 0 on success, -EBUSY if the driver is already registered.</i></td></tr>
+<tr><th id="108">108</th><td><i class="doc" data-doc="__cpuidle_set_driver"> */</i></td></tr>
+<tr><th id="109">109</th><td><em>static</em> <a class="macro" href="../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="tu decl def fn" id="__cpuidle_set_driver" title='__cpuidle_set_driver' data-type='int __cpuidle_set_driver(struct cpuidle_driver * drv)' data-ref="__cpuidle_set_driver" data-ref-filename="__cpuidle_set_driver">__cpuidle_set_driver</dfn>(<b>struct</b> <a class="type" href="../../include/linux/cpuidle.h.html#cpuidle_driver" title='cpuidle_driver' data-ref="cpuidle_driver" data-ref-filename="cpuidle_driver">cpuidle_driver</a> *<dfn class="local col2 decl" id="2drv" title='drv' data-type='struct cpuidle_driver *' data-ref="2drv" data-ref-filename="2drv">drv</dfn>)</td></tr>
+<tr><th id="110">110</th><td>{</td></tr>
+<tr><th id="111">111</th><td>	<b>if</b> (<a class="tu ref" href="#cpuidle_curr_driver" title='cpuidle_curr_driver' data-use='r' data-ref="cpuidle_curr_driver" data-ref-filename="cpuidle_curr_driver">cpuidle_curr_driver</a>)</td></tr>
+<tr><th id="112">112</th><td>		<b>return</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#20" title="16" data-ref="_M/EBUSY">EBUSY</a>;</td></tr>
+<tr><th id="113">113</th><td></td></tr>
+<tr><th id="114">114</th><td>	<a class="tu ref" href="#cpuidle_curr_driver" title='cpuidle_curr_driver' data-use='w' data-ref="cpuidle_curr_driver" data-ref-filename="cpuidle_curr_driver">cpuidle_curr_driver</a> = <a class="local col2 ref" href="#2drv" title='drv' data-ref="2drv" data-ref-filename="2drv">drv</a>;</td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="117">117</th><td>}</td></tr>
+<tr><th id="118">118</th><td></td></tr>
+<tr><th id="119">119</th><td><i class="doc" data-doc="__cpuidle_unset_driver">/**</i></td></tr>
+<tr><th id="120">120</th><td><i class="doc" data-doc="__cpuidle_unset_driver"> * __cpuidle_unset_driver - unset the global cpuidle driver variable.</i></td></tr>
+<tr><th id="121">121</th><td><i class="doc" data-doc="__cpuidle_unset_driver"> *<span class="command"> @drv</span>: a pointer to a struct cpuidle_driver</i></td></tr>
+<tr><th id="122">122</th><td><i class="doc" data-doc="__cpuidle_unset_driver"> *</i></td></tr>
+<tr><th id="123">123</th><td><i class="doc" data-doc="__cpuidle_unset_driver"> * Reset the global cpuidle variable to NULL.  If<span class="command"> @drv</span> does not match the</i></td></tr>
+<tr><th id="124">124</th><td><i class="doc" data-doc="__cpuidle_unset_driver"> * registered driver, do nothing.</i></td></tr>
+<tr><th id="125">125</th><td><i class="doc" data-doc="__cpuidle_unset_driver"> */</i></td></tr>
+<tr><th id="126">126</th><td><em>static</em> <a class="macro" href="../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="tu decl def fn" id="__cpuidle_unset_driver" title='__cpuidle_unset_driver' data-type='void __cpuidle_unset_driver(struct cpuidle_driver * drv)' data-ref="__cpuidle_unset_driver" data-ref-filename="__cpuidle_unset_driver">__cpuidle_unset_driver</dfn>(<b>struct</b> <a class="type" href="../../include/linux/cpuidle.h.html#cpuidle_driver" title='cpuidle_driver' data-ref="cpuidle_driver" data-ref-filename="cpuidle_driver">cpuidle_driver</a> *<dfn class="local col3 decl" id="3drv" title='drv' data-type='struct cpuidle_driver *' data-ref="3drv" data-ref-filename="3drv">drv</dfn>)</td></tr>
+<tr><th id="127">127</th><td>{</td></tr>
+<tr><th id="128">128</th><td>	<b>if</b> (<a class="local col3 ref" href="#3drv" title='drv' data-ref="3drv" data-ref-filename="3drv">drv</a> == <a class="tu ref" href="#cpuidle_curr_driver" title='cpuidle_curr_driver' data-use='r' data-ref="cpuidle_curr_driver" data-ref-filename="cpuidle_curr_driver">cpuidle_curr_driver</a>)</td></tr>
+<tr><th id="129">129</th><td>		<a class="tu ref" href="#cpuidle_curr_driver" title='cpuidle_curr_driver' data-use='w' data-ref="cpuidle_curr_driver" data-ref-filename="cpuidle_curr_driver">cpuidle_curr_driver</a> = <a class="macro" href="../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="130">130</th><td>}</td></tr>
+<tr><th id="131">131</th><td></td></tr>
+<tr><th id="132">132</th><td><u>#<span data-ppcond="24">endif</span></u></td></tr>
+<tr><th id="133">133</th><td></td></tr>
+<tr><th id="134">134</th><td><i class="doc" data-doc="cpuidle_setup_broadcast_timer">/**</i></td></tr>
+<tr><th id="135">135</th><td><i class="doc" data-doc="cpuidle_setup_broadcast_timer"> * cpuidle_setup_broadcast_timer - enable/disable the broadcast timer on a cpu</i></td></tr>
+<tr><th id="136">136</th><td><i class="doc" data-doc="cpuidle_setup_broadcast_timer"> * <span class="command">@arg</span>: a void pointer used to match the SMP cross call API</i></td></tr>
+<tr><th id="137">137</th><td><i class="doc" data-doc="cpuidle_setup_broadcast_timer"> *</i></td></tr>
+<tr><th id="138">138</th><td><i class="doc" data-doc="cpuidle_setup_broadcast_timer"> * If <span class="command">@arg</span> is NULL broadcast is disabled otherwise enabled</i></td></tr>
+<tr><th id="139">139</th><td><i class="doc" data-doc="cpuidle_setup_broadcast_timer"> *</i></td></tr>
+<tr><th id="140">140</th><td><i class="doc" data-doc="cpuidle_setup_broadcast_timer"> * This function is executed per CPU by an SMP cross call.  It's not</i></td></tr>
+<tr><th id="141">141</th><td><i class="doc" data-doc="cpuidle_setup_broadcast_timer"> * supposed to be called directly.</i></td></tr>
+<tr><th id="142">142</th><td><i class="doc" data-doc="cpuidle_setup_broadcast_timer"> */</i></td></tr>
+<tr><th id="143">143</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="cpuidle_setup_broadcast_timer" title='cpuidle_setup_broadcast_timer' data-type='void cpuidle_setup_broadcast_timer(void * arg)' data-ref="cpuidle_setup_broadcast_timer" data-ref-filename="cpuidle_setup_broadcast_timer">cpuidle_setup_broadcast_timer</dfn>(<em>void</em> *<dfn class="local col4 decl" id="4arg" title='arg' data-type='void *' data-ref="4arg" data-ref-filename="4arg">arg</dfn>)</td></tr>
+<tr><th id="144">144</th><td>{</td></tr>
+<tr><th id="145">145</th><td>	<b>if</b> (<a class="local col4 ref" href="#4arg" title='arg' data-ref="4arg" data-ref-filename="4arg">arg</a>)</td></tr>
+<tr><th id="146">146</th><td>		<a class="ref fn" href="../../include/linux/tick.h.html#tick_broadcast_enable" title='tick_broadcast_enable' data-ref="tick_broadcast_enable" data-ref-filename="tick_broadcast_enable">tick_broadcast_enable</a>();</td></tr>
+<tr><th id="147">147</th><td>	<b>else</b></td></tr>
+<tr><th id="148">148</th><td>		<a class="ref fn" href="../../include/linux/tick.h.html#tick_broadcast_disable" title='tick_broadcast_disable' data-ref="tick_broadcast_disable" data-ref-filename="tick_broadcast_disable">tick_broadcast_disable</a>();</td></tr>
+<tr><th id="149">149</th><td>}</td></tr>
+<tr><th id="150">150</th><td></td></tr>
+<tr><th id="151">151</th><td><i class="doc" data-doc="__cpuidle_driver_init">/**</i></td></tr>
+<tr><th id="152">152</th><td><i class="doc" data-doc="__cpuidle_driver_init"> * __cpuidle_driver_init - initialize the driver's internal data</i></td></tr>
+<tr><th id="153">153</th><td><i class="doc" data-doc="__cpuidle_driver_init"> *<span class="command"> @drv</span>: a valid pointer to a struct cpuidle_driver</i></td></tr>
+<tr><th id="154">154</th><td><i class="doc" data-doc="__cpuidle_driver_init"> */</i></td></tr>
+<tr><th id="155">155</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="__cpuidle_driver_init" title='__cpuidle_driver_init' data-type='void __cpuidle_driver_init(struct cpuidle_driver * drv)' data-ref="__cpuidle_driver_init" data-ref-filename="__cpuidle_driver_init">__cpuidle_driver_init</dfn>(<b>struct</b> <a class="type" href="../../include/linux/cpuidle.h.html#cpuidle_driver" title='cpuidle_driver' data-ref="cpuidle_driver" data-ref-filename="cpuidle_driver">cpuidle_driver</a> *<dfn class="local col5 decl" id="5drv" title='drv' data-type='struct cpuidle_driver *' data-ref="5drv" data-ref-filename="5drv">drv</dfn>)</td></tr>
+<tr><th id="156">156</th><td>{</td></tr>
+<tr><th id="157">157</th><td>	<em>int</em> <dfn class="local col6 decl" id="6i" title='i' data-type='int' data-ref="6i" data-ref-filename="6i">i</dfn>;</td></tr>
+<tr><th id="158">158</th><td></td></tr>
+<tr><th id="159">159</th><td>	<a class="local col5 ref" href="#5drv" title='drv' data-ref="5drv" data-ref-filename="5drv">drv</a>-&gt;<a class="ref field" href="../../include/linux/cpuidle.h.html#cpuidle_driver::refcnt" title='cpuidle_driver::refcnt' data-ref="cpuidle_driver::refcnt" data-ref-filename="cpuidle_driver..refcnt">refcnt</a> = <var>0</var>;</td></tr>
+<tr><th id="160">160</th><td></td></tr>
+<tr><th id="161">161</th><td>	<i>/*</i></td></tr>
+<tr><th id="162">162</th><td><i>	 * Use all possible CPUs as the default, because if the kernel boots</i></td></tr>
+<tr><th id="163">163</th><td><i>	 * with some CPUs offline and then we online one of them, the CPU</i></td></tr>
+<tr><th id="164">164</th><td><i>	 * notifier has to know which driver to assign.</i></td></tr>
+<tr><th id="165">165</th><td><i>	 */</i></td></tr>
+<tr><th id="166">166</th><td>	<b>if</b> (!<a class="local col5 ref" href="#5drv" title='drv' data-ref="5drv" data-ref-filename="5drv">drv</a>-&gt;<a class="ref field" href="../../include/linux/cpuidle.h.html#cpuidle_driver::cpumask" title='cpuidle_driver::cpumask' data-ref="cpuidle_driver::cpumask" data-ref-filename="cpuidle_driver..cpumask">cpumask</a>)</td></tr>
+<tr><th id="167">167</th><td>		<a class="local col5 ref" href="#5drv" title='drv' data-ref="5drv" data-ref-filename="5drv">drv</a>-&gt;<a class="ref field" href="../../include/linux/cpuidle.h.html#cpuidle_driver::cpumask" title='cpuidle_driver::cpumask' data-ref="cpuidle_driver::cpumask" data-ref-filename="cpuidle_driver..cpumask">cpumask</a> = (<b>struct</b> <a class="type" href="../../include/linux/cpumask.h.html#cpumask" title='cpumask' data-ref="cpumask" data-ref-filename="cpumask">cpumask</a> *)<a class="macro" href="../../include/linux/cpumask.h.html#93" title="((const struct cpumask *)&amp;__cpu_possible_mask)" data-ref="_M/cpu_possible_mask">cpu_possible_mask</a>;</td></tr>
+<tr><th id="168">168</th><td></td></tr>
+<tr><th id="169">169</th><td>	<i>/*</i></td></tr>
+<tr><th id="170">170</th><td><i>	 * Look for the timer stop flag in the different states, so that we know</i></td></tr>
+<tr><th id="171">171</th><td><i>	 * if the broadcast timer has to be set up.  The loop is in the reverse</i></td></tr>
+<tr><th id="172">172</th><td><i>	 * order, because usually one of the deeper states have this flag set.</i></td></tr>
+<tr><th id="173">173</th><td><i>	 */</i></td></tr>
+<tr><th id="174">174</th><td>	<b>for</b> (<a class="local col6 ref" href="#6i" title='i' data-ref="6i" data-ref-filename="6i">i</a> = <a class="local col5 ref" href="#5drv" title='drv' data-ref="5drv" data-ref-filename="5drv">drv</a>-&gt;<a class="ref field" href="../../include/linux/cpuidle.h.html#cpuidle_driver::state_count" title='cpuidle_driver::state_count' data-ref="cpuidle_driver::state_count" data-ref-filename="cpuidle_driver..state_count">state_count</a> - <var>1</var>; <a class="local col6 ref" href="#6i" title='i' data-ref="6i" data-ref-filename="6i">i</a> &gt;= <var>0</var> ; <a class="local col6 ref" href="#6i" title='i' data-ref="6i" data-ref-filename="6i">i</a>--) {</td></tr>
+<tr><th id="175">175</th><td>		<b>if</b> (<a class="local col5 ref" href="#5drv" title='drv' data-ref="5drv" data-ref-filename="5drv">drv</a>-&gt;<a class="ref field" href="../../include/linux/cpuidle.h.html#cpuidle_driver::states" title='cpuidle_driver::states' data-ref="cpuidle_driver::states" data-ref-filename="cpuidle_driver..states">states</a>[<a class="local col6 ref" href="#6i" title='i' data-ref="6i" data-ref-filename="6i">i</a>].<a class="ref field" href="../../include/linux/cpuidle.h.html#cpuidle_state::flags" title='cpuidle_state::flags' data-ref="cpuidle_state::flags" data-ref-filename="cpuidle_state..flags">flags</a> &amp; <a class="macro" href="../../include/linux/cpuidle.h.html#74" title="((((1UL))) &lt;&lt; (2))" data-ref="_M/CPUIDLE_FLAG_TIMER_STOP">CPUIDLE_FLAG_TIMER_STOP</a>) {</td></tr>
+<tr><th id="176">176</th><td>			<a class="local col5 ref" href="#5drv" title='drv' data-ref="5drv" data-ref-filename="5drv">drv</a>-&gt;<a class="ref field" href="../../include/linux/cpuidle.h.html#cpuidle_driver::bctimer" title='cpuidle_driver::bctimer' data-ref="cpuidle_driver::bctimer" data-ref-filename="cpuidle_driver..bctimer">bctimer</a> = <var>1</var>;</td></tr>
+<tr><th id="177">177</th><td>			<b>break</b>;</td></tr>
+<tr><th id="178">178</th><td>		}</td></tr>
+<tr><th id="179">179</th><td>	}</td></tr>
+<tr><th id="180">180</th><td>}</td></tr>
+<tr><th id="181">181</th><td></td></tr>
+<tr><th id="182">182</th><td><i class="doc" data-doc="__cpuidle_register_driver">/**</i></td></tr>
+<tr><th id="183">183</th><td><i class="doc" data-doc="__cpuidle_register_driver"> * __cpuidle_register_driver: register the driver</i></td></tr>
+<tr><th id="184">184</th><td><i class="doc" data-doc="__cpuidle_register_driver"> *<span class="command"> @drv</span>: a valid pointer to a struct cpuidle_driver</i></td></tr>
+<tr><th id="185">185</th><td><i class="doc" data-doc="__cpuidle_register_driver"> *</i></td></tr>
+<tr><th id="186">186</th><td><i class="doc" data-doc="__cpuidle_register_driver"> * Do some sanity checks, initialize the driver, assign the driver to the</i></td></tr>
+<tr><th id="187">187</th><td><i class="doc" data-doc="__cpuidle_register_driver"> * global cpuidle driver variable(s) and set up the broadcast timer if the</i></td></tr>
+<tr><th id="188">188</th><td><i class="doc" data-doc="__cpuidle_register_driver"> * cpuidle driver has some states that shut down the local timer.</i></td></tr>
+<tr><th id="189">189</th><td><i class="doc" data-doc="__cpuidle_register_driver"> *</i></td></tr>
+<tr><th id="190">190</th><td><i class="doc" data-doc="__cpuidle_register_driver"> * Returns 0 on success, a negative error code otherwise:</i></td></tr>
+<tr><th id="191">191</th><td><i class="doc" data-doc="__cpuidle_register_driver"> *  * -EINVAL if the driver pointer is NULL or no idle states are available</i></td></tr>
+<tr><th id="192">192</th><td><i class="doc" data-doc="__cpuidle_register_driver"> *  * -ENODEV if the cpuidle framework is disabled</i></td></tr>
+<tr><th id="193">193</th><td><i class="doc" data-doc="__cpuidle_register_driver"> *  * -EBUSY if the driver is already assigned to the global variable(s)</i></td></tr>
+<tr><th id="194">194</th><td><i class="doc" data-doc="__cpuidle_register_driver"> */</i></td></tr>
+<tr><th id="195">195</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="__cpuidle_register_driver" title='__cpuidle_register_driver' data-type='int __cpuidle_register_driver(struct cpuidle_driver * drv)' data-ref="__cpuidle_register_driver" data-ref-filename="__cpuidle_register_driver">__cpuidle_register_driver</dfn>(<b>struct</b> <a class="type" href="../../include/linux/cpuidle.h.html#cpuidle_driver" title='cpuidle_driver' data-ref="cpuidle_driver" data-ref-filename="cpuidle_driver">cpuidle_driver</a> *<dfn class="local col7 decl" id="7drv" title='drv' data-type='struct cpuidle_driver *' data-ref="7drv" data-ref-filename="7drv">drv</dfn>)</td></tr>
+<tr><th id="196">196</th><td>{</td></tr>
+<tr><th id="197">197</th><td>	<em>int</em> <dfn class="local col8 decl" id="8ret" title='ret' data-type='int' data-ref="8ret" data-ref-filename="8ret">ret</dfn>;</td></tr>
+<tr><th id="198">198</th><td></td></tr>
+<tr><th id="199">199</th><td>	<b>if</b> (!<a class="local col7 ref" href="#7drv" title='drv' data-ref="7drv" data-ref-filename="7drv">drv</a> || !<a class="local col7 ref" href="#7drv" title='drv' data-ref="7drv" data-ref-filename="7drv">drv</a>-&gt;<a class="ref field" href="../../include/linux/cpuidle.h.html#cpuidle_driver::state_count" title='cpuidle_driver::state_count' data-ref="cpuidle_driver::state_count" data-ref-filename="cpuidle_driver..state_count">state_count</a>)</td></tr>
+<tr><th id="200">200</th><td>		<b>return</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="201">201</th><td></td></tr>
+<tr><th id="202">202</th><td>	<a class="local col8 ref" href="#8ret" title='ret' data-ref="8ret" data-ref-filename="8ret">ret</a> = <a class="ref fn" href="cpuidle.h.html#cpuidle_coupled_state_verify" title='cpuidle_coupled_state_verify' data-ref="cpuidle_coupled_state_verify" data-ref-filename="cpuidle_coupled_state_verify">cpuidle_coupled_state_verify</a>(<a class="local col7 ref" href="#7drv" title='drv' data-ref="7drv" data-ref-filename="7drv">drv</a>);</td></tr>
+<tr><th id="203">203</th><td>	<b>if</b> (<a class="local col8 ref" href="#8ret" title='ret' data-ref="8ret" data-ref-filename="8ret">ret</a>)</td></tr>
+<tr><th id="204">204</th><td>		<b>return</b> <a class="local col8 ref" href="#8ret" title='ret' data-ref="8ret" data-ref-filename="8ret">ret</a>;</td></tr>
+<tr><th id="205">205</th><td></td></tr>
+<tr><th id="206">206</th><td>	<b>if</b> (<a class="ref fn" href="cpuidle.h.html#cpuidle_disabled" title='cpuidle_disabled' data-ref="cpuidle_disabled" data-ref-filename="cpuidle_disabled">cpuidle_disabled</a>())</td></tr>
+<tr><th id="207">207</th><td>		<b>return</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#23" title="19" data-ref="_M/ENODEV">ENODEV</a>;</td></tr>
+<tr><th id="208">208</th><td></td></tr>
+<tr><th id="209">209</th><td>	<a class="tu ref fn" href="#__cpuidle_driver_init" title='__cpuidle_driver_init' data-use='c' data-ref="__cpuidle_driver_init" data-ref-filename="__cpuidle_driver_init">__cpuidle_driver_init</a>(<a class="local col7 ref" href="#7drv" title='drv' data-ref="7drv" data-ref-filename="7drv">drv</a>);</td></tr>
+<tr><th id="210">210</th><td></td></tr>
+<tr><th id="211">211</th><td>	<a class="local col8 ref" href="#8ret" title='ret' data-ref="8ret" data-ref-filename="8ret">ret</a> = <a class="tu ref fn" href="#__cpuidle_set_driver" title='__cpuidle_set_driver' data-use='c' data-ref="__cpuidle_set_driver" data-ref-filename="__cpuidle_set_driver">__cpuidle_set_driver</a>(<a class="local col7 ref" href="#7drv" title='drv' data-ref="7drv" data-ref-filename="7drv">drv</a>);</td></tr>
+<tr><th id="212">212</th><td>	<b>if</b> (<a class="local col8 ref" href="#8ret" title='ret' data-ref="8ret" data-ref-filename="8ret">ret</a>)</td></tr>
+<tr><th id="213">213</th><td>		<b>return</b> <a class="local col8 ref" href="#8ret" title='ret' data-ref="8ret" data-ref-filename="8ret">ret</a>;</td></tr>
+<tr><th id="214">214</th><td></td></tr>
+<tr><th id="215">215</th><td>	<b>if</b> (<a class="local col7 ref" href="#7drv" title='drv' data-ref="7drv" data-ref-filename="7drv">drv</a>-&gt;<a class="ref field" href="../../include/linux/cpuidle.h.html#cpuidle_driver::bctimer" title='cpuidle_driver::bctimer' data-ref="cpuidle_driver::bctimer" data-ref-filename="cpuidle_driver..bctimer">bctimer</a>)</td></tr>
+<tr><th id="216">216</th><td>		<a class="ref fn" href="../../include/linux/smp.h.html#on_each_cpu_mask" title='on_each_cpu_mask' data-ref="on_each_cpu_mask" data-ref-filename="on_each_cpu_mask">on_each_cpu_mask</a>(<a class="local col7 ref" href="#7drv" title='drv' data-ref="7drv" data-ref-filename="7drv">drv</a>-&gt;<a class="ref field" href="../../include/linux/cpuidle.h.html#cpuidle_driver::cpumask" title='cpuidle_driver::cpumask' data-ref="cpuidle_driver::cpumask" data-ref-filename="cpuidle_driver..cpumask">cpumask</a>, <a class="tu ref fn" href="#cpuidle_setup_broadcast_timer" title='cpuidle_setup_broadcast_timer' data-use='r' data-ref="cpuidle_setup_broadcast_timer" data-ref-filename="cpuidle_setup_broadcast_timer">cpuidle_setup_broadcast_timer</a>,</td></tr>
+<tr><th id="217">217</th><td>				 (<em>void</em> *)<var>1</var>, <var>1</var>);</td></tr>
+<tr><th id="218">218</th><td></td></tr>
+<tr><th id="219">219</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="220">220</th><td>}</td></tr>
+<tr><th id="221">221</th><td></td></tr>
+<tr><th id="222">222</th><td><i class="doc" data-doc="__cpuidle_unregister_driver">/**</i></td></tr>
+<tr><th id="223">223</th><td><i class="doc" data-doc="__cpuidle_unregister_driver"> * __cpuidle_unregister_driver - unregister the driver</i></td></tr>
+<tr><th id="224">224</th><td><i class="doc" data-doc="__cpuidle_unregister_driver"> *<span class="command"> @drv</span>: a valid pointer to a struct cpuidle_driver</i></td></tr>
+<tr><th id="225">225</th><td><i class="doc" data-doc="__cpuidle_unregister_driver"> *</i></td></tr>
+<tr><th id="226">226</th><td><i class="doc" data-doc="__cpuidle_unregister_driver"> * Check if the driver is no longer in use, reset the global cpuidle driver</i></td></tr>
+<tr><th id="227">227</th><td><i class="doc" data-doc="__cpuidle_unregister_driver"> * variable(s) and disable the timer broadcast notification mechanism if it was</i></td></tr>
+<tr><th id="228">228</th><td><i class="doc" data-doc="__cpuidle_unregister_driver"> * in use.</i></td></tr>
+<tr><th id="229">229</th><td><i class="doc" data-doc="__cpuidle_unregister_driver"> *</i></td></tr>
+<tr><th id="230">230</th><td><i class="doc" data-doc="__cpuidle_unregister_driver"> */</i></td></tr>
+<tr><th id="231">231</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="__cpuidle_unregister_driver" title='__cpuidle_unregister_driver' data-type='void __cpuidle_unregister_driver(struct cpuidle_driver * drv)' data-ref="__cpuidle_unregister_driver" data-ref-filename="__cpuidle_unregister_driver">__cpuidle_unregister_driver</dfn>(<b>struct</b> <a class="type" href="../../include/linux/cpuidle.h.html#cpuidle_driver" title='cpuidle_driver' data-ref="cpuidle_driver" data-ref-filename="cpuidle_driver">cpuidle_driver</a> *<dfn class="local col9 decl" id="9drv" title='drv' data-type='struct cpuidle_driver *' data-ref="9drv" data-ref-filename="9drv">drv</dfn>)</td></tr>
+<tr><th id="232">232</th><td>{</td></tr>
+<tr><th id="233">233</th><td>	<b>if</b> (<a class="macro" href="../../include/asm-generic/bug.h.html#123" title="({ int __ret_warn_on = !!(drv-&gt;refcnt &gt; 0); if (__builtin_expect(!!(__ret_warn_on), 0)) do { printk(&quot;\001&quot; &quot;4&quot; &quot;------------[ cut here ]------------\n&quot;); do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/drivers/cpuidle/driver.c&quot;), &quot;i&quot; (233), &quot;i&quot; ((1 &lt;&lt; 0)|(((9) &lt;&lt; 8))), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.reachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (20)); }); } while (0); } while (0); __builtin_expect(!!(__ret_warn_on), 0); })" data-ref="_M/WARN_ON">WARN_ON</a>(<a class="local col9 ref" href="#9drv" title='drv' data-ref="9drv" data-ref-filename="9drv">drv</a>-&gt;<a class="ref field" href="../../include/linux/cpuidle.h.html#cpuidle_driver::refcnt" title='cpuidle_driver::refcnt' data-ref="cpuidle_driver::refcnt" data-ref-filename="cpuidle_driver..refcnt">refcnt</a> &gt; <var>0</var>))</td></tr>
+<tr><th id="234">234</th><td>		<b>return</b>;</td></tr>
+<tr><th id="235">235</th><td></td></tr>
+<tr><th id="236">236</th><td>	<b>if</b> (<a class="local col9 ref" href="#9drv" title='drv' data-ref="9drv" data-ref-filename="9drv">drv</a>-&gt;<a class="ref field" href="../../include/linux/cpuidle.h.html#cpuidle_driver::bctimer" title='cpuidle_driver::bctimer' data-ref="cpuidle_driver::bctimer" data-ref-filename="cpuidle_driver..bctimer">bctimer</a>) {</td></tr>
+<tr><th id="237">237</th><td>		<a class="local col9 ref" href="#9drv" title='drv' data-ref="9drv" data-ref-filename="9drv">drv</a>-&gt;<a class="ref field" href="../../include/linux/cpuidle.h.html#cpuidle_driver::bctimer" title='cpuidle_driver::bctimer' data-ref="cpuidle_driver::bctimer" data-ref-filename="cpuidle_driver..bctimer">bctimer</a> = <var>0</var>;</td></tr>
+<tr><th id="238">238</th><td>		<a class="ref fn" href="../../include/linux/smp.h.html#on_each_cpu_mask" title='on_each_cpu_mask' data-ref="on_each_cpu_mask" data-ref-filename="on_each_cpu_mask">on_each_cpu_mask</a>(<a class="local col9 ref" href="#9drv" title='drv' data-ref="9drv" data-ref-filename="9drv">drv</a>-&gt;<a class="ref field" href="../../include/linux/cpuidle.h.html#cpuidle_driver::cpumask" title='cpuidle_driver::cpumask' data-ref="cpuidle_driver::cpumask" data-ref-filename="cpuidle_driver..cpumask">cpumask</a>, <a class="tu ref fn" href="#cpuidle_setup_broadcast_timer" title='cpuidle_setup_broadcast_timer' data-use='r' data-ref="cpuidle_setup_broadcast_timer" data-ref-filename="cpuidle_setup_broadcast_timer">cpuidle_setup_broadcast_timer</a>,</td></tr>
+<tr><th id="239">239</th><td>				 <a class="macro" href="../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>, <var>1</var>);</td></tr>
+<tr><th id="240">240</th><td>	}</td></tr>
+<tr><th id="241">241</th><td></td></tr>
+<tr><th id="242">242</th><td>	<a class="tu ref fn" href="#__cpuidle_unset_driver" title='__cpuidle_unset_driver' data-use='c' data-ref="__cpuidle_unset_driver" data-ref-filename="__cpuidle_unset_driver">__cpuidle_unset_driver</a>(<a class="local col9 ref" href="#9drv" title='drv' data-ref="9drv" data-ref-filename="9drv">drv</a>);</td></tr>
+<tr><th id="243">243</th><td>}</td></tr>
+<tr><th id="244">244</th><td></td></tr>
+<tr><th id="245">245</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="246">246</th><td><i class="doc"> * cpuidle_register_driver - registers a driver</i></td></tr>
+<tr><th id="247">247</th><td><i class="doc"> *<span class="command"> @drv</span>: a pointer to a valid struct cpuidle_driver</i></td></tr>
+<tr><th id="248">248</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="249">249</th><td><i class="doc"> * Register the driver under a lock to prevent concurrent attempts to</i></td></tr>
+<tr><th id="250">250</th><td><i class="doc"> * [un]register the driver from occuring at the same time.</i></td></tr>
+<tr><th id="251">251</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="252">252</th><td><i class="doc"> * Returns 0 on success, a negative error code (returned by</i></td></tr>
+<tr><th id="253">253</th><td><i class="doc"> * __cpuidle_register_driver()) otherwise.</i></td></tr>
+<tr><th id="254">254</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="255">255</th><td><em>int</em> <dfn class="decl def fn" id="cpuidle_register_driver" title='cpuidle_register_driver' data-ref="cpuidle_register_driver" data-ref-filename="cpuidle_register_driver">cpuidle_register_driver</dfn>(<b>struct</b> <a class="type" href="../../include/linux/cpuidle.h.html#cpuidle_driver" title='cpuidle_driver' data-ref="cpuidle_driver" data-ref-filename="cpuidle_driver">cpuidle_driver</a> *<dfn class="local col0 decl" id="10drv" title='drv' data-type='struct cpuidle_driver *' data-ref="10drv" data-ref-filename="10drv">drv</dfn>)</td></tr>
+<tr><th id="256">256</th><td>{</td></tr>
+<tr><th id="257">257</th><td>	<em>int</em> <dfn class="local col1 decl" id="11ret" title='ret' data-type='int' data-ref="11ret" data-ref-filename="11ret">ret</dfn>;</td></tr>
+<tr><th id="258">258</th><td></td></tr>
+<tr><th id="259">259</th><td>	<a class="ref fn" href="../../include/linux/spinlock.h.html#spin_lock" title='spin_lock' data-ref="spin_lock" data-ref-filename="spin_lock">spin_lock</a>(&amp;<a class="ref" href="cpuidle.h.html#cpuidle_driver_lock" title='cpuidle_driver_lock' data-ref="cpuidle_driver_lock" data-ref-filename="cpuidle_driver_lock">cpuidle_driver_lock</a>);</td></tr>
+<tr><th id="260">260</th><td>	<a class="local col1 ref" href="#11ret" title='ret' data-ref="11ret" data-ref-filename="11ret">ret</a> = <a class="tu ref fn" href="#__cpuidle_register_driver" title='__cpuidle_register_driver' data-use='c' data-ref="__cpuidle_register_driver" data-ref-filename="__cpuidle_register_driver">__cpuidle_register_driver</a>(<a class="local col0 ref" href="#10drv" title='drv' data-ref="10drv" data-ref-filename="10drv">drv</a>);</td></tr>
+<tr><th id="261">261</th><td>	<a class="ref fn" href="../../include/linux/spinlock.h.html#spin_unlock" title='spin_unlock' data-ref="spin_unlock" data-ref-filename="spin_unlock">spin_unlock</a>(&amp;<a class="ref" href="cpuidle.h.html#cpuidle_driver_lock" title='cpuidle_driver_lock' data-ref="cpuidle_driver_lock" data-ref-filename="cpuidle_driver_lock">cpuidle_driver_lock</a>);</td></tr>
+<tr><th id="262">262</th><td></td></tr>
+<tr><th id="263">263</th><td>	<b>return</b> <a class="local col1 ref" href="#11ret" title='ret' data-ref="11ret" data-ref-filename="11ret">ret</a>;</td></tr>
+<tr><th id="264">264</th><td>}</td></tr>
+<tr><th id="265">265</th><td><a class="macro" href="../../include/linux/export.h.html#126" title="extern typeof(cpuidle_register_driver) cpuidle_register_driver; static const char __kstrtab_cpuidle_register_driver[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;cpuidle_register_driver&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_cpuidle_register_driver265 = (void *)&amp;cpuidle_register_driver; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;cpuidle_register_driver&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;cpuidle_register_driver&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;cpuidle_register_driver&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;cpuidle_register_driver&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#cpuidle_register_driver" title='cpuidle_register_driver' data-ref="cpuidle_register_driver" data-ref-filename="cpuidle_register_driver"><a class="ref fn" href="#cpuidle_register_driver" title='cpuidle_register_driver' data-ref="cpuidle_register_driver" data-ref-filename="cpuidle_register_driver"><a class="ref fn" href="#cpuidle_register_driver" title='cpuidle_register_driver' data-ref="cpuidle_register_driver" data-ref-filename="cpuidle_register_driver">cpuidle_register_driver</a></a></a>);</td></tr>
+<tr><th id="266">266</th><td></td></tr>
+<tr><th id="267">267</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="268">268</th><td><i class="doc"> * cpuidle_unregister_driver - unregisters a driver</i></td></tr>
+<tr><th id="269">269</th><td><i class="doc"> *<span class="command"> @drv</span>: a pointer to a valid struct cpuidle_driver</i></td></tr>
+<tr><th id="270">270</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="271">271</th><td><i class="doc"> * Unregisters the cpuidle driver under a lock to prevent concurrent attempts</i></td></tr>
+<tr><th id="272">272</th><td><i class="doc"> * to [un]register the driver from occuring at the same time. <span class="command"> @drv</span> has to</i></td></tr>
+<tr><th id="273">273</th><td><i class="doc"> * match the currently registered driver.</i></td></tr>
+<tr><th id="274">274</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="275">275</th><td><em>void</em> <dfn class="decl def fn" id="cpuidle_unregister_driver" title='cpuidle_unregister_driver' data-ref="cpuidle_unregister_driver" data-ref-filename="cpuidle_unregister_driver">cpuidle_unregister_driver</dfn>(<b>struct</b> <a class="type" href="../../include/linux/cpuidle.h.html#cpuidle_driver" title='cpuidle_driver' data-ref="cpuidle_driver" data-ref-filename="cpuidle_driver">cpuidle_driver</a> *<dfn class="local col2 decl" id="12drv" title='drv' data-type='struct cpuidle_driver *' data-ref="12drv" data-ref-filename="12drv">drv</dfn>)</td></tr>
+<tr><th id="276">276</th><td>{</td></tr>
+<tr><th id="277">277</th><td>	<a class="ref fn" href="../../include/linux/spinlock.h.html#spin_lock" title='spin_lock' data-ref="spin_lock" data-ref-filename="spin_lock">spin_lock</a>(&amp;<a class="ref" href="cpuidle.h.html#cpuidle_driver_lock" title='cpuidle_driver_lock' data-ref="cpuidle_driver_lock" data-ref-filename="cpuidle_driver_lock">cpuidle_driver_lock</a>);</td></tr>
+<tr><th id="278">278</th><td>	<a class="tu ref fn" href="#__cpuidle_unregister_driver" title='__cpuidle_unregister_driver' data-use='c' data-ref="__cpuidle_unregister_driver" data-ref-filename="__cpuidle_unregister_driver">__cpuidle_unregister_driver</a>(<a class="local col2 ref" href="#12drv" title='drv' data-ref="12drv" data-ref-filename="12drv">drv</a>);</td></tr>
+<tr><th id="279">279</th><td>	<a class="ref fn" href="../../include/linux/spinlock.h.html#spin_unlock" title='spin_unlock' data-ref="spin_unlock" data-ref-filename="spin_unlock">spin_unlock</a>(&amp;<a class="ref" href="cpuidle.h.html#cpuidle_driver_lock" title='cpuidle_driver_lock' data-ref="cpuidle_driver_lock" data-ref-filename="cpuidle_driver_lock">cpuidle_driver_lock</a>);</td></tr>
+<tr><th id="280">280</th><td>}</td></tr>
+<tr><th id="281">281</th><td><a class="macro" href="../../include/linux/export.h.html#126" title="extern typeof(cpuidle_unregister_driver) cpuidle_unregister_driver; static const char __kstrtab_cpuidle_unregister_driver[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;cpuidle_unregister_driver&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_cpuidle_unregister_driver281 = (void *)&amp;cpuidle_unregister_driver; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;cpuidle_unregister_driver&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;cpuidle_unregister_driver&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;cpuidle_unregister_driver&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;cpuidle_unregister_driver&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#cpuidle_unregister_driver" title='cpuidle_unregister_driver' data-ref="cpuidle_unregister_driver" data-ref-filename="cpuidle_unregister_driver"><a class="ref fn" href="#cpuidle_unregister_driver" title='cpuidle_unregister_driver' data-ref="cpuidle_unregister_driver" data-ref-filename="cpuidle_unregister_driver"><a class="ref fn" href="#cpuidle_unregister_driver" title='cpuidle_unregister_driver' data-ref="cpuidle_unregister_driver" data-ref-filename="cpuidle_unregister_driver">cpuidle_unregister_driver</a></a></a>);</td></tr>
+<tr><th id="282">282</th><td></td></tr>
+<tr><th id="283">283</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="284">284</th><td><i class="doc"> * cpuidle_get_driver - return the driver tied to the current CPU.</i></td></tr>
+<tr><th id="285">285</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="286">286</th><td><i class="doc"> * Returns a struct cpuidle_driver pointer, or NULL if no driver is registered.</i></td></tr>
+<tr><th id="287">287</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="288">288</th><td><b>struct</b> <a class="type" href="../../include/linux/cpuidle.h.html#cpuidle_driver" title='cpuidle_driver' data-ref="cpuidle_driver" data-ref-filename="cpuidle_driver">cpuidle_driver</a> *<dfn class="decl def fn" id="cpuidle_get_driver" title='cpuidle_get_driver' data-ref="cpuidle_get_driver" data-ref-filename="cpuidle_get_driver">cpuidle_get_driver</dfn>(<em>void</em>)</td></tr>
+<tr><th id="289">289</th><td>{</td></tr>
+<tr><th id="290">290</th><td>	<b>struct</b> <a class="type" href="../../include/linux/cpuidle.h.html#cpuidle_driver" title='cpuidle_driver' data-ref="cpuidle_driver" data-ref-filename="cpuidle_driver">cpuidle_driver</a> *<dfn class="local col3 decl" id="13drv" title='drv' data-type='struct cpuidle_driver *' data-ref="13drv" data-ref-filename="13drv">drv</dfn>;</td></tr>
+<tr><th id="291">291</th><td>	<em>int</em> <dfn class="local col4 decl" id="14cpu" title='cpu' data-type='int' data-ref="14cpu" data-ref-filename="14cpu">cpu</dfn>;</td></tr>
+<tr><th id="292">292</th><td></td></tr>
+<tr><th id="293">293</th><td>	<a class="local col4 ref" href="#14cpu" title='cpu' data-ref="14cpu" data-ref-filename="14cpu">cpu</a> = <a class="macro" href="../../include/linux/smp.h.html#222" title="({ __asm__ __volatile__(&quot;&quot; : : : &quot;memory&quot;); ({ __this_cpu_preempt_check(&quot;read&quot;); ({ typeof(cpu_number) pscr_ret__; do { const void *__vpp_verify = (typeof((&amp;(cpu_number)) + 0))((void *)0); (void)__vpp_verify; } while (0); switch(sizeof(cpu_number)) { case 1: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; case 2: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; case 4: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; case 8: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; default: __bad_size_call_parameter(); break; } pscr_ret__; }); }); })" data-ref="_M/get_cpu">get_cpu</a>();</td></tr>
+<tr><th id="294">294</th><td>	<a class="local col3 ref" href="#13drv" title='drv' data-ref="13drv" data-ref-filename="13drv">drv</a> = <a class="tu ref fn" href="#__cpuidle_get_cpu_driver" title='__cpuidle_get_cpu_driver' data-use='c' data-ref="__cpuidle_get_cpu_driver" data-ref-filename="__cpuidle_get_cpu_driver">__cpuidle_get_cpu_driver</a>(<a class="local col4 ref" href="#14cpu" title='cpu' data-ref="14cpu" data-ref-filename="14cpu">cpu</a>);</td></tr>
+<tr><th id="295">295</th><td>	<a class="macro" href="../../include/linux/smp.h.html#223" title="__asm__ __volatile__(&quot;&quot; : : : &quot;memory&quot;)" data-ref="_M/put_cpu">put_cpu</a>();</td></tr>
+<tr><th id="296">296</th><td></td></tr>
+<tr><th id="297">297</th><td>	<b>return</b> <a class="local col3 ref" href="#13drv" title='drv' data-ref="13drv" data-ref-filename="13drv">drv</a>;</td></tr>
+<tr><th id="298">298</th><td>}</td></tr>
+<tr><th id="299">299</th><td><a class="macro" href="../../include/linux/export.h.html#126" title="extern typeof(cpuidle_get_driver) cpuidle_get_driver; static const char __kstrtab_cpuidle_get_driver[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;cpuidle_get_driver&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_cpuidle_get_driver299 = (void *)&amp;cpuidle_get_driver; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;cpuidle_get_driver&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;cpuidle_get_driver&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;cpuidle_get_driver&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;cpuidle_get_driver&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#cpuidle_get_driver" title='cpuidle_get_driver' data-ref="cpuidle_get_driver" data-ref-filename="cpuidle_get_driver"><a class="ref fn" href="#cpuidle_get_driver" title='cpuidle_get_driver' data-ref="cpuidle_get_driver" data-ref-filename="cpuidle_get_driver"><a class="ref fn" href="#cpuidle_get_driver" title='cpuidle_get_driver' data-ref="cpuidle_get_driver" data-ref-filename="cpuidle_get_driver">cpuidle_get_driver</a></a></a>);</td></tr>
+<tr><th id="300">300</th><td></td></tr>
+<tr><th id="301">301</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="302">302</th><td><i class="doc"> * cpuidle_get_cpu_driver - return the driver registered for a CPU.</i></td></tr>
+<tr><th id="303">303</th><td><i class="doc"> * <span class="command">@dev</span>:<span class="verb"> a valid pointer to a struct cpuidle_device</span></i></td></tr>
+<tr><th id="304">304</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="305">305</th><td><i class="doc"> * Returns a struct cpuidle_driver pointer, or NULL if no driver is registered</i></td></tr>
+<tr><th id="306">306</th><td><i class="doc"> * for the CPU associated with <span class="command">@dev</span>.</i></td></tr>
+<tr><th id="307">307</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="308">308</th><td><b>struct</b> <a class="type" href="../../include/linux/cpuidle.h.html#cpuidle_driver" title='cpuidle_driver' data-ref="cpuidle_driver" data-ref-filename="cpuidle_driver">cpuidle_driver</a> *<dfn class="decl def fn" id="cpuidle_get_cpu_driver" title='cpuidle_get_cpu_driver' data-ref="cpuidle_get_cpu_driver" data-ref-filename="cpuidle_get_cpu_driver">cpuidle_get_cpu_driver</dfn>(<b>struct</b> <a class="type" href="../../include/linux/cpuidle.h.html#cpuidle_device" title='cpuidle_device' data-ref="cpuidle_device" data-ref-filename="cpuidle_device">cpuidle_device</a> *<dfn class="local col5 decl" id="15dev" title='dev' data-type='struct cpuidle_device *' data-ref="15dev" data-ref-filename="15dev">dev</dfn>)</td></tr>
+<tr><th id="309">309</th><td>{</td></tr>
+<tr><th id="310">310</th><td>	<b>if</b> (!<a class="local col5 ref" href="#15dev" title='dev' data-ref="15dev" data-ref-filename="15dev">dev</a>)</td></tr>
+<tr><th id="311">311</th><td>		<b>return</b> <a class="macro" href="../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="312">312</th><td></td></tr>
+<tr><th id="313">313</th><td>	<b>return</b> <a class="tu ref fn" href="#__cpuidle_get_cpu_driver" title='__cpuidle_get_cpu_driver' data-use='c' data-ref="__cpuidle_get_cpu_driver" data-ref-filename="__cpuidle_get_cpu_driver">__cpuidle_get_cpu_driver</a>(<a class="local col5 ref" href="#15dev" title='dev' data-ref="15dev" data-ref-filename="15dev">dev</a>-&gt;<a class="ref field" href="../../include/linux/cpuidle.h.html#cpuidle_device::cpu" title='cpuidle_device::cpu' data-ref="cpuidle_device::cpu" data-ref-filename="cpuidle_device..cpu">cpu</a>);</td></tr>
+<tr><th id="314">314</th><td>}</td></tr>
+<tr><th id="315">315</th><td><a class="macro" href="../../include/linux/export.h.html#126" title="extern typeof(cpuidle_get_cpu_driver) cpuidle_get_cpu_driver; static const char __kstrtab_cpuidle_get_cpu_driver[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;cpuidle_get_cpu_driver&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_cpuidle_get_cpu_driver315 = (void *)&amp;cpuidle_get_cpu_driver; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;cpuidle_get_cpu_driver&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;cpuidle_get_cpu_driver&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;cpuidle_get_cpu_driver&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;cpuidle_get_cpu_driver&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#cpuidle_get_cpu_driver" title='cpuidle_get_cpu_driver' data-ref="cpuidle_get_cpu_driver" data-ref-filename="cpuidle_get_cpu_driver"><a class="ref fn" href="#cpuidle_get_cpu_driver" title='cpuidle_get_cpu_driver' data-ref="cpuidle_get_cpu_driver" data-ref-filename="cpuidle_get_cpu_driver"><a class="ref fn" href="#cpuidle_get_cpu_driver" title='cpuidle_get_cpu_driver' data-ref="cpuidle_get_cpu_driver" data-ref-filename="cpuidle_get_cpu_driver">cpuidle_get_cpu_driver</a></a></a>);</td></tr>
+<tr><th id="316">316</th><td></td></tr>
+<tr><th id="317">317</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="318">318</th><td><i class="doc"> * cpuidle_driver_ref - get a reference to the driver.</i></td></tr>
+<tr><th id="319">319</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="320">320</th><td><i class="doc"> * Increment the reference counter of the cpuidle driver associated with</i></td></tr>
+<tr><th id="321">321</th><td><i class="doc"> * the current CPU.</i></td></tr>
+<tr><th id="322">322</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="323">323</th><td><i class="doc"> * Returns a pointer to the driver, or NULL if the current CPU has no driver.</i></td></tr>
+<tr><th id="324">324</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="325">325</th><td><b>struct</b> <a class="type" href="../../include/linux/cpuidle.h.html#cpuidle_driver" title='cpuidle_driver' data-ref="cpuidle_driver" data-ref-filename="cpuidle_driver">cpuidle_driver</a> *<dfn class="decl def fn" id="cpuidle_driver_ref" title='cpuidle_driver_ref' data-ref="cpuidle_driver_ref" data-ref-filename="cpuidle_driver_ref">cpuidle_driver_ref</dfn>(<em>void</em>)</td></tr>
+<tr><th id="326">326</th><td>{</td></tr>
+<tr><th id="327">327</th><td>	<b>struct</b> <a class="type" href="../../include/linux/cpuidle.h.html#cpuidle_driver" title='cpuidle_driver' data-ref="cpuidle_driver" data-ref-filename="cpuidle_driver">cpuidle_driver</a> *<dfn class="local col6 decl" id="16drv" title='drv' data-type='struct cpuidle_driver *' data-ref="16drv" data-ref-filename="16drv">drv</dfn>;</td></tr>
+<tr><th id="328">328</th><td></td></tr>
+<tr><th id="329">329</th><td>	<a class="ref fn" href="../../include/linux/spinlock.h.html#spin_lock" title='spin_lock' data-ref="spin_lock" data-ref-filename="spin_lock">spin_lock</a>(&amp;<a class="ref" href="cpuidle.h.html#cpuidle_driver_lock" title='cpuidle_driver_lock' data-ref="cpuidle_driver_lock" data-ref-filename="cpuidle_driver_lock">cpuidle_driver_lock</a>);</td></tr>
+<tr><th id="330">330</th><td></td></tr>
+<tr><th id="331">331</th><td>	<a class="local col6 ref" href="#16drv" title='drv' data-ref="16drv" data-ref-filename="16drv">drv</a> = <a class="ref fn" href="#cpuidle_get_driver" title='cpuidle_get_driver' data-ref="cpuidle_get_driver" data-ref-filename="cpuidle_get_driver">cpuidle_get_driver</a>();</td></tr>
+<tr><th id="332">332</th><td>	<b>if</b> (<a class="local col6 ref" href="#16drv" title='drv' data-ref="16drv" data-ref-filename="16drv">drv</a>)</td></tr>
+<tr><th id="333">333</th><td>		<a class="local col6 ref" href="#16drv" title='drv' data-ref="16drv" data-ref-filename="16drv">drv</a>-&gt;<a class="ref field" href="../../include/linux/cpuidle.h.html#cpuidle_driver::refcnt" title='cpuidle_driver::refcnt' data-ref="cpuidle_driver::refcnt" data-ref-filename="cpuidle_driver..refcnt">refcnt</a>++;</td></tr>
+<tr><th id="334">334</th><td></td></tr>
+<tr><th id="335">335</th><td>	<a class="ref fn" href="../../include/linux/spinlock.h.html#spin_unlock" title='spin_unlock' data-ref="spin_unlock" data-ref-filename="spin_unlock">spin_unlock</a>(&amp;<a class="ref" href="cpuidle.h.html#cpuidle_driver_lock" title='cpuidle_driver_lock' data-ref="cpuidle_driver_lock" data-ref-filename="cpuidle_driver_lock">cpuidle_driver_lock</a>);</td></tr>
+<tr><th id="336">336</th><td>	<b>return</b> <a class="local col6 ref" href="#16drv" title='drv' data-ref="16drv" data-ref-filename="16drv">drv</a>;</td></tr>
+<tr><th id="337">337</th><td>}</td></tr>
+<tr><th id="338">338</th><td></td></tr>
+<tr><th id="339">339</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="340">340</th><td><i class="doc"> * cpuidle_driver_unref - puts down the refcount for the driver</i></td></tr>
+<tr><th id="341">341</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="342">342</th><td><i class="doc"> * Decrement the reference counter of the cpuidle driver associated with</i></td></tr>
+<tr><th id="343">343</th><td><i class="doc"> * the current CPU.</i></td></tr>
+<tr><th id="344">344</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="345">345</th><td><em>void</em> <dfn class="decl def fn" id="cpuidle_driver_unref" title='cpuidle_driver_unref' data-ref="cpuidle_driver_unref" data-ref-filename="cpuidle_driver_unref">cpuidle_driver_unref</dfn>(<em>void</em>)</td></tr>
+<tr><th id="346">346</th><td>{</td></tr>
+<tr><th id="347">347</th><td>	<b>struct</b> <a class="type" href="../../include/linux/cpuidle.h.html#cpuidle_driver" title='cpuidle_driver' data-ref="cpuidle_driver" data-ref-filename="cpuidle_driver">cpuidle_driver</a> *<dfn class="local col7 decl" id="17drv" title='drv' data-type='struct cpuidle_driver *' data-ref="17drv" data-ref-filename="17drv">drv</dfn>;</td></tr>
+<tr><th id="348">348</th><td></td></tr>
+<tr><th id="349">349</th><td>	<a class="ref fn" href="../../include/linux/spinlock.h.html#spin_lock" title='spin_lock' data-ref="spin_lock" data-ref-filename="spin_lock">spin_lock</a>(&amp;<a class="ref" href="cpuidle.h.html#cpuidle_driver_lock" title='cpuidle_driver_lock' data-ref="cpuidle_driver_lock" data-ref-filename="cpuidle_driver_lock">cpuidle_driver_lock</a>);</td></tr>
+<tr><th id="350">350</th><td></td></tr>
+<tr><th id="351">351</th><td>	<a class="local col7 ref" href="#17drv" title='drv' data-ref="17drv" data-ref-filename="17drv">drv</a> = <a class="ref fn" href="#cpuidle_get_driver" title='cpuidle_get_driver' data-ref="cpuidle_get_driver" data-ref-filename="cpuidle_get_driver">cpuidle_get_driver</a>();</td></tr>
+<tr><th id="352">352</th><td>	<b>if</b> (<a class="local col7 ref" href="#17drv" title='drv' data-ref="17drv" data-ref-filename="17drv">drv</a> &amp;&amp; !<a class="macro" href="../../include/asm-generic/bug.h.html#123" title="({ int __ret_warn_on = !!(drv-&gt;refcnt &lt;= 0); if (__builtin_expect(!!(__ret_warn_on), 0)) do { printk(&quot;\001&quot; &quot;4&quot; &quot;------------[ cut here ]------------\n&quot;); do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/drivers/cpuidle/driver.c&quot;), &quot;i&quot; (352), &quot;i&quot; ((1 &lt;&lt; 0)|(((9) &lt;&lt; 8))), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.reachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (22)); }); } while (0); } while (0); __builtin_expect(!!(__ret_warn_on), 0); })" data-ref="_M/WARN_ON">WARN_ON</a>(<a class="local col7 ref" href="#17drv" title='drv' data-ref="17drv" data-ref-filename="17drv">drv</a>-&gt;<a class="ref field" href="../../include/linux/cpuidle.h.html#cpuidle_driver::refcnt" title='cpuidle_driver::refcnt' data-ref="cpuidle_driver::refcnt" data-ref-filename="cpuidle_driver..refcnt">refcnt</a> &lt;= <var>0</var>))</td></tr>
+<tr><th id="353">353</th><td>		<a class="local col7 ref" href="#17drv" title='drv' data-ref="17drv" data-ref-filename="17drv">drv</a>-&gt;<a class="ref field" href="../../include/linux/cpuidle.h.html#cpuidle_driver::refcnt" title='cpuidle_driver::refcnt' data-ref="cpuidle_driver::refcnt" data-ref-filename="cpuidle_driver..refcnt">refcnt</a>--;</td></tr>
+<tr><th id="354">354</th><td></td></tr>
+<tr><th id="355">355</th><td>	<a class="ref fn" href="../../include/linux/spinlock.h.html#spin_unlock" title='spin_unlock' data-ref="spin_unlock" data-ref-filename="spin_unlock">spin_unlock</a>(&amp;<a class="ref" href="cpuidle.h.html#cpuidle_driver_lock" title='cpuidle_driver_lock' data-ref="cpuidle_driver_lock" data-ref-filename="cpuidle_driver_lock">cpuidle_driver_lock</a>);</td></tr>
+<tr><th id="356">356</th><td>}</td></tr>
+<tr><th id="357">357</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

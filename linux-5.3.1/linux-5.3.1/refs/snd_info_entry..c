@@ -1,0 +1,35 @@
+<dec f='linux-5.3.1/include/sound/info.h' l='68' type='union (anonymous union at /home/woboq/linux-5.3.1/./include/sound/info.h:65:2)'/>
+<use f='linux-5.3.1/include/sound/info.h' l='144' u='m' c='snd_info_set_text_ops'/>
+<offset>256</offset>
+<use f='linux-5.3.1/sound/core/hwdep.c' l='497' u='m' c='snd_hwdep_proc_init'/>
+<use f='linux-5.3.1/sound/core/info.c' l='114' u='m' c='snd_info_entry_llseek'/>
+<use f='linux-5.3.1/sound/core/info.c' l='115' u='m' c='snd_info_entry_llseek'/>
+<use f='linux-5.3.1/sound/core/info.c' l='162' u='m' c='snd_info_entry_read'/>
+<use f='linux-5.3.1/sound/core/info.c' l='183' u='m' c='snd_info_entry_write'/>
+<use f='linux-5.3.1/sound/core/info.c' l='197' u='m' c='snd_info_entry_poll'/>
+<use f='linux-5.3.1/sound/core/info.c' l='198' u='m' c='snd_info_entry_poll'/>
+<use f='linux-5.3.1/sound/core/info.c' l='201' u='m' c='snd_info_entry_poll'/>
+<use f='linux-5.3.1/sound/core/info.c' l='203' u='m' c='snd_info_entry_poll'/>
+<use f='linux-5.3.1/sound/core/info.c' l='214' u='m' c='snd_info_entry_ioctl'/>
+<use f='linux-5.3.1/sound/core/info.c' l='216' u='m' c='snd_info_entry_ioctl'/>
+<use f='linux-5.3.1/sound/core/info.c' l='230' u='m' c='snd_info_entry_mmap'/>
+<use f='linux-5.3.1/sound/core/info.c' l='232' u='m' c='snd_info_entry_mmap'/>
+<use f='linux-5.3.1/sound/core/info.c' l='248' u='m' c='snd_info_entry_open'/>
+<use f='linux-5.3.1/sound/core/info.c' l='249' u='m' c='snd_info_entry_open'/>
+<use f='linux-5.3.1/sound/core/info.c' l='254' u='m' c='snd_info_entry_open'/>
+<use f='linux-5.3.1/sound/core/info.c' l='255' u='m' c='snd_info_entry_open'/>
+<use f='linux-5.3.1/sound/core/info.c' l='277' u='m' c='snd_info_entry_release'/>
+<use f='linux-5.3.1/sound/core/info.c' l='278' u='m' c='snd_info_entry_release'/>
+<use f='linux-5.3.1/sound/core/info.c' l='313' u='m' c='snd_info_text_entry_write'/>
+<use f='linux-5.3.1/sound/core/info.c' l='359' u='m' c='snd_info_seq_show'/>
+<use f='linux-5.3.1/sound/core/info.c' l='363' u='m' c='snd_info_seq_show'/>
+<use f='linux-5.3.1/sound/core/info.c' l='409' u='m' c='snd_info_text_entry_release'/>
+<use f='linux-5.3.1/sound/core/info.c' l='410' u='m' c='snd_info_text_entry_release'/>
+<use f='linux-5.3.1/sound/core/info.c' l='888' u='m' c='snd_card_rw_proc_new'/>
+<use f='linux-5.3.1/sound/core/info.c' l='912' u='m' c='snd_info_version_init'/>
+<use f='linux-5.3.1/sound/core/init.c' l='858' u='m' c='snd_card_info_init'/>
+<use f='linux-5.3.1/sound/core/pcm_memory.c' l='179' u='m' c='preallocate_info_init'/>
+<use f='linux-5.3.1/sound/core/seq/seq_info.c' l='30' u='m' c='create_info_entry'/>
+<use f='linux-5.3.1/sound/core/seq_device.c' l='269' u='m' c='seq_dev_proc_init'/>
+<use f='linux-5.3.1/sound/core/sound.c' l='377' u='m' c='snd_minor_info_init'/>
+<use f='linux-5.3.1/sound/core/timer.c' l='1250' u='m' c='snd_timer_proc_init'/>

@@ -1,0 +1,46 @@
+<dec f='linux-5.3.1/crypto/asymmetric_keys/x509_parser.h' l='16' type='struct public_key_signature *'/>
+<offset>192</offset>
+<doc f='linux-5.3.1/crypto/asymmetric_keys/x509_parser.h' l='16'>/* Signature parameters */</doc>
+<use f='linux-5.3.1/crypto/asymmetric_keys/pkcs7_trust.c' l='75' u='r' c='pkcs7_validate_trust_one'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/pkcs7_trust.c' l='81' u='r' c='pkcs7_validate_trust_one'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/pkcs7_trust.c' l='81' u='r' c='pkcs7_validate_trust_one'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/pkcs7_trust.c' l='83' u='r' c='pkcs7_validate_trust_one'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/pkcs7_trust.c' l='84' u='r' c='pkcs7_validate_trust_one'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/pkcs7_verify.c' l='201' u='r' c='pkcs7_verify_sig_chain'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/pkcs7_verify.c' l='268' u='r' c='pkcs7_verify_sig_chain'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_cert_parser.c' l='50' u='r' c='x509_free_certificate'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_cert_parser.c' l='77' u='w' c='x509_cert_parse'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_cert_parser.c' l='78' u='r' c='x509_cert_parse'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_cert_parser.c' l='207' u='r' c='x509_note_pkey_algo'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_cert_parser.c' l='211' u='r' c='x509_note_pkey_algo'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_cert_parser.c' l='215' u='r' c='x509_note_pkey_algo'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_cert_parser.c' l='219' u='r' c='x509_note_pkey_algo'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_cert_parser.c' l='223' u='r' c='x509_note_pkey_algo'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_cert_parser.c' l='227' u='r' c='x509_note_pkey_algo'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_cert_parser.c' l='231' u='r' c='x509_note_pkey_algo'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_cert_parser.c' l='235' u='r' c='x509_note_pkey_algo'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_cert_parser.c' l='240' u='r' c='x509_note_pkey_algo'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_cert_parser.c' l='241' u='r' c='x509_note_pkey_algo'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_cert_parser.c' l='245' u='r' c='x509_note_pkey_algo'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_cert_parser.c' l='246' u='r' c='x509_note_pkey_algo'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_cert_parser.c' l='268' u='r' c='x509_note_signature'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_cert_parser.c' l='269' u='r' c='x509_note_signature'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_cert_parser.c' l='638' u='r' c='x509_akid_note_kid'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_cert_parser.c' l='645' u='r' c='x509_akid_note_kid'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_cert_parser.c' l='677' u='r' c='x509_akid_note_serial'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_cert_parser.c' l='688' u='r' c='x509_akid_note_serial'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_public_key.c' l='25' u='r' c='x509_get_sig_params'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_public_key.c' l='112' u='r' c='x509_check_for_self_signed'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_public_key.c' l='112' u='r' c='x509_check_for_self_signed'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_public_key.c' l='116' u='r' c='x509_check_for_self_signed'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_public_key.c' l='117' u='r' c='x509_check_for_self_signed'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_public_key.c' l='124' u='r' c='x509_check_for_self_signed'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_public_key.c' l='124' u='r' c='x509_check_for_self_signed'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_public_key.c' l='129' u='r' c='x509_check_for_self_signed'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_public_key.c' l='132' u='r' c='x509_check_for_self_signed'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_public_key.c' l='183' u='r' c='x509_key_preparse'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_public_key.c' l='184' u='w' c='x509_key_preparse'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_public_key.c' l='187' u='r' c='x509_key_preparse'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_public_key.c' l='187' u='r' c='x509_key_preparse'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_public_key.c' l='227' u='r' c='x509_key_preparse'/>
+<use f='linux-5.3.1/crypto/asymmetric_keys/x509_public_key.c' l='235' u='w' c='x509_key_preparse'/>

@@ -1,0 +1,211 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>drm_modeset_lock.h source code [linux-5.3.1/include/drm/drm_modeset_lock.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="drm_modeset_acquire_ctx,drm_modeset_lock "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/include/drm/drm_modeset_lock.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>include</a>/<a href='./'>drm</a>/<a href='drm_modeset_lock.h.html'>drm_modeset_lock.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*</i></td></tr>
+<tr><th id="2">2</th><td><i> * Copyright (C) 2014 Red Hat</i></td></tr>
+<tr><th id="3">3</th><td><i> * Author: Rob Clark &lt;robdclark@gmail.com&gt;</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * Permission is hereby granted, free of charge, to any person obtaining a</i></td></tr>
+<tr><th id="6">6</th><td><i> * copy of this software and associated documentation files (the "Software"),</i></td></tr>
+<tr><th id="7">7</th><td><i> * to deal in the Software without restriction, including without limitation</i></td></tr>
+<tr><th id="8">8</th><td><i> * the rights to use, copy, modify, merge, publish, distribute, sublicense,</i></td></tr>
+<tr><th id="9">9</th><td><i> * and/or sell copies of the Software, and to permit persons to whom the</i></td></tr>
+<tr><th id="10">10</th><td><i> * Software is furnished to do so, subject to the following conditions:</i></td></tr>
+<tr><th id="11">11</th><td><i> *</i></td></tr>
+<tr><th id="12">12</th><td><i> * The above copyright notice and this permission notice shall be included in</i></td></tr>
+<tr><th id="13">13</th><td><i> * all copies or substantial portions of the Software.</i></td></tr>
+<tr><th id="14">14</th><td><i> *</i></td></tr>
+<tr><th id="15">15</th><td><i> * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR</i></td></tr>
+<tr><th id="16">16</th><td><i> * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,</i></td></tr>
+<tr><th id="17">17</th><td><i> * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL</i></td></tr>
+<tr><th id="18">18</th><td><i> * THE COPYRIGHT HOLDER(S) OR AUTHOR(S) BE LIABLE FOR ANY CLAIM, DAMAGES OR</i></td></tr>
+<tr><th id="19">19</th><td><i> * OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,</i></td></tr>
+<tr><th id="20">20</th><td><i> * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR</i></td></tr>
+<tr><th id="21">21</th><td><i> * OTHER DEALINGS IN THE SOFTWARE.</i></td></tr>
+<tr><th id="22">22</th><td><i> */</i></td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td><u>#<span data-ppcond="24">ifndef</span> <span class="macro" data-ref="_M/DRM_MODESET_LOCK_H_">DRM_MODESET_LOCK_H_</span></u></td></tr>
+<tr><th id="25">25</th><td><u>#define <dfn class="macro" id="_M/DRM_MODESET_LOCK_H_" data-ref="_M/DRM_MODESET_LOCK_H_">DRM_MODESET_LOCK_H_</dfn></u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../linux/ww_mutex.h.html">&lt;linux/ww_mutex.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td></td></tr>
+<tr><th id="29">29</th><td><b>struct</b> <a class="type" href="#drm_modeset_lock" title='drm_modeset_lock' data-ref="drm_modeset_lock" data-ref-filename="drm_modeset_lock">drm_modeset_lock</a>;</td></tr>
+<tr><th id="30">30</th><td></td></tr>
+<tr><th id="31">31</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="32">32</th><td><i class="doc"> * struct drm_modeset_acquire_ctx - locking context (see ww_acquire_ctx)</i></td></tr>
+<tr><th id="33">33</th><td><i class="doc"> *<span class="command"> @ww</span>_ctx: base acquire ctx</i></td></tr>
+<tr><th id="34">34</th><td><i class="doc"> *<span class="command"> @contended</span>: used internally for -EDEADLK handling</i></td></tr>
+<tr><th id="35">35</th><td><i class="doc"> *<span class="command"> @locked</span>: list of held locks</i></td></tr>
+<tr><th id="36">36</th><td><i class="doc"> *<span class="command"> @trylock</span>_only: trylock mode used in atomic contexts/panic notifiers</i></td></tr>
+<tr><th id="37">37</th><td><i class="doc"> *<span class="command"> @interruptible</span>: whether interruptible locking should be used.</i></td></tr>
+<tr><th id="38">38</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="39">39</th><td><i class="doc"> * Each thread competing for a set of locks must use one acquire</i></td></tr>
+<tr><th id="40">40</th><td><i class="doc"> * ctx.  And if any lock fxn returns -EDEADLK, it must backoff and</i></td></tr>
+<tr><th id="41">41</th><td><i class="doc"> * retry.</i></td></tr>
+<tr><th id="42">42</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="43">43</th><td><b>struct</b> <dfn class="type def" id="drm_modeset_acquire_ctx" title='drm_modeset_acquire_ctx' data-ref="drm_modeset_acquire_ctx" data-ref-filename="drm_modeset_acquire_ctx">drm_modeset_acquire_ctx</dfn> {</td></tr>
+<tr><th id="44">44</th><td></td></tr>
+<tr><th id="45">45</th><td>	<b>struct</b> <a class="type" href="../linux/ww_mutex.h.html#ww_acquire_ctx" title='ww_acquire_ctx' data-ref="ww_acquire_ctx" data-ref-filename="ww_acquire_ctx">ww_acquire_ctx</a> <dfn class="decl field" id="drm_modeset_acquire_ctx::ww_ctx" title='drm_modeset_acquire_ctx::ww_ctx' data-ref="drm_modeset_acquire_ctx::ww_ctx" data-ref-filename="drm_modeset_acquire_ctx..ww_ctx">ww_ctx</dfn>;</td></tr>
+<tr><th id="46">46</th><td></td></tr>
+<tr><th id="47">47</th><td>	<i>/*</i></td></tr>
+<tr><th id="48">48</th><td><i>	 * Contended lock: if a lock is contended you should only call</i></td></tr>
+<tr><th id="49">49</th><td><i>	 * drm_modeset_backoff() which drops locks and slow-locks the</i></td></tr>
+<tr><th id="50">50</th><td><i>	 * contended lock.</i></td></tr>
+<tr><th id="51">51</th><td><i>	 */</i></td></tr>
+<tr><th id="52">52</th><td>	<b>struct</b> <a class="type" href="#drm_modeset_lock" title='drm_modeset_lock' data-ref="drm_modeset_lock" data-ref-filename="drm_modeset_lock">drm_modeset_lock</a> *<dfn class="decl field" id="drm_modeset_acquire_ctx::contended" title='drm_modeset_acquire_ctx::contended' data-ref="drm_modeset_acquire_ctx::contended" data-ref-filename="drm_modeset_acquire_ctx..contended">contended</dfn>;</td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td>	<i>/*</i></td></tr>
+<tr><th id="55">55</th><td><i>	 * list of held locks (drm_modeset_lock)</i></td></tr>
+<tr><th id="56">56</th><td><i>	 */</i></td></tr>
+<tr><th id="57">57</th><td>	<b>struct</b> <a class="type" href="../linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="drm_modeset_acquire_ctx::locked" title='drm_modeset_acquire_ctx::locked' data-ref="drm_modeset_acquire_ctx::locked" data-ref-filename="drm_modeset_acquire_ctx..locked">locked</dfn>;</td></tr>
+<tr><th id="58">58</th><td></td></tr>
+<tr><th id="59">59</th><td>	<i>/*</i></td></tr>
+<tr><th id="60">60</th><td><i>	 * Trylock mode, use only for panic handlers!</i></td></tr>
+<tr><th id="61">61</th><td><i>	 */</i></td></tr>
+<tr><th id="62">62</th><td>	<a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="drm_modeset_acquire_ctx::trylock_only" title='drm_modeset_acquire_ctx::trylock_only' data-ref="drm_modeset_acquire_ctx::trylock_only" data-ref-filename="drm_modeset_acquire_ctx..trylock_only">trylock_only</dfn>;</td></tr>
+<tr><th id="63">63</th><td></td></tr>
+<tr><th id="64">64</th><td>	<i>/* Perform interruptible waits on this context. */</i></td></tr>
+<tr><th id="65">65</th><td>	<a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="drm_modeset_acquire_ctx::interruptible" title='drm_modeset_acquire_ctx::interruptible' data-ref="drm_modeset_acquire_ctx::interruptible" data-ref-filename="drm_modeset_acquire_ctx..interruptible">interruptible</dfn>;</td></tr>
+<tr><th id="66">66</th><td>};</td></tr>
+<tr><th id="67">67</th><td></td></tr>
+<tr><th id="68">68</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="69">69</th><td><i class="doc"> * struct drm_modeset_lock - used for locking modeset resources.</i></td></tr>
+<tr><th id="70">70</th><td><i class="doc"> *<span class="command"> @mutex</span>: resource locking</i></td></tr>
+<tr><th id="71">71</th><td><i class="doc"> *<span class="command"> @head</span>: used to hold its place on &amp;drm_atomi_state.locked list when</i></td></tr>
+<tr><th id="72">72</th><td><i class="doc"> *    part of an atomic update</i></td></tr>
+<tr><th id="73">73</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="74">74</th><td><i class="doc"> * Used for locking CRTCs and other modeset resources.</i></td></tr>
+<tr><th id="75">75</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="76">76</th><td><b>struct</b> <dfn class="type def" id="drm_modeset_lock" title='drm_modeset_lock' data-ref="drm_modeset_lock" data-ref-filename="drm_modeset_lock">drm_modeset_lock</dfn> {</td></tr>
+<tr><th id="77">77</th><td>	<i>/*</i></td></tr>
+<tr><th id="78">78</th><td><i>	 * modeset lock</i></td></tr>
+<tr><th id="79">79</th><td><i>	 */</i></td></tr>
+<tr><th id="80">80</th><td>	<b>struct</b> <a class="type" href="../linux/ww_mutex.h.html#ww_mutex" title='ww_mutex' data-ref="ww_mutex" data-ref-filename="ww_mutex">ww_mutex</a> <dfn class="decl field" id="drm_modeset_lock::mutex" title='drm_modeset_lock::mutex' data-ref="drm_modeset_lock::mutex" data-ref-filename="drm_modeset_lock..mutex">mutex</dfn>;</td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td>	<i>/*</i></td></tr>
+<tr><th id="83">83</th><td><i>	 * Resources that are locked as part of an atomic update are added</i></td></tr>
+<tr><th id="84">84</th><td><i>	 * to a list (so we know what to unlock at the end).</i></td></tr>
+<tr><th id="85">85</th><td><i>	 */</i></td></tr>
+<tr><th id="86">86</th><td>	<b>struct</b> <a class="type" href="../linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="drm_modeset_lock::head" title='drm_modeset_lock::head' data-ref="drm_modeset_lock::head" data-ref-filename="drm_modeset_lock..head">head</dfn>;</td></tr>
+<tr><th id="87">87</th><td>};</td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td><u>#define <dfn class="macro" id="_M/DRM_MODESET_ACQUIRE_INTERRUPTIBLE" data-ref="_M/DRM_MODESET_ACQUIRE_INTERRUPTIBLE">DRM_MODESET_ACQUIRE_INTERRUPTIBLE</dfn> BIT(0)</u></td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td><em>void</em> <dfn class="decl fn" id="drm_modeset_acquire_init" title='drm_modeset_acquire_init' data-ref="drm_modeset_acquire_init" data-ref-filename="drm_modeset_acquire_init">drm_modeset_acquire_init</dfn>(<b>struct</b> <a class="type" href="#drm_modeset_acquire_ctx" title='drm_modeset_acquire_ctx' data-ref="drm_modeset_acquire_ctx" data-ref-filename="drm_modeset_acquire_ctx">drm_modeset_acquire_ctx</a> *<dfn class="local col6 decl" id="56ctx" title='ctx' data-type='struct drm_modeset_acquire_ctx *' data-ref="56ctx" data-ref-filename="56ctx">ctx</dfn>,</td></tr>
+<tr><th id="92">92</th><td>		<a class="typedef" href="../linux/types.h.html#uint32_t" title='uint32_t' data-type='u32' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a> <dfn class="local col7 decl" id="57flags" title='flags' data-type='uint32_t' data-ref="57flags" data-ref-filename="57flags">flags</dfn>);</td></tr>
+<tr><th id="93">93</th><td><em>void</em> <dfn class="decl fn" id="drm_modeset_acquire_fini" title='drm_modeset_acquire_fini' data-ref="drm_modeset_acquire_fini" data-ref-filename="drm_modeset_acquire_fini">drm_modeset_acquire_fini</dfn>(<b>struct</b> <a class="type" href="#drm_modeset_acquire_ctx" title='drm_modeset_acquire_ctx' data-ref="drm_modeset_acquire_ctx" data-ref-filename="drm_modeset_acquire_ctx">drm_modeset_acquire_ctx</a> *<dfn class="local col8 decl" id="58ctx" title='ctx' data-type='struct drm_modeset_acquire_ctx *' data-ref="58ctx" data-ref-filename="58ctx">ctx</dfn>);</td></tr>
+<tr><th id="94">94</th><td><em>void</em> <dfn class="decl fn" id="drm_modeset_drop_locks" title='drm_modeset_drop_locks' data-ref="drm_modeset_drop_locks" data-ref-filename="drm_modeset_drop_locks">drm_modeset_drop_locks</dfn>(<b>struct</b> <a class="type" href="#drm_modeset_acquire_ctx" title='drm_modeset_acquire_ctx' data-ref="drm_modeset_acquire_ctx" data-ref-filename="drm_modeset_acquire_ctx">drm_modeset_acquire_ctx</a> *<dfn class="local col9 decl" id="59ctx" title='ctx' data-type='struct drm_modeset_acquire_ctx *' data-ref="59ctx" data-ref-filename="59ctx">ctx</dfn>);</td></tr>
+<tr><th id="95">95</th><td><em>int</em> <dfn class="decl fn" id="drm_modeset_backoff" title='drm_modeset_backoff' data-ref="drm_modeset_backoff" data-ref-filename="drm_modeset_backoff">drm_modeset_backoff</dfn>(<b>struct</b> <a class="type" href="#drm_modeset_acquire_ctx" title='drm_modeset_acquire_ctx' data-ref="drm_modeset_acquire_ctx" data-ref-filename="drm_modeset_acquire_ctx">drm_modeset_acquire_ctx</a> *<dfn class="local col0 decl" id="60ctx" title='ctx' data-type='struct drm_modeset_acquire_ctx *' data-ref="60ctx" data-ref-filename="60ctx">ctx</dfn>);</td></tr>
+<tr><th id="96">96</th><td></td></tr>
+<tr><th id="97">97</th><td><em>void</em> <dfn class="decl fn" id="drm_modeset_lock_init" title='drm_modeset_lock_init' data-ref="drm_modeset_lock_init" data-ref-filename="drm_modeset_lock_init">drm_modeset_lock_init</dfn>(<b>struct</b> <a class="type" href="#drm_modeset_lock" title='drm_modeset_lock' data-ref="drm_modeset_lock" data-ref-filename="drm_modeset_lock">drm_modeset_lock</a> *<dfn class="local col1 decl" id="61lock" title='lock' data-type='struct drm_modeset_lock *' data-ref="61lock" data-ref-filename="61lock">lock</dfn>);</td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="100">100</th><td><i class="doc"> * drm_modeset_lock_fini - cleanup lock</i></td></tr>
+<tr><th id="101">101</th><td><i class="doc"> *<span class="command"> @lock</span>: lock to cleanup</i></td></tr>
+<tr><th id="102">102</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="103">103</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="drm_modeset_lock_fini" title='drm_modeset_lock_fini' data-ref="drm_modeset_lock_fini" data-ref-filename="drm_modeset_lock_fini">drm_modeset_lock_fini</dfn>(<b>struct</b> <a class="type" href="#drm_modeset_lock" title='drm_modeset_lock' data-ref="drm_modeset_lock" data-ref-filename="drm_modeset_lock">drm_modeset_lock</a> *<dfn class="local col2 decl" id="62lock" title='lock' data-type='struct drm_modeset_lock *' data-ref="62lock" data-ref-filename="62lock">lock</dfn>)</td></tr>
+<tr><th id="104">104</th><td>{</td></tr>
+<tr><th id="105">105</th><td>	<a class="macro" href="../asm-generic/bug.h.html#123" title="({ int __ret_warn_on = !!(!list_empty(&amp;lock-&gt;head)); if (__builtin_expect(!!(__ret_warn_on), 0)) do { printk(&quot;\001&quot; &quot;4&quot; &quot;------------[ cut here ]------------\n&quot;); do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/./include/drm/drm_modeset_lock.h&quot;), &quot;i&quot; (105), &quot;i&quot; ((1 &lt;&lt; 0)|(((9) &lt;&lt; 8))), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.reachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (28)); }); } while (0); } while (0); __builtin_expect(!!(__ret_warn_on), 0); })" data-ref="_M/WARN_ON">WARN_ON</a>(!<a class="ref fn" href="../linux/list.h.html#list_empty" title='list_empty' data-ref="list_empty" data-ref-filename="list_empty">list_empty</a>(&amp;<a class="local col2 ref" href="#62lock" title='lock' data-ref="62lock" data-ref-filename="62lock">lock</a>-&gt;<a class="ref field" href="#drm_modeset_lock::head" title='drm_modeset_lock::head' data-ref="drm_modeset_lock::head" data-ref-filename="drm_modeset_lock..head">head</a>));</td></tr>
+<tr><th id="106">106</th><td>}</td></tr>
+<tr><th id="107">107</th><td></td></tr>
+<tr><th id="108">108</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="109">109</th><td><i class="doc"> * drm_modeset_is_locked - equivalent to mutex_is_locked()</i></td></tr>
+<tr><th id="110">110</th><td><i class="doc"> *<span class="command"> @lock</span>: lock to check</i></td></tr>
+<tr><th id="111">111</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="112">112</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="drm_modeset_is_locked" title='drm_modeset_is_locked' data-ref="drm_modeset_is_locked" data-ref-filename="drm_modeset_is_locked">drm_modeset_is_locked</dfn>(<b>struct</b> <a class="type" href="#drm_modeset_lock" title='drm_modeset_lock' data-ref="drm_modeset_lock" data-ref-filename="drm_modeset_lock">drm_modeset_lock</a> *<dfn class="local col3 decl" id="63lock" title='lock' data-type='struct drm_modeset_lock *' data-ref="63lock" data-ref-filename="63lock">lock</dfn>)</td></tr>
+<tr><th id="113">113</th><td>{</td></tr>
+<tr><th id="114">114</th><td>	<b>return</b> <a class="ref fn" href="../linux/ww_mutex.h.html#ww_mutex_is_locked" title='ww_mutex_is_locked' data-ref="ww_mutex_is_locked" data-ref-filename="ww_mutex_is_locked">ww_mutex_is_locked</a>(&amp;<a class="local col3 ref" href="#63lock" title='lock' data-ref="63lock" data-ref-filename="63lock">lock</a>-&gt;<a class="ref field" href="#drm_modeset_lock::mutex" title='drm_modeset_lock::mutex' data-ref="drm_modeset_lock::mutex" data-ref-filename="drm_modeset_lock..mutex">mutex</a>);</td></tr>
+<tr><th id="115">115</th><td>}</td></tr>
+<tr><th id="116">116</th><td></td></tr>
+<tr><th id="117">117</th><td><em>int</em> <dfn class="decl fn" id="drm_modeset_lock" title='drm_modeset_lock' data-ref="drm_modeset_lock" data-ref-filename="drm_modeset_lock">drm_modeset_lock</dfn>(<b>struct</b> <a class="type" href="#drm_modeset_lock" title='drm_modeset_lock' data-ref="drm_modeset_lock" data-ref-filename="drm_modeset_lock">drm_modeset_lock</a> *<dfn class="local col4 decl" id="64lock" title='lock' data-type='struct drm_modeset_lock *' data-ref="64lock" data-ref-filename="64lock">lock</dfn>,</td></tr>
+<tr><th id="118">118</th><td>		<b>struct</b> <a class="type" href="#drm_modeset_acquire_ctx" title='drm_modeset_acquire_ctx' data-ref="drm_modeset_acquire_ctx" data-ref-filename="drm_modeset_acquire_ctx">drm_modeset_acquire_ctx</a> *<dfn class="local col5 decl" id="65ctx" title='ctx' data-type='struct drm_modeset_acquire_ctx *' data-ref="65ctx" data-ref-filename="65ctx">ctx</dfn>);</td></tr>
+<tr><th id="119">119</th><td><em>int</em> <a class="macro" href="../linux/compiler_types.h.html#108" title="__attribute__((__warn_unused_result__))" data-ref="_M/__must_check">__must_check</a> <dfn class="decl fn" id="drm_modeset_lock_single_interruptible" title='drm_modeset_lock_single_interruptible' data-ref="drm_modeset_lock_single_interruptible" data-ref-filename="drm_modeset_lock_single_interruptible">drm_modeset_lock_single_interruptible</dfn>(<b>struct</b> <a class="type" href="#drm_modeset_lock" title='drm_modeset_lock' data-ref="drm_modeset_lock" data-ref-filename="drm_modeset_lock">drm_modeset_lock</a> *<dfn class="local col6 decl" id="66lock" title='lock' data-type='struct drm_modeset_lock *' data-ref="66lock" data-ref-filename="66lock">lock</dfn>);</td></tr>
+<tr><th id="120">120</th><td><em>void</em> <dfn class="decl fn" id="drm_modeset_unlock" title='drm_modeset_unlock' data-ref="drm_modeset_unlock" data-ref-filename="drm_modeset_unlock">drm_modeset_unlock</dfn>(<b>struct</b> <a class="type" href="#drm_modeset_lock" title='drm_modeset_lock' data-ref="drm_modeset_lock" data-ref-filename="drm_modeset_lock">drm_modeset_lock</a> *<dfn class="local col7 decl" id="67lock" title='lock' data-type='struct drm_modeset_lock *' data-ref="67lock" data-ref-filename="67lock">lock</dfn>);</td></tr>
+<tr><th id="121">121</th><td></td></tr>
+<tr><th id="122">122</th><td><b>struct</b> <a class="type" href="drm_device.h.html#drm_device" title='drm_device' data-ref="drm_device" data-ref-filename="drm_device" id="drm_device">drm_device</a>;</td></tr>
+<tr><th id="123">123</th><td><b>struct</b> <a class="type" href="drm_crtc.h.html#drm_crtc" title='drm_crtc' data-ref="drm_crtc" data-ref-filename="drm_crtc" id="drm_crtc">drm_crtc</a>;</td></tr>
+<tr><th id="124">124</th><td><b>struct</b> <a class="type" href="drm_plane.h.html#drm_plane" title='drm_plane' data-ref="drm_plane" data-ref-filename="drm_plane" id="drm_plane">drm_plane</a>;</td></tr>
+<tr><th id="125">125</th><td></td></tr>
+<tr><th id="126">126</th><td><em>void</em> <dfn class="decl fn" id="drm_modeset_lock_all" title='drm_modeset_lock_all' data-ref="drm_modeset_lock_all" data-ref-filename="drm_modeset_lock_all">drm_modeset_lock_all</dfn>(<b>struct</b> <a class="type" href="drm_device.h.html#drm_device" title='drm_device' data-ref="drm_device" data-ref-filename="drm_device">drm_device</a> *<dfn class="local col8 decl" id="68dev" title='dev' data-type='struct drm_device *' data-ref="68dev" data-ref-filename="68dev">dev</dfn>);</td></tr>
+<tr><th id="127">127</th><td><em>void</em> <dfn class="decl fn" id="drm_modeset_unlock_all" title='drm_modeset_unlock_all' data-ref="drm_modeset_unlock_all" data-ref-filename="drm_modeset_unlock_all">drm_modeset_unlock_all</dfn>(<b>struct</b> <a class="type" href="drm_device.h.html#drm_device" title='drm_device' data-ref="drm_device" data-ref-filename="drm_device">drm_device</a> *<dfn class="local col9 decl" id="69dev" title='dev' data-type='struct drm_device *' data-ref="69dev" data-ref-filename="69dev">dev</dfn>);</td></tr>
+<tr><th id="128">128</th><td><em>void</em> <dfn class="decl fn" id="drm_warn_on_modeset_not_all_locked" title='drm_warn_on_modeset_not_all_locked' data-ref="drm_warn_on_modeset_not_all_locked" data-ref-filename="drm_warn_on_modeset_not_all_locked">drm_warn_on_modeset_not_all_locked</dfn>(<b>struct</b> <a class="type" href="drm_device.h.html#drm_device" title='drm_device' data-ref="drm_device" data-ref-filename="drm_device">drm_device</a> *<dfn class="local col0 decl" id="70dev" title='dev' data-type='struct drm_device *' data-ref="70dev" data-ref-filename="70dev">dev</dfn>);</td></tr>
+<tr><th id="129">129</th><td></td></tr>
+<tr><th id="130">130</th><td><em>int</em> <dfn class="decl fn" id="drm_modeset_lock_all_ctx" title='drm_modeset_lock_all_ctx' data-ref="drm_modeset_lock_all_ctx" data-ref-filename="drm_modeset_lock_all_ctx">drm_modeset_lock_all_ctx</dfn>(<b>struct</b> <a class="type" href="drm_device.h.html#drm_device" title='drm_device' data-ref="drm_device" data-ref-filename="drm_device">drm_device</a> *<dfn class="local col1 decl" id="71dev" title='dev' data-type='struct drm_device *' data-ref="71dev" data-ref-filename="71dev">dev</dfn>,</td></tr>
+<tr><th id="131">131</th><td>			     <b>struct</b> <a class="type" href="#drm_modeset_acquire_ctx" title='drm_modeset_acquire_ctx' data-ref="drm_modeset_acquire_ctx" data-ref-filename="drm_modeset_acquire_ctx">drm_modeset_acquire_ctx</a> *<dfn class="local col2 decl" id="72ctx" title='ctx' data-type='struct drm_modeset_acquire_ctx *' data-ref="72ctx" data-ref-filename="72ctx">ctx</dfn>);</td></tr>
+<tr><th id="132">132</th><td></td></tr>
+<tr><th id="133">133</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="134">134</th><td><i class="doc"> * DRM_MODESET_LOCK_ALL_BEGIN - Helper to acquire modeset locks</i></td></tr>
+<tr><th id="135">135</th><td><i class="doc"> * <span class="command">@dev</span>:<span class="verb"> drm device</span></i></td></tr>
+<tr><th id="136">136</th><td><i class="doc"> *<span class="command"> @ctx</span>: local modeset acquire context, will be dereferenced</i></td></tr>
+<tr><th id="137">137</th><td><i class="doc"> *<span class="command"> @flags</span>: DRM_MODESET_ACQUIRE_* flags to pass to drm_modeset_acquire_init()</i></td></tr>
+<tr><th id="138">138</th><td><i class="doc"> * <span class="command">@ret</span>:<span class="verb"> local ret/err/etc variable to track error status</span></i></td></tr>
+<tr><th id="139">139</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="140">140</th><td><i class="doc"> * Use these macros to simplify grabbing all modeset locks using a local</i></td></tr>
+<tr><th id="141">141</th><td><i class="doc"> * context. This has the advantage of reducing boilerplate, but also properly</i></td></tr>
+<tr><th id="142">142</th><td><i class="doc"> * checking return values where appropriate.</i></td></tr>
+<tr><th id="143">143</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="144">144</th><td><i class="doc"> * Any code run between BEGIN and END will be holding the modeset locks.</i></td></tr>
+<tr><th id="145">145</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="146">146</th><td><i class="doc"> * This must be paired with DRM_MODESET_LOCK_ALL_END(). We will jump back and</i></td></tr>
+<tr><th id="147">147</th><td><i class="doc"> * forth between the labels on deadlock and error conditions.</i></td></tr>
+<tr><th id="148">148</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="149">149</th><td><i class="doc"> * Drivers can acquire additional modeset locks. If any lock acquisition</i></td></tr>
+<tr><th id="150">150</th><td><i class="doc"> * fails, the control flow needs to jump to DRM_MODESET_LOCK_ALL_END() with</i></td></tr>
+<tr><th id="151">151</th><td><i class="doc"> * the <span class="command">@ret</span> <span class="verb">parameter containing the return value of drm_modeset_lock().</span></i></td></tr>
+<tr><th id="152">152</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="153">153</th><td><i class="doc"> * Returns:</i></td></tr>
+<tr><th id="154">154</th><td><i class="doc"> * The only possible value of ret immediately after DRM_MODESET_LOCK_ALL_BEGIN()</i></td></tr>
+<tr><th id="155">155</th><td><i class="doc"> * is 0, so no error checking is necessary</i></td></tr>
+<tr><th id="156">156</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="157">157</th><td><u>#define <dfn class="macro" id="_M/DRM_MODESET_LOCK_ALL_BEGIN" data-ref="_M/DRM_MODESET_LOCK_ALL_BEGIN">DRM_MODESET_LOCK_ALL_BEGIN</dfn>(dev, ctx, flags, ret)		\</u></td></tr>
+<tr><th id="158">158</th><td><u>	drm_modeset_acquire_init(&amp;ctx, flags);				\</u></td></tr>
+<tr><th id="159">159</th><td><u>modeset_lock_retry:							\</u></td></tr>
+<tr><th id="160">160</th><td><u>	ret = drm_modeset_lock_all_ctx(dev, &amp;ctx);			\</u></td></tr>
+<tr><th id="161">161</th><td><u>	if (ret)							\</u></td></tr>
+<tr><th id="162">162</th><td><u>		goto modeset_lock_fail;</u></td></tr>
+<tr><th id="163">163</th><td></td></tr>
+<tr><th id="164">164</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="165">165</th><td><i class="doc"> * DRM_MODESET_LOCK_ALL_END - Helper to release and cleanup modeset locks</i></td></tr>
+<tr><th id="166">166</th><td><i class="doc"> *<span class="command"> @ctx</span>: local modeset acquire context, will be dereferenced</i></td></tr>
+<tr><th id="167">167</th><td><i class="doc"> * <span class="command">@ret</span>:<span class="verb"> local ret/err/etc variable to track error status</span></i></td></tr>
+<tr><th id="168">168</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="169">169</th><td><i class="doc"> * The other side of DRM_MODESET_LOCK_ALL_BEGIN(). It will bounce back to BEGIN</i></td></tr>
+<tr><th id="170">170</th><td><i class="doc"> * if ret is -EDEADLK.</i></td></tr>
+<tr><th id="171">171</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="172">172</th><td><i class="doc"> * It's important that you use the same ret variable for begin and end so</i></td></tr>
+<tr><th id="173">173</th><td><i class="doc"> * deadlock conditions are properly handled.</i></td></tr>
+<tr><th id="174">174</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="175">175</th><td><i class="doc"> * Returns:</i></td></tr>
+<tr><th id="176">176</th><td><i class="doc"> * ret will be untouched unless it is -EDEADLK on entry. That means that if you</i></td></tr>
+<tr><th id="177">177</th><td><i class="doc"> * successfully acquire the locks, ret will be whatever your code sets it to. If</i></td></tr>
+<tr><th id="178">178</th><td><i class="doc"> * there is a deadlock or other failure with acquire or backoff, ret will be set</i></td></tr>
+<tr><th id="179">179</th><td><i class="doc"> * to that failure. In both of these cases the code between BEGIN/END will not</i></td></tr>
+<tr><th id="180">180</th><td><i class="doc"> * be run, so the failure will reflect the inability to grab the locks.</i></td></tr>
+<tr><th id="181">181</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="182">182</th><td><u>#define <dfn class="macro" id="_M/DRM_MODESET_LOCK_ALL_END" data-ref="_M/DRM_MODESET_LOCK_ALL_END">DRM_MODESET_LOCK_ALL_END</dfn>(ctx, ret)				\</u></td></tr>
+<tr><th id="183">183</th><td><u>modeset_lock_fail:							\</u></td></tr>
+<tr><th id="184">184</th><td><u>	if (ret == -EDEADLK) {						\</u></td></tr>
+<tr><th id="185">185</th><td><u>		ret = drm_modeset_backoff(&amp;ctx);			\</u></td></tr>
+<tr><th id="186">186</th><td><u>		if (!ret)						\</u></td></tr>
+<tr><th id="187">187</th><td><u>			goto modeset_lock_retry;			\</u></td></tr>
+<tr><th id="188">188</th><td><u>	}								\</u></td></tr>
+<tr><th id="189">189</th><td><u>	drm_modeset_drop_locks(&amp;ctx);					\</u></td></tr>
+<tr><th id="190">190</th><td><u>	drm_modeset_acquire_fini(&amp;ctx);</u></td></tr>
+<tr><th id="191">191</th><td></td></tr>
+<tr><th id="192">192</th><td><u>#<span data-ppcond="24">endif</span> /* DRM_MODESET_LOCK_H_ */</u></td></tr>
+<tr><th id="193">193</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../drivers/gpu/drm/bridge/panel.c.html'>linux-5.3.1/drivers/gpu/drm/bridge/panel.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

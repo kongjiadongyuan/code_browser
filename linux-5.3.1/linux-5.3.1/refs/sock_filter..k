@@ -1,0 +1,39 @@
+<dec f='linux-5.3.1/include/uapi/linux/filter.h' l='28' type='__u32'/>
+<use f='linux-5.3.1/include/linux/filter.h' l='1117' u='r' c='bpf_needs_clear_a'/>
+<use f='linux-5.3.1/include/linux/filter.h' l='1136' u='r' c='bpf_anc_helper'/>
+<offset>32</offset>
+<doc f='linux-5.3.1/include/uapi/linux/filter.h' l='28'>/* Generic multiuse field */</doc>
+<use f='linux-5.3.1/kernel/seccomp.c' l='180' u='r' c='seccomp_check_filter'/>
+<use f='linux-5.3.1/kernel/seccomp.c' l='191' u='w' c='seccomp_check_filter'/>
+<use f='linux-5.3.1/kernel/seccomp.c' l='195' u='w' c='seccomp_check_filter'/>
+<use f='linux-5.3.1/net/core/filter.c' l='323' u='r' c='convert_bpf_extensions'/>
+<use f='linux-5.3.1/net/core/filter.c' l='350' u='r' c='convert_bpf_extensions'/>
+<use f='linux-5.3.1/net/core/filter.c' l='409' u='r' c='convert_bpf_extensions'/>
+<use f='linux-5.3.1/net/core/filter.c' l='456' u='r' c='convert_bpf_ld_abs'/>
+<use f='linux-5.3.1/net/core/filter.c' l='491' u='r' c='convert_bpf_ld_abs'/>
+<use f='linux-5.3.1/net/core/filter.c' l='657' u='r' c='bpf_convert_filter'/>
+<use f='linux-5.3.1/net/core/filter.c' l='657' u='r' c='bpf_convert_filter'/>
+<use f='linux-5.3.1/net/core/filter.c' l='683' u='r' c='bpf_convert_filter'/>
+<use f='linux-5.3.1/net/core/filter.c' l='696' u='r' c='bpf_convert_filter'/>
+<use f='linux-5.3.1/net/core/filter.c' l='701' u='r' c='bpf_convert_filter'/>
+<use f='linux-5.3.1/net/core/filter.c' l='701' u='r' c='bpf_convert_filter'/>
+<use f='linux-5.3.1/net/core/filter.c' l='708' u='r' c='bpf_convert_filter'/>
+<use f='linux-5.3.1/net/core/filter.c' l='757' u='w' c='bpf_convert_filter'/>
+<use f='linux-5.3.1/net/core/filter.c' l='757' u='r' c='bpf_convert_filter'/>
+<use f='linux-5.3.1/net/core/filter.c' l='757' u='r' c='bpf_convert_filter'/>
+<use f='linux-5.3.1/net/core/filter.c' l='786' u='r' c='bpf_convert_filter'/>
+<use f='linux-5.3.1/net/core/filter.c' l='786' u='r' c='bpf_convert_filter'/>
+<use f='linux-5.3.1/net/core/filter.c' l='793' u='r' c='bpf_convert_filter'/>
+<use f='linux-5.3.1/net/core/filter.c' l='808' u='r' c='bpf_convert_filter'/>
+<use f='linux-5.3.1/net/core/filter.c' l='818' u='r' c='bpf_convert_filter'/>
+<use f='linux-5.3.1/net/core/filter.c' l='818' u='r' c='bpf_convert_filter'/>
+<use f='linux-5.3.1/net/core/filter.c' l='842' u='r' c='bpf_convert_filter'/>
+<use f='linux-5.3.1/net/core/filter.c' l='842' u='r' c='bpf_convert_filter'/>
+<use f='linux-5.3.1/net/core/filter.c' l='907' u='r' c='check_load_and_stores'/>
+<use f='linux-5.3.1/net/core/filter.c' l='911' u='r' c='check_load_and_stores'/>
+<use f='linux-5.3.1/net/core/filter.c' l='918' u='r' c='check_load_and_stores'/>
+<use f='linux-5.3.1/net/core/filter.c' l='1051' u='r' c='bpf_check_classic'/>
+<use f='linux-5.3.1/net/core/filter.c' l='1056' u='r' c='bpf_check_classic'/>
+<use f='linux-5.3.1/net/core/filter.c' l='1064' u='r' c='bpf_check_classic'/>
+<use f='linux-5.3.1/net/core/filter.c' l='1072' u='r' c='bpf_check_classic'/>
+<use f='linux-5.3.1/net/core/filter.c' l='1095' u='r' c='bpf_check_classic'/>

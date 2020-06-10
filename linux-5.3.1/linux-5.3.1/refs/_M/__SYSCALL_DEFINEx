@@ -1,0 +1,35 @@
+<dec f='linux-5.3.1/arch/x86/include/asm/syscall_wrapper.h' l='157'/>
+<use f='linux-5.3.1/include/linux/syscalls.h' l='234' u='a'/>
+<doc f='linux-5.3.1/arch/x86/include/asm/syscall_wrapper.h' l='124'>/*
+ * Instead of the generic __SYSCALL_DEFINEx() definition, this macro takes
+ * struct pt_regs *regs as the only argument of the syscall stub named
+ * __x64_sys_*(). It decodes just the registers it needs and passes them on to
+ * the __se_sys_*() wrapper performing sign extension and then to the
+ * __do_sys_*() function doing the actual job. These wrappers and functions
+ * are inlined (at least in very most cases), meaning that the assembly looks
+ * as follows (slightly re-ordered for better readability):
+ *
+ * &lt;__x64_sys_recv&gt;:		&lt;-- syscall with 4 parameters
+ *	callq	&lt;__fentry__&gt;
+ *
+ *	mov	0x70(%rdi),%rdi	&lt;-- decode regs-&gt;di
+ *	mov	0x68(%rdi),%rsi	&lt;-- decode regs-&gt;si
+ *	mov	0x60(%rdi),%rdx	&lt;-- decode regs-&gt;dx
+ *	mov	0x38(%rdi),%rcx	&lt;-- decode regs-&gt;r10
+ *
+ *	xor	%r9d,%r9d	&lt;-- clear %r9
+ *	xor	%r8d,%r8d	&lt;-- clear %r8
+ *
+ *	callq	__sys_recvfrom	&lt;-- do the actual work in __sys_recvfrom()
+ *				    which takes 6 arguments
+ *
+ *	cltq			&lt;-- extend return value to 64-bit
+ *	retq			&lt;-- return
+ *
+ * This approach avoids leaking random user-provided register content down
+ * the call chain.
+ *
+ * If IA32_EMULATION is enabled, this macro generates an additional wrapper
+ * named __ia32_sys_*() which decodes the struct pt_regs *regs according
+ * to the i386 calling convention (bx, cx, dx, si, di, bp).
+ */</doc>

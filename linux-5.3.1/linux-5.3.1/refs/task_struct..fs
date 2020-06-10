@@ -1,0 +1,56 @@
+<dec f='linux-5.3.1/include/linux/sched.h' l='920' type='struct fs_struct *'/>
+<offset>13184</offset>
+<doc f='linux-5.3.1/include/linux/sched.h' l='919'>/* Filesystem information: */</doc>
+<use f='linux-5.3.1/fs/coredump.c' l='744' u='r' c='do_coredump'/>
+<use f='linux-5.3.1/fs/d_path.c' l='278' u='r' c='d_path'/>
+<use f='linux-5.3.1/fs/d_path.c' l='433' u='r' c='__do_sys_getcwd'/>
+<use f='linux-5.3.1/fs/exec.c' l='1498' u='r' c='check_unsafe_exec'/>
+<use f='linux-5.3.1/fs/exec.c' l='1501' u='r' c='check_unsafe_exec'/>
+<use f='linux-5.3.1/fs/exec.c' l='1501' u='r' c='check_unsafe_exec'/>
+<use f='linux-5.3.1/fs/exec.c' l='1506' u='r' c='check_unsafe_exec'/>
+<use f='linux-5.3.1/fs/exec.c' l='1509' u='r' c='check_unsafe_exec'/>
+<use f='linux-5.3.1/fs/exec.c' l='1510' u='r' c='check_unsafe_exec'/>
+<use f='linux-5.3.1/fs/exec.c' l='1826' u='r' c='__do_execve_file'/>
+<use f='linux-5.3.1/fs/exec.c' l='1847' u='r' c='__do_execve_file'/>
+<use f='linux-5.3.1/fs/fhandle.c' l='120' u='r' c='get_vfsmount_from_fd'/>
+<use f='linux-5.3.1/fs/fs_struct.c' l='67' u='r' c='chroot_fs_refs'/>
+<use f='linux-5.3.1/fs/fs_struct.c' l='97' u='r' c='exit_fs'/>
+<use f='linux-5.3.1/fs/fs_struct.c' l='103' u='w' c='exit_fs'/>
+<use f='linux-5.3.1/fs/fs_struct.c' l='135' u='r' c='unshare_fs_struct'/>
+<use f='linux-5.3.1/fs/fs_struct.c' l='145' u='w' c='unshare_fs_struct'/>
+<use f='linux-5.3.1/fs/fs_struct.c' l='158' u='r' c='current_umask'/>
+<use f='linux-5.3.1/fs/namei.c' l='810' u='r' c='set_root'/>
+<use f='linux-5.3.1/fs/namei.c' l='2211' u='r' c='path_init'/>
+<use f='linux-5.3.1/fs/namei.c' l='2221' u='r' c='path_init'/>
+<use f='linux-5.3.1/fs/namespace.c' l='1522' u='r' c='do_umount'/>
+<use f='linux-5.3.1/fs/namespace.c' l='1564' u='r' c='do_umount'/>
+<use f='linux-5.3.1/fs/namespace.c' l='3608' u='r' c='__do_sys_pivot_root'/>
+<use f='linux-5.3.1/fs/namespace.c' l='3708' u='r' c='init_mount_tree'/>
+<use f='linux-5.3.1/fs/namespace.c' l='3709' u='r' c='init_mount_tree'/>
+<use f='linux-5.3.1/fs/namespace.c' l='3800' u='r' c='current_chrooted'/>
+<use f='linux-5.3.1/fs/namespace.c' l='3933' u='r' c='mntns_install'/>
+<use f='linux-5.3.1/fs/open.c' l='467' u='r' c='ksys_chdir'/>
+<use f='linux-5.3.1/fs/open.c' l='499' u='r' c='__do_sys_fchdir'/>
+<use f='linux-5.3.1/fs/open.c' l='527' u='r' c='ksys_chroot'/>
+<use f='linux-5.3.1/fs/proc/array.c' l='176' u='r' c='task_state'/>
+<use f='linux-5.3.1/fs/proc/array.c' l='177' u='r' c='task_state'/>
+<use f='linux-5.3.1/fs/proc/base.c' l='175' u='r' c='get_task_root'/>
+<use f='linux-5.3.1/fs/proc/base.c' l='176' u='r' c='get_task_root'/>
+<use f='linux-5.3.1/fs/proc/base.c' l='190' u='r' c='proc_cwd_link'/>
+<use f='linux-5.3.1/fs/proc/base.c' l='191' u='r' c='proc_cwd_link'/>
+<use f='linux-5.3.1/fs/proc_namespace.c' l='261' u='r' c='mounts_open_common'/>
+<use f='linux-5.3.1/fs/proc_namespace.c' l='267' u='r' c='mounts_open_common'/>
+<use f='linux-5.3.1/init/do_mounts.c' l='394' u='r' c='do_mount_root'/>
+<use f='linux-5.3.1/init/init_task.c' l='108' u='w'/>
+<use f='linux-5.3.1/kernel/auditsc.c' l='1893' u='r' c='__audit_getname'/>
+<use f='linux-5.3.1/kernel/fork.c' l='1417' u='r' c='copy_fs'/>
+<use f='linux-5.3.1/kernel/fork.c' l='1429' u='w' c='copy_fs'/>
+<use f='linux-5.3.1/kernel/fork.c' l='1430' u='r' c='copy_fs'/>
+<use f='linux-5.3.1/kernel/fork.c' l='2749' u='r' c='unshare_fs'/>
+<use f='linux-5.3.1/kernel/fork.c' l='2865' u='r' c='ksys_unshare'/>
+<use f='linux-5.3.1/kernel/fork.c' l='2867' u='w' c='ksys_unshare'/>
+<use f='linux-5.3.1/kernel/nsproxy.c' l='161' u='r' c='copy_namespaces'/>
+<use f='linux-5.3.1/kernel/nsproxy.c' l='203' u='r' c='unshare_nsproxy_namespaces'/>
+<use f='linux-5.3.1/kernel/nsproxy.c' l='250' u='r' c='__do_sys_setns'/>
+<use f='linux-5.3.1/kernel/sys.c' l='1818' u='r' c='__do_sys_umask'/>
+<use f='linux-5.3.1/kernel/sys.c' l='1818' u='r' c='__do_sys_umask'/>

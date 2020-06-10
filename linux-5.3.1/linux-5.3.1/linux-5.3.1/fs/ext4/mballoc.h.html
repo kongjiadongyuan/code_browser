@@ -1,0 +1,237 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>mballoc.h source code [linux-5.3.1/fs/ext4/mballoc.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="ext4_allocation_context,ext4_buddy,ext4_free_data,ext4_free_extent,ext4_locality_group,ext4_prealloc_space "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/fs/ext4/mballoc.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>fs</a>/<a href='./'>ext4</a>/<a href='mballoc.h.html'>mballoc.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> *  fs/ext4/mballoc.h</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> *  Written by: Alex Tomas &lt;alex@clusterfs.com&gt;</i></td></tr>
+<tr><th id="6">6</th><td><i> *</i></td></tr>
+<tr><th id="7">7</th><td><i> */</i></td></tr>
+<tr><th id="8">8</th><td><u>#<span data-ppcond="8">ifndef</span> <span class="macro" data-ref="_M/_EXT4_MBALLOC_H">_EXT4_MBALLOC_H</span></u></td></tr>
+<tr><th id="9">9</th><td><u>#define <dfn class="macro" id="_M/_EXT4_MBALLOC_H" data-ref="_M/_EXT4_MBALLOC_H">_EXT4_MBALLOC_H</dfn></u></td></tr>
+<tr><th id="10">10</th><td></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../../include/linux/time.h.html">&lt;linux/time.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="../../include/linux/fs.h.html">&lt;linux/fs.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="../../include/linux/namei.h.html">&lt;linux/namei.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="../../include/linux/quotaops.h.html">&lt;linux/quotaops.h&gt;</a></u></td></tr>
+<tr><th id="15">15</th><td><u>#include <a href="../../include/linux/buffer_head.h.html">&lt;linux/buffer_head.h&gt;</a></u></td></tr>
+<tr><th id="16">16</th><td><u>#include <a href="../../include/linux/module.h.html">&lt;linux/module.h&gt;</a></u></td></tr>
+<tr><th id="17">17</th><td><u>#include <a href="../../include/linux/swap.h.html">&lt;linux/swap.h&gt;</a></u></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../../include/linux/proc_fs.h.html">&lt;linux/proc_fs.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../include/linux/pagemap.h.html">&lt;linux/pagemap.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../include/linux/seq_file.h.html">&lt;linux/seq_file.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../include/linux/blkdev.h.html">&lt;linux/blkdev.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../../include/linux/mutex.h.html">&lt;linux/mutex.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="ext4_jbd2.h.html">"ext4_jbd2.h"</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="ext4.h.html">"ext4.h"</a></u></td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td><i>/*</i></td></tr>
+<tr><th id="27">27</th><td><i> */</i></td></tr>
+<tr><th id="28">28</th><td><u>#<span data-ppcond="28">ifdef</span> <span class="macro" data-ref="_M/CONFIG_EXT4_DEBUG">CONFIG_EXT4_DEBUG</span></u></td></tr>
+<tr><th id="29">29</th><td><b>extern</b> ushort ext4_mballoc_debug;</td></tr>
+<tr><th id="30">30</th><td></td></tr>
+<tr><th id="31">31</th><td><u>#define mb_debug(n, fmt, ...)	                                        \</u></td></tr>
+<tr><th id="32">32</th><td><u>do {									\</u></td></tr>
+<tr><th id="33">33</th><td><u>	if ((n) &lt;= ext4_mballoc_debug) {				\</u></td></tr>
+<tr><th id="34">34</th><td><u>		printk(KERN_DEBUG "(%s, %d): %s: " fmt,			\</u></td></tr>
+<tr><th id="35">35</th><td><u>		       __FILE__, __LINE__, __func__, ##__VA_ARGS__);	\</u></td></tr>
+<tr><th id="36">36</th><td><u>	}								\</u></td></tr>
+<tr><th id="37">37</th><td><u>} while (0)</u></td></tr>
+<tr><th id="38">38</th><td><u>#<span data-ppcond="28">else</span></u></td></tr>
+<tr><th id="39">39</th><td><u>#define <dfn class="macro" id="_M/mb_debug" data-ref="_M/mb_debug">mb_debug</dfn>(n, fmt, ...)	no_printk(fmt, ##__VA_ARGS__)</u></td></tr>
+<tr><th id="40">40</th><td><u>#<span data-ppcond="28">endif</span></u></td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td><u>#define <dfn class="macro" id="_M/EXT4_MB_HISTORY_ALLOC" data-ref="_M/EXT4_MB_HISTORY_ALLOC">EXT4_MB_HISTORY_ALLOC</dfn>		1	/* allocation */</u></td></tr>
+<tr><th id="43">43</th><td><u>#define <dfn class="macro" id="_M/EXT4_MB_HISTORY_PREALLOC" data-ref="_M/EXT4_MB_HISTORY_PREALLOC">EXT4_MB_HISTORY_PREALLOC</dfn>	2	/* preallocated blocks used */</u></td></tr>
+<tr><th id="44">44</th><td></td></tr>
+<tr><th id="45">45</th><td><i>/*</i></td></tr>
+<tr><th id="46">46</th><td><i> * How long mballoc can look for a best extent (in found extents)</i></td></tr>
+<tr><th id="47">47</th><td><i> */</i></td></tr>
+<tr><th id="48">48</th><td><u>#define <dfn class="macro" id="_M/MB_DEFAULT_MAX_TO_SCAN" data-ref="_M/MB_DEFAULT_MAX_TO_SCAN">MB_DEFAULT_MAX_TO_SCAN</dfn>		200</u></td></tr>
+<tr><th id="49">49</th><td></td></tr>
+<tr><th id="50">50</th><td><i>/*</i></td></tr>
+<tr><th id="51">51</th><td><i> * How long mballoc must look for a best extent</i></td></tr>
+<tr><th id="52">52</th><td><i> */</i></td></tr>
+<tr><th id="53">53</th><td><u>#define <dfn class="macro" id="_M/MB_DEFAULT_MIN_TO_SCAN" data-ref="_M/MB_DEFAULT_MIN_TO_SCAN">MB_DEFAULT_MIN_TO_SCAN</dfn>		10</u></td></tr>
+<tr><th id="54">54</th><td></td></tr>
+<tr><th id="55">55</th><td><i>/*</i></td></tr>
+<tr><th id="56">56</th><td><i> * with 'ext4_mb_stats' allocator will collect stats that will be</i></td></tr>
+<tr><th id="57">57</th><td><i> * shown at umount. The collecting costs though!</i></td></tr>
+<tr><th id="58">58</th><td><i> */</i></td></tr>
+<tr><th id="59">59</th><td><u>#define <dfn class="macro" id="_M/MB_DEFAULT_STATS" data-ref="_M/MB_DEFAULT_STATS">MB_DEFAULT_STATS</dfn>		0</u></td></tr>
+<tr><th id="60">60</th><td></td></tr>
+<tr><th id="61">61</th><td><i>/*</i></td></tr>
+<tr><th id="62">62</th><td><i> * files smaller than MB_DEFAULT_STREAM_THRESHOLD are served</i></td></tr>
+<tr><th id="63">63</th><td><i> * by the stream allocator, which purpose is to pack requests</i></td></tr>
+<tr><th id="64">64</th><td><i> * as close each to other as possible to produce smooth I/O traffic</i></td></tr>
+<tr><th id="65">65</th><td><i> * We use locality group prealloc space for stream request.</i></td></tr>
+<tr><th id="66">66</th><td><i> * We can tune the same via /proc/fs/ext4/&lt;parition&gt;/stream_req</i></td></tr>
+<tr><th id="67">67</th><td><i> */</i></td></tr>
+<tr><th id="68">68</th><td><u>#define <dfn class="macro" id="_M/MB_DEFAULT_STREAM_THRESHOLD" data-ref="_M/MB_DEFAULT_STREAM_THRESHOLD">MB_DEFAULT_STREAM_THRESHOLD</dfn>	16	/* 64K */</u></td></tr>
+<tr><th id="69">69</th><td></td></tr>
+<tr><th id="70">70</th><td><i>/*</i></td></tr>
+<tr><th id="71">71</th><td><i> * for which requests use 2^N search using buddies</i></td></tr>
+<tr><th id="72">72</th><td><i> */</i></td></tr>
+<tr><th id="73">73</th><td><u>#define <dfn class="macro" id="_M/MB_DEFAULT_ORDER2_REQS" data-ref="_M/MB_DEFAULT_ORDER2_REQS">MB_DEFAULT_ORDER2_REQS</dfn>		2</u></td></tr>
+<tr><th id="74">74</th><td></td></tr>
+<tr><th id="75">75</th><td><i>/*</i></td></tr>
+<tr><th id="76">76</th><td><i> * default group prealloc size 512 blocks</i></td></tr>
+<tr><th id="77">77</th><td><i> */</i></td></tr>
+<tr><th id="78">78</th><td><u>#define <dfn class="macro" id="_M/MB_DEFAULT_GROUP_PREALLOC" data-ref="_M/MB_DEFAULT_GROUP_PREALLOC">MB_DEFAULT_GROUP_PREALLOC</dfn>	512</u></td></tr>
+<tr><th id="79">79</th><td></td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td><b>struct</b> <dfn class="type def" id="ext4_free_data" title='ext4_free_data' data-ref="ext4_free_data" data-ref-filename="ext4_free_data">ext4_free_data</dfn> {</td></tr>
+<tr><th id="82">82</th><td>	<i>/* this links the free block information from sb_info */</i></td></tr>
+<tr><th id="83">83</th><td>	<b>struct</b> <a class="type" href="../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>		<dfn class="decl field" id="ext4_free_data::efd_list" title='ext4_free_data::efd_list' data-ref="ext4_free_data::efd_list" data-ref-filename="ext4_free_data..efd_list">efd_list</dfn>;</td></tr>
+<tr><th id="84">84</th><td></td></tr>
+<tr><th id="85">85</th><td>	<i>/* this links the free block information from group_info */</i></td></tr>
+<tr><th id="86">86</th><td>	<b>struct</b> <a class="type" href="../../include/linux/rbtree.h.html#rb_node" title='rb_node' data-ref="rb_node" data-ref-filename="rb_node">rb_node</a>			<dfn class="decl field" id="ext4_free_data::efd_node" title='ext4_free_data::efd_node' data-ref="ext4_free_data::efd_node" data-ref-filename="ext4_free_data..efd_node">efd_node</dfn>;</td></tr>
+<tr><th id="87">87</th><td></td></tr>
+<tr><th id="88">88</th><td>	<i>/* group which free block extent belongs */</i></td></tr>
+<tr><th id="89">89</th><td>	<a class="typedef" href="ext4.h.html#ext4_group_t" title='ext4_group_t' data-type='unsigned int' data-ref="ext4_group_t" data-ref-filename="ext4_group_t">ext4_group_t</a>			<dfn class="decl field" id="ext4_free_data::efd_group" title='ext4_free_data::efd_group' data-ref="ext4_free_data::efd_group" data-ref-filename="ext4_free_data..efd_group">efd_group</dfn>;</td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td>	<i>/* free block extent */</i></td></tr>
+<tr><th id="92">92</th><td>	<a class="typedef" href="ext4.h.html#ext4_grpblk_t" title='ext4_grpblk_t' data-type='int' data-ref="ext4_grpblk_t" data-ref-filename="ext4_grpblk_t">ext4_grpblk_t</a>			<dfn class="decl field" id="ext4_free_data::efd_start_cluster" title='ext4_free_data::efd_start_cluster' data-ref="ext4_free_data::efd_start_cluster" data-ref-filename="ext4_free_data..efd_start_cluster">efd_start_cluster</dfn>;</td></tr>
+<tr><th id="93">93</th><td>	<a class="typedef" href="ext4.h.html#ext4_grpblk_t" title='ext4_grpblk_t' data-type='int' data-ref="ext4_grpblk_t" data-ref-filename="ext4_grpblk_t">ext4_grpblk_t</a>			<dfn class="decl field" id="ext4_free_data::efd_count" title='ext4_free_data::efd_count' data-ref="ext4_free_data::efd_count" data-ref-filename="ext4_free_data..efd_count">efd_count</dfn>;</td></tr>
+<tr><th id="94">94</th><td></td></tr>
+<tr><th id="95">95</th><td>	<i>/* transaction which freed this extent */</i></td></tr>
+<tr><th id="96">96</th><td>	<a class="typedef" href="../../include/linux/journal-head.h.html#tid_t" title='tid_t' data-type='unsigned int' data-ref="tid_t" data-ref-filename="tid_t">tid_t</a>				<dfn class="decl field" id="ext4_free_data::efd_tid" title='ext4_free_data::efd_tid' data-ref="ext4_free_data::efd_tid" data-ref-filename="ext4_free_data..efd_tid">efd_tid</dfn>;</td></tr>
+<tr><th id="97">97</th><td>};</td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td><b>struct</b> <dfn class="type def" id="ext4_prealloc_space" title='ext4_prealloc_space' data-ref="ext4_prealloc_space" data-ref-filename="ext4_prealloc_space">ext4_prealloc_space</dfn> {</td></tr>
+<tr><th id="100">100</th><td>	<b>struct</b> <a class="type" href="../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="ext4_prealloc_space::pa_inode_list" title='ext4_prealloc_space::pa_inode_list' data-ref="ext4_prealloc_space::pa_inode_list" data-ref-filename="ext4_prealloc_space..pa_inode_list">pa_inode_list</dfn>;</td></tr>
+<tr><th id="101">101</th><td>	<b>struct</b> <a class="type" href="../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="ext4_prealloc_space::pa_group_list" title='ext4_prealloc_space::pa_group_list' data-ref="ext4_prealloc_space::pa_group_list" data-ref-filename="ext4_prealloc_space..pa_group_list">pa_group_list</dfn>;</td></tr>
+<tr><th id="102">102</th><td>	<b>union</b> {</td></tr>
+<tr><th id="103">103</th><td>		<b>struct</b> <a class="type" href="../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="ext4_prealloc_space::(anonymous)::pa_tmp_list" title='ext4_prealloc_space::(anonymous union)::pa_tmp_list' data-ref="ext4_prealloc_space::(anonymous)::pa_tmp_list" data-ref-filename="ext4_prealloc_space..(anonymous)..pa_tmp_list">pa_tmp_list</dfn>;</td></tr>
+<tr><th id="104">104</th><td>		<b>struct</b> <a class="macro" href="../../include/linux/types.h.html#223" title="callback_head" data-ref="_M/rcu_head">rcu_head</a>	<dfn class="decl field" id="ext4_prealloc_space::(anonymous)::pa_rcu" title='ext4_prealloc_space::(anonymous union)::pa_rcu' data-ref="ext4_prealloc_space::(anonymous)::pa_rcu" data-ref-filename="ext4_prealloc_space..(anonymous)..pa_rcu">pa_rcu</dfn>;</td></tr>
+<tr><th id="105">105</th><td>	} <dfn class="decl field" id="ext4_prealloc_space::u" title='ext4_prealloc_space::u' data-ref="ext4_prealloc_space::u" data-ref-filename="ext4_prealloc_space..u">u</dfn>;</td></tr>
+<tr><th id="106">106</th><td>	<a class="typedef" href="../../include/linux/spinlock_types.h.html#spinlock_t" title='spinlock_t' data-type='struct spinlock' data-ref="spinlock_t" data-ref-filename="spinlock_t">spinlock_t</a>		<dfn class="decl field" id="ext4_prealloc_space::pa_lock" title='ext4_prealloc_space::pa_lock' data-ref="ext4_prealloc_space::pa_lock" data-ref-filename="ext4_prealloc_space..pa_lock">pa_lock</dfn>;</td></tr>
+<tr><th id="107">107</th><td>	<a class="typedef" href="../../include/linux/types.h.html#atomic_t" title='atomic_t' data-type='struct atomic_t' data-ref="atomic_t" data-ref-filename="atomic_t">atomic_t</a>		<dfn class="decl field" id="ext4_prealloc_space::pa_count" title='ext4_prealloc_space::pa_count' data-ref="ext4_prealloc_space::pa_count" data-ref-filename="ext4_prealloc_space..pa_count">pa_count</dfn>;</td></tr>
+<tr><th id="108">108</th><td>	<em>unsigned</em>		<dfn class="decl field" id="ext4_prealloc_space::pa_deleted" title='ext4_prealloc_space::pa_deleted' data-ref="ext4_prealloc_space::pa_deleted" data-ref-filename="ext4_prealloc_space..pa_deleted">pa_deleted</dfn>;</td></tr>
+<tr><th id="109">109</th><td>	<a class="typedef" href="ext4.h.html#ext4_fsblk_t" title='ext4_fsblk_t' data-type='unsigned long long' data-ref="ext4_fsblk_t" data-ref-filename="ext4_fsblk_t">ext4_fsblk_t</a>		<dfn class="decl field" id="ext4_prealloc_space::pa_pstart" title='ext4_prealloc_space::pa_pstart' data-ref="ext4_prealloc_space::pa_pstart" data-ref-filename="ext4_prealloc_space..pa_pstart">pa_pstart</dfn>;	<i>/* phys. block */</i></td></tr>
+<tr><th id="110">110</th><td>	<a class="typedef" href="ext4.h.html#ext4_lblk_t" title='ext4_lblk_t' data-type='__u32' data-ref="ext4_lblk_t" data-ref-filename="ext4_lblk_t">ext4_lblk_t</a>		<dfn class="decl field" id="ext4_prealloc_space::pa_lstart" title='ext4_prealloc_space::pa_lstart' data-ref="ext4_prealloc_space::pa_lstart" data-ref-filename="ext4_prealloc_space..pa_lstart">pa_lstart</dfn>;	<i>/* log. block */</i></td></tr>
+<tr><th id="111">111</th><td>	<a class="typedef" href="ext4.h.html#ext4_grpblk_t" title='ext4_grpblk_t' data-type='int' data-ref="ext4_grpblk_t" data-ref-filename="ext4_grpblk_t">ext4_grpblk_t</a>		<dfn class="decl field" id="ext4_prealloc_space::pa_len" title='ext4_prealloc_space::pa_len' data-ref="ext4_prealloc_space::pa_len" data-ref-filename="ext4_prealloc_space..pa_len">pa_len</dfn>;		<i>/* len of preallocated chunk */</i></td></tr>
+<tr><th id="112">112</th><td>	<a class="typedef" href="ext4.h.html#ext4_grpblk_t" title='ext4_grpblk_t' data-type='int' data-ref="ext4_grpblk_t" data-ref-filename="ext4_grpblk_t">ext4_grpblk_t</a>		<dfn class="decl field" id="ext4_prealloc_space::pa_free" title='ext4_prealloc_space::pa_free' data-ref="ext4_prealloc_space::pa_free" data-ref-filename="ext4_prealloc_space..pa_free">pa_free</dfn>;	<i>/* how many blocks are free */</i></td></tr>
+<tr><th id="113">113</th><td>	<em>unsigned</em> <em>short</em>		<dfn class="decl field" id="ext4_prealloc_space::pa_type" title='ext4_prealloc_space::pa_type' data-ref="ext4_prealloc_space::pa_type" data-ref-filename="ext4_prealloc_space..pa_type">pa_type</dfn>;	<i>/* pa type. inode or group */</i></td></tr>
+<tr><th id="114">114</th><td>	<a class="typedef" href="../../include/linux/spinlock_types.h.html#spinlock_t" title='spinlock_t' data-type='struct spinlock' data-ref="spinlock_t" data-ref-filename="spinlock_t">spinlock_t</a>		*<dfn class="decl field" id="ext4_prealloc_space::pa_obj_lock" title='ext4_prealloc_space::pa_obj_lock' data-ref="ext4_prealloc_space::pa_obj_lock" data-ref-filename="ext4_prealloc_space..pa_obj_lock">pa_obj_lock</dfn>;</td></tr>
+<tr><th id="115">115</th><td>	<b>struct</b> <a class="type" href="../../include/linux/fs.h.html#inode" title='inode' data-ref="inode" data-ref-filename="inode">inode</a>		*<dfn class="decl field" id="ext4_prealloc_space::pa_inode" title='ext4_prealloc_space::pa_inode' data-ref="ext4_prealloc_space::pa_inode" data-ref-filename="ext4_prealloc_space..pa_inode">pa_inode</dfn>;	<i>/* hack, for history only */</i></td></tr>
+<tr><th id="116">116</th><td>};</td></tr>
+<tr><th id="117">117</th><td></td></tr>
+<tr><th id="118">118</th><td><b>enum</b> {</td></tr>
+<tr><th id="119">119</th><td>	<dfn class="enum" id="MB_INODE_PA" title='MB_INODE_PA' data-ref="MB_INODE_PA" data-ref-filename="MB_INODE_PA">MB_INODE_PA</dfn> = <var>0</var>,</td></tr>
+<tr><th id="120">120</th><td>	<dfn class="enum" id="MB_GROUP_PA" title='MB_GROUP_PA' data-ref="MB_GROUP_PA" data-ref-filename="MB_GROUP_PA">MB_GROUP_PA</dfn> = <var>1</var></td></tr>
+<tr><th id="121">121</th><td>};</td></tr>
+<tr><th id="122">122</th><td></td></tr>
+<tr><th id="123">123</th><td><b>struct</b> <dfn class="type def" id="ext4_free_extent" title='ext4_free_extent' data-ref="ext4_free_extent" data-ref-filename="ext4_free_extent">ext4_free_extent</dfn> {</td></tr>
+<tr><th id="124">124</th><td>	<a class="typedef" href="ext4.h.html#ext4_lblk_t" title='ext4_lblk_t' data-type='__u32' data-ref="ext4_lblk_t" data-ref-filename="ext4_lblk_t">ext4_lblk_t</a> <dfn class="decl field" id="ext4_free_extent::fe_logical" title='ext4_free_extent::fe_logical' data-ref="ext4_free_extent::fe_logical" data-ref-filename="ext4_free_extent..fe_logical">fe_logical</dfn>;</td></tr>
+<tr><th id="125">125</th><td>	<a class="typedef" href="ext4.h.html#ext4_grpblk_t" title='ext4_grpblk_t' data-type='int' data-ref="ext4_grpblk_t" data-ref-filename="ext4_grpblk_t">ext4_grpblk_t</a> <dfn class="decl field" id="ext4_free_extent::fe_start" title='ext4_free_extent::fe_start' data-ref="ext4_free_extent::fe_start" data-ref-filename="ext4_free_extent..fe_start">fe_start</dfn>;	<i>/* In cluster units */</i></td></tr>
+<tr><th id="126">126</th><td>	<a class="typedef" href="ext4.h.html#ext4_group_t" title='ext4_group_t' data-type='unsigned int' data-ref="ext4_group_t" data-ref-filename="ext4_group_t">ext4_group_t</a> <dfn class="decl field" id="ext4_free_extent::fe_group" title='ext4_free_extent::fe_group' data-ref="ext4_free_extent::fe_group" data-ref-filename="ext4_free_extent..fe_group">fe_group</dfn>;</td></tr>
+<tr><th id="127">127</th><td>	<a class="typedef" href="ext4.h.html#ext4_grpblk_t" title='ext4_grpblk_t' data-type='int' data-ref="ext4_grpblk_t" data-ref-filename="ext4_grpblk_t">ext4_grpblk_t</a> <dfn class="decl field" id="ext4_free_extent::fe_len" title='ext4_free_extent::fe_len' data-ref="ext4_free_extent::fe_len" data-ref-filename="ext4_free_extent..fe_len">fe_len</dfn>;	<i>/* In cluster units */</i></td></tr>
+<tr><th id="128">128</th><td>};</td></tr>
+<tr><th id="129">129</th><td></td></tr>
+<tr><th id="130">130</th><td><i>/*</i></td></tr>
+<tr><th id="131">131</th><td><i> * Locality group:</i></td></tr>
+<tr><th id="132">132</th><td><i> *   we try to group all related changes together</i></td></tr>
+<tr><th id="133">133</th><td><i> *   so that writeback can flush/allocate them together as well</i></td></tr>
+<tr><th id="134">134</th><td><i> *   Size of lg_prealloc_list hash is determined by MB_DEFAULT_GROUP_PREALLOC</i></td></tr>
+<tr><th id="135">135</th><td><i> *   (512). We store prealloc space into the hash based on the pa_free blocks</i></td></tr>
+<tr><th id="136">136</th><td><i> *   order value.ie, fls(pa_free)-1;</i></td></tr>
+<tr><th id="137">137</th><td><i> */</i></td></tr>
+<tr><th id="138">138</th><td><u>#define <dfn class="macro" id="_M/PREALLOC_TB_SIZE" data-ref="_M/PREALLOC_TB_SIZE">PREALLOC_TB_SIZE</dfn> 10</u></td></tr>
+<tr><th id="139">139</th><td><b>struct</b> <dfn class="type def" id="ext4_locality_group" title='ext4_locality_group' data-ref="ext4_locality_group" data-ref-filename="ext4_locality_group">ext4_locality_group</dfn> {</td></tr>
+<tr><th id="140">140</th><td>	<i>/* for allocator */</i></td></tr>
+<tr><th id="141">141</th><td>	<i>/* to serialize allocates */</i></td></tr>
+<tr><th id="142">142</th><td>	<b>struct</b> <a class="type" href="../../include/linux/mutex.h.html#mutex" title='mutex' data-ref="mutex" data-ref-filename="mutex">mutex</a>		<dfn class="decl field" id="ext4_locality_group::lg_mutex" title='ext4_locality_group::lg_mutex' data-ref="ext4_locality_group::lg_mutex" data-ref-filename="ext4_locality_group..lg_mutex">lg_mutex</dfn>;</td></tr>
+<tr><th id="143">143</th><td>	<i>/* list of preallocations */</i></td></tr>
+<tr><th id="144">144</th><td>	<b>struct</b> <a class="type" href="../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="ext4_locality_group::lg_prealloc_list" title='ext4_locality_group::lg_prealloc_list' data-ref="ext4_locality_group::lg_prealloc_list" data-ref-filename="ext4_locality_group..lg_prealloc_list">lg_prealloc_list</dfn>[<a class="macro" href="#138" title="10" data-ref="_M/PREALLOC_TB_SIZE">PREALLOC_TB_SIZE</a>];</td></tr>
+<tr><th id="145">145</th><td>	<a class="typedef" href="../../include/linux/spinlock_types.h.html#spinlock_t" title='spinlock_t' data-type='struct spinlock' data-ref="spinlock_t" data-ref-filename="spinlock_t">spinlock_t</a>		<dfn class="decl field" id="ext4_locality_group::lg_prealloc_lock" title='ext4_locality_group::lg_prealloc_lock' data-ref="ext4_locality_group::lg_prealloc_lock" data-ref-filename="ext4_locality_group..lg_prealloc_lock">lg_prealloc_lock</dfn>;</td></tr>
+<tr><th id="146">146</th><td>};</td></tr>
+<tr><th id="147">147</th><td></td></tr>
+<tr><th id="148">148</th><td><b>struct</b> <dfn class="type def" id="ext4_allocation_context" title='ext4_allocation_context' data-ref="ext4_allocation_context" data-ref-filename="ext4_allocation_context">ext4_allocation_context</dfn> {</td></tr>
+<tr><th id="149">149</th><td>	<b>struct</b> <a class="type" href="../../include/linux/fs.h.html#inode" title='inode' data-ref="inode" data-ref-filename="inode">inode</a> *<dfn class="decl field" id="ext4_allocation_context::ac_inode" title='ext4_allocation_context::ac_inode' data-ref="ext4_allocation_context::ac_inode" data-ref-filename="ext4_allocation_context..ac_inode">ac_inode</dfn>;</td></tr>
+<tr><th id="150">150</th><td>	<b>struct</b> <a class="type" href="../../include/linux/fs.h.html#super_block" title='super_block' data-ref="super_block" data-ref-filename="super_block">super_block</a> *<dfn class="decl field" id="ext4_allocation_context::ac_sb" title='ext4_allocation_context::ac_sb' data-ref="ext4_allocation_context::ac_sb" data-ref-filename="ext4_allocation_context..ac_sb">ac_sb</dfn>;</td></tr>
+<tr><th id="151">151</th><td></td></tr>
+<tr><th id="152">152</th><td>	<i>/* original request */</i></td></tr>
+<tr><th id="153">153</th><td>	<b>struct</b> <a class="type" href="#ext4_free_extent" title='ext4_free_extent' data-ref="ext4_free_extent" data-ref-filename="ext4_free_extent">ext4_free_extent</a> <dfn class="decl field" id="ext4_allocation_context::ac_o_ex" title='ext4_allocation_context::ac_o_ex' data-ref="ext4_allocation_context::ac_o_ex" data-ref-filename="ext4_allocation_context..ac_o_ex">ac_o_ex</dfn>;</td></tr>
+<tr><th id="154">154</th><td></td></tr>
+<tr><th id="155">155</th><td>	<i>/* goal request (normalized ac_o_ex) */</i></td></tr>
+<tr><th id="156">156</th><td>	<b>struct</b> <a class="type" href="#ext4_free_extent" title='ext4_free_extent' data-ref="ext4_free_extent" data-ref-filename="ext4_free_extent">ext4_free_extent</a> <dfn class="decl field" id="ext4_allocation_context::ac_g_ex" title='ext4_allocation_context::ac_g_ex' data-ref="ext4_allocation_context::ac_g_ex" data-ref-filename="ext4_allocation_context..ac_g_ex">ac_g_ex</dfn>;</td></tr>
+<tr><th id="157">157</th><td></td></tr>
+<tr><th id="158">158</th><td>	<i>/* the best found extent */</i></td></tr>
+<tr><th id="159">159</th><td>	<b>struct</b> <a class="type" href="#ext4_free_extent" title='ext4_free_extent' data-ref="ext4_free_extent" data-ref-filename="ext4_free_extent">ext4_free_extent</a> <dfn class="decl field" id="ext4_allocation_context::ac_b_ex" title='ext4_allocation_context::ac_b_ex' data-ref="ext4_allocation_context::ac_b_ex" data-ref-filename="ext4_allocation_context..ac_b_ex">ac_b_ex</dfn>;</td></tr>
+<tr><th id="160">160</th><td></td></tr>
+<tr><th id="161">161</th><td>	<i>/* copy of the best found extent taken before preallocation efforts */</i></td></tr>
+<tr><th id="162">162</th><td>	<b>struct</b> <a class="type" href="#ext4_free_extent" title='ext4_free_extent' data-ref="ext4_free_extent" data-ref-filename="ext4_free_extent">ext4_free_extent</a> <dfn class="decl field" id="ext4_allocation_context::ac_f_ex" title='ext4_allocation_context::ac_f_ex' data-ref="ext4_allocation_context::ac_f_ex" data-ref-filename="ext4_allocation_context..ac_f_ex">ac_f_ex</dfn>;</td></tr>
+<tr><th id="163">163</th><td></td></tr>
+<tr><th id="164">164</th><td>	<a class="typedef" href="../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a> <dfn class="decl field" id="ext4_allocation_context::ac_groups_scanned" title='ext4_allocation_context::ac_groups_scanned' data-ref="ext4_allocation_context::ac_groups_scanned" data-ref-filename="ext4_allocation_context..ac_groups_scanned">ac_groups_scanned</dfn>;</td></tr>
+<tr><th id="165">165</th><td>	<a class="typedef" href="../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a> <dfn class="decl field" id="ext4_allocation_context::ac_found" title='ext4_allocation_context::ac_found' data-ref="ext4_allocation_context::ac_found" data-ref-filename="ext4_allocation_context..ac_found">ac_found</dfn>;</td></tr>
+<tr><th id="166">166</th><td>	<a class="typedef" href="../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a> <dfn class="decl field" id="ext4_allocation_context::ac_tail" title='ext4_allocation_context::ac_tail' data-ref="ext4_allocation_context::ac_tail" data-ref-filename="ext4_allocation_context..ac_tail">ac_tail</dfn>;</td></tr>
+<tr><th id="167">167</th><td>	<a class="typedef" href="../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a> <dfn class="decl field" id="ext4_allocation_context::ac_buddy" title='ext4_allocation_context::ac_buddy' data-ref="ext4_allocation_context::ac_buddy" data-ref-filename="ext4_allocation_context..ac_buddy">ac_buddy</dfn>;</td></tr>
+<tr><th id="168">168</th><td>	<a class="typedef" href="../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a> <dfn class="decl field" id="ext4_allocation_context::ac_flags" title='ext4_allocation_context::ac_flags' data-ref="ext4_allocation_context::ac_flags" data-ref-filename="ext4_allocation_context..ac_flags">ac_flags</dfn>;		<i>/* allocation hints */</i></td></tr>
+<tr><th id="169">169</th><td>	<a class="typedef" href="../../include/uapi/asm-generic/int-ll64.h.html#__u8" title='__u8' data-type='unsigned char' data-ref="__u8" data-ref-filename="__u8">__u8</a> <dfn class="decl field" id="ext4_allocation_context::ac_status" title='ext4_allocation_context::ac_status' data-ref="ext4_allocation_context::ac_status" data-ref-filename="ext4_allocation_context..ac_status">ac_status</dfn>;</td></tr>
+<tr><th id="170">170</th><td>	<a class="typedef" href="../../include/uapi/asm-generic/int-ll64.h.html#__u8" title='__u8' data-type='unsigned char' data-ref="__u8" data-ref-filename="__u8">__u8</a> <dfn class="decl field" id="ext4_allocation_context::ac_criteria" title='ext4_allocation_context::ac_criteria' data-ref="ext4_allocation_context::ac_criteria" data-ref-filename="ext4_allocation_context..ac_criteria">ac_criteria</dfn>;</td></tr>
+<tr><th id="171">171</th><td>	<a class="typedef" href="../../include/uapi/asm-generic/int-ll64.h.html#__u8" title='__u8' data-type='unsigned char' data-ref="__u8" data-ref-filename="__u8">__u8</a> <dfn class="decl field" id="ext4_allocation_context::ac_2order" title='ext4_allocation_context::ac_2order' data-ref="ext4_allocation_context::ac_2order" data-ref-filename="ext4_allocation_context..ac_2order">ac_2order</dfn>;		<i>/* if request is to allocate 2^N blocks and</i></td></tr>
+<tr><th id="172">172</th><td><i>				 * N &gt; 0, the field stores N, otherwise 0 */</i></td></tr>
+<tr><th id="173">173</th><td>	<a class="typedef" href="../../include/uapi/asm-generic/int-ll64.h.html#__u8" title='__u8' data-type='unsigned char' data-ref="__u8" data-ref-filename="__u8">__u8</a> <dfn class="decl field" id="ext4_allocation_context::ac_op" title='ext4_allocation_context::ac_op' data-ref="ext4_allocation_context::ac_op" data-ref-filename="ext4_allocation_context..ac_op">ac_op</dfn>;		<i>/* operation, for history only */</i></td></tr>
+<tr><th id="174">174</th><td>	<b>struct</b> <a class="type" href="../../include/linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="decl field" id="ext4_allocation_context::ac_bitmap_page" title='ext4_allocation_context::ac_bitmap_page' data-ref="ext4_allocation_context::ac_bitmap_page" data-ref-filename="ext4_allocation_context..ac_bitmap_page">ac_bitmap_page</dfn>;</td></tr>
+<tr><th id="175">175</th><td>	<b>struct</b> <a class="type" href="../../include/linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="decl field" id="ext4_allocation_context::ac_buddy_page" title='ext4_allocation_context::ac_buddy_page' data-ref="ext4_allocation_context::ac_buddy_page" data-ref-filename="ext4_allocation_context..ac_buddy_page">ac_buddy_page</dfn>;</td></tr>
+<tr><th id="176">176</th><td>	<b>struct</b> <a class="type" href="#ext4_prealloc_space" title='ext4_prealloc_space' data-ref="ext4_prealloc_space" data-ref-filename="ext4_prealloc_space">ext4_prealloc_space</a> *<dfn class="decl field" id="ext4_allocation_context::ac_pa" title='ext4_allocation_context::ac_pa' data-ref="ext4_allocation_context::ac_pa" data-ref-filename="ext4_allocation_context..ac_pa">ac_pa</dfn>;</td></tr>
+<tr><th id="177">177</th><td>	<b>struct</b> <a class="type" href="#ext4_locality_group" title='ext4_locality_group' data-ref="ext4_locality_group" data-ref-filename="ext4_locality_group">ext4_locality_group</a> *<dfn class="decl field" id="ext4_allocation_context::ac_lg" title='ext4_allocation_context::ac_lg' data-ref="ext4_allocation_context::ac_lg" data-ref-filename="ext4_allocation_context..ac_lg">ac_lg</dfn>;</td></tr>
+<tr><th id="178">178</th><td>};</td></tr>
+<tr><th id="179">179</th><td></td></tr>
+<tr><th id="180">180</th><td><u>#define <dfn class="macro" id="_M/AC_STATUS_CONTINUE" data-ref="_M/AC_STATUS_CONTINUE">AC_STATUS_CONTINUE</dfn>	1</u></td></tr>
+<tr><th id="181">181</th><td><u>#define <dfn class="macro" id="_M/AC_STATUS_FOUND" data-ref="_M/AC_STATUS_FOUND">AC_STATUS_FOUND</dfn>		2</u></td></tr>
+<tr><th id="182">182</th><td><u>#define <dfn class="macro" id="_M/AC_STATUS_BREAK" data-ref="_M/AC_STATUS_BREAK">AC_STATUS_BREAK</dfn>		3</u></td></tr>
+<tr><th id="183">183</th><td></td></tr>
+<tr><th id="184">184</th><td><b>struct</b> <dfn class="type def" id="ext4_buddy" title='ext4_buddy' data-ref="ext4_buddy" data-ref-filename="ext4_buddy">ext4_buddy</dfn> {</td></tr>
+<tr><th id="185">185</th><td>	<b>struct</b> <a class="type" href="../../include/linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="decl field" id="ext4_buddy::bd_buddy_page" title='ext4_buddy::bd_buddy_page' data-ref="ext4_buddy::bd_buddy_page" data-ref-filename="ext4_buddy..bd_buddy_page">bd_buddy_page</dfn>;</td></tr>
+<tr><th id="186">186</th><td>	<em>void</em> *<dfn class="decl field" id="ext4_buddy::bd_buddy" title='ext4_buddy::bd_buddy' data-ref="ext4_buddy::bd_buddy" data-ref-filename="ext4_buddy..bd_buddy">bd_buddy</dfn>;</td></tr>
+<tr><th id="187">187</th><td>	<b>struct</b> <a class="type" href="../../include/linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="decl field" id="ext4_buddy::bd_bitmap_page" title='ext4_buddy::bd_bitmap_page' data-ref="ext4_buddy::bd_bitmap_page" data-ref-filename="ext4_buddy..bd_bitmap_page">bd_bitmap_page</dfn>;</td></tr>
+<tr><th id="188">188</th><td>	<em>void</em> *<dfn class="decl field" id="ext4_buddy::bd_bitmap" title='ext4_buddy::bd_bitmap' data-ref="ext4_buddy::bd_bitmap" data-ref-filename="ext4_buddy..bd_bitmap">bd_bitmap</dfn>;</td></tr>
+<tr><th id="189">189</th><td>	<b>struct</b> <a class="type" href="ext4.h.html#ext4_group_info" title='ext4_group_info' data-ref="ext4_group_info" data-ref-filename="ext4_group_info">ext4_group_info</a> *<dfn class="decl field" id="ext4_buddy::bd_info" title='ext4_buddy::bd_info' data-ref="ext4_buddy::bd_info" data-ref-filename="ext4_buddy..bd_info">bd_info</dfn>;</td></tr>
+<tr><th id="190">190</th><td>	<b>struct</b> <a class="type" href="../../include/linux/fs.h.html#super_block" title='super_block' data-ref="super_block" data-ref-filename="super_block">super_block</a> *<dfn class="decl field" id="ext4_buddy::bd_sb" title='ext4_buddy::bd_sb' data-ref="ext4_buddy::bd_sb" data-ref-filename="ext4_buddy..bd_sb">bd_sb</dfn>;</td></tr>
+<tr><th id="191">191</th><td>	<a class="typedef" href="../../include/uapi/asm-generic/int-ll64.h.html#__u16" title='__u16' data-type='unsigned short' data-ref="__u16" data-ref-filename="__u16">__u16</a> <dfn class="decl field" id="ext4_buddy::bd_blkbits" title='ext4_buddy::bd_blkbits' data-ref="ext4_buddy::bd_blkbits" data-ref-filename="ext4_buddy..bd_blkbits">bd_blkbits</dfn>;</td></tr>
+<tr><th id="192">192</th><td>	<a class="typedef" href="ext4.h.html#ext4_group_t" title='ext4_group_t' data-type='unsigned int' data-ref="ext4_group_t" data-ref-filename="ext4_group_t">ext4_group_t</a> <dfn class="decl field" id="ext4_buddy::bd_group" title='ext4_buddy::bd_group' data-ref="ext4_buddy::bd_group" data-ref-filename="ext4_buddy..bd_group">bd_group</dfn>;</td></tr>
+<tr><th id="193">193</th><td>};</td></tr>
+<tr><th id="194">194</th><td></td></tr>
+<tr><th id="195">195</th><td><em>static</em> <a class="macro" href="../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="ext4.h.html#ext4_fsblk_t" title='ext4_fsblk_t' data-type='unsigned long long' data-ref="ext4_fsblk_t" data-ref-filename="ext4_fsblk_t">ext4_fsblk_t</a> <dfn class="decl def fn" id="ext4_grp_offs_to_block" title='ext4_grp_offs_to_block' data-ref="ext4_grp_offs_to_block" data-ref-filename="ext4_grp_offs_to_block">ext4_grp_offs_to_block</dfn>(<b>struct</b> <a class="type" href="../../include/linux/fs.h.html#super_block" title='super_block' data-ref="super_block" data-ref-filename="super_block">super_block</a> *<dfn class="local col1 decl" id="1sb" title='sb' data-type='struct super_block *' data-ref="1sb" data-ref-filename="1sb">sb</dfn>,</td></tr>
+<tr><th id="196">196</th><td>					<b>struct</b> <a class="type" href="#ext4_free_extent" title='ext4_free_extent' data-ref="ext4_free_extent" data-ref-filename="ext4_free_extent">ext4_free_extent</a> *<dfn class="local col2 decl" id="2fex" title='fex' data-type='struct ext4_free_extent *' data-ref="2fex" data-ref-filename="2fex">fex</dfn>)</td></tr>
+<tr><th id="197">197</th><td>{</td></tr>
+<tr><th id="198">198</th><td>	<b>return</b> <a class="ref fn" href="ext4.h.html#ext4_group_first_block_no" title='ext4_group_first_block_no' data-ref="ext4_group_first_block_no" data-ref-filename="ext4_group_first_block_no">ext4_group_first_block_no</a>(<a class="local col1 ref" href="#1sb" title='sb' data-ref="1sb" data-ref-filename="1sb">sb</a>, <a class="local col2 ref" href="#2fex" title='fex' data-ref="2fex" data-ref-filename="2fex">fex</a>-&gt;<a class="ref field" href="#ext4_free_extent::fe_group" title='ext4_free_extent::fe_group' data-ref="ext4_free_extent::fe_group" data-ref-filename="ext4_free_extent..fe_group">fe_group</a>) +</td></tr>
+<tr><th id="199">199</th><td>		(<a class="local col2 ref" href="#2fex" title='fex' data-ref="2fex" data-ref-filename="2fex">fex</a>-&gt;<a class="ref field" href="#ext4_free_extent::fe_start" title='ext4_free_extent::fe_start' data-ref="ext4_free_extent::fe_start" data-ref-filename="ext4_free_extent..fe_start">fe_start</a> &lt;&lt; <a class="ref fn" href="ext4.h.html#EXT4_SB" title='EXT4_SB' data-ref="EXT4_SB" data-ref-filename="EXT4_SB">EXT4_SB</a>(<a class="local col1 ref" href="#1sb" title='sb' data-ref="1sb" data-ref-filename="1sb">sb</a>)-&gt;<a class="ref field" href="ext4.h.html#ext4_sb_info::s_cluster_bits" title='ext4_sb_info::s_cluster_bits' data-ref="ext4_sb_info::s_cluster_bits" data-ref-filename="ext4_sb_info..s_cluster_bits">s_cluster_bits</a>);</td></tr>
+<tr><th id="200">200</th><td>}</td></tr>
+<tr><th id="201">201</th><td></td></tr>
+<tr><th id="202">202</th><td><b>typedef</b> <em>int</em> (*<dfn class="typedef" id="ext4_mballoc_query_range_fn" title='ext4_mballoc_query_range_fn' data-type='int (*)(struct super_block *, ext4_group_t, ext4_grpblk_t, ext4_grpblk_t, void *)' data-ref="ext4_mballoc_query_range_fn" data-ref-filename="ext4_mballoc_query_range_fn">ext4_mballoc_query_range_fn</dfn>)(</td></tr>
+<tr><th id="203">203</th><td>	<b>struct</b> <a class="type" href="../../include/linux/fs.h.html#super_block" title='super_block' data-ref="super_block" data-ref-filename="super_block">super_block</a>		*<dfn class="local col3 decl" id="3sb" title='sb' data-type='struct super_block *' data-ref="3sb" data-ref-filename="3sb">sb</dfn>,</td></tr>
+<tr><th id="204">204</th><td>	<a class="typedef" href="ext4.h.html#ext4_group_t" title='ext4_group_t' data-type='unsigned int' data-ref="ext4_group_t" data-ref-filename="ext4_group_t">ext4_group_t</a>			<dfn class="local col4 decl" id="4agno" title='agno' data-type='ext4_group_t' data-ref="4agno" data-ref-filename="4agno">agno</dfn>,</td></tr>
+<tr><th id="205">205</th><td>	<a class="typedef" href="ext4.h.html#ext4_grpblk_t" title='ext4_grpblk_t' data-type='int' data-ref="ext4_grpblk_t" data-ref-filename="ext4_grpblk_t">ext4_grpblk_t</a>			<dfn class="local col5 decl" id="5start" title='start' data-type='ext4_grpblk_t' data-ref="5start" data-ref-filename="5start">start</dfn>,</td></tr>
+<tr><th id="206">206</th><td>	<a class="typedef" href="ext4.h.html#ext4_grpblk_t" title='ext4_grpblk_t' data-type='int' data-ref="ext4_grpblk_t" data-ref-filename="ext4_grpblk_t">ext4_grpblk_t</a>			<dfn class="local col6 decl" id="6len" title='len' data-type='ext4_grpblk_t' data-ref="6len" data-ref-filename="6len">len</dfn>,</td></tr>
+<tr><th id="207">207</th><td>	<em>void</em>				*<dfn class="local col7 decl" id="7priv" title='priv' data-type='void *' data-ref="7priv" data-ref-filename="7priv">priv</dfn>);</td></tr>
+<tr><th id="208">208</th><td></td></tr>
+<tr><th id="209">209</th><td><em>int</em></td></tr>
+<tr><th id="210">210</th><td><dfn class="decl fn" id="ext4_mballoc_query_range" title='ext4_mballoc_query_range' data-ref="ext4_mballoc_query_range" data-ref-filename="ext4_mballoc_query_range">ext4_mballoc_query_range</dfn>(</td></tr>
+<tr><th id="211">211</th><td>	<b>struct</b> <a class="type" href="../../include/linux/fs.h.html#super_block" title='super_block' data-ref="super_block" data-ref-filename="super_block">super_block</a>		*<dfn class="local col8 decl" id="8sb" title='sb' data-type='struct super_block *' data-ref="8sb" data-ref-filename="8sb">sb</dfn>,</td></tr>
+<tr><th id="212">212</th><td>	<a class="typedef" href="ext4.h.html#ext4_group_t" title='ext4_group_t' data-type='unsigned int' data-ref="ext4_group_t" data-ref-filename="ext4_group_t">ext4_group_t</a>			<dfn class="local col9 decl" id="9agno" title='agno' data-type='ext4_group_t' data-ref="9agno" data-ref-filename="9agno">agno</dfn>,</td></tr>
+<tr><th id="213">213</th><td>	<a class="typedef" href="ext4.h.html#ext4_grpblk_t" title='ext4_grpblk_t' data-type='int' data-ref="ext4_grpblk_t" data-ref-filename="ext4_grpblk_t">ext4_grpblk_t</a>			<dfn class="local col0 decl" id="10start" title='start' data-type='ext4_grpblk_t' data-ref="10start" data-ref-filename="10start">start</dfn>,</td></tr>
+<tr><th id="214">214</th><td>	<a class="typedef" href="ext4.h.html#ext4_grpblk_t" title='ext4_grpblk_t' data-type='int' data-ref="ext4_grpblk_t" data-ref-filename="ext4_grpblk_t">ext4_grpblk_t</a>			<dfn class="local col1 decl" id="11end" title='end' data-type='ext4_grpblk_t' data-ref="11end" data-ref-filename="11end">end</dfn>,</td></tr>
+<tr><th id="215">215</th><td>	<a class="typedef" href="#ext4_mballoc_query_range_fn" title='ext4_mballoc_query_range_fn' data-type='int (*)(struct super_block *, ext4_group_t, ext4_grpblk_t, ext4_grpblk_t, void *)' data-ref="ext4_mballoc_query_range_fn" data-ref-filename="ext4_mballoc_query_range_fn">ext4_mballoc_query_range_fn</a>	<dfn class="local col2 decl" id="12formatter" title='formatter' data-type='ext4_mballoc_query_range_fn' data-ref="12formatter" data-ref-filename="12formatter">formatter</dfn>,</td></tr>
+<tr><th id="216">216</th><td>	<em>void</em>				*<dfn class="local col3 decl" id="13priv" title='priv' data-type='void *' data-ref="13priv" data-ref-filename="13priv">priv</dfn>);</td></tr>
+<tr><th id="217">217</th><td></td></tr>
+<tr><th id="218">218</th><td><u>#<span data-ppcond="8">endif</span></u></td></tr>
+<tr><th id="219">219</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='balloc.c.html'>linux-5.3.1/fs/ext4/balloc.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

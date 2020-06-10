@@ -1,0 +1,333 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>common.c source code [linux-5.3.1/drivers/usb/common/common.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/drivers/usb/common/common.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>linux-5.3.1</a>/<a href='../..'>drivers</a>/<a href='..'>usb</a>/<a href='./'>common</a>/<a href='common.c.html'>common.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * Provides code common for host and device side USB.</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * If either host side (ie. CONFIG_USB=y) or device side USB stack</i></td></tr>
+<tr><th id="6">6</th><td><i> * (ie. CONFIG_USB_GADGET=y) is compiled in the kernel, this module is</i></td></tr>
+<tr><th id="7">7</th><td><i> * compiled-in as well.  Otherwise, if either of the two stacks is</i></td></tr>
+<tr><th id="8">8</th><td><i> * compiled as module, this file is compiled as module as well.</i></td></tr>
+<tr><th id="9">9</th><td><i> */</i></td></tr>
+<tr><th id="10">10</th><td></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../../../include/linux/kernel.h.html">&lt;linux/kernel.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="../../../include/linux/module.h.html">&lt;linux/module.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="../../../include/linux/of.h.html">&lt;linux/of.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="../../../include/linux/usb/ch9.h.html">&lt;linux/usb/ch9.h&gt;</a></u></td></tr>
+<tr><th id="15">15</th><td><u>#include <a href="../../../include/linux/usb/of.h.html">&lt;linux/usb/of.h&gt;</a></u></td></tr>
+<tr><th id="16">16</th><td><u>#include <a href="../../../include/linux/usb/otg.h.html">&lt;linux/usb/otg.h&gt;</a></u></td></tr>
+<tr><th id="17">17</th><td><u>#include <a href="../../../include/linux/of_platform.h.html">&lt;linux/of_platform.h&gt;</a></u></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../../../include/linux/debugfs.h.html">&lt;linux/debugfs.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="common.h.html">"common.h"</a></u></td></tr>
+<tr><th id="20">20</th><td></td></tr>
+<tr><th id="21">21</th><td><em>static</em> <em>const</em> <em>char</em> *<em>const</em> <dfn class="tu decl def" id="ep_type_names" title='ep_type_names' data-type='const char *const [4]' data-ref="ep_type_names" data-ref-filename="ep_type_names">ep_type_names</dfn>[] = {</td></tr>
+<tr><th id="22">22</th><td>	[<a class="macro" href="../../../include/uapi/linux/usb/ch9.h.html#426" title="0" data-ref="_M/USB_ENDPOINT_XFER_CONTROL">USB_ENDPOINT_XFER_CONTROL</a>] = <q>"ctrl"</q>,</td></tr>
+<tr><th id="23">23</th><td>	[<a class="macro" href="../../../include/uapi/linux/usb/ch9.h.html#427" title="1" data-ref="_M/USB_ENDPOINT_XFER_ISOC">USB_ENDPOINT_XFER_ISOC</a>] = <q>"isoc"</q>,</td></tr>
+<tr><th id="24">24</th><td>	[<a class="macro" href="../../../include/uapi/linux/usb/ch9.h.html#428" title="2" data-ref="_M/USB_ENDPOINT_XFER_BULK">USB_ENDPOINT_XFER_BULK</a>] = <q>"bulk"</q>,</td></tr>
+<tr><th id="25">25</th><td>	[<a class="macro" href="../../../include/uapi/linux/usb/ch9.h.html#429" title="3" data-ref="_M/USB_ENDPOINT_XFER_INT">USB_ENDPOINT_XFER_INT</a>] = <q>"intr"</q>,</td></tr>
+<tr><th id="26">26</th><td>};</td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td><em>const</em> <em>char</em> *<dfn class="decl def fn" id="usb_ep_type_string" title='usb_ep_type_string' data-ref="usb_ep_type_string" data-ref-filename="usb_ep_type_string">usb_ep_type_string</dfn>(<em>int</em> <dfn class="local col2 decl" id="132ep_type" title='ep_type' data-type='int' data-ref="132ep_type" data-ref-filename="132ep_type">ep_type</dfn>)</td></tr>
+<tr><th id="29">29</th><td>{</td></tr>
+<tr><th id="30">30</th><td>	<b>if</b> (<a class="local col2 ref" href="#132ep_type" title='ep_type' data-ref="132ep_type" data-ref-filename="132ep_type">ep_type</a> &lt; <var>0</var> || <a class="local col2 ref" href="#132ep_type" title='ep_type' data-ref="132ep_type" data-ref-filename="132ep_type">ep_type</a> &gt;= <a class="macro" href="../../../include/linux/kernel.h.html#47" title="(sizeof(ep_type_names) / sizeof((ep_type_names)[0]) + (sizeof(struct { int:(-!!(__builtin_types_compatible_p(typeof((ep_type_names)), typeof(&amp;(ep_type_names)[0])))); })))" data-ref="_M/ARRAY_SIZE">ARRAY_SIZE</a>(<a class="tu ref" href="#ep_type_names" title='ep_type_names' data-use='r' data-ref="ep_type_names" data-ref-filename="ep_type_names">ep_type_names</a>))</td></tr>
+<tr><th id="31">31</th><td>		<b>return</b> <q>"unknown"</q>;</td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td>	<b>return</b> <a class="tu ref" href="#ep_type_names" title='ep_type_names' data-use='r' data-ref="ep_type_names" data-ref-filename="ep_type_names">ep_type_names</a>[<a class="local col2 ref" href="#132ep_type" title='ep_type' data-ref="132ep_type" data-ref-filename="132ep_type">ep_type</a>];</td></tr>
+<tr><th id="34">34</th><td>}</td></tr>
+<tr><th id="35">35</th><td><a class="macro" href="../../../include/linux/export.h.html#126" title="extern typeof(usb_ep_type_string) usb_ep_type_string; static const char __kstrtab_usb_ep_type_string[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;usb_ep_type_string&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_usb_ep_type_string35 = (void *)&amp;usb_ep_type_string; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;usb_ep_type_string&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;usb_ep_type_string&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;usb_ep_type_string&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;usb_ep_type_string&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#usb_ep_type_string" title='usb_ep_type_string' data-ref="usb_ep_type_string" data-ref-filename="usb_ep_type_string"><a class="ref fn" href="#usb_ep_type_string" title='usb_ep_type_string' data-ref="usb_ep_type_string" data-ref-filename="usb_ep_type_string"><a class="ref fn" href="#usb_ep_type_string" title='usb_ep_type_string' data-ref="usb_ep_type_string" data-ref-filename="usb_ep_type_string">usb_ep_type_string</a></a></a>);</td></tr>
+<tr><th id="36">36</th><td></td></tr>
+<tr><th id="37">37</th><td><em>const</em> <em>char</em> *<dfn class="decl def fn" id="usb_otg_state_string" title='usb_otg_state_string' data-ref="usb_otg_state_string" data-ref-filename="usb_otg_state_string">usb_otg_state_string</dfn>(<b>enum</b> <a class="type" href="../../../include/linux/usb/phy.h.html#usb_otg_state" title='usb_otg_state' data-ref="usb_otg_state" data-ref-filename="usb_otg_state">usb_otg_state</a> <dfn class="local col3 decl" id="133state" title='state' data-type='enum usb_otg_state' data-ref="133state" data-ref-filename="133state">state</dfn>)</td></tr>
+<tr><th id="38">38</th><td>{</td></tr>
+<tr><th id="39">39</th><td>	<em>static</em> <em>const</em> <em>char</em> *<em>const</em> <dfn class="local col4 decl" id="134names" title='names' data-type='const char *const [14]' data-ref="134names" data-ref-filename="134names">names</dfn>[] = {</td></tr>
+<tr><th id="40">40</th><td>		[<a class="enum" href="../../../include/linux/usb/phy.h.html#OTG_STATE_A_IDLE" title='OTG_STATE_A_IDLE' data-ref="OTG_STATE_A_IDLE" data-ref-filename="OTG_STATE_A_IDLE">OTG_STATE_A_IDLE</a>] = <q>"a_idle"</q>,</td></tr>
+<tr><th id="41">41</th><td>		[<a class="enum" href="../../../include/linux/usb/phy.h.html#OTG_STATE_A_WAIT_VRISE" title='OTG_STATE_A_WAIT_VRISE' data-ref="OTG_STATE_A_WAIT_VRISE" data-ref-filename="OTG_STATE_A_WAIT_VRISE">OTG_STATE_A_WAIT_VRISE</a>] = <q>"a_wait_vrise"</q>,</td></tr>
+<tr><th id="42">42</th><td>		[<a class="enum" href="../../../include/linux/usb/phy.h.html#OTG_STATE_A_WAIT_BCON" title='OTG_STATE_A_WAIT_BCON' data-ref="OTG_STATE_A_WAIT_BCON" data-ref-filename="OTG_STATE_A_WAIT_BCON">OTG_STATE_A_WAIT_BCON</a>] = <q>"a_wait_bcon"</q>,</td></tr>
+<tr><th id="43">43</th><td>		[<a class="enum" href="../../../include/linux/usb/phy.h.html#OTG_STATE_A_HOST" title='OTG_STATE_A_HOST' data-ref="OTG_STATE_A_HOST" data-ref-filename="OTG_STATE_A_HOST">OTG_STATE_A_HOST</a>] = <q>"a_host"</q>,</td></tr>
+<tr><th id="44">44</th><td>		[<a class="enum" href="../../../include/linux/usb/phy.h.html#OTG_STATE_A_SUSPEND" title='OTG_STATE_A_SUSPEND' data-ref="OTG_STATE_A_SUSPEND" data-ref-filename="OTG_STATE_A_SUSPEND">OTG_STATE_A_SUSPEND</a>] = <q>"a_suspend"</q>,</td></tr>
+<tr><th id="45">45</th><td>		[<a class="enum" href="../../../include/linux/usb/phy.h.html#OTG_STATE_A_PERIPHERAL" title='OTG_STATE_A_PERIPHERAL' data-ref="OTG_STATE_A_PERIPHERAL" data-ref-filename="OTG_STATE_A_PERIPHERAL">OTG_STATE_A_PERIPHERAL</a>] = <q>"a_peripheral"</q>,</td></tr>
+<tr><th id="46">46</th><td>		[<a class="enum" href="../../../include/linux/usb/phy.h.html#OTG_STATE_A_WAIT_VFALL" title='OTG_STATE_A_WAIT_VFALL' data-ref="OTG_STATE_A_WAIT_VFALL" data-ref-filename="OTG_STATE_A_WAIT_VFALL">OTG_STATE_A_WAIT_VFALL</a>] = <q>"a_wait_vfall"</q>,</td></tr>
+<tr><th id="47">47</th><td>		[<a class="enum" href="../../../include/linux/usb/phy.h.html#OTG_STATE_A_VBUS_ERR" title='OTG_STATE_A_VBUS_ERR' data-ref="OTG_STATE_A_VBUS_ERR" data-ref-filename="OTG_STATE_A_VBUS_ERR">OTG_STATE_A_VBUS_ERR</a>] = <q>"a_vbus_err"</q>,</td></tr>
+<tr><th id="48">48</th><td>		[<a class="enum" href="../../../include/linux/usb/phy.h.html#OTG_STATE_B_IDLE" title='OTG_STATE_B_IDLE' data-ref="OTG_STATE_B_IDLE" data-ref-filename="OTG_STATE_B_IDLE">OTG_STATE_B_IDLE</a>] = <q>"b_idle"</q>,</td></tr>
+<tr><th id="49">49</th><td>		[<a class="enum" href="../../../include/linux/usb/phy.h.html#OTG_STATE_B_SRP_INIT" title='OTG_STATE_B_SRP_INIT' data-ref="OTG_STATE_B_SRP_INIT" data-ref-filename="OTG_STATE_B_SRP_INIT">OTG_STATE_B_SRP_INIT</a>] = <q>"b_srp_init"</q>,</td></tr>
+<tr><th id="50">50</th><td>		[<a class="enum" href="../../../include/linux/usb/phy.h.html#OTG_STATE_B_PERIPHERAL" title='OTG_STATE_B_PERIPHERAL' data-ref="OTG_STATE_B_PERIPHERAL" data-ref-filename="OTG_STATE_B_PERIPHERAL">OTG_STATE_B_PERIPHERAL</a>] = <q>"b_peripheral"</q>,</td></tr>
+<tr><th id="51">51</th><td>		[<a class="enum" href="../../../include/linux/usb/phy.h.html#OTG_STATE_B_WAIT_ACON" title='OTG_STATE_B_WAIT_ACON' data-ref="OTG_STATE_B_WAIT_ACON" data-ref-filename="OTG_STATE_B_WAIT_ACON">OTG_STATE_B_WAIT_ACON</a>] = <q>"b_wait_acon"</q>,</td></tr>
+<tr><th id="52">52</th><td>		[<a class="enum" href="../../../include/linux/usb/phy.h.html#OTG_STATE_B_HOST" title='OTG_STATE_B_HOST' data-ref="OTG_STATE_B_HOST" data-ref-filename="OTG_STATE_B_HOST">OTG_STATE_B_HOST</a>] = <q>"b_host"</q>,</td></tr>
+<tr><th id="53">53</th><td>	};</td></tr>
+<tr><th id="54">54</th><td></td></tr>
+<tr><th id="55">55</th><td>	<b>if</b> (<a class="local col3 ref" href="#133state" title='state' data-ref="133state" data-ref-filename="133state">state</a> &lt; <var>0</var> || <a class="local col3 ref" href="#133state" title='state' data-ref="133state" data-ref-filename="133state">state</a> &gt;= <a class="macro" href="../../../include/linux/kernel.h.html#47" title="(sizeof(names) / sizeof((names)[0]) + (sizeof(struct { int:(-!!(__builtin_types_compatible_p(typeof((names)), typeof(&amp;(names)[0])))); })))" data-ref="_M/ARRAY_SIZE">ARRAY_SIZE</a>(<a class="local col4 ref" href="#134names" title='names' data-ref="134names" data-ref-filename="134names">names</a>))</td></tr>
+<tr><th id="56">56</th><td>		<b>return</b> <q>"UNDEFINED"</q>;</td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td>	<b>return</b> <a class="local col4 ref" href="#134names" title='names' data-ref="134names" data-ref-filename="134names">names</a>[<a class="local col3 ref" href="#133state" title='state' data-ref="133state" data-ref-filename="133state">state</a>];</td></tr>
+<tr><th id="59">59</th><td>}</td></tr>
+<tr><th id="60">60</th><td><a class="macro" href="../../../include/linux/export.h.html#126" title="extern typeof(usb_otg_state_string) usb_otg_state_string; static const char __kstrtab_usb_otg_state_string[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;usb_otg_state_string&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_usb_otg_state_string60 = (void *)&amp;usb_otg_state_string; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;usb_otg_state_string&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;usb_otg_state_string&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;usb_otg_state_string&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;usb_otg_state_string&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#usb_otg_state_string" title='usb_otg_state_string' data-ref="usb_otg_state_string" data-ref-filename="usb_otg_state_string"><a class="ref fn" href="#usb_otg_state_string" title='usb_otg_state_string' data-ref="usb_otg_state_string" data-ref-filename="usb_otg_state_string"><a class="ref fn" href="#usb_otg_state_string" title='usb_otg_state_string' data-ref="usb_otg_state_string" data-ref-filename="usb_otg_state_string">usb_otg_state_string</a></a></a>);</td></tr>
+<tr><th id="61">61</th><td></td></tr>
+<tr><th id="62">62</th><td><em>static</em> <em>const</em> <em>char</em> *<em>const</em> <dfn class="tu decl def" id="speed_names" title='speed_names' data-type='const char *const [7]' data-ref="speed_names" data-ref-filename="speed_names">speed_names</dfn>[] = {</td></tr>
+<tr><th id="63">63</th><td>	[<a class="enum" href="../../../include/uapi/linux/usb/ch9.h.html#USB_SPEED_UNKNOWN" title='USB_SPEED_UNKNOWN' data-ref="USB_SPEED_UNKNOWN" data-ref-filename="USB_SPEED_UNKNOWN">USB_SPEED_UNKNOWN</a>] = <q>"UNKNOWN"</q>,</td></tr>
+<tr><th id="64">64</th><td>	[<a class="enum" href="../../../include/uapi/linux/usb/ch9.h.html#USB_SPEED_LOW" title='USB_SPEED_LOW' data-ref="USB_SPEED_LOW" data-ref-filename="USB_SPEED_LOW">USB_SPEED_LOW</a>] = <q>"low-speed"</q>,</td></tr>
+<tr><th id="65">65</th><td>	[<a class="enum" href="../../../include/uapi/linux/usb/ch9.h.html#USB_SPEED_FULL" title='USB_SPEED_FULL' data-ref="USB_SPEED_FULL" data-ref-filename="USB_SPEED_FULL">USB_SPEED_FULL</a>] = <q>"full-speed"</q>,</td></tr>
+<tr><th id="66">66</th><td>	[<a class="enum" href="../../../include/uapi/linux/usb/ch9.h.html#USB_SPEED_HIGH" title='USB_SPEED_HIGH' data-ref="USB_SPEED_HIGH" data-ref-filename="USB_SPEED_HIGH">USB_SPEED_HIGH</a>] = <q>"high-speed"</q>,</td></tr>
+<tr><th id="67">67</th><td>	[<a class="enum" href="../../../include/uapi/linux/usb/ch9.h.html#USB_SPEED_WIRELESS" title='USB_SPEED_WIRELESS' data-ref="USB_SPEED_WIRELESS" data-ref-filename="USB_SPEED_WIRELESS">USB_SPEED_WIRELESS</a>] = <q>"wireless"</q>,</td></tr>
+<tr><th id="68">68</th><td>	[<a class="enum" href="../../../include/uapi/linux/usb/ch9.h.html#USB_SPEED_SUPER" title='USB_SPEED_SUPER' data-ref="USB_SPEED_SUPER" data-ref-filename="USB_SPEED_SUPER">USB_SPEED_SUPER</a>] = <q>"super-speed"</q>,</td></tr>
+<tr><th id="69">69</th><td>	[<a class="enum" href="../../../include/uapi/linux/usb/ch9.h.html#USB_SPEED_SUPER_PLUS" title='USB_SPEED_SUPER_PLUS' data-ref="USB_SPEED_SUPER_PLUS" data-ref-filename="USB_SPEED_SUPER_PLUS">USB_SPEED_SUPER_PLUS</a>] = <q>"super-speed-plus"</q>,</td></tr>
+<tr><th id="70">70</th><td>};</td></tr>
+<tr><th id="71">71</th><td></td></tr>
+<tr><th id="72">72</th><td><em>const</em> <em>char</em> *<dfn class="decl def fn" id="usb_speed_string" title='usb_speed_string' data-ref="usb_speed_string" data-ref-filename="usb_speed_string">usb_speed_string</dfn>(<b>enum</b> <a class="type" href="../../../include/uapi/linux/usb/ch9.h.html#usb_device_speed" title='usb_device_speed' data-ref="usb_device_speed" data-ref-filename="usb_device_speed">usb_device_speed</a> <dfn class="local col5 decl" id="135speed" title='speed' data-type='enum usb_device_speed' data-ref="135speed" data-ref-filename="135speed">speed</dfn>)</td></tr>
+<tr><th id="73">73</th><td>{</td></tr>
+<tr><th id="74">74</th><td>	<b>if</b> (<a class="local col5 ref" href="#135speed" title='speed' data-ref="135speed" data-ref-filename="135speed">speed</a> &lt; <var>0</var> || <a class="local col5 ref" href="#135speed" title='speed' data-ref="135speed" data-ref-filename="135speed">speed</a> &gt;= <a class="macro" href="../../../include/linux/kernel.h.html#47" title="(sizeof(speed_names) / sizeof((speed_names)[0]) + (sizeof(struct { int:(-!!(__builtin_types_compatible_p(typeof((speed_names)), typeof(&amp;(speed_names)[0])))); })))" data-ref="_M/ARRAY_SIZE">ARRAY_SIZE</a>(<a class="tu ref" href="#speed_names" title='speed_names' data-use='r' data-ref="speed_names" data-ref-filename="speed_names">speed_names</a>))</td></tr>
+<tr><th id="75">75</th><td>		<a class="local col5 ref" href="#135speed" title='speed' data-ref="135speed" data-ref-filename="135speed">speed</a> = <a class="enum" href="../../../include/uapi/linux/usb/ch9.h.html#USB_SPEED_UNKNOWN" title='USB_SPEED_UNKNOWN' data-ref="USB_SPEED_UNKNOWN" data-ref-filename="USB_SPEED_UNKNOWN">USB_SPEED_UNKNOWN</a>;</td></tr>
+<tr><th id="76">76</th><td>	<b>return</b> <a class="tu ref" href="#speed_names" title='speed_names' data-use='r' data-ref="speed_names" data-ref-filename="speed_names">speed_names</a>[<a class="local col5 ref" href="#135speed" title='speed' data-ref="135speed" data-ref-filename="135speed">speed</a>];</td></tr>
+<tr><th id="77">77</th><td>}</td></tr>
+<tr><th id="78">78</th><td><a class="macro" href="../../../include/linux/export.h.html#126" title="extern typeof(usb_speed_string) usb_speed_string; static const char __kstrtab_usb_speed_string[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;usb_speed_string&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_usb_speed_string78 = (void *)&amp;usb_speed_string; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;usb_speed_string&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;usb_speed_string&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;usb_speed_string&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;usb_speed_string&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#usb_speed_string" title='usb_speed_string' data-ref="usb_speed_string" data-ref-filename="usb_speed_string"><a class="ref fn" href="#usb_speed_string" title='usb_speed_string' data-ref="usb_speed_string" data-ref-filename="usb_speed_string"><a class="ref fn" href="#usb_speed_string" title='usb_speed_string' data-ref="usb_speed_string" data-ref-filename="usb_speed_string">usb_speed_string</a></a></a>);</td></tr>
+<tr><th id="79">79</th><td></td></tr>
+<tr><th id="80">80</th><td><b>enum</b> <a class="type" href="../../../include/uapi/linux/usb/ch9.h.html#usb_device_speed" title='usb_device_speed' data-ref="usb_device_speed" data-ref-filename="usb_device_speed">usb_device_speed</a> <dfn class="decl def fn" id="usb_get_maximum_speed" title='usb_get_maximum_speed' data-ref="usb_get_maximum_speed" data-ref-filename="usb_get_maximum_speed">usb_get_maximum_speed</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col6 decl" id="136dev" title='dev' data-type='struct device *' data-ref="136dev" data-ref-filename="136dev">dev</dfn>)</td></tr>
+<tr><th id="81">81</th><td>{</td></tr>
+<tr><th id="82">82</th><td>	<em>const</em> <em>char</em> *<dfn class="local col7 decl" id="137maximum_speed" title='maximum_speed' data-type='const char *' data-ref="137maximum_speed" data-ref-filename="137maximum_speed">maximum_speed</dfn>;</td></tr>
+<tr><th id="83">83</th><td>	<em>int</em> <dfn class="local col8 decl" id="138ret" title='ret' data-type='int' data-ref="138ret" data-ref-filename="138ret">ret</dfn>;</td></tr>
+<tr><th id="84">84</th><td></td></tr>
+<tr><th id="85">85</th><td>	<a class="local col8 ref" href="#138ret" title='ret' data-ref="138ret" data-ref-filename="138ret">ret</a> = <a class="ref fn" href="../../../include/linux/property.h.html#device_property_read_string" title='device_property_read_string' data-ref="device_property_read_string" data-ref-filename="device_property_read_string">device_property_read_string</a>(<a class="local col6 ref" href="#136dev" title='dev' data-ref="136dev" data-ref-filename="136dev">dev</a>, <q>"maximum-speed"</q>, &amp;<a class="local col7 ref" href="#137maximum_speed" title='maximum_speed' data-ref="137maximum_speed" data-ref-filename="137maximum_speed">maximum_speed</a>);</td></tr>
+<tr><th id="86">86</th><td>	<b>if</b> (<a class="local col8 ref" href="#138ret" title='ret' data-ref="138ret" data-ref-filename="138ret">ret</a> &lt; <var>0</var>)</td></tr>
+<tr><th id="87">87</th><td>		<b>return</b> <a class="enum" href="../../../include/uapi/linux/usb/ch9.h.html#USB_SPEED_UNKNOWN" title='USB_SPEED_UNKNOWN' data-ref="USB_SPEED_UNKNOWN" data-ref-filename="USB_SPEED_UNKNOWN">USB_SPEED_UNKNOWN</a>;</td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td>	<a class="local col8 ref" href="#138ret" title='ret' data-ref="138ret" data-ref-filename="138ret">ret</a> = <a class="ref fn" href="../../../include/linux/string.h.html#match_string" title='match_string' data-ref="match_string" data-ref-filename="match_string">match_string</a>(<a class="tu ref" href="#speed_names" title='speed_names' data-use='r' data-ref="speed_names" data-ref-filename="speed_names">speed_names</a>, <a class="macro" href="../../../include/linux/kernel.h.html#47" title="(sizeof(speed_names) / sizeof((speed_names)[0]) + (sizeof(struct { int:(-!!(__builtin_types_compatible_p(typeof((speed_names)), typeof(&amp;(speed_names)[0])))); })))" data-ref="_M/ARRAY_SIZE">ARRAY_SIZE</a>(<a class="tu ref" href="#speed_names" title='speed_names' data-use='r' data-ref="speed_names" data-ref-filename="speed_names">speed_names</a>), <a class="local col7 ref" href="#137maximum_speed" title='maximum_speed' data-ref="137maximum_speed" data-ref-filename="137maximum_speed">maximum_speed</a>);</td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td>	<b>return</b> (<a class="local col8 ref" href="#138ret" title='ret' data-ref="138ret" data-ref-filename="138ret">ret</a> &lt; <var>0</var>) ? <a class="enum" href="../../../include/uapi/linux/usb/ch9.h.html#USB_SPEED_UNKNOWN" title='USB_SPEED_UNKNOWN' data-ref="USB_SPEED_UNKNOWN" data-ref-filename="USB_SPEED_UNKNOWN">USB_SPEED_UNKNOWN</a> : <a class="local col8 ref" href="#138ret" title='ret' data-ref="138ret" data-ref-filename="138ret">ret</a>;</td></tr>
+<tr><th id="92">92</th><td>}</td></tr>
+<tr><th id="93">93</th><td><a class="macro" href="../../../include/linux/export.h.html#126" title="extern typeof(usb_get_maximum_speed) usb_get_maximum_speed; static const char __kstrtab_usb_get_maximum_speed[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;usb_get_maximum_speed&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_usb_get_maximum_speed93 = (void *)&amp;usb_get_maximum_speed; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;usb_get_maximum_speed&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;usb_get_maximum_speed&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;usb_get_maximum_speed&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;usb_get_maximum_speed&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#usb_get_maximum_speed" title='usb_get_maximum_speed' data-ref="usb_get_maximum_speed" data-ref-filename="usb_get_maximum_speed"><a class="ref fn" href="#usb_get_maximum_speed" title='usb_get_maximum_speed' data-ref="usb_get_maximum_speed" data-ref-filename="usb_get_maximum_speed"><a class="ref fn" href="#usb_get_maximum_speed" title='usb_get_maximum_speed' data-ref="usb_get_maximum_speed" data-ref-filename="usb_get_maximum_speed">usb_get_maximum_speed</a></a></a>);</td></tr>
+<tr><th id="94">94</th><td></td></tr>
+<tr><th id="95">95</th><td><em>const</em> <em>char</em> *<dfn class="decl def fn" id="usb_state_string" title='usb_state_string' data-ref="usb_state_string" data-ref-filename="usb_state_string">usb_state_string</dfn>(<b>enum</b> <a class="type" href="../../../include/uapi/linux/usb/ch9.h.html#usb_device_state" title='usb_device_state' data-ref="usb_device_state" data-ref-filename="usb_device_state">usb_device_state</a> <dfn class="local col9 decl" id="139state" title='state' data-type='enum usb_device_state' data-ref="139state" data-ref-filename="139state">state</dfn>)</td></tr>
+<tr><th id="96">96</th><td>{</td></tr>
+<tr><th id="97">97</th><td>	<em>static</em> <em>const</em> <em>char</em> *<em>const</em> <dfn class="local col0 decl" id="140names" title='names' data-type='const char *const [9]' data-ref="140names" data-ref-filename="140names">names</dfn>[] = {</td></tr>
+<tr><th id="98">98</th><td>		[<a class="enum" href="../../../include/uapi/linux/usb/ch9.h.html#USB_STATE_NOTATTACHED" title='USB_STATE_NOTATTACHED' data-ref="USB_STATE_NOTATTACHED" data-ref-filename="USB_STATE_NOTATTACHED">USB_STATE_NOTATTACHED</a>] = <q>"not attached"</q>,</td></tr>
+<tr><th id="99">99</th><td>		[<a class="enum" href="../../../include/uapi/linux/usb/ch9.h.html#USB_STATE_ATTACHED" title='USB_STATE_ATTACHED' data-ref="USB_STATE_ATTACHED" data-ref-filename="USB_STATE_ATTACHED">USB_STATE_ATTACHED</a>] = <q>"attached"</q>,</td></tr>
+<tr><th id="100">100</th><td>		[<a class="enum" href="../../../include/uapi/linux/usb/ch9.h.html#USB_STATE_POWERED" title='USB_STATE_POWERED' data-ref="USB_STATE_POWERED" data-ref-filename="USB_STATE_POWERED">USB_STATE_POWERED</a>] = <q>"powered"</q>,</td></tr>
+<tr><th id="101">101</th><td>		[<a class="enum" href="../../../include/uapi/linux/usb/ch9.h.html#USB_STATE_RECONNECTING" title='USB_STATE_RECONNECTING' data-ref="USB_STATE_RECONNECTING" data-ref-filename="USB_STATE_RECONNECTING">USB_STATE_RECONNECTING</a>] = <q>"reconnecting"</q>,</td></tr>
+<tr><th id="102">102</th><td>		[<a class="enum" href="../../../include/uapi/linux/usb/ch9.h.html#USB_STATE_UNAUTHENTICATED" title='USB_STATE_UNAUTHENTICATED' data-ref="USB_STATE_UNAUTHENTICATED" data-ref-filename="USB_STATE_UNAUTHENTICATED">USB_STATE_UNAUTHENTICATED</a>] = <q>"unauthenticated"</q>,</td></tr>
+<tr><th id="103">103</th><td>		[<a class="enum" href="../../../include/uapi/linux/usb/ch9.h.html#USB_STATE_DEFAULT" title='USB_STATE_DEFAULT' data-ref="USB_STATE_DEFAULT" data-ref-filename="USB_STATE_DEFAULT">USB_STATE_DEFAULT</a>] = <q>"default"</q>,</td></tr>
+<tr><th id="104">104</th><td>		[<a class="enum" href="../../../include/uapi/linux/usb/ch9.h.html#USB_STATE_ADDRESS" title='USB_STATE_ADDRESS' data-ref="USB_STATE_ADDRESS" data-ref-filename="USB_STATE_ADDRESS">USB_STATE_ADDRESS</a>] = <q>"addressed"</q>,</td></tr>
+<tr><th id="105">105</th><td>		[<a class="enum" href="../../../include/uapi/linux/usb/ch9.h.html#USB_STATE_CONFIGURED" title='USB_STATE_CONFIGURED' data-ref="USB_STATE_CONFIGURED" data-ref-filename="USB_STATE_CONFIGURED">USB_STATE_CONFIGURED</a>] = <q>"configured"</q>,</td></tr>
+<tr><th id="106">106</th><td>		[<a class="enum" href="../../../include/uapi/linux/usb/ch9.h.html#USB_STATE_SUSPENDED" title='USB_STATE_SUSPENDED' data-ref="USB_STATE_SUSPENDED" data-ref-filename="USB_STATE_SUSPENDED">USB_STATE_SUSPENDED</a>] = <q>"suspended"</q>,</td></tr>
+<tr><th id="107">107</th><td>	};</td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td>	<b>if</b> (<a class="local col9 ref" href="#139state" title='state' data-ref="139state" data-ref-filename="139state">state</a> &lt; <var>0</var> || <a class="local col9 ref" href="#139state" title='state' data-ref="139state" data-ref-filename="139state">state</a> &gt;= <a class="macro" href="../../../include/linux/kernel.h.html#47" title="(sizeof(names) / sizeof((names)[0]) + (sizeof(struct { int:(-!!(__builtin_types_compatible_p(typeof((names)), typeof(&amp;(names)[0])))); })))" data-ref="_M/ARRAY_SIZE">ARRAY_SIZE</a>(<a class="local col0 ref" href="#140names" title='names' data-ref="140names" data-ref-filename="140names">names</a>))</td></tr>
+<tr><th id="110">110</th><td>		<b>return</b> <q>"UNKNOWN"</q>;</td></tr>
+<tr><th id="111">111</th><td></td></tr>
+<tr><th id="112">112</th><td>	<b>return</b> <a class="local col0 ref" href="#140names" title='names' data-ref="140names" data-ref-filename="140names">names</a>[<a class="local col9 ref" href="#139state" title='state' data-ref="139state" data-ref-filename="139state">state</a>];</td></tr>
+<tr><th id="113">113</th><td>}</td></tr>
+<tr><th id="114">114</th><td><a class="macro" href="../../../include/linux/export.h.html#126" title="extern typeof(usb_state_string) usb_state_string; static const char __kstrtab_usb_state_string[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;usb_state_string&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_usb_state_string114 = (void *)&amp;usb_state_string; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;usb_state_string&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;usb_state_string&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;usb_state_string&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;usb_state_string&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#usb_state_string" title='usb_state_string' data-ref="usb_state_string" data-ref-filename="usb_state_string"><a class="ref fn" href="#usb_state_string" title='usb_state_string' data-ref="usb_state_string" data-ref-filename="usb_state_string"><a class="ref fn" href="#usb_state_string" title='usb_state_string' data-ref="usb_state_string" data-ref-filename="usb_state_string">usb_state_string</a></a></a>);</td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td><em>static</em> <em>const</em> <em>char</em> *<em>const</em> <dfn class="tu decl def" id="usb_dr_modes" title='usb_dr_modes' data-type='const char *const [4]' data-ref="usb_dr_modes" data-ref-filename="usb_dr_modes">usb_dr_modes</dfn>[] = {</td></tr>
+<tr><th id="117">117</th><td>	[<a class="enum" href="../../../include/linux/usb/otg.h.html#USB_DR_MODE_UNKNOWN" title='USB_DR_MODE_UNKNOWN' data-ref="USB_DR_MODE_UNKNOWN" data-ref-filename="USB_DR_MODE_UNKNOWN">USB_DR_MODE_UNKNOWN</a>]		= <q>""</q>,</td></tr>
+<tr><th id="118">118</th><td>	[<a class="enum" href="../../../include/linux/usb/otg.h.html#USB_DR_MODE_HOST" title='USB_DR_MODE_HOST' data-ref="USB_DR_MODE_HOST" data-ref-filename="USB_DR_MODE_HOST">USB_DR_MODE_HOST</a>]		= <q>"host"</q>,</td></tr>
+<tr><th id="119">119</th><td>	[<a class="enum" href="../../../include/linux/usb/otg.h.html#USB_DR_MODE_PERIPHERAL" title='USB_DR_MODE_PERIPHERAL' data-ref="USB_DR_MODE_PERIPHERAL" data-ref-filename="USB_DR_MODE_PERIPHERAL">USB_DR_MODE_PERIPHERAL</a>]	= <q>"peripheral"</q>,</td></tr>
+<tr><th id="120">120</th><td>	[<a class="enum" href="../../../include/linux/usb/otg.h.html#USB_DR_MODE_OTG" title='USB_DR_MODE_OTG' data-ref="USB_DR_MODE_OTG" data-ref-filename="USB_DR_MODE_OTG">USB_DR_MODE_OTG</a>]		= <q>"otg"</q>,</td></tr>
+<tr><th id="121">121</th><td>};</td></tr>
+<tr><th id="122">122</th><td></td></tr>
+<tr><th id="123">123</th><td><em>static</em> <b>enum</b> <a class="type" href="../../../include/linux/usb/otg.h.html#usb_dr_mode" title='usb_dr_mode' data-ref="usb_dr_mode" data-ref-filename="usb_dr_mode">usb_dr_mode</a> <dfn class="tu decl def fn" id="usb_get_dr_mode_from_string" title='usb_get_dr_mode_from_string' data-type='enum usb_dr_mode usb_get_dr_mode_from_string(const char * str)' data-ref="usb_get_dr_mode_from_string" data-ref-filename="usb_get_dr_mode_from_string">usb_get_dr_mode_from_string</dfn>(<em>const</em> <em>char</em> *<dfn class="local col1 decl" id="141str" title='str' data-type='const char *' data-ref="141str" data-ref-filename="141str">str</dfn>)</td></tr>
+<tr><th id="124">124</th><td>{</td></tr>
+<tr><th id="125">125</th><td>	<em>int</em> <dfn class="local col2 decl" id="142ret" title='ret' data-type='int' data-ref="142ret" data-ref-filename="142ret">ret</dfn>;</td></tr>
+<tr><th id="126">126</th><td></td></tr>
+<tr><th id="127">127</th><td>	<a class="local col2 ref" href="#142ret" title='ret' data-ref="142ret" data-ref-filename="142ret">ret</a> = <a class="ref fn" href="../../../include/linux/string.h.html#match_string" title='match_string' data-ref="match_string" data-ref-filename="match_string">match_string</a>(<a class="tu ref" href="#usb_dr_modes" title='usb_dr_modes' data-use='r' data-ref="usb_dr_modes" data-ref-filename="usb_dr_modes">usb_dr_modes</a>, <a class="macro" href="../../../include/linux/kernel.h.html#47" title="(sizeof(usb_dr_modes) / sizeof((usb_dr_modes)[0]) + (sizeof(struct { int:(-!!(__builtin_types_compatible_p(typeof((usb_dr_modes)), typeof(&amp;(usb_dr_modes)[0])))); })))" data-ref="_M/ARRAY_SIZE">ARRAY_SIZE</a>(<a class="tu ref" href="#usb_dr_modes" title='usb_dr_modes' data-use='r' data-ref="usb_dr_modes" data-ref-filename="usb_dr_modes">usb_dr_modes</a>), <a class="local col1 ref" href="#141str" title='str' data-ref="141str" data-ref-filename="141str">str</a>);</td></tr>
+<tr><th id="128">128</th><td>	<b>return</b> (<a class="local col2 ref" href="#142ret" title='ret' data-ref="142ret" data-ref-filename="142ret">ret</a> &lt; <var>0</var>) ? <a class="enum" href="../../../include/linux/usb/otg.h.html#USB_DR_MODE_UNKNOWN" title='USB_DR_MODE_UNKNOWN' data-ref="USB_DR_MODE_UNKNOWN" data-ref-filename="USB_DR_MODE_UNKNOWN">USB_DR_MODE_UNKNOWN</a> : <a class="local col2 ref" href="#142ret" title='ret' data-ref="142ret" data-ref-filename="142ret">ret</a>;</td></tr>
+<tr><th id="129">129</th><td>}</td></tr>
+<tr><th id="130">130</th><td></td></tr>
+<tr><th id="131">131</th><td><b>enum</b> <a class="type" href="../../../include/linux/usb/otg.h.html#usb_dr_mode" title='usb_dr_mode' data-ref="usb_dr_mode" data-ref-filename="usb_dr_mode">usb_dr_mode</a> <dfn class="decl def fn" id="usb_get_dr_mode" title='usb_get_dr_mode' data-ref="usb_get_dr_mode" data-ref-filename="usb_get_dr_mode">usb_get_dr_mode</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col3 decl" id="143dev" title='dev' data-type='struct device *' data-ref="143dev" data-ref-filename="143dev">dev</dfn>)</td></tr>
+<tr><th id="132">132</th><td>{</td></tr>
+<tr><th id="133">133</th><td>	<em>const</em> <em>char</em> *<dfn class="local col4 decl" id="144dr_mode" title='dr_mode' data-type='const char *' data-ref="144dr_mode" data-ref-filename="144dr_mode">dr_mode</dfn>;</td></tr>
+<tr><th id="134">134</th><td>	<em>int</em> <dfn class="local col5 decl" id="145err" title='err' data-type='int' data-ref="145err" data-ref-filename="145err">err</dfn>;</td></tr>
+<tr><th id="135">135</th><td></td></tr>
+<tr><th id="136">136</th><td>	<a class="local col5 ref" href="#145err" title='err' data-ref="145err" data-ref-filename="145err">err</a> = <a class="ref fn" href="../../../include/linux/property.h.html#device_property_read_string" title='device_property_read_string' data-ref="device_property_read_string" data-ref-filename="device_property_read_string">device_property_read_string</a>(<a class="local col3 ref" href="#143dev" title='dev' data-ref="143dev" data-ref-filename="143dev">dev</a>, <q>"dr_mode"</q>, &amp;<a class="local col4 ref" href="#144dr_mode" title='dr_mode' data-ref="144dr_mode" data-ref-filename="144dr_mode">dr_mode</a>);</td></tr>
+<tr><th id="137">137</th><td>	<b>if</b> (<a class="local col5 ref" href="#145err" title='err' data-ref="145err" data-ref-filename="145err">err</a> &lt; <var>0</var>)</td></tr>
+<tr><th id="138">138</th><td>		<b>return</b> <a class="enum" href="../../../include/linux/usb/otg.h.html#USB_DR_MODE_UNKNOWN" title='USB_DR_MODE_UNKNOWN' data-ref="USB_DR_MODE_UNKNOWN" data-ref-filename="USB_DR_MODE_UNKNOWN">USB_DR_MODE_UNKNOWN</a>;</td></tr>
+<tr><th id="139">139</th><td></td></tr>
+<tr><th id="140">140</th><td>	<b>return</b> <a class="tu ref fn" href="#usb_get_dr_mode_from_string" title='usb_get_dr_mode_from_string' data-use='c' data-ref="usb_get_dr_mode_from_string" data-ref-filename="usb_get_dr_mode_from_string">usb_get_dr_mode_from_string</a>(<a class="local col4 ref" href="#144dr_mode" title='dr_mode' data-ref="144dr_mode" data-ref-filename="144dr_mode">dr_mode</a>);</td></tr>
+<tr><th id="141">141</th><td>}</td></tr>
+<tr><th id="142">142</th><td><a class="macro" href="../../../include/linux/export.h.html#126" title="extern typeof(usb_get_dr_mode) usb_get_dr_mode; static const char __kstrtab_usb_get_dr_mode[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;usb_get_dr_mode&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_usb_get_dr_mode142 = (void *)&amp;usb_get_dr_mode; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;usb_get_dr_mode&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;usb_get_dr_mode&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;usb_get_dr_mode&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;usb_get_dr_mode&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#usb_get_dr_mode" title='usb_get_dr_mode' data-ref="usb_get_dr_mode" data-ref-filename="usb_get_dr_mode"><a class="ref fn" href="#usb_get_dr_mode" title='usb_get_dr_mode' data-ref="usb_get_dr_mode" data-ref-filename="usb_get_dr_mode"><a class="ref fn" href="#usb_get_dr_mode" title='usb_get_dr_mode' data-ref="usb_get_dr_mode" data-ref-filename="usb_get_dr_mode">usb_get_dr_mode</a></a></a>);</td></tr>
+<tr><th id="143">143</th><td></td></tr>
+<tr><th id="144">144</th><td><u>#<span data-ppcond="144">ifdef</span> <span class="macro" data-ref="_M/CONFIG_OF">CONFIG_OF</span></u></td></tr>
+<tr><th id="145">145</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="146">146</th><td><i class="doc"> * of_usb_get_dr_mode_by_phy - Get dual role mode for the controller device</i></td></tr>
+<tr><th id="147">147</th><td><i class="doc"> * which is associated with the given phy device_node</i></td></tr>
+<tr><th id="148">148</th><td><i class="doc"> *<span class="command"> @np</span><span class="arg">:</span>	Pointer to the given phy device_node</i></td></tr>
+<tr><th id="149">149</th><td><i class="doc"> * <span class="command">@arg</span>0: phandle args[0] for phy's with #phy-cells &gt;= 1, or -1 for</i></td></tr>
+<tr><th id="150">150</th><td><i class="doc"> *        phys which do not have phy-cells</i></td></tr>
+<tr><th id="151">151</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="152">152</th><td><i class="doc"> * In dts a usb controller associates with phy devices.  The function gets</i></td></tr>
+<tr><th id="153">153</th><td><i class="doc"> * the string from property 'dr_mode' of the controller associated with the</i></td></tr>
+<tr><th id="154">154</th><td><i class="doc"> * given phy device node, and returns the correspondig enum usb_dr_mode.</i></td></tr>
+<tr><th id="155">155</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="156">156</th><td><b>enum</b> usb_dr_mode of_usb_get_dr_mode_by_phy(<b>struct</b> device_node *np, <em>int</em> arg0)</td></tr>
+<tr><th id="157">157</th><td>{</td></tr>
+<tr><th id="158">158</th><td>	<b>struct</b> device_node *controller = NULL;</td></tr>
+<tr><th id="159">159</th><td>	<b>struct</b> of_phandle_args args;</td></tr>
+<tr><th id="160">160</th><td>	<em>const</em> <em>char</em> *dr_mode;</td></tr>
+<tr><th id="161">161</th><td>	<em>int</em> index;</td></tr>
+<tr><th id="162">162</th><td>	<em>int</em> err;</td></tr>
+<tr><th id="163">163</th><td></td></tr>
+<tr><th id="164">164</th><td>	<b>do</b> {</td></tr>
+<tr><th id="165">165</th><td>		controller = of_find_node_with_property(controller, <q>"phys"</q>);</td></tr>
+<tr><th id="166">166</th><td>		<b>if</b> (!of_device_is_available(controller))</td></tr>
+<tr><th id="167">167</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="168">168</th><td>		index = <var>0</var>;</td></tr>
+<tr><th id="169">169</th><td>		<b>do</b> {</td></tr>
+<tr><th id="170">170</th><td>			<b>if</b> (arg0 == -<var>1</var>) {</td></tr>
+<tr><th id="171">171</th><td>				args.np = of_parse_phandle(controller, <q>"phys"</q>,</td></tr>
+<tr><th id="172">172</th><td>							index);</td></tr>
+<tr><th id="173">173</th><td>				args.args_count = <var>0</var>;</td></tr>
+<tr><th id="174">174</th><td>			} <b>else</b> {</td></tr>
+<tr><th id="175">175</th><td>				err = of_parse_phandle_with_args(controller,</td></tr>
+<tr><th id="176">176</th><td>							<q>"phys"</q>, <q>"#phy-cells"</q>,</td></tr>
+<tr><th id="177">177</th><td>							index, &amp;args);</td></tr>
+<tr><th id="178">178</th><td>				<b>if</b> (err)</td></tr>
+<tr><th id="179">179</th><td>					<b>break</b>;</td></tr>
+<tr><th id="180">180</th><td>			}</td></tr>
+<tr><th id="181">181</th><td></td></tr>
+<tr><th id="182">182</th><td>			of_node_put(args.np);</td></tr>
+<tr><th id="183">183</th><td>			<b>if</b> (args.np == np &amp;&amp; (args.args_count == <var>0</var> ||</td></tr>
+<tr><th id="184">184</th><td>					      args.args[<var>0</var>] == arg0))</td></tr>
+<tr><th id="185">185</th><td>				<b>goto</b> finish;</td></tr>
+<tr><th id="186">186</th><td>			index++;</td></tr>
+<tr><th id="187">187</th><td>		} <b>while</b> (args.np);</td></tr>
+<tr><th id="188">188</th><td>	} <b>while</b> (controller);</td></tr>
+<tr><th id="189">189</th><td></td></tr>
+<tr><th id="190">190</th><td>finish:</td></tr>
+<tr><th id="191">191</th><td>	err = of_property_read_string(controller, <q>"dr_mode"</q>, &amp;dr_mode);</td></tr>
+<tr><th id="192">192</th><td>	of_node_put(controller);</td></tr>
+<tr><th id="193">193</th><td></td></tr>
+<tr><th id="194">194</th><td>	<b>if</b> (err &lt; <var>0</var>)</td></tr>
+<tr><th id="195">195</th><td>		<b>return</b> USB_DR_MODE_UNKNOWN;</td></tr>
+<tr><th id="196">196</th><td></td></tr>
+<tr><th id="197">197</th><td>	<b>return</b> usb_get_dr_mode_from_string(dr_mode);</td></tr>
+<tr><th id="198">198</th><td>}</td></tr>
+<tr><th id="199">199</th><td>EXPORT_SYMBOL_GPL(of_usb_get_dr_mode_by_phy);</td></tr>
+<tr><th id="200">200</th><td></td></tr>
+<tr><th id="201">201</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="202">202</th><td><i class="doc"> * of_usb_host_tpl_support - to get if Targeted Peripheral List is supported</i></td></tr>
+<tr><th id="203">203</th><td><i class="doc"> * for given targeted hosts (non-PC hosts)</i></td></tr>
+<tr><th id="204">204</th><td><i class="doc"> *<span class="command"> @np</span><span class="arg">:</span> Pointer to the given device_node</i></td></tr>
+<tr><th id="205">205</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="206">206</th><td><i class="doc"> * The function gets if the targeted hosts support TPL or not</i></td></tr>
+<tr><th id="207">207</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="208">208</th><td>bool of_usb_host_tpl_support(<b>struct</b> device_node *np)</td></tr>
+<tr><th id="209">209</th><td>{</td></tr>
+<tr><th id="210">210</th><td>	<b>return</b> of_property_read_bool(np, <q>"tpl-support"</q>);</td></tr>
+<tr><th id="211">211</th><td>}</td></tr>
+<tr><th id="212">212</th><td>EXPORT_SYMBOL_GPL(of_usb_host_tpl_support);</td></tr>
+<tr><th id="213">213</th><td></td></tr>
+<tr><th id="214">214</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="215">215</th><td><i class="doc"> * of_usb_update_otg_caps - to update usb otg capabilities according to</i></td></tr>
+<tr><th id="216">216</th><td><i class="doc"> * the passed properties in DT.</i></td></tr>
+<tr><th id="217">217</th><td><i class="doc"> *<span class="command"> @np</span><span class="arg">:</span> Pointer to the given device_node</i></td></tr>
+<tr><th id="218">218</th><td><i class="doc"> *<span class="command"> @otg</span>_caps: Pointer to the target usb_otg_caps to be set</i></td></tr>
+<tr><th id="219">219</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="220">220</th><td><i class="doc"> * The function updates the otg capabilities</i></td></tr>
+<tr><th id="221">221</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="222">222</th><td><em>int</em> of_usb_update_otg_caps(<b>struct</b> device_node *np,</td></tr>
+<tr><th id="223">223</th><td>			<b>struct</b> usb_otg_caps *otg_caps)</td></tr>
+<tr><th id="224">224</th><td>{</td></tr>
+<tr><th id="225">225</th><td>	u32 otg_rev;</td></tr>
+<tr><th id="226">226</th><td></td></tr>
+<tr><th id="227">227</th><td>	<b>if</b> (!otg_caps)</td></tr>
+<tr><th id="228">228</th><td>		<b>return</b> -EINVAL;</td></tr>
+<tr><th id="229">229</th><td></td></tr>
+<tr><th id="230">230</th><td>	<b>if</b> (!of_property_read_u32(np, <q>"otg-rev"</q>, &amp;otg_rev)) {</td></tr>
+<tr><th id="231">231</th><td>		<b>switch</b> (otg_rev) {</td></tr>
+<tr><th id="232">232</th><td>		<b>case</b> <var>0x0100</var>:</td></tr>
+<tr><th id="233">233</th><td>		<b>case</b> <var>0x0120</var>:</td></tr>
+<tr><th id="234">234</th><td>		<b>case</b> <var>0x0130</var>:</td></tr>
+<tr><th id="235">235</th><td>		<b>case</b> <var>0x0200</var>:</td></tr>
+<tr><th id="236">236</th><td>			<i>/* Choose the lesser one if it's already been set */</i></td></tr>
+<tr><th id="237">237</th><td>			<b>if</b> (otg_caps-&gt;otg_rev)</td></tr>
+<tr><th id="238">238</th><td>				otg_caps-&gt;otg_rev = min_t(u16, otg_rev,</td></tr>
+<tr><th id="239">239</th><td>							otg_caps-&gt;otg_rev);</td></tr>
+<tr><th id="240">240</th><td>			<b>else</b></td></tr>
+<tr><th id="241">241</th><td>				otg_caps-&gt;otg_rev = otg_rev;</td></tr>
+<tr><th id="242">242</th><td>			<b>break</b>;</td></tr>
+<tr><th id="243">243</th><td>		<b>default</b>:</td></tr>
+<tr><th id="244">244</th><td>			pr_err(<q>"%pOF: unsupported otg-rev: 0x%x\n"</q>,</td></tr>
+<tr><th id="245">245</th><td>						np, otg_rev);</td></tr>
+<tr><th id="246">246</th><td>			<b>return</b> -EINVAL;</td></tr>
+<tr><th id="247">247</th><td>		}</td></tr>
+<tr><th id="248">248</th><td>	} <b>else</b> {</td></tr>
+<tr><th id="249">249</th><td>		<i>/*</i></td></tr>
+<tr><th id="250">250</th><td><i>		 * otg-rev is mandatory for otg properties, if not passed</i></td></tr>
+<tr><th id="251">251</th><td><i>		 * we set it to be 0 and assume it's a legacy otg device.</i></td></tr>
+<tr><th id="252">252</th><td><i>		 * Non-dt platform can set it afterwards.</i></td></tr>
+<tr><th id="253">253</th><td><i>		 */</i></td></tr>
+<tr><th id="254">254</th><td>		otg_caps-&gt;otg_rev = <var>0</var>;</td></tr>
+<tr><th id="255">255</th><td>	}</td></tr>
+<tr><th id="256">256</th><td></td></tr>
+<tr><th id="257">257</th><td>	<b>if</b> (of_property_read_bool(np, <q>"hnp-disable"</q>))</td></tr>
+<tr><th id="258">258</th><td>		otg_caps-&gt;hnp_support = false;</td></tr>
+<tr><th id="259">259</th><td>	<b>if</b> (of_property_read_bool(np, <q>"srp-disable"</q>))</td></tr>
+<tr><th id="260">260</th><td>		otg_caps-&gt;srp_support = false;</td></tr>
+<tr><th id="261">261</th><td>	<b>if</b> (of_property_read_bool(np, <q>"adp-disable"</q>) ||</td></tr>
+<tr><th id="262">262</th><td>				(otg_caps-&gt;otg_rev &lt; <var>0x0200</var>))</td></tr>
+<tr><th id="263">263</th><td>		otg_caps-&gt;adp_support = false;</td></tr>
+<tr><th id="264">264</th><td></td></tr>
+<tr><th id="265">265</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="266">266</th><td>}</td></tr>
+<tr><th id="267">267</th><td>EXPORT_SYMBOL_GPL(of_usb_update_otg_caps);</td></tr>
+<tr><th id="268">268</th><td></td></tr>
+<tr><th id="269">269</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="270">270</th><td><i class="doc"> * usb_of_get_companion_dev - Find the companion device</i></td></tr>
+<tr><th id="271">271</th><td><i class="doc"> * <span class="command">@dev</span>:<span class="verb"> the device pointer to find a companion</span></i></td></tr>
+<tr><th id="272">272</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="273">273</th><td><i class="doc"> * Find the companion device from platform bus.</i></td></tr>
+<tr><th id="274">274</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="275">275</th><td><i class="doc"> * Takes a reference to the returned struct device which needs to be dropped</i></td></tr>
+<tr><th id="276">276</th><td><i class="doc"> * after use.</i></td></tr>
+<tr><th id="277">277</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="278">278</th><td><i class="doc"> * Return: On success, a pointer to the companion device, %NULL on failure.</i></td></tr>
+<tr><th id="279">279</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="280">280</th><td><b>struct</b> device *usb_of_get_companion_dev(<b>struct</b> device *dev)</td></tr>
+<tr><th id="281">281</th><td>{</td></tr>
+<tr><th id="282">282</th><td>	<b>struct</b> device_node *node;</td></tr>
+<tr><th id="283">283</th><td>	<b>struct</b> platform_device *pdev = NULL;</td></tr>
+<tr><th id="284">284</th><td></td></tr>
+<tr><th id="285">285</th><td>	node = of_parse_phandle(dev-&gt;of_node, <q>"companion"</q>, <var>0</var>);</td></tr>
+<tr><th id="286">286</th><td>	<b>if</b> (node)</td></tr>
+<tr><th id="287">287</th><td>		pdev = of_find_device_by_node(node);</td></tr>
+<tr><th id="288">288</th><td></td></tr>
+<tr><th id="289">289</th><td>	of_node_put(node);</td></tr>
+<tr><th id="290">290</th><td></td></tr>
+<tr><th id="291">291</th><td>	<b>return</b> pdev ? &amp;pdev-&gt;dev : NULL;</td></tr>
+<tr><th id="292">292</th><td>}</td></tr>
+<tr><th id="293">293</th><td>EXPORT_SYMBOL_GPL(usb_of_get_companion_dev);</td></tr>
+<tr><th id="294">294</th><td><u>#<span data-ppcond="144">endif</span></u></td></tr>
+<tr><th id="295">295</th><td></td></tr>
+<tr><th id="296">296</th><td><b>struct</b> <a class="type" href="../../../include/linux/dcache.h.html#dentry" title='dentry' data-ref="dentry" data-ref-filename="dentry">dentry</a> *<dfn class="decl def" id="usb_debug_root" title='usb_debug_root' data-ref="usb_debug_root" data-ref-filename="usb_debug_root">usb_debug_root</dfn>;</td></tr>
+<tr><th id="297">297</th><td><a class="macro" href="../../../include/linux/export.h.html#126" title="extern typeof(usb_debug_root) usb_debug_root; static const char __kstrtab_usb_debug_root[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;usb_debug_root&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_usb_debug_root297 = (void *)&amp;usb_debug_root; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;usb_debug_root&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;usb_debug_root&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;usb_debug_root&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;usb_debug_root&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl" href="../../../include/linux/usb.h.html#usb_debug_root" title='usb_debug_root' data-ref="usb_debug_root" data-ref-filename="usb_debug_root" id="usb_debug_root"><a class="ref" href="../../../include/linux/usb.h.html#usb_debug_root" title='usb_debug_root' data-ref="usb_debug_root" data-ref-filename="usb_debug_root"><a class="ref" href="../../../include/linux/usb.h.html#usb_debug_root" title='usb_debug_root' data-ref="usb_debug_root" data-ref-filename="usb_debug_root">usb_debug_root</a></a></a>);</td></tr>
+<tr><th id="298">298</th><td></td></tr>
+<tr><th id="299">299</th><td><em>static</em> <em>int</em> <a class="macro" href="../../../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="tu decl def fn" id="usb_common_init" title='usb_common_init' data-type='int usb_common_init()' data-ref="usb_common_init" data-ref-filename="usb_common_init">usb_common_init</dfn>(<em>void</em>)</td></tr>
+<tr><th id="300">300</th><td>{</td></tr>
+<tr><th id="301">301</th><td>	<a class="ref" href="../../../include/linux/usb.h.html#usb_debug_root" title='usb_debug_root' data-ref="usb_debug_root" data-ref-filename="usb_debug_root">usb_debug_root</a> = <a class="ref fn" href="../../../include/linux/debugfs.h.html#debugfs_create_dir" title='debugfs_create_dir' data-ref="debugfs_create_dir" data-ref-filename="debugfs_create_dir">debugfs_create_dir</a>(<q>"usb"</q>, <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>);</td></tr>
+<tr><th id="302">302</th><td>	<a class="ref fn" href="common.h.html#ledtrig_usb_init" title='ledtrig_usb_init' data-ref="ledtrig_usb_init" data-ref-filename="ledtrig_usb_init">ledtrig_usb_init</a>();</td></tr>
+<tr><th id="303">303</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="304">304</th><td>}</td></tr>
+<tr><th id="305">305</th><td></td></tr>
+<tr><th id="306">306</th><td><em>static</em> <em>void</em> <a class="macro" href="../../../include/linux/init.h.html#83" title="__attribute__((__section__(&quot;.exit.text&quot;))) __attribute__((__used__)) __attribute__((__cold__)) __attribute__((no_instrument_function))" data-ref="_M/__exit">__exit</a> <dfn class="tu decl def fn" id="usb_common_exit" title='usb_common_exit' data-type='void usb_common_exit()' data-ref="usb_common_exit" data-ref-filename="usb_common_exit">usb_common_exit</dfn>(<em>void</em>)</td></tr>
+<tr><th id="307">307</th><td>{</td></tr>
+<tr><th id="308">308</th><td>	<a class="ref fn" href="common.h.html#ledtrig_usb_exit" title='ledtrig_usb_exit' data-ref="ledtrig_usb_exit" data-ref-filename="ledtrig_usb_exit">ledtrig_usb_exit</a>();</td></tr>
+<tr><th id="309">309</th><td>	<a class="ref fn" href="../../../include/linux/debugfs.h.html#debugfs_remove_recursive" title='debugfs_remove_recursive' data-ref="debugfs_remove_recursive" data-ref-filename="debugfs_remove_recursive">debugfs_remove_recursive</a>(<a class="ref" href="../../../include/linux/usb.h.html#usb_debug_root" title='usb_debug_root' data-ref="usb_debug_root" data-ref-filename="usb_debug_root">usb_debug_root</a>);</td></tr>
+<tr><th id="310">310</th><td>}</td></tr>
+<tr><th id="311">311</th><td></td></tr>
+<tr><th id="312">312</th><td><a class="macro" href="../../../include/linux/init.h.html#224" title="static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_usb_common_init312 = (void *)&amp;usb_common_init; asm(&quot;.section	\&quot;&quot; &quot;.initcall4&quot; &quot;.init\&quot;, \&quot;a\&quot;	\n&quot; &quot;__initcall_&quot; &quot;usb_common_init&quot; &quot;4&quot; &quot;:			\n&quot; &quot;.long	&quot; &quot;usb_common_init&quot; &quot; - .			\n&quot; &quot;.previous					\n&quot;);" data-ref="_M/subsys_initcall">subsys_initcall</a>(<a class="tu ref fn" href="#usb_common_init" title='usb_common_init' data-use='a' data-ref="usb_common_init" data-ref-filename="usb_common_init">usb_common_init</a>);</td></tr>
+<tr><th id="313">313</th><td><a class="macro" href="../../../include/linux/module.h.html#100" title="static exitcall_t __exitcall_usb_common_exit __attribute__((__used__)) __attribute__((__section__(&quot;.exitcall.exit&quot;))) = usb_common_exit;" data-ref="_M/module_exit">module_exit</a>(<a class="tu ref fn" href="#usb_common_exit" title='usb_common_exit' data-ref="usb_common_exit" data-ref-filename="usb_common_exit">usb_common_exit</a>);</td></tr>
+<tr><th id="314">314</th><td></td></tr>
+<tr><th id="315">315</th><td><a class="macro" href="../../../include/linux/module.h.html#216" title="static const char __UNIQUE_ID_license34[] __attribute__((__used__)) __attribute__((section(&quot;.modinfo&quot;), unused, aligned(1))) = &quot;usb_common&quot; &quot;.&quot; &quot;license&quot; &quot;=&quot; &quot;GPL&quot;" data-ref="_M/MODULE_LICENSE">MODULE_LICENSE</a>(<q>"GPL"</q>);</td></tr>
+<tr><th id="316">316</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

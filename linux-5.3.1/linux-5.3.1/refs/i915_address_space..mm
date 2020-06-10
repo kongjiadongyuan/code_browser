@@ -1,0 +1,23 @@
+<dec f='linux-5.3.1/drivers/gpu/drm/i915/i915_gem_gtt.h' l='284' type='struct drm_mm'/>
+<offset>64</offset>
+<use f='linux-5.3.1/drivers/gpu/drm/i915/gem/i915_gem_execbuffer.c' l='1101' u='a' c='reloc_iomap'/>
+<use f='linux-5.3.1/drivers/gpu/drm/i915/i915_gem.c' l='67' u='a' c='insert_mappable_node'/>
+<use f='linux-5.3.1/drivers/gpu/drm/i915/i915_gem_evict.c' l='130' u='a' c='i915_gem_evict_something'/>
+<use f='linux-5.3.1/drivers/gpu/drm/i915/i915_gem_evict.c' l='290' u='m' c='i915_gem_evict_for_node'/>
+<use f='linux-5.3.1/drivers/gpu/drm/i915/i915_gem_evict.c' l='301' u='a' c='i915_gem_evict_for_node'/>
+<use f='linux-5.3.1/drivers/gpu/drm/i915/i915_gem_gtt.c' l='499' u='a' c='i915_address_space_init'/>
+<use f='linux-5.3.1/drivers/gpu/drm/i915/i915_gem_gtt.c' l='500' u='m' c='i915_address_space_init'/>
+<use f='linux-5.3.1/drivers/gpu/drm/i915/i915_gem_gtt.c' l='516' u='a' c='i915_address_space_fini'/>
+<use f='linux-5.3.1/drivers/gpu/drm/i915/i915_gem_gtt.c' l='2867' u='a' c='i915_gem_init_ggtt'/>
+<use f='linux-5.3.1/drivers/gpu/drm/i915/i915_gem_gtt.c' l='2884' u='a' c='i915_gem_init_ggtt'/>
+<use f='linux-5.3.1/drivers/gpu/drm/i915/i915_gem_gtt.c' l='2884' u='a' c='i915_gem_init_ggtt'/>
+<use f='linux-5.3.1/drivers/gpu/drm/i915/i915_gem_gtt.c' l='2884' u='a' c='i915_gem_init_ggtt'/>
+<use f='linux-5.3.1/drivers/gpu/drm/i915/i915_gem_gtt.c' l='2884' u='a' c='i915_gem_init_ggtt'/>
+<use f='linux-5.3.1/drivers/gpu/drm/i915/i915_gem_gtt.c' l='2932' u='a' c='i915_ggtt_cleanup_hw'/>
+<use f='linux-5.3.1/drivers/gpu/drm/i915/i915_gem_gtt.c' l='3558' u='m' c='i915_ggtt_init_hw'/>
+<use f='linux-5.3.1/drivers/gpu/drm/i915/i915_gem_gtt.c' l='3963' u='a' c='i915_gem_gtt_reserve'/>
+<use f='linux-5.3.1/drivers/gpu/drm/i915/i915_gem_gtt.c' l='3972' u='a' c='i915_gem_gtt_reserve'/>
+<use f='linux-5.3.1/drivers/gpu/drm/i915/i915_gem_gtt.c' l='4078' u='a' c='i915_gem_gtt_insert'/>
+<use f='linux-5.3.1/drivers/gpu/drm/i915/i915_gem_gtt.c' l='4085' u='a' c='i915_gem_gtt_insert'/>
+<use f='linux-5.3.1/drivers/gpu/drm/i915/i915_gem_gtt.c' l='4130' u='a' c='i915_gem_gtt_insert'/>
+<use f='linux-5.3.1/drivers/gpu/drm/i915/i915_vma.c' l='511' u='m' c='i915_gem_valid_gtt_space'/>

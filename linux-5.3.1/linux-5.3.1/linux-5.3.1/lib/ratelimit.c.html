@@ -1,0 +1,88 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>ratelimit.c source code [linux-5.3.1/lib/ratelimit.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/lib/ratelimit.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>linux-5.3.1</a>/<a href='./'>lib</a>/<a href='ratelimit.c.html'>ratelimit.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0-only</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * ratelimit.c - Do something with rate limit.</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * Isolated from kernel/printk.c by Dave Young &lt;hidave.darkstar@gmail.com&gt;</i></td></tr>
+<tr><th id="6">6</th><td><i> *</i></td></tr>
+<tr><th id="7">7</th><td><i> * 2008-05-01 rewrite the function and use a ratelimit_state data struct as</i></td></tr>
+<tr><th id="8">8</th><td><i> * parameter. Now every user can use their own standalone ratelimit_state.</i></td></tr>
+<tr><th id="9">9</th><td><i> */</i></td></tr>
+<tr><th id="10">10</th><td></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../include/linux/ratelimit.h.html">&lt;linux/ratelimit.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="../include/linux/jiffies.h.html">&lt;linux/jiffies.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="../include/linux/export.h.html">&lt;linux/export.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td></td></tr>
+<tr><th id="15">15</th><td><i>/*</i></td></tr>
+<tr><th id="16">16</th><td><i> * __ratelimit - rate limiting</i></td></tr>
+<tr><th id="17">17</th><td><i> * @rs: ratelimit_state data</i></td></tr>
+<tr><th id="18">18</th><td><i> * @func: name of calling function</i></td></tr>
+<tr><th id="19">19</th><td><i> *</i></td></tr>
+<tr><th id="20">20</th><td><i> * This enforces a rate limit: not more than @rs-&gt;burst callbacks</i></td></tr>
+<tr><th id="21">21</th><td><i> * in every @rs-&gt;interval</i></td></tr>
+<tr><th id="22">22</th><td><i> *</i></td></tr>
+<tr><th id="23">23</th><td><i> * RETURNS:</i></td></tr>
+<tr><th id="24">24</th><td><i> * 0 means callbacks will be suppressed.</i></td></tr>
+<tr><th id="25">25</th><td><i> * 1 means go ahead and do it.</i></td></tr>
+<tr><th id="26">26</th><td><i> */</i></td></tr>
+<tr><th id="27">27</th><td><em>int</em> <dfn class="decl def fn" id="___ratelimit" title='___ratelimit' data-ref="___ratelimit" data-ref-filename="___ratelimit">___ratelimit</dfn>(<b>struct</b> <a class="type" href="../include/linux/ratelimit.h.html#ratelimit_state" title='ratelimit_state' data-ref="ratelimit_state" data-ref-filename="ratelimit_state">ratelimit_state</a> *<dfn class="local col1 decl" id="1rs" title='rs' data-type='struct ratelimit_state *' data-ref="1rs" data-ref-filename="1rs">rs</dfn>, <em>const</em> <em>char</em> *<dfn class="local col2 decl" id="2func" title='func' data-type='const char *' data-ref="2func" data-ref-filename="2func">func</dfn>)</td></tr>
+<tr><th id="28">28</th><td>{</td></tr>
+<tr><th id="29">29</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col3 decl" id="3flags" title='flags' data-type='unsigned long' data-ref="3flags" data-ref-filename="3flags">flags</dfn>;</td></tr>
+<tr><th id="30">30</th><td>	<em>int</em> <dfn class="local col4 decl" id="4ret" title='ret' data-type='int' data-ref="4ret" data-ref-filename="4ret">ret</dfn>;</td></tr>
+<tr><th id="31">31</th><td></td></tr>
+<tr><th id="32">32</th><td>	<b>if</b> (!<a class="local col1 ref" href="#1rs" title='rs' data-ref="1rs" data-ref-filename="1rs">rs</a>-&gt;<a class="ref field" href="../include/linux/ratelimit.h.html#ratelimit_state::interval" title='ratelimit_state::interval' data-ref="ratelimit_state::interval" data-ref-filename="ratelimit_state..interval">interval</a>)</td></tr>
+<tr><th id="33">33</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="34">34</th><td></td></tr>
+<tr><th id="35">35</th><td>	<i>/*</i></td></tr>
+<tr><th id="36">36</th><td><i>	 * If we contend on this state's lock then almost</i></td></tr>
+<tr><th id="37">37</th><td><i>	 * by definition we are too busy to print a message,</i></td></tr>
+<tr><th id="38">38</th><td><i>	 * in addition to the one that will be printed by</i></td></tr>
+<tr><th id="39">39</th><td><i>	 * the entity that is holding the lock already:</i></td></tr>
+<tr><th id="40">40</th><td><i>	 */</i></td></tr>
+<tr><th id="41">41</th><td>	<b>if</b> (!<a class="macro" href="../include/linux/spinlock.h.html#302" title="({ do { do { ({ unsigned long __dummy; typeof(flags) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }); flags = arch_local_irq_save(); } while (0); } while (0); (_raw_spin_trylock(&amp;rs-&gt;lock)) ? 1 : ({ do { do { ({ unsigned long __dummy; typeof(flags) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }); arch_local_irq_restore(flags); } while (0); } while (0); 0; }); })" data-ref="_M/raw_spin_trylock_irqsave">raw_spin_trylock_irqsave</a>(&amp;<a class="local col1 ref" href="#1rs" title='rs' data-ref="1rs" data-ref-filename="1rs">rs</a>-&gt;<a class="ref field" href="../include/linux/ratelimit.h.html#ratelimit_state::lock" title='ratelimit_state::lock' data-ref="ratelimit_state::lock" data-ref-filename="ratelimit_state..lock">lock</a>, <a class="local col3 ref" href="#3flags" title='flags' data-ref="3flags" data-ref-filename="3flags">flags</a>))</td></tr>
+<tr><th id="42">42</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="43">43</th><td></td></tr>
+<tr><th id="44">44</th><td>	<b>if</b> (!<a class="local col1 ref" href="#1rs" title='rs' data-ref="1rs" data-ref-filename="1rs">rs</a>-&gt;<a class="ref field" href="../include/linux/ratelimit.h.html#ratelimit_state::begin" title='ratelimit_state::begin' data-ref="ratelimit_state::begin" data-ref-filename="ratelimit_state..begin">begin</a>)</td></tr>
+<tr><th id="45">45</th><td>		<a class="local col1 ref" href="#1rs" title='rs' data-ref="1rs" data-ref-filename="1rs">rs</a>-&gt;<a class="ref field" href="../include/linux/ratelimit.h.html#ratelimit_state::begin" title='ratelimit_state::begin' data-ref="ratelimit_state::begin" data-ref-filename="ratelimit_state..begin">begin</a> = <a class="ref" href="../include/linux/jiffies.h.html#jiffies" title='jiffies' data-ref="jiffies" data-ref-filename="jiffies">jiffies</a>;</td></tr>
+<tr><th id="46">46</th><td></td></tr>
+<tr><th id="47">47</th><td>	<b>if</b> (<a class="macro" href="../include/linux/jiffies.h.html#155" title="(({ unsigned long __dummy; typeof(jiffies) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }) &amp;&amp; ({ unsigned long __dummy; typeof(rs-&gt;begin + rs-&gt;interval) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }) &amp;&amp; ((long)((rs-&gt;begin + rs-&gt;interval) - (jiffies)) &lt; 0))" data-ref="_M/time_is_before_jiffies">time_is_before_jiffies</a>(<a class="local col1 ref" href="#1rs" title='rs' data-ref="1rs" data-ref-filename="1rs">rs</a>-&gt;<a class="ref field" href="../include/linux/ratelimit.h.html#ratelimit_state::begin" title='ratelimit_state::begin' data-ref="ratelimit_state::begin" data-ref-filename="ratelimit_state..begin">begin</a> + <a class="local col1 ref" href="#1rs" title='rs' data-ref="1rs" data-ref-filename="1rs">rs</a>-&gt;<a class="ref field" href="../include/linux/ratelimit.h.html#ratelimit_state::interval" title='ratelimit_state::interval' data-ref="ratelimit_state::interval" data-ref-filename="ratelimit_state..interval">interval</a>)) {</td></tr>
+<tr><th id="48">48</th><td>		<b>if</b> (<a class="local col1 ref" href="#1rs" title='rs' data-ref="1rs" data-ref-filename="1rs">rs</a>-&gt;<a class="ref field" href="../include/linux/ratelimit.h.html#ratelimit_state::missed" title='ratelimit_state::missed' data-ref="ratelimit_state::missed" data-ref-filename="ratelimit_state..missed">missed</a>) {</td></tr>
+<tr><th id="49">49</th><td>			<b>if</b> (!(<a class="local col1 ref" href="#1rs" title='rs' data-ref="1rs" data-ref-filename="1rs">rs</a>-&gt;<a class="ref field" href="../include/linux/ratelimit.h.html#ratelimit_state::flags" title='ratelimit_state::flags' data-ref="ratelimit_state::flags" data-ref-filename="ratelimit_state..flags">flags</a> &amp; <a class="macro" href="../include/linux/ratelimit.h.html#13" title="((((1UL))) &lt;&lt; (0))" data-ref="_M/RATELIMIT_MSG_ON_RELEASE">RATELIMIT_MSG_ON_RELEASE</a>)) {</td></tr>
+<tr><th id="50">50</th><td>				<a class="ref fn" href="../include/linux/printk.h.html#printk_deferred" title='printk_deferred' data-ref="printk_deferred" data-ref-filename="printk_deferred">printk_deferred</a>(<a class="macro" href="../include/linux/kern_levels.h.html#12" title="&quot;\001&quot; &quot;4&quot;" data-ref="_M/KERN_WARNING">KERN_WARNING</a></td></tr>
+<tr><th id="51">51</th><td>						<q>"%s: %d callbacks suppressed\n"</q>,</td></tr>
+<tr><th id="52">52</th><td>						<a class="local col2 ref" href="#2func" title='func' data-ref="2func" data-ref-filename="2func">func</a>, <a class="local col1 ref" href="#1rs" title='rs' data-ref="1rs" data-ref-filename="1rs">rs</a>-&gt;<a class="ref field" href="../include/linux/ratelimit.h.html#ratelimit_state::missed" title='ratelimit_state::missed' data-ref="ratelimit_state::missed" data-ref-filename="ratelimit_state..missed">missed</a>);</td></tr>
+<tr><th id="53">53</th><td>				<a class="local col1 ref" href="#1rs" title='rs' data-ref="1rs" data-ref-filename="1rs">rs</a>-&gt;<a class="ref field" href="../include/linux/ratelimit.h.html#ratelimit_state::missed" title='ratelimit_state::missed' data-ref="ratelimit_state::missed" data-ref-filename="ratelimit_state..missed">missed</a> = <var>0</var>;</td></tr>
+<tr><th id="54">54</th><td>			}</td></tr>
+<tr><th id="55">55</th><td>		}</td></tr>
+<tr><th id="56">56</th><td>		<a class="local col1 ref" href="#1rs" title='rs' data-ref="1rs" data-ref-filename="1rs">rs</a>-&gt;<a class="ref field" href="../include/linux/ratelimit.h.html#ratelimit_state::begin" title='ratelimit_state::begin' data-ref="ratelimit_state::begin" data-ref-filename="ratelimit_state..begin">begin</a>   = <a class="ref" href="../include/linux/jiffies.h.html#jiffies" title='jiffies' data-ref="jiffies" data-ref-filename="jiffies">jiffies</a>;</td></tr>
+<tr><th id="57">57</th><td>		<a class="local col1 ref" href="#1rs" title='rs' data-ref="1rs" data-ref-filename="1rs">rs</a>-&gt;<a class="ref field" href="../include/linux/ratelimit.h.html#ratelimit_state::printed" title='ratelimit_state::printed' data-ref="ratelimit_state::printed" data-ref-filename="ratelimit_state..printed">printed</a> = <var>0</var>;</td></tr>
+<tr><th id="58">58</th><td>	}</td></tr>
+<tr><th id="59">59</th><td>	<b>if</b> (<a class="local col1 ref" href="#1rs" title='rs' data-ref="1rs" data-ref-filename="1rs">rs</a>-&gt;<a class="ref field" href="../include/linux/ratelimit.h.html#ratelimit_state::burst" title='ratelimit_state::burst' data-ref="ratelimit_state::burst" data-ref-filename="ratelimit_state..burst">burst</a> &amp;&amp; <a class="local col1 ref" href="#1rs" title='rs' data-ref="1rs" data-ref-filename="1rs">rs</a>-&gt;<a class="ref field" href="../include/linux/ratelimit.h.html#ratelimit_state::burst" title='ratelimit_state::burst' data-ref="ratelimit_state::burst" data-ref-filename="ratelimit_state..burst">burst</a> &gt; <a class="local col1 ref" href="#1rs" title='rs' data-ref="1rs" data-ref-filename="1rs">rs</a>-&gt;<a class="ref field" href="../include/linux/ratelimit.h.html#ratelimit_state::printed" title='ratelimit_state::printed' data-ref="ratelimit_state::printed" data-ref-filename="ratelimit_state..printed">printed</a>) {</td></tr>
+<tr><th id="60">60</th><td>		<a class="local col1 ref" href="#1rs" title='rs' data-ref="1rs" data-ref-filename="1rs">rs</a>-&gt;<a class="ref field" href="../include/linux/ratelimit.h.html#ratelimit_state::printed" title='ratelimit_state::printed' data-ref="ratelimit_state::printed" data-ref-filename="ratelimit_state..printed">printed</a>++;</td></tr>
+<tr><th id="61">61</th><td>		<a class="local col4 ref" href="#4ret" title='ret' data-ref="4ret" data-ref-filename="4ret">ret</a> = <var>1</var>;</td></tr>
+<tr><th id="62">62</th><td>	} <b>else</b> {</td></tr>
+<tr><th id="63">63</th><td>		<a class="local col1 ref" href="#1rs" title='rs' data-ref="1rs" data-ref-filename="1rs">rs</a>-&gt;<a class="ref field" href="../include/linux/ratelimit.h.html#ratelimit_state::missed" title='ratelimit_state::missed' data-ref="ratelimit_state::missed" data-ref-filename="ratelimit_state..missed">missed</a>++;</td></tr>
+<tr><th id="64">64</th><td>		<a class="local col4 ref" href="#4ret" title='ret' data-ref="4ret" data-ref-filename="4ret">ret</a> = <var>0</var>;</td></tr>
+<tr><th id="65">65</th><td>	}</td></tr>
+<tr><th id="66">66</th><td>	<a class="macro" href="../include/linux/spinlock.h.html#285" title="do { ({ unsigned long __dummy; typeof(flags) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }); _raw_spin_unlock_irqrestore(&amp;rs-&gt;lock, flags); } while (0)" data-ref="_M/raw_spin_unlock_irqrestore">raw_spin_unlock_irqrestore</a>(&amp;<a class="local col1 ref" href="#1rs" title='rs' data-ref="1rs" data-ref-filename="1rs">rs</a>-&gt;<a class="ref field" href="../include/linux/ratelimit.h.html#ratelimit_state::lock" title='ratelimit_state::lock' data-ref="ratelimit_state::lock" data-ref-filename="ratelimit_state..lock">lock</a>, <a class="local col3 ref" href="#3flags" title='flags' data-ref="3flags" data-ref-filename="3flags">flags</a>);</td></tr>
+<tr><th id="67">67</th><td></td></tr>
+<tr><th id="68">68</th><td>	<b>return</b> <a class="local col4 ref" href="#4ret" title='ret' data-ref="4ret" data-ref-filename="4ret">ret</a>;</td></tr>
+<tr><th id="69">69</th><td>}</td></tr>
+<tr><th id="70">70</th><td><a class="macro" href="../include/linux/export.h.html#123" title="extern typeof(___ratelimit) ___ratelimit; static const char __kstrtab____ratelimit[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;___ratelimit&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable____ratelimit70 = (void *)&amp;___ratelimit; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;&quot; &quot;+&quot; &quot;___ratelimit&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;___ratelimit&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;___ratelimit&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;___ratelimit&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL">EXPORT_SYMBOL</a>(<a class="decl fn" href="#___ratelimit" title='___ratelimit' data-ref="___ratelimit" data-ref-filename="___ratelimit"><a class="ref fn" href="#___ratelimit" title='___ratelimit' data-ref="___ratelimit" data-ref-filename="___ratelimit"><a class="ref fn" href="#___ratelimit" title='___ratelimit' data-ref="___ratelimit" data-ref-filename="___ratelimit">___ratelimit</a></a></a>);</td></tr>
+<tr><th id="71">71</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

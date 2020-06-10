@@ -1,0 +1,174 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>reboot.S source code [linux-5.3.1/arch/x86/realmode/rm/reboot.S] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/arch/x86/realmode/rm/reboot.S'; var root_path = '../../../../..'; var data_path = '../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../..'>linux-5.3.1</a>/<a href='../../..'>arch</a>/<a href='../..'>x86</a>/<a href='..'>realmode</a>/<a href='./'>rm</a>/<a href='reboot.S.html'>reboot.S</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0 */</i></td></tr>
+<tr><th id="2">2</th><td><u>#include <a href="../../../../include/linux/linkage.h.html">&lt;linux/linkage.h&gt;</a></u></td></tr>
+<tr><th id="3">3</th><td><u>#include <a href="../../include/asm/segment.h.html">&lt;asm/segment.h&gt;</a></u></td></tr>
+<tr><th id="4">4</th><td><u>#include <a href="../../include/asm/page_types.h.html">&lt;asm/page_types.h&gt;</a></u></td></tr>
+<tr><th id="5">5</th><td><u>#include <a href="../../include/asm/processor-flags.h.html">&lt;asm/processor-flags.h&gt;</a></u></td></tr>
+<tr><th id="6">6</th><td><u>#include <a href="../../include/asm/msr-index.h.html">&lt;asm/msr-index.h&gt;</a></u></td></tr>
+<tr><th id="7">7</th><td><u>#include <a href="realmode.h.html">"realmode.h"</a></u></td></tr>
+<tr><th id="8">8</th><td></td></tr>
+<tr><th id="9">9</th><td><i>/*</i></td></tr>
+<tr><th id="10">10</th><td><i> * The following code and data reboots the machine by switching to real</i></td></tr>
+<tr><th id="11">11</th><td><i> * mode and jumping to the BIOS reset entry point, as if the CPU has</i></td></tr>
+<tr><th id="12">12</th><td><i> * really been reset.  The previous version asked the keyboard</i></td></tr>
+<tr><th id="13">13</th><td><i> * controller to pulse the CPU reset line, which is more thorough, but</i></td></tr>
+<tr><th id="14">14</th><td><i> * doesn't work with at least one type of 486 motherboard.  It is easy</i></td></tr>
+<tr><th id="15">15</th><td><i> * to stop this code working; hence the copious comments.</i></td></tr>
+<tr><th id="16">16</th><td><i> *</i></td></tr>
+<tr><th id="17">17</th><td><i> * This code is called with the restart type (0 = BIOS, 1 = APM) in</i></td></tr>
+<tr><th id="18">18</th><td><i> * the primary argument register (%eax for 32 bit, %edi for 64 bit).</i></td></tr>
+<tr><th id="19">19</th><td><i> */</i></td></tr>
+<tr><th id="20">20</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>section <q>".text32"</q>, <q>"ax"</q></td></tr>
+<tr><th id="21">21</th><td>	.code32</td></tr>
+<tr><th id="22">22</th><td><a class="macro" href="../../../../include/linux/linkage.h.html#89" title=".globl machine_real_restart_asm ; .p2align 4, 0x90 ; machine_real_restart_asm:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="machine_real_restart_asm" title='machine_real_restart_asm' data-ref="machine_real_restart_asm" data-ref-filename="machine_real_restart_asm">machine_real_restart_asm</dfn></span>)</td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td><u>#<span data-ppcond="24">ifdef</span> <a class="macro" href="../../../../include/generated/autoconf.h.html#961" data-ref="_M/CONFIG_X86_64">CONFIG_X86_64</a></u></td></tr>
+<tr><th id="25">25</th><td>	<i>/* Switch to trampoline GDT as it is guaranteed &lt; 4 GiB */</i></td></tr>
+<tr><th id="26">26</th><td>	<span class='error' title="unknown type name &apos;movl&apos;">movl</span>	<span class='error' title="expected identifier or &apos;(&apos;">$</span><a class="macro" href="../../include/asm/segment.h.html#204" title="(3*8)" data-ref="_M/__KERNEL_DS">__KERNEL_DS</a>, %eax</td></tr>
+<tr><th id="27">27</th><td>	movl	%eax, %ds</td></tr>
+<tr><th id="28">28</th><td>	lgdtl	pa_tr_gdt</td></tr>
+<tr><th id="29">29</th><td></td></tr>
+<tr><th id="30">30</th><td>	<i>/* Disable paging to drop us out of long mode */</i></td></tr>
+<tr><th id="31">31</th><td>	movl	%cr0, %eax</td></tr>
+<tr><th id="32">32</th><td>	andl	$~<a class="macro" href="../../include/uapi/asm/processor-flags.h.html#72" title="((1) &lt;&lt; (31))" data-ref="_M/X86_CR0_PG">X86_CR0_PG</a>, %eax</td></tr>
+<tr><th id="33">33</th><td>	movl	%eax, %cr0</td></tr>
+<tr><th id="34">34</th><td>	ljmpl	$<a class="macro" href="../../include/asm/segment.h.html#202" title="(1*8)" data-ref="_M/__KERNEL32_CS">__KERNEL32_CS</a>, $pa_machine_real_restart_paging_off</td></tr>
+<tr><th id="35">35</th><td></td></tr>
+<tr><th id="36">36</th><td><a class="macro" href="../../include/asm/linkage.h.html#16" title=".globl machine_real_restart_paging_off; machine_real_restart_paging_off:" data-ref="_M/GLOBAL">GLOBAL</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="machine_real_restart_paging_off" title='machine_real_restart_paging_off' data-ref="machine_real_restart_paging_off" data-ref-filename="machine_real_restart_paging_off">machine_real_restart_paging_off</dfn></span>)</td></tr>
+<tr><th id="37">37</th><td>	<span class='error' title="unknown type name &apos;xorl&apos;">xorl</span>	<span class='error' title="expected identifier or &apos;(&apos;">%</span>eax, %eax</td></tr>
+<tr><th id="38">38</th><td>	xorl	%edx, %edx</td></tr>
+<tr><th id="39">39</th><td>	movl	$<a class="macro" href="../../include/asm/msr-index.h.html#15" title="0xc0000080" data-ref="_M/MSR_EFER">MSR_EFER</a>, %ecx</td></tr>
+<tr><th id="40">40</th><td>	wrmsr</td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td>	movl	%edi, %eax</td></tr>
+<tr><th id="43">43</th><td>	</td></tr>
+<tr><th id="44">44</th><td><u>#<span data-ppcond="24">endif</span> /* CONFIG_X86_64 */</u></td></tr>
+<tr><th id="45">45</th><td>	</td></tr>
+<tr><th id="46">46</th><td>	<i>/* Set up the IDT for real mode. */</i></td></tr>
+<tr><th id="47">47</th><td>	lidtl	pa_machine_real_restart_idt</td></tr>
+<tr><th id="48">48</th><td></td></tr>
+<tr><th id="49">49</th><td>	<i>/*</i></td></tr>
+<tr><th id="50">50</th><td><i>	 * Set up a GDT from which we can load segment descriptors for real</i></td></tr>
+<tr><th id="51">51</th><td><i>	 * mode.  The GDT is not used in real mode; it is just needed here to</i></td></tr>
+<tr><th id="52">52</th><td><i>	 * prepare the descriptors.</i></td></tr>
+<tr><th id="53">53</th><td><i>	 */</i></td></tr>
+<tr><th id="54">54</th><td>	lgdtl	pa_machine_real_restart_gdt</td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td>	<i>/*</i></td></tr>
+<tr><th id="57">57</th><td><i>	 * Load the data segment registers with 16-bit compatible values</i></td></tr>
+<tr><th id="58">58</th><td><i>	 */</i></td></tr>
+<tr><th id="59">59</th><td>	movl	$<var>16</var>, %ecx</td></tr>
+<tr><th id="60">60</th><td>	movl	%ecx, %ds</td></tr>
+<tr><th id="61">61</th><td>	movl	%ecx, %es</td></tr>
+<tr><th id="62">62</th><td>	movl	%ecx, %fs</td></tr>
+<tr><th id="63">63</th><td>	movl	%ecx, %gs</td></tr>
+<tr><th id="64">64</th><td>	movl	%ecx, %ss</td></tr>
+<tr><th id="65">65</th><td>	ljmpw	$<var>8</var>, $<var>1f</var></td></tr>
+<tr><th id="66">66</th><td></td></tr>
+<tr><th id="67">67</th><td><i>/*</i></td></tr>
+<tr><th id="68">68</th><td><i> * This is 16-bit protected mode code to disable paging and the cache,</i></td></tr>
+<tr><th id="69">69</th><td><i> * switch to real mode and jump to the BIOS reset code.</i></td></tr>
+<tr><th id="70">70</th><td><i> *</i></td></tr>
+<tr><th id="71">71</th><td><i> * The instruction that switches to real mode by writing to CR0 must be</i></td></tr>
+<tr><th id="72">72</th><td><i> * followed immediately by a far jump instruction, which set CS to a</i></td></tr>
+<tr><th id="73">73</th><td><i> * valid value for real mode, and flushes the prefetch queue to avoid</i></td></tr>
+<tr><th id="74">74</th><td><i> * running instructions that have already been decoded in protected</i></td></tr>
+<tr><th id="75">75</th><td><i> * mode.</i></td></tr>
+<tr><th id="76">76</th><td><i> *</i></td></tr>
+<tr><th id="77">77</th><td><i> * Clears all the flags except ET, especially PG (paging), PE</i></td></tr>
+<tr><th id="78">78</th><td><i> * (protected-mode enable) and TS (task switch for coprocessor state</i></td></tr>
+<tr><th id="79">79</th><td><i> * save).  Flushes the TLB after paging has been disabled.  Sets CD and</i></td></tr>
+<tr><th id="80">80</th><td><i> * NW, to disable the cache on a 486, and invalidates the cache.  This</i></td></tr>
+<tr><th id="81">81</th><td><i> * is more like the state of a 486 after reset.  I don't know if</i></td></tr>
+<tr><th id="82">82</th><td><i> * something else should be done for other chips.</i></td></tr>
+<tr><th id="83">83</th><td><i> *</i></td></tr>
+<tr><th id="84">84</th><td><i> * More could be done here to set up the registers as if a CPU reset had</i></td></tr>
+<tr><th id="85">85</th><td><i> * occurred; hopefully real BIOSs don't assume much.  This is not the</i></td></tr>
+<tr><th id="86">86</th><td><i> * actual BIOS entry point, anyway (that is at 0xfffffff0).</i></td></tr>
+<tr><th id="87">87</th><td><i> *</i></td></tr>
+<tr><th id="88">88</th><td><i> * Most of this work is probably excessive, but it is what is tested.</i></td></tr>
+<tr><th id="89">89</th><td><i> */</i></td></tr>
+<tr><th id="90">90</th><td>	.text</td></tr>
+<tr><th id="91">91</th><td>	.code16</td></tr>
+<tr><th id="92">92</th><td></td></tr>
+<tr><th id="93">93</th><td>	.balign	<var>16</var></td></tr>
+<tr><th id="94">94</th><td>machine_real_restart_asm16:</td></tr>
+<tr><th id="95">95</th><td><var>1</var>:</td></tr>
+<tr><th id="96">96</th><td>	xorl	%ecx, %ecx</td></tr>
+<tr><th id="97">97</th><td>	movl	%cr0, %edx</td></tr>
+<tr><th id="98">98</th><td>	andl	$<var>0x00000011</var>, %edx</td></tr>
+<tr><th id="99">99</th><td>	orl	$<var>0x60000000</var>, %edx</td></tr>
+<tr><th id="100">100</th><td>	movl	%edx, %cr0</td></tr>
+<tr><th id="101">101</th><td>	movl	%ecx, %cr3</td></tr>
+<tr><th id="102">102</th><td>	movl	%cr0, %edx</td></tr>
+<tr><th id="103">103</th><td>	testl	$<var>0x60000000</var>, %edx	<i>/* If no cache bits -&gt; no wbinvd */</i></td></tr>
+<tr><th id="104">104</th><td>	jz	<var>2f</var></td></tr>
+<tr><th id="105">105</th><td>	wbinvd</td></tr>
+<tr><th id="106">106</th><td><var>2</var>:</td></tr>
+<tr><th id="107">107</th><td>	andb	$<var>0x10</var>, %dl</td></tr>
+<tr><th id="108">108</th><td>	movl	%edx, %cr0</td></tr>
+<tr><th id="109">109</th><td>	<a class="macro" href="realmode.h.html#13" title=".byte 0xea ; .word (3f), real_mode_seg" data-ref="_M/LJMPW_RM">LJMPW_RM</a>(<var>3f</var>)</td></tr>
+<tr><th id="110">110</th><td><var>3</var>:</td></tr>
+<tr><th id="111">111</th><td>	andw	%ax, %ax</td></tr>
+<tr><th id="112">112</th><td>	jz	bios</td></tr>
+<tr><th id="113">113</th><td></td></tr>
+<tr><th id="114">114</th><td>apm:</td></tr>
+<tr><th id="115">115</th><td>	movw	$<var>0x1000</var>, %ax</td></tr>
+<tr><th id="116">116</th><td>	movw	%ax, %ss</td></tr>
+<tr><th id="117">117</th><td>	movw	$<var>0xf000</var>, %sp</td></tr>
+<tr><th id="118">118</th><td>	movw	$<var>0x5307</var>, %ax</td></tr>
+<tr><th id="119">119</th><td>	movw	$<var>0x0001</var>, %bx</td></tr>
+<tr><th id="120">120</th><td>	movw	$<var>0x0003</var>, %cx</td></tr>
+<tr><th id="121">121</th><td>	<em>int</em>	$<var>0x15</var></td></tr>
+<tr><th id="122">122</th><td>	<i>/* This should never return... */</i></td></tr>
+<tr><th id="123">123</th><td></td></tr>
+<tr><th id="124">124</th><td>bios:</td></tr>
+<tr><th id="125">125</th><td>	ljmpw	$<var>0xf000</var>, $<var>0xfff0</var></td></tr>
+<tr><th id="126">126</th><td></td></tr>
+<tr><th id="127">127</th><td>	.section <q>".rodata"</q>, <q>"a"</q></td></tr>
+<tr><th id="128">128</th><td></td></tr>
+<tr><th id="129">129</th><td>	.balign	<var>16</var></td></tr>
+<tr><th id="130">130</th><td><a class="macro" href="../../include/asm/linkage.h.html#16" title=".globl machine_real_restart_idt; machine_real_restart_idt:" data-ref="_M/GLOBAL">GLOBAL</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="machine_real_restart_idt" title='machine_real_restart_idt' data-ref="machine_real_restart_idt" data-ref-filename="machine_real_restart_idt">machine_real_restart_idt</dfn></span>)</td></tr>
+<tr><th id="131">131</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>word	<var>0xffff</var>		<i>/* Length - real mode default value */</i></td></tr>
+<tr><th id="132">132</th><td>	.<em>long</em>	<var>0</var>		<i>/* Base - real mode default value */</i></td></tr>
+<tr><th id="133">133</th><td><a class="macro" href="../../../../include/linux/linkage.h.html#104" title=".size machine_real_restart_idt, .-machine_real_restart_idt" data-ref="_M/END">END</a>(machine_real_restart_idt)</td></tr>
+<tr><th id="134">134</th><td></td></tr>
+<tr><th id="135">135</th><td>	.balign	<var>16</var></td></tr>
+<tr><th id="136">136</th><td><a class="macro" href="../../include/asm/linkage.h.html#16" title=".globl machine_real_restart_gdt; machine_real_restart_gdt:" data-ref="_M/GLOBAL">GLOBAL</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="machine_real_restart_gdt" title='machine_real_restart_gdt' data-ref="machine_real_restart_gdt" data-ref-filename="machine_real_restart_gdt">machine_real_restart_gdt</dfn></span>)</td></tr>
+<tr><th id="137">137</th><td>	<i>/* Self-pointer */</i></td></tr>
+<tr><th id="138">138</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>word	<var>0xffff</var>		<i>/* Length - real mode default value */</i></td></tr>
+<tr><th id="139">139</th><td>	.<em>long</em>	pa_machine_real_restart_gdt</td></tr>
+<tr><th id="140">140</th><td>	.word	<var>0</var></td></tr>
+<tr><th id="141">141</th><td></td></tr>
+<tr><th id="142">142</th><td>	<i>/*</i></td></tr>
+<tr><th id="143">143</th><td><i>	 * 16-bit code segment pointing to real_mode_seg</i></td></tr>
+<tr><th id="144">144</th><td><i>	 * Selector value 8</i></td></tr>
+<tr><th id="145">145</th><td><i>	 */</i></td></tr>
+<tr><th id="146">146</th><td>	.word	<var>0xffff</var>		<i>/* Limit */</i></td></tr>
+<tr><th id="147">147</th><td>	.<em>long</em>	<var>0x9b000000</var> + pa_real_mode_base</td></tr>
+<tr><th id="148">148</th><td>	.word	<var>0</var></td></tr>
+<tr><th id="149">149</th><td></td></tr>
+<tr><th id="150">150</th><td>	<i>/*</i></td></tr>
+<tr><th id="151">151</th><td><i>	 * 16-bit data segment with the selector value 16 = 0x10 and</i></td></tr>
+<tr><th id="152">152</th><td><i>	 * base value 0x100; since this is consistent with real mode</i></td></tr>
+<tr><th id="153">153</th><td><i>	 * semantics we don't have to reload the segments once CR0.PE = 0.</i></td></tr>
+<tr><th id="154">154</th><td><i>	 */</i></td></tr>
+<tr><th id="155">155</th><td>	.quad	<a class="macro" href="../../include/asm/segment.h.html#12" title="((((0x100) &amp; 0xff000000) &lt;&lt; (56-24)) | (((0x0093) &amp; 0x0000f0ff) &lt;&lt; 40) | (((0xffff) &amp; 0x000f0000) &lt;&lt; (48-16)) | (((0x100) &amp; 0x00ffffff) &lt;&lt; 16) | (((0xffff) &amp; 0x0000ffff)))" data-ref="_M/GDT_ENTRY">GDT_ENTRY</a>(<var>0x0093</var>, <var>0x100</var>, <var>0xffff</var>)</td></tr>
+<tr><th id="156">156</th><td><a class="macro" href="../../../../include/linux/linkage.h.html#104" title=".size machine_real_restart_gdt, .-machine_real_restart_gdt" data-ref="_M/END">END</a>(machine_real_restart_gdt)</td></tr>
+<tr><th id="157">157</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

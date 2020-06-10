@@ -1,0 +1,839 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>kfifo.h source code [linux-5.3.1/include/linux/kfifo.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="__kfifo,kfifo,kfifo_rec_ptr_1,kfifo_rec_ptr_2 "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/include/linux/kfifo.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>include</a>/<a href='./'>linux</a>/<a href='kfifo.h.html'>kfifo.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0-or-later */</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * A generic kernel FIFO implementation</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * Copyright (C) 2013 Stefani Seibold &lt;stefani@seibold.net&gt;</i></td></tr>
+<tr><th id="6">6</th><td><i> */</i></td></tr>
+<tr><th id="7">7</th><td></td></tr>
+<tr><th id="8">8</th><td><u>#<span data-ppcond="8">ifndef</span> <span class="macro" data-ref="_M/_LINUX_KFIFO_H">_LINUX_KFIFO_H</span></u></td></tr>
+<tr><th id="9">9</th><td><u>#define <dfn class="macro" id="_M/_LINUX_KFIFO_H" data-ref="_M/_LINUX_KFIFO_H">_LINUX_KFIFO_H</dfn></u></td></tr>
+<tr><th id="10">10</th><td></td></tr>
+<tr><th id="11">11</th><td><i>/*</i></td></tr>
+<tr><th id="12">12</th><td><i> * How to porting drivers to the new generic FIFO API:</i></td></tr>
+<tr><th id="13">13</th><td><i> *</i></td></tr>
+<tr><th id="14">14</th><td><i> * - Modify the declaration of the "struct kfifo *" object into a</i></td></tr>
+<tr><th id="15">15</th><td><i> *   in-place "struct kfifo" object</i></td></tr>
+<tr><th id="16">16</th><td><i> * - Init the in-place object with kfifo_alloc() or kfifo_init()</i></td></tr>
+<tr><th id="17">17</th><td><i> *   Note: The address of the in-place "struct kfifo" object must be</i></td></tr>
+<tr><th id="18">18</th><td><i> *   passed as the first argument to this functions</i></td></tr>
+<tr><th id="19">19</th><td><i> * - Replace the use of __kfifo_put into kfifo_in and __kfifo_get</i></td></tr>
+<tr><th id="20">20</th><td><i> *   into kfifo_out</i></td></tr>
+<tr><th id="21">21</th><td><i> * - Replace the use of kfifo_put into kfifo_in_spinlocked and kfifo_get</i></td></tr>
+<tr><th id="22">22</th><td><i> *   into kfifo_out_spinlocked</i></td></tr>
+<tr><th id="23">23</th><td><i> *   Note: the spinlock pointer formerly passed to kfifo_init/kfifo_alloc</i></td></tr>
+<tr><th id="24">24</th><td><i> *   must be passed now to the kfifo_in_spinlocked and kfifo_out_spinlocked</i></td></tr>
+<tr><th id="25">25</th><td><i> *   as the last parameter</i></td></tr>
+<tr><th id="26">26</th><td><i> * - The formerly __kfifo_* functions are renamed into kfifo_*</i></td></tr>
+<tr><th id="27">27</th><td><i> */</i></td></tr>
+<tr><th id="28">28</th><td></td></tr>
+<tr><th id="29">29</th><td><i>/*</i></td></tr>
+<tr><th id="30">30</th><td><i> * Note about locking: There is no locking required until only one reader</i></td></tr>
+<tr><th id="31">31</th><td><i> * and one writer is using the fifo and no kfifo_reset() will be called.</i></td></tr>
+<tr><th id="32">32</th><td><i> * kfifo_reset_out() can be safely used, until it will be only called</i></td></tr>
+<tr><th id="33">33</th><td><i> * in the reader thread.</i></td></tr>
+<tr><th id="34">34</th><td><i> * For multiple writer and one reader there is only a need to lock the writer.</i></td></tr>
+<tr><th id="35">35</th><td><i> * And vice versa for only one writer and multiple reader there is only a need</i></td></tr>
+<tr><th id="36">36</th><td><i> * to lock the reader.</i></td></tr>
+<tr><th id="37">37</th><td><i> */</i></td></tr>
+<tr><th id="38">38</th><td></td></tr>
+<tr><th id="39">39</th><td><u>#include <a href="kernel.h.html">&lt;linux/kernel.h&gt;</a></u></td></tr>
+<tr><th id="40">40</th><td><u>#include <a href="spinlock.h.html">&lt;linux/spinlock.h&gt;</a></u></td></tr>
+<tr><th id="41">41</th><td><u>#include <a href="stddef.h.html">&lt;linux/stddef.h&gt;</a></u></td></tr>
+<tr><th id="42">42</th><td><u>#include <a href="scatterlist.h.html">&lt;linux/scatterlist.h&gt;</a></u></td></tr>
+<tr><th id="43">43</th><td></td></tr>
+<tr><th id="44">44</th><td><b>struct</b> <dfn class="type def" id="__kfifo" title='__kfifo' data-ref="__kfifo" data-ref-filename="__kfifo">__kfifo</dfn> {</td></tr>
+<tr><th id="45">45</th><td>	<em>unsigned</em> <em>int</em>	<dfn class="decl field" id="__kfifo::in" title='__kfifo::in' data-ref="__kfifo::in" data-ref-filename="__kfifo..in">in</dfn>;</td></tr>
+<tr><th id="46">46</th><td>	<em>unsigned</em> <em>int</em>	<dfn class="decl field" id="__kfifo::out" title='__kfifo::out' data-ref="__kfifo::out" data-ref-filename="__kfifo..out">out</dfn>;</td></tr>
+<tr><th id="47">47</th><td>	<em>unsigned</em> <em>int</em>	<dfn class="decl field" id="__kfifo::mask" title='__kfifo::mask' data-ref="__kfifo::mask" data-ref-filename="__kfifo..mask">mask</dfn>;</td></tr>
+<tr><th id="48">48</th><td>	<em>unsigned</em> <em>int</em>	<dfn class="decl field" id="__kfifo::esize" title='__kfifo::esize' data-ref="__kfifo::esize" data-ref-filename="__kfifo..esize">esize</dfn>;</td></tr>
+<tr><th id="49">49</th><td>	<em>void</em>		*<dfn class="decl field" id="__kfifo::data" title='__kfifo::data' data-ref="__kfifo::data" data-ref-filename="__kfifo..data">data</dfn>;</td></tr>
+<tr><th id="50">50</th><td>};</td></tr>
+<tr><th id="51">51</th><td></td></tr>
+<tr><th id="52">52</th><td><u>#define <dfn class="macro" id="_M/__STRUCT_KFIFO_COMMON" data-ref="_M/__STRUCT_KFIFO_COMMON">__STRUCT_KFIFO_COMMON</dfn>(datatype, recsize, ptrtype) \</u></td></tr>
+<tr><th id="53">53</th><td><u>	union { \</u></td></tr>
+<tr><th id="54">54</th><td><u>		struct <a class="type" href="#__kfifo" title='__kfifo' data-ref="__kfifo" data-ref-filename="__kfifo">__kfifo</a>	<dfn class="decl field" id="kfifo::(anonymous)::kfifo" title='kfifo::(anonymous union)::kfifo' data-ref="kfifo::(anonymous)::kfifo" data-ref-filename="kfifo..(anonymous)..kfifo"><dfn class="decl field" id="kfifo_rec_ptr_1::(anonymous)::kfifo" title='kfifo_rec_ptr_1::(anonymous union)::kfifo' data-ref="kfifo_rec_ptr_1::(anonymous)::kfifo" data-ref-filename="kfifo_rec_ptr_1..(anonymous)..kfifo"><dfn class="decl field" id="kfifo_rec_ptr_2::(anonymous)::kfifo" title='kfifo_rec_ptr_2::(anonymous union)::kfifo' data-ref="kfifo_rec_ptr_2::(anonymous)::kfifo" data-ref-filename="kfifo_rec_ptr_2..(anonymous)..kfifo">kfifo</dfn></dfn></dfn>; \</u></td></tr>
+<tr><th id="55">55</th><td><u>		datatype	*<dfn class="decl field" id="kfifo::(anonymous)::type" title='kfifo::(anonymous union)::type' data-ref="kfifo::(anonymous)::type" data-ref-filename="kfifo..(anonymous)..type"><dfn class="decl field" id="kfifo_rec_ptr_1::(anonymous)::type" title='kfifo_rec_ptr_1::(anonymous union)::type' data-ref="kfifo_rec_ptr_1::(anonymous)::type" data-ref-filename="kfifo_rec_ptr_1..(anonymous)..type"><dfn class="decl field" id="kfifo_rec_ptr_2::(anonymous)::type" title='kfifo_rec_ptr_2::(anonymous union)::type' data-ref="kfifo_rec_ptr_2::(anonymous)::type" data-ref-filename="kfifo_rec_ptr_2..(anonymous)..type">type</dfn></dfn></dfn>; \</u></td></tr>
+<tr><th id="56">56</th><td><u>		const datatype	*<dfn class="decl field" id="kfifo::(anonymous)::const_type" title='kfifo::(anonymous union)::const_type' data-ref="kfifo::(anonymous)::const_type" data-ref-filename="kfifo..(anonymous)..const_type"><dfn class="decl field" id="kfifo_rec_ptr_1::(anonymous)::const_type" title='kfifo_rec_ptr_1::(anonymous union)::const_type' data-ref="kfifo_rec_ptr_1::(anonymous)::const_type" data-ref-filename="kfifo_rec_ptr_1..(anonymous)..const_type"><dfn class="decl field" id="kfifo_rec_ptr_2::(anonymous)::const_type" title='kfifo_rec_ptr_2::(anonymous union)::const_type' data-ref="kfifo_rec_ptr_2::(anonymous)::const_type" data-ref-filename="kfifo_rec_ptr_2..(anonymous)..const_type">const_type</dfn></dfn></dfn>; \</u></td></tr>
+<tr><th id="57">57</th><td><u>		char		(*<dfn class="decl field" id="kfifo::(anonymous)::rectype" title='kfifo::(anonymous union)::rectype' data-ref="kfifo::(anonymous)::rectype" data-ref-filename="kfifo..(anonymous)..rectype"><dfn class="decl field" id="kfifo_rec_ptr_1::(anonymous)::rectype" title='kfifo_rec_ptr_1::(anonymous union)::rectype' data-ref="kfifo_rec_ptr_1::(anonymous)::rectype" data-ref-filename="kfifo_rec_ptr_1..(anonymous)..rectype"><dfn class="decl field" id="kfifo_rec_ptr_2::(anonymous)::rectype" title='kfifo_rec_ptr_2::(anonymous union)::rectype' data-ref="kfifo_rec_ptr_2::(anonymous)::rectype" data-ref-filename="kfifo_rec_ptr_2..(anonymous)..rectype">rectype</dfn></dfn></dfn>)[recsize]; \</u></td></tr>
+<tr><th id="58">58</th><td><u>		ptrtype		*<dfn class="decl field" id="kfifo::(anonymous)::ptr" title='kfifo::(anonymous union)::ptr' data-ref="kfifo::(anonymous)::ptr" data-ref-filename="kfifo..(anonymous)..ptr"><dfn class="decl field" id="kfifo_rec_ptr_1::(anonymous)::ptr" title='kfifo_rec_ptr_1::(anonymous union)::ptr' data-ref="kfifo_rec_ptr_1::(anonymous)::ptr" data-ref-filename="kfifo_rec_ptr_1..(anonymous)..ptr"><dfn class="decl field" id="kfifo_rec_ptr_2::(anonymous)::ptr" title='kfifo_rec_ptr_2::(anonymous union)::ptr' data-ref="kfifo_rec_ptr_2::(anonymous)::ptr" data-ref-filename="kfifo_rec_ptr_2..(anonymous)..ptr">ptr</dfn></dfn></dfn>; \</u></td></tr>
+<tr><th id="59">59</th><td><u>		ptrtype const	*<dfn class="decl field" id="kfifo::(anonymous)::ptr_const" title='kfifo::(anonymous union)::ptr_const' data-ref="kfifo::(anonymous)::ptr_const" data-ref-filename="kfifo..(anonymous)..ptr_const"><dfn class="decl field" id="kfifo_rec_ptr_1::(anonymous)::ptr_const" title='kfifo_rec_ptr_1::(anonymous union)::ptr_const' data-ref="kfifo_rec_ptr_1::(anonymous)::ptr_const" data-ref-filename="kfifo_rec_ptr_1..(anonymous)..ptr_const"><dfn class="decl field" id="kfifo_rec_ptr_2::(anonymous)::ptr_const" title='kfifo_rec_ptr_2::(anonymous union)::ptr_const' data-ref="kfifo_rec_ptr_2::(anonymous)::ptr_const" data-ref-filename="kfifo_rec_ptr_2..(anonymous)..ptr_const">ptr_const</dfn></dfn></dfn>; \</u></td></tr>
+<tr><th id="60">60</th><td><u>	}</u></td></tr>
+<tr><th id="61">61</th><td></td></tr>
+<tr><th id="62">62</th><td><u>#define <dfn class="macro" id="_M/__STRUCT_KFIFO" data-ref="_M/__STRUCT_KFIFO">__STRUCT_KFIFO</dfn>(type, size, recsize, ptrtype) \</u></td></tr>
+<tr><th id="63">63</th><td><u>{ \</u></td></tr>
+<tr><th id="64">64</th><td><u>	__STRUCT_KFIFO_COMMON(type, recsize, ptrtype); \</u></td></tr>
+<tr><th id="65">65</th><td><u>	type		buf[((size &lt; 2) || (size &amp; (size - 1))) ? -1 : size]; \</u></td></tr>
+<tr><th id="66">66</th><td><u>}</u></td></tr>
+<tr><th id="67">67</th><td></td></tr>
+<tr><th id="68">68</th><td><u>#define <dfn class="macro" id="_M/STRUCT_KFIFO" data-ref="_M/STRUCT_KFIFO">STRUCT_KFIFO</dfn>(type, size) \</u></td></tr>
+<tr><th id="69">69</th><td><u>	struct __STRUCT_KFIFO(type, size, 0, type)</u></td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td><u>#define <dfn class="macro" id="_M/__STRUCT_KFIFO_PTR" data-ref="_M/__STRUCT_KFIFO_PTR">__STRUCT_KFIFO_PTR</dfn>(type, recsize, ptrtype) \</u></td></tr>
+<tr><th id="72">72</th><td><u>{ \</u></td></tr>
+<tr><th id="73">73</th><td><u>	__STRUCT_KFIFO_COMMON(type, recsize, ptrtype); \</u></td></tr>
+<tr><th id="74">74</th><td><u>	type		<dfn class="decl field" id="kfifo::buf" title='kfifo::buf' data-ref="kfifo::buf" data-ref-filename="kfifo..buf"><dfn class="decl field" id="kfifo_rec_ptr_1::buf" title='kfifo_rec_ptr_1::buf' data-ref="kfifo_rec_ptr_1::buf" data-ref-filename="kfifo_rec_ptr_1..buf"><dfn class="decl field" id="kfifo_rec_ptr_2::buf" title='kfifo_rec_ptr_2::buf' data-ref="kfifo_rec_ptr_2::buf" data-ref-filename="kfifo_rec_ptr_2..buf">buf</dfn></dfn></dfn>[0]; \</u></td></tr>
+<tr><th id="75">75</th><td><u>}</u></td></tr>
+<tr><th id="76">76</th><td></td></tr>
+<tr><th id="77">77</th><td><u>#define <dfn class="macro" id="_M/STRUCT_KFIFO_PTR" data-ref="_M/STRUCT_KFIFO_PTR">STRUCT_KFIFO_PTR</dfn>(type) \</u></td></tr>
+<tr><th id="78">78</th><td><u>	struct __STRUCT_KFIFO_PTR(type, 0, type)</u></td></tr>
+<tr><th id="79">79</th><td></td></tr>
+<tr><th id="80">80</th><td><i>/*</i></td></tr>
+<tr><th id="81">81</th><td><i> * define compatibility "struct kfifo" for dynamic allocated fifos</i></td></tr>
+<tr><th id="82">82</th><td><i> */</i></td></tr>
+<tr><th id="83">83</th><td><b>struct</b> <dfn class="type def" id="kfifo" title='kfifo' data-ref="kfifo" data-ref-filename="kfifo">kfifo</dfn> <a class="macro" href="#71" title="{ union { struct __kfifo kfifo; unsigned char *type; const unsigned char *const_type; char (*rectype)[0]; void *ptr; void const *ptr_const; }; unsigned char buf[0]; }" data-ref="_M/__STRUCT_KFIFO_PTR">__STRUCT_KFIFO_PTR</a>(<em>unsigned</em> <em>char</em>, <var>0</var>, <em>void</em>);</td></tr>
+<tr><th id="84">84</th><td></td></tr>
+<tr><th id="85">85</th><td><u>#define <dfn class="macro" id="_M/STRUCT_KFIFO_REC_1" data-ref="_M/STRUCT_KFIFO_REC_1">STRUCT_KFIFO_REC_1</dfn>(size) \</u></td></tr>
+<tr><th id="86">86</th><td><u>	struct __STRUCT_KFIFO(unsigned char, size, 1, void)</u></td></tr>
+<tr><th id="87">87</th><td></td></tr>
+<tr><th id="88">88</th><td><u>#define <dfn class="macro" id="_M/STRUCT_KFIFO_REC_2" data-ref="_M/STRUCT_KFIFO_REC_2">STRUCT_KFIFO_REC_2</dfn>(size) \</u></td></tr>
+<tr><th id="89">89</th><td><u>	struct __STRUCT_KFIFO(unsigned char, size, 2, void)</u></td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td><i>/*</i></td></tr>
+<tr><th id="92">92</th><td><i> * define kfifo_rec types</i></td></tr>
+<tr><th id="93">93</th><td><i> */</i></td></tr>
+<tr><th id="94">94</th><td><b>struct</b> <dfn class="type def" id="kfifo_rec_ptr_1" title='kfifo_rec_ptr_1' data-ref="kfifo_rec_ptr_1" data-ref-filename="kfifo_rec_ptr_1">kfifo_rec_ptr_1</dfn> <a class="macro" href="#71" title="{ union { struct __kfifo kfifo; unsigned char *type; const unsigned char *const_type; char (*rectype)[1]; void *ptr; void const *ptr_const; }; unsigned char buf[0]; }" data-ref="_M/__STRUCT_KFIFO_PTR">__STRUCT_KFIFO_PTR</a>(<em>unsigned</em> <em>char</em>, <var>1</var>, <em>void</em>);</td></tr>
+<tr><th id="95">95</th><td><b>struct</b> <dfn class="type def" id="kfifo_rec_ptr_2" title='kfifo_rec_ptr_2' data-ref="kfifo_rec_ptr_2" data-ref-filename="kfifo_rec_ptr_2">kfifo_rec_ptr_2</dfn> <a class="macro" href="#71" title="{ union { struct __kfifo kfifo; unsigned char *type; const unsigned char *const_type; char (*rectype)[2]; void *ptr; void const *ptr_const; }; unsigned char buf[0]; }" data-ref="_M/__STRUCT_KFIFO_PTR">__STRUCT_KFIFO_PTR</a>(<em>unsigned</em> <em>char</em>, <var>2</var>, <em>void</em>);</td></tr>
+<tr><th id="96">96</th><td></td></tr>
+<tr><th id="97">97</th><td><i>/*</i></td></tr>
+<tr><th id="98">98</th><td><i> * helper macro to distinguish between real in place fifo where the fifo</i></td></tr>
+<tr><th id="99">99</th><td><i> * array is a part of the structure and the fifo type where the array is</i></td></tr>
+<tr><th id="100">100</th><td><i> * outside of the fifo structure.</i></td></tr>
+<tr><th id="101">101</th><td><i> */</i></td></tr>
+<tr><th id="102">102</th><td><u>#define	<dfn class="macro" id="_M/__is_kfifo_ptr" data-ref="_M/__is_kfifo_ptr">__is_kfifo_ptr</dfn>(fifo) \</u></td></tr>
+<tr><th id="103">103</th><td><u>	(sizeof(*fifo) == sizeof(STRUCT_KFIFO_PTR(typeof(*(fifo)-&gt;type))))</u></td></tr>
+<tr><th id="104">104</th><td></td></tr>
+<tr><th id="105">105</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="106">106</th><td><i class="doc"> * DECLARE_KFIFO_PTR - macro to declare a fifo pointer object</i></td></tr>
+<tr><th id="107">107</th><td><i class="doc"> *<span class="command"> @fifo</span>: name of the declared fifo</i></td></tr>
+<tr><th id="108">108</th><td><i class="doc"> *<span class="command"> @type</span>: type of the fifo elements</i></td></tr>
+<tr><th id="109">109</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="110">110</th><td><u>#define <dfn class="macro" id="_M/DECLARE_KFIFO_PTR" data-ref="_M/DECLARE_KFIFO_PTR">DECLARE_KFIFO_PTR</dfn>(fifo, type)	STRUCT_KFIFO_PTR(type) fifo</u></td></tr>
+<tr><th id="111">111</th><td></td></tr>
+<tr><th id="112">112</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="113">113</th><td><i class="doc"> * DECLARE_KFIFO - macro to declare a fifo object</i></td></tr>
+<tr><th id="114">114</th><td><i class="doc"> *<span class="command"> @fifo</span>: name of the declared fifo</i></td></tr>
+<tr><th id="115">115</th><td><i class="doc"> *<span class="command"> @type</span>: type of the fifo elements</i></td></tr>
+<tr><th id="116">116</th><td><i class="doc"> *<span class="command"> @size</span>: the number of elements in the fifo, this must be a power of 2</i></td></tr>
+<tr><th id="117">117</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="118">118</th><td><u>#define <dfn class="macro" id="_M/DECLARE_KFIFO" data-ref="_M/DECLARE_KFIFO">DECLARE_KFIFO</dfn>(fifo, type, size)	STRUCT_KFIFO(type, size) fifo</u></td></tr>
+<tr><th id="119">119</th><td></td></tr>
+<tr><th id="120">120</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="121">121</th><td><i class="doc"> * INIT_KFIFO - Initialize a fifo declared by DECLARE_KFIFO</i></td></tr>
+<tr><th id="122">122</th><td><i class="doc"> *<span class="command"> @fifo</span>: name of the declared fifo datatype</i></td></tr>
+<tr><th id="123">123</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="124">124</th><td><u>#define <dfn class="macro" id="_M/INIT_KFIFO" data-ref="_M/INIT_KFIFO">INIT_KFIFO</dfn>(fifo) \</u></td></tr>
+<tr><th id="125">125</th><td><u>(void)({ \</u></td></tr>
+<tr><th id="126">126</th><td><u>	typeof(&amp;(fifo)) __tmp = &amp;(fifo); \</u></td></tr>
+<tr><th id="127">127</th><td><u>	struct __kfifo *__kfifo = &amp;__tmp-&gt;kfifo; \</u></td></tr>
+<tr><th id="128">128</th><td><u>	__kfifo-&gt;in = 0; \</u></td></tr>
+<tr><th id="129">129</th><td><u>	__kfifo-&gt;out = 0; \</u></td></tr>
+<tr><th id="130">130</th><td><u>	__kfifo-&gt;mask = __is_kfifo_ptr(__tmp) ? 0 : ARRAY_SIZE(__tmp-&gt;buf) - 1;\</u></td></tr>
+<tr><th id="131">131</th><td><u>	__kfifo-&gt;esize = sizeof(*__tmp-&gt;buf); \</u></td></tr>
+<tr><th id="132">132</th><td><u>	__kfifo-&gt;data = __is_kfifo_ptr(__tmp) ?  NULL : __tmp-&gt;buf; \</u></td></tr>
+<tr><th id="133">133</th><td><u>})</u></td></tr>
+<tr><th id="134">134</th><td></td></tr>
+<tr><th id="135">135</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="136">136</th><td><i class="doc"> * DEFINE_KFIFO - macro to define and initialize a fifo</i></td></tr>
+<tr><th id="137">137</th><td><i class="doc"> *<span class="command"> @fifo</span>: name of the declared fifo datatype</i></td></tr>
+<tr><th id="138">138</th><td><i class="doc"> *<span class="command"> @type</span>: type of the fifo elements</i></td></tr>
+<tr><th id="139">139</th><td><i class="doc"> *<span class="command"> @size</span>: the number of elements in the fifo, this must be a power of 2</i></td></tr>
+<tr><th id="140">140</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="141">141</th><td><i class="doc"> * Note: the macro can be used for global and local fifo data type variables.</i></td></tr>
+<tr><th id="142">142</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="143">143</th><td><u>#define <dfn class="macro" id="_M/DEFINE_KFIFO" data-ref="_M/DEFINE_KFIFO">DEFINE_KFIFO</dfn>(fifo, type, size) \</u></td></tr>
+<tr><th id="144">144</th><td><u>	DECLARE_KFIFO(fifo, type, size) = \</u></td></tr>
+<tr><th id="145">145</th><td><u>	(typeof(fifo)) { \</u></td></tr>
+<tr><th id="146">146</th><td><u>		{ \</u></td></tr>
+<tr><th id="147">147</th><td><u>			{ \</u></td></tr>
+<tr><th id="148">148</th><td><u>			.in	= 0, \</u></td></tr>
+<tr><th id="149">149</th><td><u>			.out	= 0, \</u></td></tr>
+<tr><th id="150">150</th><td><u>			.mask	= __is_kfifo_ptr(&amp;(fifo)) ? \</u></td></tr>
+<tr><th id="151">151</th><td><u>				  0 : \</u></td></tr>
+<tr><th id="152">152</th><td><u>				  ARRAY_SIZE((fifo).buf) - 1, \</u></td></tr>
+<tr><th id="153">153</th><td><u>			.esize	= sizeof(*(fifo).buf), \</u></td></tr>
+<tr><th id="154">154</th><td><u>			.data	= __is_kfifo_ptr(&amp;(fifo)) ? \</u></td></tr>
+<tr><th id="155">155</th><td><u>				NULL : \</u></td></tr>
+<tr><th id="156">156</th><td><u>				(fifo).buf, \</u></td></tr>
+<tr><th id="157">157</th><td><u>			} \</u></td></tr>
+<tr><th id="158">158</th><td><u>		} \</u></td></tr>
+<tr><th id="159">159</th><td><u>	}</u></td></tr>
+<tr><th id="160">160</th><td></td></tr>
+<tr><th id="161">161</th><td></td></tr>
+<tr><th id="162">162</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>int</em> <a class="macro" href="compiler_types.h.html#108" title="__attribute__((__warn_unused_result__))" data-ref="_M/__must_check">__must_check</a></td></tr>
+<tr><th id="163">163</th><td><dfn class="decl def fn" id="__kfifo_uint_must_check_helper" title='__kfifo_uint_must_check_helper' data-ref="__kfifo_uint_must_check_helper" data-ref-filename="__kfifo_uint_must_check_helper">__kfifo_uint_must_check_helper</dfn>(<em>unsigned</em> <em>int</em> <dfn class="local col1 decl" id="1val" title='val' data-type='unsigned int' data-ref="1val" data-ref-filename="1val">val</dfn>)</td></tr>
+<tr><th id="164">164</th><td>{</td></tr>
+<tr><th id="165">165</th><td>	<b>return</b> <a class="local col1 ref" href="#1val" title='val' data-ref="1val" data-ref-filename="1val">val</a>;</td></tr>
+<tr><th id="166">166</th><td>}</td></tr>
+<tr><th id="167">167</th><td></td></tr>
+<tr><th id="168">168</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <a class="macro" href="compiler_types.h.html#108" title="__attribute__((__warn_unused_result__))" data-ref="_M/__must_check">__must_check</a></td></tr>
+<tr><th id="169">169</th><td><dfn class="decl def fn" id="__kfifo_int_must_check_helper" title='__kfifo_int_must_check_helper' data-ref="__kfifo_int_must_check_helper" data-ref-filename="__kfifo_int_must_check_helper">__kfifo_int_must_check_helper</dfn>(<em>int</em> <dfn class="local col2 decl" id="2val" title='val' data-type='int' data-ref="2val" data-ref-filename="2val">val</dfn>)</td></tr>
+<tr><th id="170">170</th><td>{</td></tr>
+<tr><th id="171">171</th><td>	<b>return</b> <a class="local col2 ref" href="#2val" title='val' data-ref="2val" data-ref-filename="2val">val</a>;</td></tr>
+<tr><th id="172">172</th><td>}</td></tr>
+<tr><th id="173">173</th><td></td></tr>
+<tr><th id="174">174</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="175">175</th><td><i class="doc"> * kfifo_initialized - Check if the fifo is initialized</i></td></tr>
+<tr><th id="176">176</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to check</i></td></tr>
+<tr><th id="177">177</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="178">178</th><td><i class="doc"> * Return %true if fifo is initialized, otherwise %false.</i></td></tr>
+<tr><th id="179">179</th><td><i class="doc"> * Assumes the fifo was 0 before.</i></td></tr>
+<tr><th id="180">180</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="181">181</th><td><u>#define <dfn class="macro" id="_M/kfifo_initialized" data-ref="_M/kfifo_initialized">kfifo_initialized</dfn>(fifo) ((fifo)-&gt;kfifo.mask)</u></td></tr>
+<tr><th id="182">182</th><td></td></tr>
+<tr><th id="183">183</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="184">184</th><td><i class="doc"> * kfifo_esize - returns the size of the element managed by the fifo</i></td></tr>
+<tr><th id="185">185</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="186">186</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="187">187</th><td><u>#define <dfn class="macro" id="_M/kfifo_esize" data-ref="_M/kfifo_esize">kfifo_esize</dfn>(fifo)	((fifo)-&gt;kfifo.esize)</u></td></tr>
+<tr><th id="188">188</th><td></td></tr>
+<tr><th id="189">189</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="190">190</th><td><i class="doc"> * kfifo_recsize - returns the size of the record length field</i></td></tr>
+<tr><th id="191">191</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="192">192</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="193">193</th><td><u>#define <dfn class="macro" id="_M/kfifo_recsize" data-ref="_M/kfifo_recsize">kfifo_recsize</dfn>(fifo)	(sizeof(*(fifo)-&gt;rectype))</u></td></tr>
+<tr><th id="194">194</th><td></td></tr>
+<tr><th id="195">195</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="196">196</th><td><i class="doc"> * kfifo_size - returns the size of the fifo in elements</i></td></tr>
+<tr><th id="197">197</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="198">198</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="199">199</th><td><u>#define <dfn class="macro" id="_M/kfifo_size" data-ref="_M/kfifo_size">kfifo_size</dfn>(fifo)	((fifo)-&gt;kfifo.mask + 1)</u></td></tr>
+<tr><th id="200">200</th><td></td></tr>
+<tr><th id="201">201</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="202">202</th><td><i class="doc"> * kfifo_reset - removes the entire fifo content</i></td></tr>
+<tr><th id="203">203</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="204">204</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="205">205</th><td><i class="doc"> * Note: usage of kfifo_reset() is dangerous. It should be only called when the</i></td></tr>
+<tr><th id="206">206</th><td><i class="doc"> * fifo is exclusived locked or when it is secured that no other thread is</i></td></tr>
+<tr><th id="207">207</th><td><i class="doc"> * accessing the fifo.</i></td></tr>
+<tr><th id="208">208</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="209">209</th><td><u>#define <dfn class="macro" id="_M/kfifo_reset" data-ref="_M/kfifo_reset">kfifo_reset</dfn>(fifo) \</u></td></tr>
+<tr><th id="210">210</th><td><u>(void)({ \</u></td></tr>
+<tr><th id="211">211</th><td><u>	typeof((fifo) + 1) __tmp = (fifo); \</u></td></tr>
+<tr><th id="212">212</th><td><u>	__tmp-&gt;kfifo.in = __tmp-&gt;kfifo.out = 0; \</u></td></tr>
+<tr><th id="213">213</th><td><u>})</u></td></tr>
+<tr><th id="214">214</th><td></td></tr>
+<tr><th id="215">215</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="216">216</th><td><i class="doc"> * kfifo_reset_out - skip fifo content</i></td></tr>
+<tr><th id="217">217</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="218">218</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="219">219</th><td><i class="doc"> * Note: The usage of kfifo_reset_out() is safe until it will be only called</i></td></tr>
+<tr><th id="220">220</th><td><i class="doc"> * from the reader thread and there is only one concurrent reader. Otherwise</i></td></tr>
+<tr><th id="221">221</th><td><i class="doc"> * it is dangerous and must be handled in the same way as kfifo_reset().</i></td></tr>
+<tr><th id="222">222</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="223">223</th><td><u>#define <dfn class="macro" id="_M/kfifo_reset_out" data-ref="_M/kfifo_reset_out">kfifo_reset_out</dfn>(fifo)	\</u></td></tr>
+<tr><th id="224">224</th><td><u>(void)({ \</u></td></tr>
+<tr><th id="225">225</th><td><u>	typeof((fifo) + 1) __tmp = (fifo); \</u></td></tr>
+<tr><th id="226">226</th><td><u>	__tmp-&gt;kfifo.out = __tmp-&gt;kfifo.in; \</u></td></tr>
+<tr><th id="227">227</th><td><u>})</u></td></tr>
+<tr><th id="228">228</th><td></td></tr>
+<tr><th id="229">229</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="230">230</th><td><i class="doc"> * kfifo_len - returns the number of used elements in the fifo</i></td></tr>
+<tr><th id="231">231</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="232">232</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="233">233</th><td><u>#define <dfn class="macro" id="_M/kfifo_len" data-ref="_M/kfifo_len">kfifo_len</dfn>(fifo) \</u></td></tr>
+<tr><th id="234">234</th><td><u>({ \</u></td></tr>
+<tr><th id="235">235</th><td><u>	typeof((fifo) + 1) __tmpl = (fifo); \</u></td></tr>
+<tr><th id="236">236</th><td><u>	__tmpl-&gt;kfifo.in - __tmpl-&gt;kfifo.out; \</u></td></tr>
+<tr><th id="237">237</th><td><u>})</u></td></tr>
+<tr><th id="238">238</th><td></td></tr>
+<tr><th id="239">239</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="240">240</th><td><i class="doc"> * kfifo_is_empty - returns true if the fifo is empty</i></td></tr>
+<tr><th id="241">241</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="242">242</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="243">243</th><td><u>#define	<dfn class="macro" id="_M/kfifo_is_empty" data-ref="_M/kfifo_is_empty">kfifo_is_empty</dfn>(fifo) \</u></td></tr>
+<tr><th id="244">244</th><td><u>({ \</u></td></tr>
+<tr><th id="245">245</th><td><u>	typeof((fifo) + 1) __tmpq = (fifo); \</u></td></tr>
+<tr><th id="246">246</th><td><u>	__tmpq-&gt;kfifo.in == __tmpq-&gt;kfifo.out; \</u></td></tr>
+<tr><th id="247">247</th><td><u>})</u></td></tr>
+<tr><th id="248">248</th><td></td></tr>
+<tr><th id="249">249</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="250">250</th><td><i class="doc"> * kfifo_is_full - returns true if the fifo is full</i></td></tr>
+<tr><th id="251">251</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="252">252</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="253">253</th><td><u>#define	<dfn class="macro" id="_M/kfifo_is_full" data-ref="_M/kfifo_is_full">kfifo_is_full</dfn>(fifo) \</u></td></tr>
+<tr><th id="254">254</th><td><u>({ \</u></td></tr>
+<tr><th id="255">255</th><td><u>	typeof((fifo) + 1) __tmpq = (fifo); \</u></td></tr>
+<tr><th id="256">256</th><td><u>	kfifo_len(__tmpq) &gt; __tmpq-&gt;kfifo.mask; \</u></td></tr>
+<tr><th id="257">257</th><td><u>})</u></td></tr>
+<tr><th id="258">258</th><td></td></tr>
+<tr><th id="259">259</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="260">260</th><td><i class="doc"> * kfifo_avail - returns the number of unused elements in the fifo</i></td></tr>
+<tr><th id="261">261</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="262">262</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="263">263</th><td><u>#define	<dfn class="macro" id="_M/kfifo_avail" data-ref="_M/kfifo_avail">kfifo_avail</dfn>(fifo) \</u></td></tr>
+<tr><th id="264">264</th><td><u>__kfifo_uint_must_check_helper( \</u></td></tr>
+<tr><th id="265">265</th><td><u>({ \</u></td></tr>
+<tr><th id="266">266</th><td><u>	typeof((fifo) + 1) __tmpq = (fifo); \</u></td></tr>
+<tr><th id="267">267</th><td><u>	const size_t __recsize = sizeof(*__tmpq-&gt;rectype); \</u></td></tr>
+<tr><th id="268">268</th><td><u>	unsigned int __avail = kfifo_size(__tmpq) - kfifo_len(__tmpq); \</u></td></tr>
+<tr><th id="269">269</th><td><u>	(__recsize) ? ((__avail &lt;= __recsize) ? 0 : \</u></td></tr>
+<tr><th id="270">270</th><td><u>	__kfifo_max_r(__avail - __recsize, __recsize)) : \</u></td></tr>
+<tr><th id="271">271</th><td><u>	__avail; \</u></td></tr>
+<tr><th id="272">272</th><td><u>}) \</u></td></tr>
+<tr><th id="273">273</th><td><u>)</u></td></tr>
+<tr><th id="274">274</th><td></td></tr>
+<tr><th id="275">275</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="276">276</th><td><i class="doc"> * kfifo_skip - skip output data</i></td></tr>
+<tr><th id="277">277</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="278">278</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="279">279</th><td><u>#define	<dfn class="macro" id="_M/kfifo_skip" data-ref="_M/kfifo_skip">kfifo_skip</dfn>(fifo) \</u></td></tr>
+<tr><th id="280">280</th><td><u>(void)({ \</u></td></tr>
+<tr><th id="281">281</th><td><u>	typeof((fifo) + 1) __tmp = (fifo); \</u></td></tr>
+<tr><th id="282">282</th><td><u>	const size_t __recsize = sizeof(*__tmp-&gt;rectype); \</u></td></tr>
+<tr><th id="283">283</th><td><u>	struct __kfifo *__kfifo = &amp;__tmp-&gt;kfifo; \</u></td></tr>
+<tr><th id="284">284</th><td><u>	if (__recsize) \</u></td></tr>
+<tr><th id="285">285</th><td><u>		__kfifo_skip_r(__kfifo, __recsize); \</u></td></tr>
+<tr><th id="286">286</th><td><u>	else \</u></td></tr>
+<tr><th id="287">287</th><td><u>		__kfifo-&gt;out++; \</u></td></tr>
+<tr><th id="288">288</th><td><u>})</u></td></tr>
+<tr><th id="289">289</th><td></td></tr>
+<tr><th id="290">290</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="291">291</th><td><i class="doc"> * kfifo_peek_len - gets the size of the next fifo record</i></td></tr>
+<tr><th id="292">292</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="293">293</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="294">294</th><td><i class="doc"> * This function returns the size of the next fifo record in number of bytes.</i></td></tr>
+<tr><th id="295">295</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="296">296</th><td><u>#define <dfn class="macro" id="_M/kfifo_peek_len" data-ref="_M/kfifo_peek_len">kfifo_peek_len</dfn>(fifo) \</u></td></tr>
+<tr><th id="297">297</th><td><u>__kfifo_uint_must_check_helper( \</u></td></tr>
+<tr><th id="298">298</th><td><u>({ \</u></td></tr>
+<tr><th id="299">299</th><td><u>	typeof((fifo) + 1) __tmp = (fifo); \</u></td></tr>
+<tr><th id="300">300</th><td><u>	const size_t __recsize = sizeof(*__tmp-&gt;rectype); \</u></td></tr>
+<tr><th id="301">301</th><td><u>	struct __kfifo *__kfifo = &amp;__tmp-&gt;kfifo; \</u></td></tr>
+<tr><th id="302">302</th><td><u>	(!__recsize) ? kfifo_len(__tmp) * sizeof(*__tmp-&gt;type) : \</u></td></tr>
+<tr><th id="303">303</th><td><u>	__kfifo_len_r(__kfifo, __recsize); \</u></td></tr>
+<tr><th id="304">304</th><td><u>}) \</u></td></tr>
+<tr><th id="305">305</th><td><u>)</u></td></tr>
+<tr><th id="306">306</th><td></td></tr>
+<tr><th id="307">307</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="308">308</th><td><i class="doc"> * kfifo_alloc - dynamically allocates a new fifo buffer</i></td></tr>
+<tr><th id="309">309</th><td><i class="doc"> *<span class="command"> @fifo</span>: pointer to the fifo</i></td></tr>
+<tr><th id="310">310</th><td><i class="doc"> *<span class="command"> @size</span>: the number of elements in the fifo, this must be a power of 2</i></td></tr>
+<tr><th id="311">311</th><td><i class="doc"> *<span class="command"> @gfp</span>_mask: get_free_pages mask, passed to kmalloc()</i></td></tr>
+<tr><th id="312">312</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="313">313</th><td><i class="doc"> * This macro dynamically allocates a new fifo buffer.</i></td></tr>
+<tr><th id="314">314</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="315">315</th><td><i class="doc"> * The number of elements will be rounded-up to a power of 2.</i></td></tr>
+<tr><th id="316">316</th><td><i class="doc"> * The fifo will be release with kfifo_free().</i></td></tr>
+<tr><th id="317">317</th><td><i class="doc"> * Return 0 if no error, otherwise an error code.</i></td></tr>
+<tr><th id="318">318</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="319">319</th><td><u>#define <dfn class="macro" id="_M/kfifo_alloc" data-ref="_M/kfifo_alloc">kfifo_alloc</dfn>(fifo, size, gfp_mask) \</u></td></tr>
+<tr><th id="320">320</th><td><u>__kfifo_int_must_check_helper( \</u></td></tr>
+<tr><th id="321">321</th><td><u>({ \</u></td></tr>
+<tr><th id="322">322</th><td><u>	typeof((fifo) + 1) __tmp = (fifo); \</u></td></tr>
+<tr><th id="323">323</th><td><u>	struct __kfifo *__kfifo = &amp;__tmp-&gt;kfifo; \</u></td></tr>
+<tr><th id="324">324</th><td><u>	__is_kfifo_ptr(__tmp) ? \</u></td></tr>
+<tr><th id="325">325</th><td><u>	__kfifo_alloc(__kfifo, size, sizeof(*__tmp-&gt;type), gfp_mask) : \</u></td></tr>
+<tr><th id="326">326</th><td><u>	-EINVAL; \</u></td></tr>
+<tr><th id="327">327</th><td><u>}) \</u></td></tr>
+<tr><th id="328">328</th><td><u>)</u></td></tr>
+<tr><th id="329">329</th><td></td></tr>
+<tr><th id="330">330</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="331">331</th><td><i class="doc"> * kfifo_free - frees the fifo</i></td></tr>
+<tr><th id="332">332</th><td><i class="doc"> *<span class="command"> @fifo</span>: the fifo to be freed</i></td></tr>
+<tr><th id="333">333</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="334">334</th><td><u>#define <dfn class="macro" id="_M/kfifo_free" data-ref="_M/kfifo_free">kfifo_free</dfn>(fifo) \</u></td></tr>
+<tr><th id="335">335</th><td><u>({ \</u></td></tr>
+<tr><th id="336">336</th><td><u>	typeof((fifo) + 1) __tmp = (fifo); \</u></td></tr>
+<tr><th id="337">337</th><td><u>	struct __kfifo *__kfifo = &amp;__tmp-&gt;kfifo; \</u></td></tr>
+<tr><th id="338">338</th><td><u>	if (__is_kfifo_ptr(__tmp)) \</u></td></tr>
+<tr><th id="339">339</th><td><u>		__kfifo_free(__kfifo); \</u></td></tr>
+<tr><th id="340">340</th><td><u>})</u></td></tr>
+<tr><th id="341">341</th><td></td></tr>
+<tr><th id="342">342</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="343">343</th><td><i class="doc"> * kfifo_init - initialize a fifo using a preallocated buffer</i></td></tr>
+<tr><th id="344">344</th><td><i class="doc"> *<span class="command"> @fifo</span>: the fifo to assign the buffer</i></td></tr>
+<tr><th id="345">345</th><td><i class="doc"> *<span class="command"> @buffer</span>: the preallocated buffer to be used</i></td></tr>
+<tr><th id="346">346</th><td><i class="doc"> *<span class="command"> @size</span>: the size of the internal buffer, this have to be a power of 2</i></td></tr>
+<tr><th id="347">347</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="348">348</th><td><i class="doc"> * This macro initializes a fifo using a preallocated buffer.</i></td></tr>
+<tr><th id="349">349</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="350">350</th><td><i class="doc"> * The number of elements will be rounded-up to a power of 2.</i></td></tr>
+<tr><th id="351">351</th><td><i class="doc"> * Return 0 if no error, otherwise an error code.</i></td></tr>
+<tr><th id="352">352</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="353">353</th><td><u>#define <dfn class="macro" id="_M/kfifo_init" data-ref="_M/kfifo_init">kfifo_init</dfn>(fifo, buffer, size) \</u></td></tr>
+<tr><th id="354">354</th><td><u>({ \</u></td></tr>
+<tr><th id="355">355</th><td><u>	typeof((fifo) + 1) __tmp = (fifo); \</u></td></tr>
+<tr><th id="356">356</th><td><u>	struct __kfifo *__kfifo = &amp;__tmp-&gt;kfifo; \</u></td></tr>
+<tr><th id="357">357</th><td><u>	__is_kfifo_ptr(__tmp) ? \</u></td></tr>
+<tr><th id="358">358</th><td><u>	__kfifo_init(__kfifo, buffer, size, sizeof(*__tmp-&gt;type)) : \</u></td></tr>
+<tr><th id="359">359</th><td><u>	-EINVAL; \</u></td></tr>
+<tr><th id="360">360</th><td><u>})</u></td></tr>
+<tr><th id="361">361</th><td></td></tr>
+<tr><th id="362">362</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="363">363</th><td><i class="doc"> * kfifo_put - put data into the fifo</i></td></tr>
+<tr><th id="364">364</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="365">365</th><td><i class="doc"> * <span class="command">@val</span>:<span class="verb"> the data to be added</span></i></td></tr>
+<tr><th id="366">366</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="367">367</th><td><i class="doc"> * This macro copies the given value into the fifo.</i></td></tr>
+<tr><th id="368">368</th><td><i class="doc"> * It returns 0 if the fifo was full. Otherwise it returns the number</i></td></tr>
+<tr><th id="369">369</th><td><i class="doc"> * processed elements.</i></td></tr>
+<tr><th id="370">370</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="371">371</th><td><i class="doc"> * Note that with only one concurrent reader and one concurrent</i></td></tr>
+<tr><th id="372">372</th><td><i class="doc"> * writer, you don't need extra locking to use these macro.</i></td></tr>
+<tr><th id="373">373</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="374">374</th><td><u>#define	<dfn class="macro" id="_M/kfifo_put" data-ref="_M/kfifo_put">kfifo_put</dfn>(fifo, val) \</u></td></tr>
+<tr><th id="375">375</th><td><u>({ \</u></td></tr>
+<tr><th id="376">376</th><td><u>	typeof((fifo) + 1) __tmp = (fifo); \</u></td></tr>
+<tr><th id="377">377</th><td><u>	typeof(*__tmp-&gt;const_type) __val = (val); \</u></td></tr>
+<tr><th id="378">378</th><td><u>	unsigned int __ret; \</u></td></tr>
+<tr><th id="379">379</th><td><u>	size_t __recsize = sizeof(*__tmp-&gt;rectype); \</u></td></tr>
+<tr><th id="380">380</th><td><u>	struct __kfifo *__kfifo = &amp;__tmp-&gt;kfifo; \</u></td></tr>
+<tr><th id="381">381</th><td><u>	if (__recsize) \</u></td></tr>
+<tr><th id="382">382</th><td><u>		__ret = __kfifo_in_r(__kfifo, &amp;__val, sizeof(__val), \</u></td></tr>
+<tr><th id="383">383</th><td><u>			__recsize); \</u></td></tr>
+<tr><th id="384">384</th><td><u>	else { \</u></td></tr>
+<tr><th id="385">385</th><td><u>		__ret = !kfifo_is_full(__tmp); \</u></td></tr>
+<tr><th id="386">386</th><td><u>		if (__ret) { \</u></td></tr>
+<tr><th id="387">387</th><td><u>			(__is_kfifo_ptr(__tmp) ? \</u></td></tr>
+<tr><th id="388">388</th><td><u>			((typeof(__tmp-&gt;type))__kfifo-&gt;data) : \</u></td></tr>
+<tr><th id="389">389</th><td><u>			(__tmp-&gt;buf) \</u></td></tr>
+<tr><th id="390">390</th><td><u>			)[__kfifo-&gt;in &amp; __tmp-&gt;kfifo.mask] = \</u></td></tr>
+<tr><th id="391">391</th><td><u>				*(typeof(__tmp-&gt;type))&amp;__val; \</u></td></tr>
+<tr><th id="392">392</th><td><u>			smp_wmb(); \</u></td></tr>
+<tr><th id="393">393</th><td><u>			__kfifo-&gt;in++; \</u></td></tr>
+<tr><th id="394">394</th><td><u>		} \</u></td></tr>
+<tr><th id="395">395</th><td><u>	} \</u></td></tr>
+<tr><th id="396">396</th><td><u>	__ret; \</u></td></tr>
+<tr><th id="397">397</th><td><u>})</u></td></tr>
+<tr><th id="398">398</th><td></td></tr>
+<tr><th id="399">399</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="400">400</th><td><i class="doc"> * kfifo_get - get data from the fifo</i></td></tr>
+<tr><th id="401">401</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="402">402</th><td><i class="doc"> * <span class="command">@val</span>:<span class="verb"> address where to store the data</span></i></td></tr>
+<tr><th id="403">403</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="404">404</th><td><i class="doc"> * This macro reads the data from the fifo.</i></td></tr>
+<tr><th id="405">405</th><td><i class="doc"> * It returns 0 if the fifo was empty. Otherwise it returns the number</i></td></tr>
+<tr><th id="406">406</th><td><i class="doc"> * processed elements.</i></td></tr>
+<tr><th id="407">407</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="408">408</th><td><i class="doc"> * Note that with only one concurrent reader and one concurrent</i></td></tr>
+<tr><th id="409">409</th><td><i class="doc"> * writer, you don't need extra locking to use these macro.</i></td></tr>
+<tr><th id="410">410</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="411">411</th><td><u>#define	<dfn class="macro" id="_M/kfifo_get" data-ref="_M/kfifo_get">kfifo_get</dfn>(fifo, val) \</u></td></tr>
+<tr><th id="412">412</th><td><u>__kfifo_uint_must_check_helper( \</u></td></tr>
+<tr><th id="413">413</th><td><u>({ \</u></td></tr>
+<tr><th id="414">414</th><td><u>	typeof((fifo) + 1) __tmp = (fifo); \</u></td></tr>
+<tr><th id="415">415</th><td><u>	typeof(__tmp-&gt;ptr) __val = (val); \</u></td></tr>
+<tr><th id="416">416</th><td><u>	unsigned int __ret; \</u></td></tr>
+<tr><th id="417">417</th><td><u>	const size_t __recsize = sizeof(*__tmp-&gt;rectype); \</u></td></tr>
+<tr><th id="418">418</th><td><u>	struct __kfifo *__kfifo = &amp;__tmp-&gt;kfifo; \</u></td></tr>
+<tr><th id="419">419</th><td><u>	if (__recsize) \</u></td></tr>
+<tr><th id="420">420</th><td><u>		__ret = __kfifo_out_r(__kfifo, __val, sizeof(*__val), \</u></td></tr>
+<tr><th id="421">421</th><td><u>			__recsize); \</u></td></tr>
+<tr><th id="422">422</th><td><u>	else { \</u></td></tr>
+<tr><th id="423">423</th><td><u>		__ret = !kfifo_is_empty(__tmp); \</u></td></tr>
+<tr><th id="424">424</th><td><u>		if (__ret) { \</u></td></tr>
+<tr><th id="425">425</th><td><u>			*(typeof(__tmp-&gt;type))__val = \</u></td></tr>
+<tr><th id="426">426</th><td><u>				(__is_kfifo_ptr(__tmp) ? \</u></td></tr>
+<tr><th id="427">427</th><td><u>				((typeof(__tmp-&gt;type))__kfifo-&gt;data) : \</u></td></tr>
+<tr><th id="428">428</th><td><u>				(__tmp-&gt;buf) \</u></td></tr>
+<tr><th id="429">429</th><td><u>				)[__kfifo-&gt;out &amp; __tmp-&gt;kfifo.mask]; \</u></td></tr>
+<tr><th id="430">430</th><td><u>			smp_wmb(); \</u></td></tr>
+<tr><th id="431">431</th><td><u>			__kfifo-&gt;out++; \</u></td></tr>
+<tr><th id="432">432</th><td><u>		} \</u></td></tr>
+<tr><th id="433">433</th><td><u>	} \</u></td></tr>
+<tr><th id="434">434</th><td><u>	__ret; \</u></td></tr>
+<tr><th id="435">435</th><td><u>}) \</u></td></tr>
+<tr><th id="436">436</th><td><u>)</u></td></tr>
+<tr><th id="437">437</th><td></td></tr>
+<tr><th id="438">438</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="439">439</th><td><i class="doc"> * kfifo_peek - get data from the fifo without removing</i></td></tr>
+<tr><th id="440">440</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="441">441</th><td><i class="doc"> * <span class="command">@val</span>:<span class="verb"> address where to store the data</span></i></td></tr>
+<tr><th id="442">442</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="443">443</th><td><i class="doc"> * This reads the data from the fifo without removing it from the fifo.</i></td></tr>
+<tr><th id="444">444</th><td><i class="doc"> * It returns 0 if the fifo was empty. Otherwise it returns the number</i></td></tr>
+<tr><th id="445">445</th><td><i class="doc"> * processed elements.</i></td></tr>
+<tr><th id="446">446</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="447">447</th><td><i class="doc"> * Note that with only one concurrent reader and one concurrent</i></td></tr>
+<tr><th id="448">448</th><td><i class="doc"> * writer, you don't need extra locking to use these macro.</i></td></tr>
+<tr><th id="449">449</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="450">450</th><td><u>#define	<dfn class="macro" id="_M/kfifo_peek" data-ref="_M/kfifo_peek">kfifo_peek</dfn>(fifo, val) \</u></td></tr>
+<tr><th id="451">451</th><td><u>__kfifo_uint_must_check_helper( \</u></td></tr>
+<tr><th id="452">452</th><td><u>({ \</u></td></tr>
+<tr><th id="453">453</th><td><u>	typeof((fifo) + 1) __tmp = (fifo); \</u></td></tr>
+<tr><th id="454">454</th><td><u>	typeof(__tmp-&gt;ptr) __val = (val); \</u></td></tr>
+<tr><th id="455">455</th><td><u>	unsigned int __ret; \</u></td></tr>
+<tr><th id="456">456</th><td><u>	const size_t __recsize = sizeof(*__tmp-&gt;rectype); \</u></td></tr>
+<tr><th id="457">457</th><td><u>	struct __kfifo *__kfifo = &amp;__tmp-&gt;kfifo; \</u></td></tr>
+<tr><th id="458">458</th><td><u>	if (__recsize) \</u></td></tr>
+<tr><th id="459">459</th><td><u>		__ret = __kfifo_out_peek_r(__kfifo, __val, sizeof(*__val), \</u></td></tr>
+<tr><th id="460">460</th><td><u>			__recsize); \</u></td></tr>
+<tr><th id="461">461</th><td><u>	else { \</u></td></tr>
+<tr><th id="462">462</th><td><u>		__ret = !kfifo_is_empty(__tmp); \</u></td></tr>
+<tr><th id="463">463</th><td><u>		if (__ret) { \</u></td></tr>
+<tr><th id="464">464</th><td><u>			*(typeof(__tmp-&gt;type))__val = \</u></td></tr>
+<tr><th id="465">465</th><td><u>				(__is_kfifo_ptr(__tmp) ? \</u></td></tr>
+<tr><th id="466">466</th><td><u>				((typeof(__tmp-&gt;type))__kfifo-&gt;data) : \</u></td></tr>
+<tr><th id="467">467</th><td><u>				(__tmp-&gt;buf) \</u></td></tr>
+<tr><th id="468">468</th><td><u>				)[__kfifo-&gt;out &amp; __tmp-&gt;kfifo.mask]; \</u></td></tr>
+<tr><th id="469">469</th><td><u>			smp_wmb(); \</u></td></tr>
+<tr><th id="470">470</th><td><u>		} \</u></td></tr>
+<tr><th id="471">471</th><td><u>	} \</u></td></tr>
+<tr><th id="472">472</th><td><u>	__ret; \</u></td></tr>
+<tr><th id="473">473</th><td><u>}) \</u></td></tr>
+<tr><th id="474">474</th><td><u>)</u></td></tr>
+<tr><th id="475">475</th><td></td></tr>
+<tr><th id="476">476</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="477">477</th><td><i class="doc"> * kfifo_in - put data into the fifo</i></td></tr>
+<tr><th id="478">478</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="479">479</th><td><i class="doc"> * <span class="command">@buf</span>: the data to be added</i></td></tr>
+<tr><th id="480">480</th><td><i class="doc"> *<span class="command"> @n</span>: number of elements to be added</i></td></tr>
+<tr><th id="481">481</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="482">482</th><td><i class="doc"> * This macro copies the given buffer into the fifo and returns the</i></td></tr>
+<tr><th id="483">483</th><td><i class="doc"> * number of copied elements.</i></td></tr>
+<tr><th id="484">484</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="485">485</th><td><i class="doc"> * Note that with only one concurrent reader and one concurrent</i></td></tr>
+<tr><th id="486">486</th><td><i class="doc"> * writer, you don't need extra locking to use these macro.</i></td></tr>
+<tr><th id="487">487</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="488">488</th><td><u>#define	<dfn class="macro" id="_M/kfifo_in" data-ref="_M/kfifo_in">kfifo_in</dfn>(fifo, buf, n) \</u></td></tr>
+<tr><th id="489">489</th><td><u>({ \</u></td></tr>
+<tr><th id="490">490</th><td><u>	typeof((fifo) + 1) __tmp = (fifo); \</u></td></tr>
+<tr><th id="491">491</th><td><u>	typeof(__tmp-&gt;ptr_const) __buf = (buf); \</u></td></tr>
+<tr><th id="492">492</th><td><u>	unsigned long __n = (n); \</u></td></tr>
+<tr><th id="493">493</th><td><u>	const size_t __recsize = sizeof(*__tmp-&gt;rectype); \</u></td></tr>
+<tr><th id="494">494</th><td><u>	struct __kfifo *__kfifo = &amp;__tmp-&gt;kfifo; \</u></td></tr>
+<tr><th id="495">495</th><td><u>	(__recsize) ?\</u></td></tr>
+<tr><th id="496">496</th><td><u>	__kfifo_in_r(__kfifo, __buf, __n, __recsize) : \</u></td></tr>
+<tr><th id="497">497</th><td><u>	__kfifo_in(__kfifo, __buf, __n); \</u></td></tr>
+<tr><th id="498">498</th><td><u>})</u></td></tr>
+<tr><th id="499">499</th><td></td></tr>
+<tr><th id="500">500</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="501">501</th><td><i class="doc"> * kfifo_in_spinlocked - put data into the fifo using a spinlock for locking</i></td></tr>
+<tr><th id="502">502</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="503">503</th><td><i class="doc"> * <span class="command">@buf</span>: the data to be added</i></td></tr>
+<tr><th id="504">504</th><td><i class="doc"> *<span class="command"> @n</span>: number of elements to be added</i></td></tr>
+<tr><th id="505">505</th><td><i class="doc"> *<span class="command"> @lock</span>: pointer to the spinlock to use for locking</i></td></tr>
+<tr><th id="506">506</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="507">507</th><td><i class="doc"> * This macro copies the given values buffer into the fifo and returns the</i></td></tr>
+<tr><th id="508">508</th><td><i class="doc"> * number of copied elements.</i></td></tr>
+<tr><th id="509">509</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="510">510</th><td><u>#define	<dfn class="macro" id="_M/kfifo_in_spinlocked" data-ref="_M/kfifo_in_spinlocked">kfifo_in_spinlocked</dfn>(fifo, buf, n, lock) \</u></td></tr>
+<tr><th id="511">511</th><td><u>({ \</u></td></tr>
+<tr><th id="512">512</th><td><u>	unsigned long __flags; \</u></td></tr>
+<tr><th id="513">513</th><td><u>	unsigned int __ret; \</u></td></tr>
+<tr><th id="514">514</th><td><u>	spin_lock_irqsave(lock, __flags); \</u></td></tr>
+<tr><th id="515">515</th><td><u>	__ret = kfifo_in(fifo, buf, n); \</u></td></tr>
+<tr><th id="516">516</th><td><u>	spin_unlock_irqrestore(lock, __flags); \</u></td></tr>
+<tr><th id="517">517</th><td><u>	__ret; \</u></td></tr>
+<tr><th id="518">518</th><td><u>})</u></td></tr>
+<tr><th id="519">519</th><td></td></tr>
+<tr><th id="520">520</th><td><i>/* alias for kfifo_in_spinlocked, will be removed in a future release */</i></td></tr>
+<tr><th id="521">521</th><td><u>#define <dfn class="macro" id="_M/kfifo_in_locked" data-ref="_M/kfifo_in_locked">kfifo_in_locked</dfn>(fifo, buf, n, lock) \</u></td></tr>
+<tr><th id="522">522</th><td><u>		kfifo_in_spinlocked(fifo, buf, n, lock)</u></td></tr>
+<tr><th id="523">523</th><td></td></tr>
+<tr><th id="524">524</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="525">525</th><td><i class="doc"> * kfifo_out - get data from the fifo</i></td></tr>
+<tr><th id="526">526</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="527">527</th><td><i class="doc"> * <span class="command">@buf</span>: pointer to the storage buffer</i></td></tr>
+<tr><th id="528">528</th><td><i class="doc"> *<span class="command"> @n</span>: max. number of elements to get</i></td></tr>
+<tr><th id="529">529</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="530">530</th><td><i class="doc"> * This macro get some data from the fifo and return the numbers of elements</i></td></tr>
+<tr><th id="531">531</th><td><i class="doc"> * copied.</i></td></tr>
+<tr><th id="532">532</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="533">533</th><td><i class="doc"> * Note that with only one concurrent reader and one concurrent</i></td></tr>
+<tr><th id="534">534</th><td><i class="doc"> * writer, you don't need extra locking to use these macro.</i></td></tr>
+<tr><th id="535">535</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="536">536</th><td><u>#define	<dfn class="macro" id="_M/kfifo_out" data-ref="_M/kfifo_out">kfifo_out</dfn>(fifo, buf, n) \</u></td></tr>
+<tr><th id="537">537</th><td><u>__kfifo_uint_must_check_helper( \</u></td></tr>
+<tr><th id="538">538</th><td><u>({ \</u></td></tr>
+<tr><th id="539">539</th><td><u>	typeof((fifo) + 1) __tmp = (fifo); \</u></td></tr>
+<tr><th id="540">540</th><td><u>	typeof(__tmp-&gt;ptr) __buf = (buf); \</u></td></tr>
+<tr><th id="541">541</th><td><u>	unsigned long __n = (n); \</u></td></tr>
+<tr><th id="542">542</th><td><u>	const size_t __recsize = sizeof(*__tmp-&gt;rectype); \</u></td></tr>
+<tr><th id="543">543</th><td><u>	struct __kfifo *__kfifo = &amp;__tmp-&gt;kfifo; \</u></td></tr>
+<tr><th id="544">544</th><td><u>	(__recsize) ?\</u></td></tr>
+<tr><th id="545">545</th><td><u>	__kfifo_out_r(__kfifo, __buf, __n, __recsize) : \</u></td></tr>
+<tr><th id="546">546</th><td><u>	__kfifo_out(__kfifo, __buf, __n); \</u></td></tr>
+<tr><th id="547">547</th><td><u>}) \</u></td></tr>
+<tr><th id="548">548</th><td><u>)</u></td></tr>
+<tr><th id="549">549</th><td></td></tr>
+<tr><th id="550">550</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="551">551</th><td><i class="doc"> * kfifo_out_spinlocked - get data from the fifo using a spinlock for locking</i></td></tr>
+<tr><th id="552">552</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="553">553</th><td><i class="doc"> * <span class="command">@buf</span>: pointer to the storage buffer</i></td></tr>
+<tr><th id="554">554</th><td><i class="doc"> *<span class="command"> @n</span>: max. number of elements to get</i></td></tr>
+<tr><th id="555">555</th><td><i class="doc"> *<span class="command"> @lock</span>: pointer to the spinlock to use for locking</i></td></tr>
+<tr><th id="556">556</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="557">557</th><td><i class="doc"> * This macro get the data from the fifo and return the numbers of elements</i></td></tr>
+<tr><th id="558">558</th><td><i class="doc"> * copied.</i></td></tr>
+<tr><th id="559">559</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="560">560</th><td><u>#define	<dfn class="macro" id="_M/kfifo_out_spinlocked" data-ref="_M/kfifo_out_spinlocked">kfifo_out_spinlocked</dfn>(fifo, buf, n, lock) \</u></td></tr>
+<tr><th id="561">561</th><td><u>__kfifo_uint_must_check_helper( \</u></td></tr>
+<tr><th id="562">562</th><td><u>({ \</u></td></tr>
+<tr><th id="563">563</th><td><u>	unsigned long __flags; \</u></td></tr>
+<tr><th id="564">564</th><td><u>	unsigned int __ret; \</u></td></tr>
+<tr><th id="565">565</th><td><u>	spin_lock_irqsave(lock, __flags); \</u></td></tr>
+<tr><th id="566">566</th><td><u>	__ret = kfifo_out(fifo, buf, n); \</u></td></tr>
+<tr><th id="567">567</th><td><u>	spin_unlock_irqrestore(lock, __flags); \</u></td></tr>
+<tr><th id="568">568</th><td><u>	__ret; \</u></td></tr>
+<tr><th id="569">569</th><td><u>}) \</u></td></tr>
+<tr><th id="570">570</th><td><u>)</u></td></tr>
+<tr><th id="571">571</th><td></td></tr>
+<tr><th id="572">572</th><td><i>/* alias for kfifo_out_spinlocked, will be removed in a future release */</i></td></tr>
+<tr><th id="573">573</th><td><u>#define <dfn class="macro" id="_M/kfifo_out_locked" data-ref="_M/kfifo_out_locked">kfifo_out_locked</dfn>(fifo, buf, n, lock) \</u></td></tr>
+<tr><th id="574">574</th><td><u>		kfifo_out_spinlocked(fifo, buf, n, lock)</u></td></tr>
+<tr><th id="575">575</th><td></td></tr>
+<tr><th id="576">576</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="577">577</th><td><i class="doc"> * kfifo_from_user - puts some data from user space into the fifo</i></td></tr>
+<tr><th id="578">578</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="579">579</th><td><i class="doc"> *<span class="command"> @from</span>: pointer to the data to be added</i></td></tr>
+<tr><th id="580">580</th><td><i class="doc"> *<span class="command"> @len</span>: the length of the data to be added</i></td></tr>
+<tr><th id="581">581</th><td><i class="doc"> *<span class="command"> @copied</span>: pointer to output variable to store the number of copied bytes</i></td></tr>
+<tr><th id="582">582</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="583">583</th><td><i class="doc"> * This macro copies at most<span class="command"> @len</span> bytes from the<span class="command"> @from</span> into the</i></td></tr>
+<tr><th id="584">584</th><td><i class="doc"> * fifo, depending of the available space and returns -EFAULT/0.</i></td></tr>
+<tr><th id="585">585</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="586">586</th><td><i class="doc"> * Note that with only one concurrent reader and one concurrent</i></td></tr>
+<tr><th id="587">587</th><td><i class="doc"> * writer, you don't need extra locking to use these macro.</i></td></tr>
+<tr><th id="588">588</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="589">589</th><td><u>#define	<dfn class="macro" id="_M/kfifo_from_user" data-ref="_M/kfifo_from_user">kfifo_from_user</dfn>(fifo, from, len, copied) \</u></td></tr>
+<tr><th id="590">590</th><td><u>__kfifo_uint_must_check_helper( \</u></td></tr>
+<tr><th id="591">591</th><td><u>({ \</u></td></tr>
+<tr><th id="592">592</th><td><u>	typeof((fifo) + 1) __tmp = (fifo); \</u></td></tr>
+<tr><th id="593">593</th><td><u>	const void __user *__from = (from); \</u></td></tr>
+<tr><th id="594">594</th><td><u>	unsigned int __len = (len); \</u></td></tr>
+<tr><th id="595">595</th><td><u>	unsigned int *__copied = (copied); \</u></td></tr>
+<tr><th id="596">596</th><td><u>	const size_t __recsize = sizeof(*__tmp-&gt;rectype); \</u></td></tr>
+<tr><th id="597">597</th><td><u>	struct __kfifo *__kfifo = &amp;__tmp-&gt;kfifo; \</u></td></tr>
+<tr><th id="598">598</th><td><u>	(__recsize) ? \</u></td></tr>
+<tr><th id="599">599</th><td><u>	__kfifo_from_user_r(__kfifo, __from, __len,  __copied, __recsize) : \</u></td></tr>
+<tr><th id="600">600</th><td><u>	__kfifo_from_user(__kfifo, __from, __len, __copied); \</u></td></tr>
+<tr><th id="601">601</th><td><u>}) \</u></td></tr>
+<tr><th id="602">602</th><td><u>)</u></td></tr>
+<tr><th id="603">603</th><td></td></tr>
+<tr><th id="604">604</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="605">605</th><td><i class="doc"> * kfifo_to_user - copies data from the fifo into user space</i></td></tr>
+<tr><th id="606">606</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="607">607</th><td><i class="doc"> *<span class="command"> @to</span>: where the data must be copied</i></td></tr>
+<tr><th id="608">608</th><td><i class="doc"> *<span class="command"> @len</span>: the size of the destination buffer</i></td></tr>
+<tr><th id="609">609</th><td><i class="doc"> *<span class="command"> @copied</span>: pointer to output variable to store the number of copied bytes</i></td></tr>
+<tr><th id="610">610</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="611">611</th><td><i class="doc"> * This macro copies at most<span class="command"> @len</span> bytes from the fifo into the</i></td></tr>
+<tr><th id="612">612</th><td><i class="doc"> *<span class="command"> @to</span> buffer and returns -EFAULT/0.</i></td></tr>
+<tr><th id="613">613</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="614">614</th><td><i class="doc"> * Note that with only one concurrent reader and one concurrent</i></td></tr>
+<tr><th id="615">615</th><td><i class="doc"> * writer, you don't need extra locking to use these macro.</i></td></tr>
+<tr><th id="616">616</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="617">617</th><td><u>#define	<dfn class="macro" id="_M/kfifo_to_user" data-ref="_M/kfifo_to_user">kfifo_to_user</dfn>(fifo, to, len, copied) \</u></td></tr>
+<tr><th id="618">618</th><td><u>__kfifo_uint_must_check_helper( \</u></td></tr>
+<tr><th id="619">619</th><td><u>({ \</u></td></tr>
+<tr><th id="620">620</th><td><u>	typeof((fifo) + 1) __tmp = (fifo); \</u></td></tr>
+<tr><th id="621">621</th><td><u>	void __user *__to = (to); \</u></td></tr>
+<tr><th id="622">622</th><td><u>	unsigned int __len = (len); \</u></td></tr>
+<tr><th id="623">623</th><td><u>	unsigned int *__copied = (copied); \</u></td></tr>
+<tr><th id="624">624</th><td><u>	const size_t __recsize = sizeof(*__tmp-&gt;rectype); \</u></td></tr>
+<tr><th id="625">625</th><td><u>	struct __kfifo *__kfifo = &amp;__tmp-&gt;kfifo; \</u></td></tr>
+<tr><th id="626">626</th><td><u>	(__recsize) ? \</u></td></tr>
+<tr><th id="627">627</th><td><u>	__kfifo_to_user_r(__kfifo, __to, __len, __copied, __recsize) : \</u></td></tr>
+<tr><th id="628">628</th><td><u>	__kfifo_to_user(__kfifo, __to, __len, __copied); \</u></td></tr>
+<tr><th id="629">629</th><td><u>}) \</u></td></tr>
+<tr><th id="630">630</th><td><u>)</u></td></tr>
+<tr><th id="631">631</th><td></td></tr>
+<tr><th id="632">632</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="633">633</th><td><i class="doc"> * kfifo_dma_in_prepare - setup a scatterlist for DMA input</i></td></tr>
+<tr><th id="634">634</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="635">635</th><td><i class="doc"> *<span class="command"> @sgl</span>: pointer to the scatterlist array</i></td></tr>
+<tr><th id="636">636</th><td><i class="doc"> *<span class="command"> @nents</span>: number of entries in the scatterlist array</i></td></tr>
+<tr><th id="637">637</th><td><i class="doc"> *<span class="command"> @len</span>: number of elements to transfer</i></td></tr>
+<tr><th id="638">638</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="639">639</th><td><i class="doc"> * This macro fills a scatterlist for DMA input.</i></td></tr>
+<tr><th id="640">640</th><td><i class="doc"> * It returns the number entries in the scatterlist array.</i></td></tr>
+<tr><th id="641">641</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="642">642</th><td><i class="doc"> * Note that with only one concurrent reader and one concurrent</i></td></tr>
+<tr><th id="643">643</th><td><i class="doc"> * writer, you don't need extra locking to use these macros.</i></td></tr>
+<tr><th id="644">644</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="645">645</th><td><u>#define	<dfn class="macro" id="_M/kfifo_dma_in_prepare" data-ref="_M/kfifo_dma_in_prepare">kfifo_dma_in_prepare</dfn>(fifo, sgl, nents, len) \</u></td></tr>
+<tr><th id="646">646</th><td><u>({ \</u></td></tr>
+<tr><th id="647">647</th><td><u>	typeof((fifo) + 1) __tmp = (fifo); \</u></td></tr>
+<tr><th id="648">648</th><td><u>	struct scatterlist *__sgl = (sgl); \</u></td></tr>
+<tr><th id="649">649</th><td><u>	int __nents = (nents); \</u></td></tr>
+<tr><th id="650">650</th><td><u>	unsigned int __len = (len); \</u></td></tr>
+<tr><th id="651">651</th><td><u>	const size_t __recsize = sizeof(*__tmp-&gt;rectype); \</u></td></tr>
+<tr><th id="652">652</th><td><u>	struct __kfifo *__kfifo = &amp;__tmp-&gt;kfifo; \</u></td></tr>
+<tr><th id="653">653</th><td><u>	(__recsize) ? \</u></td></tr>
+<tr><th id="654">654</th><td><u>	__kfifo_dma_in_prepare_r(__kfifo, __sgl, __nents, __len, __recsize) : \</u></td></tr>
+<tr><th id="655">655</th><td><u>	__kfifo_dma_in_prepare(__kfifo, __sgl, __nents, __len); \</u></td></tr>
+<tr><th id="656">656</th><td><u>})</u></td></tr>
+<tr><th id="657">657</th><td></td></tr>
+<tr><th id="658">658</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="659">659</th><td><i class="doc"> * kfifo_dma_in_finish - finish a DMA IN operation</i></td></tr>
+<tr><th id="660">660</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="661">661</th><td><i class="doc"> *<span class="command"> @len</span>: number of bytes to received</i></td></tr>
+<tr><th id="662">662</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="663">663</th><td><i class="doc"> * This macro finish a DMA IN operation. The in counter will be updated by</i></td></tr>
+<tr><th id="664">664</th><td><i class="doc"> * the len parameter. No error checking will be done.</i></td></tr>
+<tr><th id="665">665</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="666">666</th><td><i class="doc"> * Note that with only one concurrent reader and one concurrent</i></td></tr>
+<tr><th id="667">667</th><td><i class="doc"> * writer, you don't need extra locking to use these macros.</i></td></tr>
+<tr><th id="668">668</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="669">669</th><td><u>#define <dfn class="macro" id="_M/kfifo_dma_in_finish" data-ref="_M/kfifo_dma_in_finish">kfifo_dma_in_finish</dfn>(fifo, len) \</u></td></tr>
+<tr><th id="670">670</th><td><u>(void)({ \</u></td></tr>
+<tr><th id="671">671</th><td><u>	typeof((fifo) + 1) __tmp = (fifo); \</u></td></tr>
+<tr><th id="672">672</th><td><u>	unsigned int __len = (len); \</u></td></tr>
+<tr><th id="673">673</th><td><u>	const size_t __recsize = sizeof(*__tmp-&gt;rectype); \</u></td></tr>
+<tr><th id="674">674</th><td><u>	struct __kfifo *__kfifo = &amp;__tmp-&gt;kfifo; \</u></td></tr>
+<tr><th id="675">675</th><td><u>	if (__recsize) \</u></td></tr>
+<tr><th id="676">676</th><td><u>		__kfifo_dma_in_finish_r(__kfifo, __len, __recsize); \</u></td></tr>
+<tr><th id="677">677</th><td><u>	else \</u></td></tr>
+<tr><th id="678">678</th><td><u>		__kfifo-&gt;in += __len / sizeof(*__tmp-&gt;type); \</u></td></tr>
+<tr><th id="679">679</th><td><u>})</u></td></tr>
+<tr><th id="680">680</th><td></td></tr>
+<tr><th id="681">681</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="682">682</th><td><i class="doc"> * kfifo_dma_out_prepare - setup a scatterlist for DMA output</i></td></tr>
+<tr><th id="683">683</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="684">684</th><td><i class="doc"> *<span class="command"> @sgl</span>: pointer to the scatterlist array</i></td></tr>
+<tr><th id="685">685</th><td><i class="doc"> *<span class="command"> @nents</span>: number of entries in the scatterlist array</i></td></tr>
+<tr><th id="686">686</th><td><i class="doc"> *<span class="command"> @len</span>: number of elements to transfer</i></td></tr>
+<tr><th id="687">687</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="688">688</th><td><i class="doc"> * This macro fills a scatterlist for DMA output which at most<span class="command"> @len</span> bytes</i></td></tr>
+<tr><th id="689">689</th><td><i class="doc"> * to transfer.</i></td></tr>
+<tr><th id="690">690</th><td><i class="doc"> * It returns the number entries in the scatterlist array.</i></td></tr>
+<tr><th id="691">691</th><td><i class="doc"> * A zero means there is no space available and the scatterlist is not filled.</i></td></tr>
+<tr><th id="692">692</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="693">693</th><td><i class="doc"> * Note that with only one concurrent reader and one concurrent</i></td></tr>
+<tr><th id="694">694</th><td><i class="doc"> * writer, you don't need extra locking to use these macros.</i></td></tr>
+<tr><th id="695">695</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="696">696</th><td><u>#define	<dfn class="macro" id="_M/kfifo_dma_out_prepare" data-ref="_M/kfifo_dma_out_prepare">kfifo_dma_out_prepare</dfn>(fifo, sgl, nents, len) \</u></td></tr>
+<tr><th id="697">697</th><td><u>({ \</u></td></tr>
+<tr><th id="698">698</th><td><u>	typeof((fifo) + 1) __tmp = (fifo);  \</u></td></tr>
+<tr><th id="699">699</th><td><u>	struct scatterlist *__sgl = (sgl); \</u></td></tr>
+<tr><th id="700">700</th><td><u>	int __nents = (nents); \</u></td></tr>
+<tr><th id="701">701</th><td><u>	unsigned int __len = (len); \</u></td></tr>
+<tr><th id="702">702</th><td><u>	const size_t __recsize = sizeof(*__tmp-&gt;rectype); \</u></td></tr>
+<tr><th id="703">703</th><td><u>	struct __kfifo *__kfifo = &amp;__tmp-&gt;kfifo; \</u></td></tr>
+<tr><th id="704">704</th><td><u>	(__recsize) ? \</u></td></tr>
+<tr><th id="705">705</th><td><u>	__kfifo_dma_out_prepare_r(__kfifo, __sgl, __nents, __len, __recsize) : \</u></td></tr>
+<tr><th id="706">706</th><td><u>	__kfifo_dma_out_prepare(__kfifo, __sgl, __nents, __len); \</u></td></tr>
+<tr><th id="707">707</th><td><u>})</u></td></tr>
+<tr><th id="708">708</th><td></td></tr>
+<tr><th id="709">709</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="710">710</th><td><i class="doc"> * kfifo_dma_out_finish - finish a DMA OUT operation</i></td></tr>
+<tr><th id="711">711</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="712">712</th><td><i class="doc"> *<span class="command"> @len</span>: number of bytes transferred</i></td></tr>
+<tr><th id="713">713</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="714">714</th><td><i class="doc"> * This macro finish a DMA OUT operation. The out counter will be updated by</i></td></tr>
+<tr><th id="715">715</th><td><i class="doc"> * the len parameter. No error checking will be done.</i></td></tr>
+<tr><th id="716">716</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="717">717</th><td><i class="doc"> * Note that with only one concurrent reader and one concurrent</i></td></tr>
+<tr><th id="718">718</th><td><i class="doc"> * writer, you don't need extra locking to use these macros.</i></td></tr>
+<tr><th id="719">719</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="720">720</th><td><u>#define <dfn class="macro" id="_M/kfifo_dma_out_finish" data-ref="_M/kfifo_dma_out_finish">kfifo_dma_out_finish</dfn>(fifo, len) \</u></td></tr>
+<tr><th id="721">721</th><td><u>(void)({ \</u></td></tr>
+<tr><th id="722">722</th><td><u>	typeof((fifo) + 1) __tmp = (fifo); \</u></td></tr>
+<tr><th id="723">723</th><td><u>	unsigned int __len = (len); \</u></td></tr>
+<tr><th id="724">724</th><td><u>	const size_t __recsize = sizeof(*__tmp-&gt;rectype); \</u></td></tr>
+<tr><th id="725">725</th><td><u>	struct __kfifo *__kfifo = &amp;__tmp-&gt;kfifo; \</u></td></tr>
+<tr><th id="726">726</th><td><u>	if (__recsize) \</u></td></tr>
+<tr><th id="727">727</th><td><u>		__kfifo_dma_out_finish_r(__kfifo, __recsize); \</u></td></tr>
+<tr><th id="728">728</th><td><u>	else \</u></td></tr>
+<tr><th id="729">729</th><td><u>		__kfifo-&gt;out += __len / sizeof(*__tmp-&gt;type); \</u></td></tr>
+<tr><th id="730">730</th><td><u>})</u></td></tr>
+<tr><th id="731">731</th><td></td></tr>
+<tr><th id="732">732</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="733">733</th><td><i class="doc"> * kfifo_out_peek - gets some data from the fifo</i></td></tr>
+<tr><th id="734">734</th><td><i class="doc"> *<span class="command"> @fifo</span>: address of the fifo to be used</i></td></tr>
+<tr><th id="735">735</th><td><i class="doc"> * <span class="command">@buf</span>: pointer to the storage buffer</i></td></tr>
+<tr><th id="736">736</th><td><i class="doc"> *<span class="command"> @n</span>: max. number of elements to get</i></td></tr>
+<tr><th id="737">737</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="738">738</th><td><i class="doc"> * This macro get the data from the fifo and return the numbers of elements</i></td></tr>
+<tr><th id="739">739</th><td><i class="doc"> * copied. The data is not removed from the fifo.</i></td></tr>
+<tr><th id="740">740</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="741">741</th><td><i class="doc"> * Note that with only one concurrent reader and one concurrent</i></td></tr>
+<tr><th id="742">742</th><td><i class="doc"> * writer, you don't need extra locking to use these macro.</i></td></tr>
+<tr><th id="743">743</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="744">744</th><td><u>#define	<dfn class="macro" id="_M/kfifo_out_peek" data-ref="_M/kfifo_out_peek">kfifo_out_peek</dfn>(fifo, buf, n) \</u></td></tr>
+<tr><th id="745">745</th><td><u>__kfifo_uint_must_check_helper( \</u></td></tr>
+<tr><th id="746">746</th><td><u>({ \</u></td></tr>
+<tr><th id="747">747</th><td><u>	typeof((fifo) + 1) __tmp = (fifo); \</u></td></tr>
+<tr><th id="748">748</th><td><u>	typeof(__tmp-&gt;ptr) __buf = (buf); \</u></td></tr>
+<tr><th id="749">749</th><td><u>	unsigned long __n = (n); \</u></td></tr>
+<tr><th id="750">750</th><td><u>	const size_t __recsize = sizeof(*__tmp-&gt;rectype); \</u></td></tr>
+<tr><th id="751">751</th><td><u>	struct __kfifo *__kfifo = &amp;__tmp-&gt;kfifo; \</u></td></tr>
+<tr><th id="752">752</th><td><u>	(__recsize) ? \</u></td></tr>
+<tr><th id="753">753</th><td><u>	__kfifo_out_peek_r(__kfifo, __buf, __n, __recsize) : \</u></td></tr>
+<tr><th id="754">754</th><td><u>	__kfifo_out_peek(__kfifo, __buf, __n); \</u></td></tr>
+<tr><th id="755">755</th><td><u>}) \</u></td></tr>
+<tr><th id="756">756</th><td><u>)</u></td></tr>
+<tr><th id="757">757</th><td></td></tr>
+<tr><th id="758">758</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="__kfifo_alloc" title='__kfifo_alloc' data-ref="__kfifo_alloc" data-ref-filename="__kfifo_alloc">__kfifo_alloc</dfn>(<b>struct</b> <a class="type" href="#__kfifo" title='__kfifo' data-ref="__kfifo" data-ref-filename="__kfifo">__kfifo</a> *<dfn class="local col3 decl" id="3fifo" title='fifo' data-type='struct __kfifo *' data-ref="3fifo" data-ref-filename="3fifo">fifo</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col4 decl" id="4size" title='size' data-type='unsigned int' data-ref="4size" data-ref-filename="4size">size</dfn>,</td></tr>
+<tr><th id="759">759</th><td>	<a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col5 decl" id="5esize" title='esize' data-type='size_t' data-ref="5esize" data-ref-filename="5esize">esize</dfn>, <a class="typedef" href="types.h.html#gfp_t" title='gfp_t' data-type='unsigned int' data-ref="gfp_t" data-ref-filename="gfp_t">gfp_t</a> <dfn class="local col6 decl" id="6gfp_mask" title='gfp_mask' data-type='gfp_t' data-ref="6gfp_mask" data-ref-filename="6gfp_mask">gfp_mask</dfn>);</td></tr>
+<tr><th id="760">760</th><td></td></tr>
+<tr><th id="761">761</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="__kfifo_free" title='__kfifo_free' data-ref="__kfifo_free" data-ref-filename="__kfifo_free">__kfifo_free</dfn>(<b>struct</b> <a class="type" href="#__kfifo" title='__kfifo' data-ref="__kfifo" data-ref-filename="__kfifo">__kfifo</a> *<dfn class="local col7 decl" id="7fifo" title='fifo' data-type='struct __kfifo *' data-ref="7fifo" data-ref-filename="7fifo">fifo</dfn>);</td></tr>
+<tr><th id="762">762</th><td></td></tr>
+<tr><th id="763">763</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="__kfifo_init" title='__kfifo_init' data-ref="__kfifo_init" data-ref-filename="__kfifo_init">__kfifo_init</dfn>(<b>struct</b> <a class="type" href="#__kfifo" title='__kfifo' data-ref="__kfifo" data-ref-filename="__kfifo">__kfifo</a> *<dfn class="local col8 decl" id="8fifo" title='fifo' data-type='struct __kfifo *' data-ref="8fifo" data-ref-filename="8fifo">fifo</dfn>, <em>void</em> *<dfn class="local col9 decl" id="9buffer" title='buffer' data-type='void *' data-ref="9buffer" data-ref-filename="9buffer">buffer</dfn>,</td></tr>
+<tr><th id="764">764</th><td>	<em>unsigned</em> <em>int</em> <dfn class="local col0 decl" id="10size" title='size' data-type='unsigned int' data-ref="10size" data-ref-filename="10size">size</dfn>, <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col1 decl" id="11esize" title='esize' data-type='size_t' data-ref="11esize" data-ref-filename="11esize">esize</dfn>);</td></tr>
+<tr><th id="765">765</th><td></td></tr>
+<tr><th id="766">766</th><td><b>extern</b> <em>unsigned</em> <em>int</em> <dfn class="decl fn" id="__kfifo_in" title='__kfifo_in' data-ref="__kfifo_in" data-ref-filename="__kfifo_in">__kfifo_in</dfn>(<b>struct</b> <a class="type" href="#__kfifo" title='__kfifo' data-ref="__kfifo" data-ref-filename="__kfifo">__kfifo</a> *<dfn class="local col2 decl" id="12fifo" title='fifo' data-type='struct __kfifo *' data-ref="12fifo" data-ref-filename="12fifo">fifo</dfn>,</td></tr>
+<tr><th id="767">767</th><td>	<em>const</em> <em>void</em> *<dfn class="local col3 decl" id="13buf" title='buf' data-type='const void *' data-ref="13buf" data-ref-filename="13buf">buf</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col4 decl" id="14len" title='len' data-type='unsigned int' data-ref="14len" data-ref-filename="14len">len</dfn>);</td></tr>
+<tr><th id="768">768</th><td></td></tr>
+<tr><th id="769">769</th><td><b>extern</b> <em>unsigned</em> <em>int</em> <dfn class="decl fn" id="__kfifo_out" title='__kfifo_out' data-ref="__kfifo_out" data-ref-filename="__kfifo_out">__kfifo_out</dfn>(<b>struct</b> <a class="type" href="#__kfifo" title='__kfifo' data-ref="__kfifo" data-ref-filename="__kfifo">__kfifo</a> *<dfn class="local col5 decl" id="15fifo" title='fifo' data-type='struct __kfifo *' data-ref="15fifo" data-ref-filename="15fifo">fifo</dfn>,</td></tr>
+<tr><th id="770">770</th><td>	<em>void</em> *<dfn class="local col6 decl" id="16buf" title='buf' data-type='void *' data-ref="16buf" data-ref-filename="16buf">buf</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col7 decl" id="17len" title='len' data-type='unsigned int' data-ref="17len" data-ref-filename="17len">len</dfn>);</td></tr>
+<tr><th id="771">771</th><td></td></tr>
+<tr><th id="772">772</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="__kfifo_from_user" title='__kfifo_from_user' data-ref="__kfifo_from_user" data-ref-filename="__kfifo_from_user">__kfifo_from_user</dfn>(<b>struct</b> <a class="type" href="#__kfifo" title='__kfifo' data-ref="__kfifo" data-ref-filename="__kfifo">__kfifo</a> *<dfn class="local col8 decl" id="18fifo" title='fifo' data-type='struct __kfifo *' data-ref="18fifo" data-ref-filename="18fifo">fifo</dfn>,</td></tr>
+<tr><th id="773">773</th><td>	<em>const</em> <em>void</em> <a class="macro" href="compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *<dfn class="local col9 decl" id="19from" title='from' data-type='const void *' data-ref="19from" data-ref-filename="19from">from</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col0 decl" id="20len" title='len' data-type='unsigned long' data-ref="20len" data-ref-filename="20len">len</dfn>, <em>unsigned</em> <em>int</em> *<dfn class="local col1 decl" id="21copied" title='copied' data-type='unsigned int *' data-ref="21copied" data-ref-filename="21copied">copied</dfn>);</td></tr>
+<tr><th id="774">774</th><td></td></tr>
+<tr><th id="775">775</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="__kfifo_to_user" title='__kfifo_to_user' data-ref="__kfifo_to_user" data-ref-filename="__kfifo_to_user">__kfifo_to_user</dfn>(<b>struct</b> <a class="type" href="#__kfifo" title='__kfifo' data-ref="__kfifo" data-ref-filename="__kfifo">__kfifo</a> *<dfn class="local col2 decl" id="22fifo" title='fifo' data-type='struct __kfifo *' data-ref="22fifo" data-ref-filename="22fifo">fifo</dfn>,</td></tr>
+<tr><th id="776">776</th><td>	<em>void</em> <a class="macro" href="compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *<dfn class="local col3 decl" id="23to" title='to' data-type='void *' data-ref="23to" data-ref-filename="23to">to</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col4 decl" id="24len" title='len' data-type='unsigned long' data-ref="24len" data-ref-filename="24len">len</dfn>, <em>unsigned</em> <em>int</em> *<dfn class="local col5 decl" id="25copied" title='copied' data-type='unsigned int *' data-ref="25copied" data-ref-filename="25copied">copied</dfn>);</td></tr>
+<tr><th id="777">777</th><td></td></tr>
+<tr><th id="778">778</th><td><b>extern</b> <em>unsigned</em> <em>int</em> <dfn class="decl fn" id="__kfifo_dma_in_prepare" title='__kfifo_dma_in_prepare' data-ref="__kfifo_dma_in_prepare" data-ref-filename="__kfifo_dma_in_prepare">__kfifo_dma_in_prepare</dfn>(<b>struct</b> <a class="type" href="#__kfifo" title='__kfifo' data-ref="__kfifo" data-ref-filename="__kfifo">__kfifo</a> *<dfn class="local col6 decl" id="26fifo" title='fifo' data-type='struct __kfifo *' data-ref="26fifo" data-ref-filename="26fifo">fifo</dfn>,</td></tr>
+<tr><th id="779">779</th><td>	<b>struct</b> <a class="type" href="scatterlist.h.html#scatterlist" title='scatterlist' data-ref="scatterlist" data-ref-filename="scatterlist">scatterlist</a> *<dfn class="local col7 decl" id="27sgl" title='sgl' data-type='struct scatterlist *' data-ref="27sgl" data-ref-filename="27sgl">sgl</dfn>, <em>int</em> <dfn class="local col8 decl" id="28nents" title='nents' data-type='int' data-ref="28nents" data-ref-filename="28nents">nents</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col9 decl" id="29len" title='len' data-type='unsigned int' data-ref="29len" data-ref-filename="29len">len</dfn>);</td></tr>
+<tr><th id="780">780</th><td></td></tr>
+<tr><th id="781">781</th><td><b>extern</b> <em>unsigned</em> <em>int</em> <dfn class="decl fn" id="__kfifo_dma_out_prepare" title='__kfifo_dma_out_prepare' data-ref="__kfifo_dma_out_prepare" data-ref-filename="__kfifo_dma_out_prepare">__kfifo_dma_out_prepare</dfn>(<b>struct</b> <a class="type" href="#__kfifo" title='__kfifo' data-ref="__kfifo" data-ref-filename="__kfifo">__kfifo</a> *<dfn class="local col0 decl" id="30fifo" title='fifo' data-type='struct __kfifo *' data-ref="30fifo" data-ref-filename="30fifo">fifo</dfn>,</td></tr>
+<tr><th id="782">782</th><td>	<b>struct</b> <a class="type" href="scatterlist.h.html#scatterlist" title='scatterlist' data-ref="scatterlist" data-ref-filename="scatterlist">scatterlist</a> *<dfn class="local col1 decl" id="31sgl" title='sgl' data-type='struct scatterlist *' data-ref="31sgl" data-ref-filename="31sgl">sgl</dfn>, <em>int</em> <dfn class="local col2 decl" id="32nents" title='nents' data-type='int' data-ref="32nents" data-ref-filename="32nents">nents</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col3 decl" id="33len" title='len' data-type='unsigned int' data-ref="33len" data-ref-filename="33len">len</dfn>);</td></tr>
+<tr><th id="783">783</th><td></td></tr>
+<tr><th id="784">784</th><td><b>extern</b> <em>unsigned</em> <em>int</em> <dfn class="decl fn" id="__kfifo_out_peek" title='__kfifo_out_peek' data-ref="__kfifo_out_peek" data-ref-filename="__kfifo_out_peek">__kfifo_out_peek</dfn>(<b>struct</b> <a class="type" href="#__kfifo" title='__kfifo' data-ref="__kfifo" data-ref-filename="__kfifo">__kfifo</a> *<dfn class="local col4 decl" id="34fifo" title='fifo' data-type='struct __kfifo *' data-ref="34fifo" data-ref-filename="34fifo">fifo</dfn>,</td></tr>
+<tr><th id="785">785</th><td>	<em>void</em> *<dfn class="local col5 decl" id="35buf" title='buf' data-type='void *' data-ref="35buf" data-ref-filename="35buf">buf</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col6 decl" id="36len" title='len' data-type='unsigned int' data-ref="36len" data-ref-filename="36len">len</dfn>);</td></tr>
+<tr><th id="786">786</th><td></td></tr>
+<tr><th id="787">787</th><td><b>extern</b> <em>unsigned</em> <em>int</em> <dfn class="decl fn" id="__kfifo_in_r" title='__kfifo_in_r' data-ref="__kfifo_in_r" data-ref-filename="__kfifo_in_r">__kfifo_in_r</dfn>(<b>struct</b> <a class="type" href="#__kfifo" title='__kfifo' data-ref="__kfifo" data-ref-filename="__kfifo">__kfifo</a> *<dfn class="local col7 decl" id="37fifo" title='fifo' data-type='struct __kfifo *' data-ref="37fifo" data-ref-filename="37fifo">fifo</dfn>,</td></tr>
+<tr><th id="788">788</th><td>	<em>const</em> <em>void</em> *<dfn class="local col8 decl" id="38buf" title='buf' data-type='const void *' data-ref="38buf" data-ref-filename="38buf">buf</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col9 decl" id="39len" title='len' data-type='unsigned int' data-ref="39len" data-ref-filename="39len">len</dfn>, <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col0 decl" id="40recsize" title='recsize' data-type='size_t' data-ref="40recsize" data-ref-filename="40recsize">recsize</dfn>);</td></tr>
+<tr><th id="789">789</th><td></td></tr>
+<tr><th id="790">790</th><td><b>extern</b> <em>unsigned</em> <em>int</em> <dfn class="decl fn" id="__kfifo_out_r" title='__kfifo_out_r' data-ref="__kfifo_out_r" data-ref-filename="__kfifo_out_r">__kfifo_out_r</dfn>(<b>struct</b> <a class="type" href="#__kfifo" title='__kfifo' data-ref="__kfifo" data-ref-filename="__kfifo">__kfifo</a> *<dfn class="local col1 decl" id="41fifo" title='fifo' data-type='struct __kfifo *' data-ref="41fifo" data-ref-filename="41fifo">fifo</dfn>,</td></tr>
+<tr><th id="791">791</th><td>	<em>void</em> *<dfn class="local col2 decl" id="42buf" title='buf' data-type='void *' data-ref="42buf" data-ref-filename="42buf">buf</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col3 decl" id="43len" title='len' data-type='unsigned int' data-ref="43len" data-ref-filename="43len">len</dfn>, <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col4 decl" id="44recsize" title='recsize' data-type='size_t' data-ref="44recsize" data-ref-filename="44recsize">recsize</dfn>);</td></tr>
+<tr><th id="792">792</th><td></td></tr>
+<tr><th id="793">793</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="__kfifo_from_user_r" title='__kfifo_from_user_r' data-ref="__kfifo_from_user_r" data-ref-filename="__kfifo_from_user_r">__kfifo_from_user_r</dfn>(<b>struct</b> <a class="type" href="#__kfifo" title='__kfifo' data-ref="__kfifo" data-ref-filename="__kfifo">__kfifo</a> *<dfn class="local col5 decl" id="45fifo" title='fifo' data-type='struct __kfifo *' data-ref="45fifo" data-ref-filename="45fifo">fifo</dfn>,</td></tr>
+<tr><th id="794">794</th><td>	<em>const</em> <em>void</em> <a class="macro" href="compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *<dfn class="local col6 decl" id="46from" title='from' data-type='const void *' data-ref="46from" data-ref-filename="46from">from</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col7 decl" id="47len" title='len' data-type='unsigned long' data-ref="47len" data-ref-filename="47len">len</dfn>, <em>unsigned</em> <em>int</em> *<dfn class="local col8 decl" id="48copied" title='copied' data-type='unsigned int *' data-ref="48copied" data-ref-filename="48copied">copied</dfn>,</td></tr>
+<tr><th id="795">795</th><td>	<a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col9 decl" id="49recsize" title='recsize' data-type='size_t' data-ref="49recsize" data-ref-filename="49recsize">recsize</dfn>);</td></tr>
+<tr><th id="796">796</th><td></td></tr>
+<tr><th id="797">797</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="__kfifo_to_user_r" title='__kfifo_to_user_r' data-ref="__kfifo_to_user_r" data-ref-filename="__kfifo_to_user_r">__kfifo_to_user_r</dfn>(<b>struct</b> <a class="type" href="#__kfifo" title='__kfifo' data-ref="__kfifo" data-ref-filename="__kfifo">__kfifo</a> *<dfn class="local col0 decl" id="50fifo" title='fifo' data-type='struct __kfifo *' data-ref="50fifo" data-ref-filename="50fifo">fifo</dfn>, <em>void</em> <a class="macro" href="compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *<dfn class="local col1 decl" id="51to" title='to' data-type='void *' data-ref="51to" data-ref-filename="51to">to</dfn>,</td></tr>
+<tr><th id="798">798</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col2 decl" id="52len" title='len' data-type='unsigned long' data-ref="52len" data-ref-filename="52len">len</dfn>, <em>unsigned</em> <em>int</em> *<dfn class="local col3 decl" id="53copied" title='copied' data-type='unsigned int *' data-ref="53copied" data-ref-filename="53copied">copied</dfn>, <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col4 decl" id="54recsize" title='recsize' data-type='size_t' data-ref="54recsize" data-ref-filename="54recsize">recsize</dfn>);</td></tr>
+<tr><th id="799">799</th><td></td></tr>
+<tr><th id="800">800</th><td><b>extern</b> <em>unsigned</em> <em>int</em> <dfn class="decl fn" id="__kfifo_dma_in_prepare_r" title='__kfifo_dma_in_prepare_r' data-ref="__kfifo_dma_in_prepare_r" data-ref-filename="__kfifo_dma_in_prepare_r">__kfifo_dma_in_prepare_r</dfn>(<b>struct</b> <a class="type" href="#__kfifo" title='__kfifo' data-ref="__kfifo" data-ref-filename="__kfifo">__kfifo</a> *<dfn class="local col5 decl" id="55fifo" title='fifo' data-type='struct __kfifo *' data-ref="55fifo" data-ref-filename="55fifo">fifo</dfn>,</td></tr>
+<tr><th id="801">801</th><td>	<b>struct</b> <a class="type" href="scatterlist.h.html#scatterlist" title='scatterlist' data-ref="scatterlist" data-ref-filename="scatterlist">scatterlist</a> *<dfn class="local col6 decl" id="56sgl" title='sgl' data-type='struct scatterlist *' data-ref="56sgl" data-ref-filename="56sgl">sgl</dfn>, <em>int</em> <dfn class="local col7 decl" id="57nents" title='nents' data-type='int' data-ref="57nents" data-ref-filename="57nents">nents</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col8 decl" id="58len" title='len' data-type='unsigned int' data-ref="58len" data-ref-filename="58len">len</dfn>, <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col9 decl" id="59recsize" title='recsize' data-type='size_t' data-ref="59recsize" data-ref-filename="59recsize">recsize</dfn>);</td></tr>
+<tr><th id="802">802</th><td></td></tr>
+<tr><th id="803">803</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="__kfifo_dma_in_finish_r" title='__kfifo_dma_in_finish_r' data-ref="__kfifo_dma_in_finish_r" data-ref-filename="__kfifo_dma_in_finish_r">__kfifo_dma_in_finish_r</dfn>(<b>struct</b> <a class="type" href="#__kfifo" title='__kfifo' data-ref="__kfifo" data-ref-filename="__kfifo">__kfifo</a> *<dfn class="local col0 decl" id="60fifo" title='fifo' data-type='struct __kfifo *' data-ref="60fifo" data-ref-filename="60fifo">fifo</dfn>,</td></tr>
+<tr><th id="804">804</th><td>	<em>unsigned</em> <em>int</em> <dfn class="local col1 decl" id="61len" title='len' data-type='unsigned int' data-ref="61len" data-ref-filename="61len">len</dfn>, <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col2 decl" id="62recsize" title='recsize' data-type='size_t' data-ref="62recsize" data-ref-filename="62recsize">recsize</dfn>);</td></tr>
+<tr><th id="805">805</th><td></td></tr>
+<tr><th id="806">806</th><td><b>extern</b> <em>unsigned</em> <em>int</em> <dfn class="decl fn" id="__kfifo_dma_out_prepare_r" title='__kfifo_dma_out_prepare_r' data-ref="__kfifo_dma_out_prepare_r" data-ref-filename="__kfifo_dma_out_prepare_r">__kfifo_dma_out_prepare_r</dfn>(<b>struct</b> <a class="type" href="#__kfifo" title='__kfifo' data-ref="__kfifo" data-ref-filename="__kfifo">__kfifo</a> *<dfn class="local col3 decl" id="63fifo" title='fifo' data-type='struct __kfifo *' data-ref="63fifo" data-ref-filename="63fifo">fifo</dfn>,</td></tr>
+<tr><th id="807">807</th><td>	<b>struct</b> <a class="type" href="scatterlist.h.html#scatterlist" title='scatterlist' data-ref="scatterlist" data-ref-filename="scatterlist">scatterlist</a> *<dfn class="local col4 decl" id="64sgl" title='sgl' data-type='struct scatterlist *' data-ref="64sgl" data-ref-filename="64sgl">sgl</dfn>, <em>int</em> <dfn class="local col5 decl" id="65nents" title='nents' data-type='int' data-ref="65nents" data-ref-filename="65nents">nents</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col6 decl" id="66len" title='len' data-type='unsigned int' data-ref="66len" data-ref-filename="66len">len</dfn>, <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col7 decl" id="67recsize" title='recsize' data-type='size_t' data-ref="67recsize" data-ref-filename="67recsize">recsize</dfn>);</td></tr>
+<tr><th id="808">808</th><td></td></tr>
+<tr><th id="809">809</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="__kfifo_dma_out_finish_r" title='__kfifo_dma_out_finish_r' data-ref="__kfifo_dma_out_finish_r" data-ref-filename="__kfifo_dma_out_finish_r">__kfifo_dma_out_finish_r</dfn>(<b>struct</b> <a class="type" href="#__kfifo" title='__kfifo' data-ref="__kfifo" data-ref-filename="__kfifo">__kfifo</a> *<dfn class="local col8 decl" id="68fifo" title='fifo' data-type='struct __kfifo *' data-ref="68fifo" data-ref-filename="68fifo">fifo</dfn>, <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col9 decl" id="69recsize" title='recsize' data-type='size_t' data-ref="69recsize" data-ref-filename="69recsize">recsize</dfn>);</td></tr>
+<tr><th id="810">810</th><td></td></tr>
+<tr><th id="811">811</th><td><b>extern</b> <em>unsigned</em> <em>int</em> <dfn class="decl fn" id="__kfifo_len_r" title='__kfifo_len_r' data-ref="__kfifo_len_r" data-ref-filename="__kfifo_len_r">__kfifo_len_r</dfn>(<b>struct</b> <a class="type" href="#__kfifo" title='__kfifo' data-ref="__kfifo" data-ref-filename="__kfifo">__kfifo</a> *<dfn class="local col0 decl" id="70fifo" title='fifo' data-type='struct __kfifo *' data-ref="70fifo" data-ref-filename="70fifo">fifo</dfn>, <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col1 decl" id="71recsize" title='recsize' data-type='size_t' data-ref="71recsize" data-ref-filename="71recsize">recsize</dfn>);</td></tr>
+<tr><th id="812">812</th><td></td></tr>
+<tr><th id="813">813</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="__kfifo_skip_r" title='__kfifo_skip_r' data-ref="__kfifo_skip_r" data-ref-filename="__kfifo_skip_r">__kfifo_skip_r</dfn>(<b>struct</b> <a class="type" href="#__kfifo" title='__kfifo' data-ref="__kfifo" data-ref-filename="__kfifo">__kfifo</a> *<dfn class="local col2 decl" id="72fifo" title='fifo' data-type='struct __kfifo *' data-ref="72fifo" data-ref-filename="72fifo">fifo</dfn>, <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col3 decl" id="73recsize" title='recsize' data-type='size_t' data-ref="73recsize" data-ref-filename="73recsize">recsize</dfn>);</td></tr>
+<tr><th id="814">814</th><td></td></tr>
+<tr><th id="815">815</th><td><b>extern</b> <em>unsigned</em> <em>int</em> <dfn class="decl fn" id="__kfifo_out_peek_r" title='__kfifo_out_peek_r' data-ref="__kfifo_out_peek_r" data-ref-filename="__kfifo_out_peek_r">__kfifo_out_peek_r</dfn>(<b>struct</b> <a class="type" href="#__kfifo" title='__kfifo' data-ref="__kfifo" data-ref-filename="__kfifo">__kfifo</a> *<dfn class="local col4 decl" id="74fifo" title='fifo' data-type='struct __kfifo *' data-ref="74fifo" data-ref-filename="74fifo">fifo</dfn>,</td></tr>
+<tr><th id="816">816</th><td>	<em>void</em> *<dfn class="local col5 decl" id="75buf" title='buf' data-type='void *' data-ref="75buf" data-ref-filename="75buf">buf</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col6 decl" id="76len" title='len' data-type='unsigned int' data-ref="76len" data-ref-filename="76len">len</dfn>, <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col7 decl" id="77recsize" title='recsize' data-type='size_t' data-ref="77recsize" data-ref-filename="77recsize">recsize</dfn>);</td></tr>
+<tr><th id="817">817</th><td></td></tr>
+<tr><th id="818">818</th><td><b>extern</b> <em>unsigned</em> <em>int</em> <dfn class="decl fn" id="__kfifo_max_r" title='__kfifo_max_r' data-ref="__kfifo_max_r" data-ref-filename="__kfifo_max_r">__kfifo_max_r</dfn>(<em>unsigned</em> <em>int</em> <dfn class="local col8 decl" id="78len" title='len' data-type='unsigned int' data-ref="78len" data-ref-filename="78len">len</dfn>, <a class="typedef" href="types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col9 decl" id="79recsize" title='recsize' data-type='size_t' data-ref="79recsize" data-ref-filename="79recsize">recsize</dfn>);</td></tr>
+<tr><th id="819">819</th><td></td></tr>
+<tr><th id="820">820</th><td><u>#<span data-ppcond="8">endif</span></u></td></tr>
+<tr><th id="821">821</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../drivers/gpu/drm/drm_flip_work.c.html'>linux-5.3.1/drivers/gpu/drm/drm_flip_work.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

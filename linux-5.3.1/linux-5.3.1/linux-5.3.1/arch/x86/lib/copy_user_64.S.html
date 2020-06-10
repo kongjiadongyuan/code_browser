@@ -1,0 +1,411 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>copy_user_64.S source code [linux-5.3.1/arch/x86/lib/copy_user_64.S] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/arch/x86/lib/copy_user_64.S'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>linux-5.3.1</a>/<a href='../..'>arch</a>/<a href='..'>x86</a>/<a href='./'>lib</a>/<a href='copy_user_64.S.html'>copy_user_64.S</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0-only */</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * Copyright 2008 Vitaly Mayatskikh &lt;vmayatsk@redhat.com&gt;</i></td></tr>
+<tr><th id="4">4</th><td><i> * Copyright 2002 Andi Kleen, SuSE Labs.</i></td></tr>
+<tr><th id="5">5</th><td><i> *</i></td></tr>
+<tr><th id="6">6</th><td><i> * Functions to copy from and to user space.</i></td></tr>
+<tr><th id="7">7</th><td><i> */</i></td></tr>
+<tr><th id="8">8</th><td></td></tr>
+<tr><th id="9">9</th><td><u>#include <a href="../../../include/linux/linkage.h.html">&lt;linux/linkage.h&gt;</a></u></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="../include/asm/current.h.html">&lt;asm/current.h&gt;</a></u></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../include/asm/asm-offsets.h.html">&lt;asm/asm-offsets.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="../include/asm/thread_info.h.html">&lt;asm/thread_info.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="../include/asm/cpufeatures.h.html">&lt;asm/cpufeatures.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="../include/asm/alternative-asm.h.html">&lt;asm/alternative-asm.h&gt;</a></u></td></tr>
+<tr><th id="15">15</th><td><u>#include <a href="../include/asm/asm.h.html">&lt;asm/asm.h&gt;</a></u></td></tr>
+<tr><th id="16">16</th><td><u>#include <a href="../include/asm/smap.h.html">&lt;asm/smap.h&gt;</a></u></td></tr>
+<tr><th id="17">17</th><td><u>#include <a href="../include/generated/asm/export.h.html">&lt;asm/export.h&gt;</a></u></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td>.macro ALIGN_DESTINATION</td></tr>
+<tr><th id="20">20</th><td>	<i>/* check for bad alignment of destination */</i></td></tr>
+<tr><th id="21">21</th><td>	movl %edi,%ecx</td></tr>
+<tr><th id="22">22</th><td>	andl $<var>7</var>,%ecx</td></tr>
+<tr><th id="23">23</th><td>	jz <var>102f</var>				<i>/* already aligned */</i></td></tr>
+<tr><th id="24">24</th><td>	subl $<var>8</var>,%ecx</td></tr>
+<tr><th id="25">25</th><td>	negl %ecx</td></tr>
+<tr><th id="26">26</th><td>	subl %ecx,%edx</td></tr>
+<tr><th id="27">27</th><td><var>100</var>:	movb (%rsi),%al</td></tr>
+<tr><th id="28">28</th><td><var>101</var>:	movb %al,(%rdi)</td></tr>
+<tr><th id="29">29</th><td>	incq %rsi</td></tr>
+<tr><th id="30">30</th><td>	incq %rdi</td></tr>
+<tr><th id="31">31</th><td>	decl %ecx</td></tr>
+<tr><th id="32">32</th><td>	jnz <var>100b</var></td></tr>
+<tr><th id="33">33</th><td><var>102</var>:</td></tr>
+<tr><th id="34">34</th><td>	.section .fixup,<q>"ax"</q></td></tr>
+<tr><th id="35">35</th><td><var>103</var>:	addl %ecx,%edx			<i>/* ecx is zerorest also */</i></td></tr>
+<tr><th id="36">36</th><td>	jmp copy_user_handle_tail</td></tr>
+<tr><th id="37">37</th><td>	.previous</td></tr>
+<tr><th id="38">38</th><td></td></tr>
+<tr><th id="39">39</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (100b) - . ; .long (103b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>100b</var>, <var>103b</var>)</td></tr>
+<tr><th id="40">40</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (101b) - . ; .long (103b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>101b</var>, <var>103b</var>)</td></tr>
+<tr><th id="41">41</th><td>	.endm</td></tr>
+<tr><th id="42">42</th><td></td></tr>
+<tr><th id="43">43</th><td><i>/*</i></td></tr>
+<tr><th id="44">44</th><td><i> * copy_user_generic_unrolled - memory copy with exception handling.</i></td></tr>
+<tr><th id="45">45</th><td><i> * This version is for CPUs like P4 that don't have efficient micro</i></td></tr>
+<tr><th id="46">46</th><td><i> * code for rep movsq</i></td></tr>
+<tr><th id="47">47</th><td><i> *</i></td></tr>
+<tr><th id="48">48</th><td><i> * Input:</i></td></tr>
+<tr><th id="49">49</th><td><i> * rdi destination</i></td></tr>
+<tr><th id="50">50</th><td><i> * rsi source</i></td></tr>
+<tr><th id="51">51</th><td><i> * rdx count</i></td></tr>
+<tr><th id="52">52</th><td><i> *</i></td></tr>
+<tr><th id="53">53</th><td><i> * Output:</i></td></tr>
+<tr><th id="54">54</th><td><i> * eax uncopied bytes or 0 if successful.</i></td></tr>
+<tr><th id="55">55</th><td><i> */</i></td></tr>
+<tr><th id="56">56</th><td><a class="macro" href="../../../include/linux/linkage.h.html#89" title=".globl copy_user_generic_unrolled ; .p2align 4, 0x90 ; copy_user_generic_unrolled:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="copy_user_generic_unrolled" title='copy_user_generic_unrolled' data-ref="copy_user_generic_unrolled" data-ref-filename="copy_user_generic_unrolled">copy_user_generic_unrolled</dfn></span>)</td></tr>
+<tr><th id="57">57</th><td>	<a class="macro" href="../include/asm/smap.h.html#28" title="ALTERNATIVE &quot;&quot;, &quot;.byte 0x0f,0x01,0xcb&quot;, ( 9*32+20)" data-ref="_M/ASM_STAC">ASM_STAC</a></td></tr>
+<tr><th id="58">58</th><td>	cmpl $<var>8</var>,%edx</td></tr>
+<tr><th id="59">59</th><td>	jb <var>20f</var>		<i>/* less then 8 bytes, go to byte copy loop */</i></td></tr>
+<tr><th id="60">60</th><td>	ALIGN_DESTINATION</td></tr>
+<tr><th id="61">61</th><td>	movl %edx,%ecx</td></tr>
+<tr><th id="62">62</th><td>	andl $<var>63</var>,%edx</td></tr>
+<tr><th id="63">63</th><td>	shrl $<var>6</var>,%ecx</td></tr>
+<tr><th id="64">64</th><td>	jz .L_copy_short_string</td></tr>
+<tr><th id="65">65</th><td><var>1</var>:	movq (%rsi),%r8</td></tr>
+<tr><th id="66">66</th><td><var>2</var>:	movq <var>1</var>*<var>8</var>(%rsi),%r9</td></tr>
+<tr><th id="67">67</th><td><var>3</var>:	movq <var>2</var>*<var>8</var>(%rsi),%r10</td></tr>
+<tr><th id="68">68</th><td><var>4</var>:	movq <var>3</var>*<var>8</var>(%rsi),%r11</td></tr>
+<tr><th id="69">69</th><td><var>5</var>:	movq %r8,(%rdi)</td></tr>
+<tr><th id="70">70</th><td><var>6</var>:	movq %r9,<var>1</var>*<var>8</var>(%rdi)</td></tr>
+<tr><th id="71">71</th><td><var>7</var>:	movq %r10,<var>2</var>*<var>8</var>(%rdi)</td></tr>
+<tr><th id="72">72</th><td><var>8</var>:	movq %r11,<var>3</var>*<var>8</var>(%rdi)</td></tr>
+<tr><th id="73">73</th><td><var>9</var>:	movq <var>4</var>*<var>8</var>(%rsi),%r8</td></tr>
+<tr><th id="74">74</th><td><var>10</var>:	movq <var>5</var>*<var>8</var>(%rsi),%r9</td></tr>
+<tr><th id="75">75</th><td><var>11</var>:	movq <var>6</var>*<var>8</var>(%rsi),%r10</td></tr>
+<tr><th id="76">76</th><td><var>12</var>:	movq <var>7</var>*<var>8</var>(%rsi),%r11</td></tr>
+<tr><th id="77">77</th><td><var>13</var>:	movq %r8,<var>4</var>*<var>8</var>(%rdi)</td></tr>
+<tr><th id="78">78</th><td><var>14</var>:	movq %r9,<var>5</var>*<var>8</var>(%rdi)</td></tr>
+<tr><th id="79">79</th><td><var>15</var>:	movq %r10,<var>6</var>*<var>8</var>(%rdi)</td></tr>
+<tr><th id="80">80</th><td><var>16</var>:	movq %r11,<var>7</var>*<var>8</var>(%rdi)</td></tr>
+<tr><th id="81">81</th><td>	leaq <var>64</var>(%rsi),%rsi</td></tr>
+<tr><th id="82">82</th><td>	leaq <var>64</var>(%rdi),%rdi</td></tr>
+<tr><th id="83">83</th><td>	decl %ecx</td></tr>
+<tr><th id="84">84</th><td>	jnz <var>1b</var></td></tr>
+<tr><th id="85">85</th><td>.L_copy_short_string:</td></tr>
+<tr><th id="86">86</th><td>	movl %edx,%ecx</td></tr>
+<tr><th id="87">87</th><td>	andl $<var>7</var>,%edx</td></tr>
+<tr><th id="88">88</th><td>	shrl $<var>3</var>,%ecx</td></tr>
+<tr><th id="89">89</th><td>	jz <var>20f</var></td></tr>
+<tr><th id="90">90</th><td><var>18</var>:	movq (%rsi),%r8</td></tr>
+<tr><th id="91">91</th><td><var>19</var>:	movq %r8,(%rdi)</td></tr>
+<tr><th id="92">92</th><td>	leaq <var>8</var>(%rsi),%rsi</td></tr>
+<tr><th id="93">93</th><td>	leaq <var>8</var>(%rdi),%rdi</td></tr>
+<tr><th id="94">94</th><td>	decl %ecx</td></tr>
+<tr><th id="95">95</th><td>	jnz <var>18b</var></td></tr>
+<tr><th id="96">96</th><td><var>20</var>:	andl %edx,%edx</td></tr>
+<tr><th id="97">97</th><td>	jz <var>23f</var></td></tr>
+<tr><th id="98">98</th><td>	movl %edx,%ecx</td></tr>
+<tr><th id="99">99</th><td><var>21</var>:	movb (%rsi),%al</td></tr>
+<tr><th id="100">100</th><td><var>22</var>:	movb %al,(%rdi)</td></tr>
+<tr><th id="101">101</th><td>	incq %rsi</td></tr>
+<tr><th id="102">102</th><td>	incq %rdi</td></tr>
+<tr><th id="103">103</th><td>	decl %ecx</td></tr>
+<tr><th id="104">104</th><td>	jnz <var>21b</var></td></tr>
+<tr><th id="105">105</th><td><var>23</var>:	xor %eax,%eax</td></tr>
+<tr><th id="106">106</th><td>	<a class="macro" href="../include/asm/smap.h.html#25" title="ALTERNATIVE &quot;&quot;, &quot;.byte 0x0f,0x01,0xca&quot;, ( 9*32+20)" data-ref="_M/ASM_CLAC">ASM_CLAC</a></td></tr>
+<tr><th id="107">107</th><td>	ret</td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td>	.section .fixup,<q>"ax"</q></td></tr>
+<tr><th id="110">110</th><td><var>30</var>:	shll $<var>6</var>,%ecx</td></tr>
+<tr><th id="111">111</th><td>	addl %ecx,%edx</td></tr>
+<tr><th id="112">112</th><td>	jmp <var>60f</var></td></tr>
+<tr><th id="113">113</th><td><var>40</var>:	leal (%rdx,%rcx,<var>8</var>),%edx</td></tr>
+<tr><th id="114">114</th><td>	jmp <var>60f</var></td></tr>
+<tr><th id="115">115</th><td><var>50</var>:	movl %ecx,%edx</td></tr>
+<tr><th id="116">116</th><td><var>60</var>:	jmp copy_user_handle_tail <i>/* ecx is zerorest also */</i></td></tr>
+<tr><th id="117">117</th><td>	.previous</td></tr>
+<tr><th id="118">118</th><td></td></tr>
+<tr><th id="119">119</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (1b) - . ; .long (30b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>1b</var>, <var>30b</var>)</td></tr>
+<tr><th id="120">120</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (2b) - . ; .long (30b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>2b</var>, <var>30b</var>)</td></tr>
+<tr><th id="121">121</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (3b) - . ; .long (30b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>3b</var>, <var>30b</var>)</td></tr>
+<tr><th id="122">122</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (4b) - . ; .long (30b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>4b</var>, <var>30b</var>)</td></tr>
+<tr><th id="123">123</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (5b) - . ; .long (30b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>5b</var>, <var>30b</var>)</td></tr>
+<tr><th id="124">124</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (6b) - . ; .long (30b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>6b</var>, <var>30b</var>)</td></tr>
+<tr><th id="125">125</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (7b) - . ; .long (30b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>7b</var>, <var>30b</var>)</td></tr>
+<tr><th id="126">126</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (8b) - . ; .long (30b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>8b</var>, <var>30b</var>)</td></tr>
+<tr><th id="127">127</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (9b) - . ; .long (30b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>9b</var>, <var>30b</var>)</td></tr>
+<tr><th id="128">128</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (10b) - . ; .long (30b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>10b</var>, <var>30b</var>)</td></tr>
+<tr><th id="129">129</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (11b) - . ; .long (30b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>11b</var>, <var>30b</var>)</td></tr>
+<tr><th id="130">130</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (12b) - . ; .long (30b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>12b</var>, <var>30b</var>)</td></tr>
+<tr><th id="131">131</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (13b) - . ; .long (30b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>13b</var>, <var>30b</var>)</td></tr>
+<tr><th id="132">132</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (14b) - . ; .long (30b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>14b</var>, <var>30b</var>)</td></tr>
+<tr><th id="133">133</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (15b) - . ; .long (30b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>15b</var>, <var>30b</var>)</td></tr>
+<tr><th id="134">134</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (16b) - . ; .long (30b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>16b</var>, <var>30b</var>)</td></tr>
+<tr><th id="135">135</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (18b) - . ; .long (40b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>18b</var>, <var>40b</var>)</td></tr>
+<tr><th id="136">136</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (19b) - . ; .long (40b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>19b</var>, <var>40b</var>)</td></tr>
+<tr><th id="137">137</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (21b) - . ; .long (50b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>21b</var>, <var>50b</var>)</td></tr>
+<tr><th id="138">138</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (22b) - . ; .long (50b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>22b</var>, <var>50b</var>)</td></tr>
+<tr><th id="139">139</th><td><a class="macro" href="../../../include/linux/linkage.h.html#113" title=".type copy_user_generic_unrolled, @function ; .size copy_user_generic_unrolled, .-copy_user_generic_unrolled" data-ref="_M/ENDPROC">ENDPROC</a>(copy_user_generic_unrolled)</td></tr>
+<tr><th id="140">140</th><td><a class="macro" href="../../../include/asm-generic/export.h.html#87" title="___EXPORT_SYMBOL copy_user_generic_unrolled, copy_user_generic_unrolled," data-ref="_M/EXPORT_SYMBOL">EXPORT_SYMBOL</a>(copy_user_generic_unrolled)</td></tr>
+<tr><th id="141">141</th><td></td></tr>
+<tr><th id="142">142</th><td><i>/* Some CPUs run faster using the string copy instructions.</i></td></tr>
+<tr><th id="143">143</th><td><i> * This is also a lot simpler. Use them when possible.</i></td></tr>
+<tr><th id="144">144</th><td><i> *</i></td></tr>
+<tr><th id="145">145</th><td><i> * Only 4GB of copy is supported. This shouldn't be a problem</i></td></tr>
+<tr><th id="146">146</th><td><i> * because the kernel normally only writes from/to page sized chunks</i></td></tr>
+<tr><th id="147">147</th><td><i> * even if user space passed a longer buffer.</i></td></tr>
+<tr><th id="148">148</th><td><i> * And more would be dangerous because both Intel and AMD have</i></td></tr>
+<tr><th id="149">149</th><td><i> * errata with rep movsq &gt; 4GB. If someone feels the need to fix</i></td></tr>
+<tr><th id="150">150</th><td><i> * this please consider this.</i></td></tr>
+<tr><th id="151">151</th><td><i> *</i></td></tr>
+<tr><th id="152">152</th><td><i> * Input:</i></td></tr>
+<tr><th id="153">153</th><td><i> * rdi destination</i></td></tr>
+<tr><th id="154">154</th><td><i> * rsi source</i></td></tr>
+<tr><th id="155">155</th><td><i> * rdx count</i></td></tr>
+<tr><th id="156">156</th><td><i> *</i></td></tr>
+<tr><th id="157">157</th><td><i> * Output:</i></td></tr>
+<tr><th id="158">158</th><td><i> * eax uncopied bytes or 0 if successful.</i></td></tr>
+<tr><th id="159">159</th><td><i> */</i></td></tr>
+<tr><th id="160">160</th><td><a class="macro" href="../../../include/linux/linkage.h.html#89" title=".globl copy_user_generic_string ; .p2align 4, 0x90 ; copy_user_generic_string:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="copy_user_generic_string" title='copy_user_generic_string' data-ref="copy_user_generic_string" data-ref-filename="copy_user_generic_string">copy_user_generic_string</dfn></span>)</td></tr>
+<tr><th id="161">161</th><td>	<a class="macro" href="../include/asm/smap.h.html#28" title="ALTERNATIVE &quot;&quot;, &quot;.byte 0x0f,0x01,0xcb&quot;, ( 9*32+20)" data-ref="_M/ASM_STAC">ASM_STAC</a></td></tr>
+<tr><th id="162">162</th><td>	cmpl $<var>8</var>,%edx</td></tr>
+<tr><th id="163">163</th><td>	jb <var>2f</var>		<i>/* less than 8 bytes, go to byte copy loop */</i></td></tr>
+<tr><th id="164">164</th><td>	ALIGN_DESTINATION</td></tr>
+<tr><th id="165">165</th><td>	movl %edx,%ecx</td></tr>
+<tr><th id="166">166</th><td>	shrl $<var>3</var>,%ecx</td></tr>
+<tr><th id="167">167</th><td>	andl $<var>7</var>,%edx</td></tr>
+<tr><th id="168">168</th><td><var>1</var>:	rep</td></tr>
+<tr><th id="169">169</th><td>	movsq</td></tr>
+<tr><th id="170">170</th><td><var>2</var>:	movl %edx,%ecx</td></tr>
+<tr><th id="171">171</th><td><var>3</var>:	rep</td></tr>
+<tr><th id="172">172</th><td>	movsb</td></tr>
+<tr><th id="173">173</th><td>	xorl %eax,%eax</td></tr>
+<tr><th id="174">174</th><td>	<a class="macro" href="../include/asm/smap.h.html#25" title="ALTERNATIVE &quot;&quot;, &quot;.byte 0x0f,0x01,0xca&quot;, ( 9*32+20)" data-ref="_M/ASM_CLAC">ASM_CLAC</a></td></tr>
+<tr><th id="175">175</th><td>	ret</td></tr>
+<tr><th id="176">176</th><td></td></tr>
+<tr><th id="177">177</th><td>	.section .fixup,<q>"ax"</q></td></tr>
+<tr><th id="178">178</th><td><var>11</var>:	leal (%rdx,%rcx,<var>8</var>),%ecx</td></tr>
+<tr><th id="179">179</th><td><var>12</var>:	movl %ecx,%edx		<i>/* ecx is zerorest also */</i></td></tr>
+<tr><th id="180">180</th><td>	jmp copy_user_handle_tail</td></tr>
+<tr><th id="181">181</th><td>	.previous</td></tr>
+<tr><th id="182">182</th><td></td></tr>
+<tr><th id="183">183</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (1b) - . ; .long (11b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>1b</var>, <var>11b</var>)</td></tr>
+<tr><th id="184">184</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (3b) - . ; .long (12b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>3b</var>, <var>12b</var>)</td></tr>
+<tr><th id="185">185</th><td><a class="macro" href="../../../include/linux/linkage.h.html#113" title=".type copy_user_generic_string, @function ; .size copy_user_generic_string, .-copy_user_generic_string" data-ref="_M/ENDPROC">ENDPROC</a>(copy_user_generic_string)</td></tr>
+<tr><th id="186">186</th><td><a class="macro" href="../../../include/asm-generic/export.h.html#87" title="___EXPORT_SYMBOL copy_user_generic_string, copy_user_generic_string," data-ref="_M/EXPORT_SYMBOL">EXPORT_SYMBOL</a>(copy_user_generic_string)</td></tr>
+<tr><th id="187">187</th><td></td></tr>
+<tr><th id="188">188</th><td><i>/*</i></td></tr>
+<tr><th id="189">189</th><td><i> * Some CPUs are adding enhanced REP MOVSB/STOSB instructions.</i></td></tr>
+<tr><th id="190">190</th><td><i> * It's recommended to use enhanced REP MOVSB/STOSB if it's enabled.</i></td></tr>
+<tr><th id="191">191</th><td><i> *</i></td></tr>
+<tr><th id="192">192</th><td><i> * Input:</i></td></tr>
+<tr><th id="193">193</th><td><i> * rdi destination</i></td></tr>
+<tr><th id="194">194</th><td><i> * rsi source</i></td></tr>
+<tr><th id="195">195</th><td><i> * rdx count</i></td></tr>
+<tr><th id="196">196</th><td><i> *</i></td></tr>
+<tr><th id="197">197</th><td><i> * Output:</i></td></tr>
+<tr><th id="198">198</th><td><i> * eax uncopied bytes or 0 if successful.</i></td></tr>
+<tr><th id="199">199</th><td><i> */</i></td></tr>
+<tr><th id="200">200</th><td><a class="macro" href="../../../include/linux/linkage.h.html#89" title=".globl copy_user_enhanced_fast_string ; .p2align 4, 0x90 ; copy_user_enhanced_fast_string:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="copy_user_enhanced_fast_string" title='copy_user_enhanced_fast_string' data-ref="copy_user_enhanced_fast_string" data-ref-filename="copy_user_enhanced_fast_string">copy_user_enhanced_fast_string</dfn></span>)</td></tr>
+<tr><th id="201">201</th><td>	<a class="macro" href="../include/asm/smap.h.html#28" title="ALTERNATIVE &quot;&quot;, &quot;.byte 0x0f,0x01,0xcb&quot;, ( 9*32+20)" data-ref="_M/ASM_STAC">ASM_STAC</a></td></tr>
+<tr><th id="202">202</th><td>	cmpl $<var>64</var>,%edx</td></tr>
+<tr><th id="203">203</th><td>	jb .L_copy_short_string	<i>/* less then 64 bytes, avoid the costly 'rep' */</i></td></tr>
+<tr><th id="204">204</th><td>	movl %edx,%ecx</td></tr>
+<tr><th id="205">205</th><td><var>1</var>:	rep</td></tr>
+<tr><th id="206">206</th><td>	movsb</td></tr>
+<tr><th id="207">207</th><td>	xorl %eax,%eax</td></tr>
+<tr><th id="208">208</th><td>	<a class="macro" href="../include/asm/smap.h.html#25" title="ALTERNATIVE &quot;&quot;, &quot;.byte 0x0f,0x01,0xca&quot;, ( 9*32+20)" data-ref="_M/ASM_CLAC">ASM_CLAC</a></td></tr>
+<tr><th id="209">209</th><td>	ret</td></tr>
+<tr><th id="210">210</th><td></td></tr>
+<tr><th id="211">211</th><td>	.section .fixup,<q>"ax"</q></td></tr>
+<tr><th id="212">212</th><td><var>12</var>:	movl %ecx,%edx		<i>/* ecx is zerorest also */</i></td></tr>
+<tr><th id="213">213</th><td>	jmp copy_user_handle_tail</td></tr>
+<tr><th id="214">214</th><td>	.previous</td></tr>
+<tr><th id="215">215</th><td></td></tr>
+<tr><th id="216">216</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (1b) - . ; .long (12b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>1b</var>, <var>12b</var>)</td></tr>
+<tr><th id="217">217</th><td><a class="macro" href="../../../include/linux/linkage.h.html#113" title=".type copy_user_enhanced_fast_string, @function ; .size copy_user_enhanced_fast_string, .-copy_user_enhanced_fast_string" data-ref="_M/ENDPROC">ENDPROC</a>(copy_user_enhanced_fast_string)</td></tr>
+<tr><th id="218">218</th><td><a class="macro" href="../../../include/asm-generic/export.h.html#87" title="___EXPORT_SYMBOL copy_user_enhanced_fast_string, copy_user_enhanced_fast_string," data-ref="_M/EXPORT_SYMBOL">EXPORT_SYMBOL</a>(copy_user_enhanced_fast_string)</td></tr>
+<tr><th id="219">219</th><td></td></tr>
+<tr><th id="220">220</th><td><i>/*</i></td></tr>
+<tr><th id="221">221</th><td><i> * Try to copy last bytes and clear the rest if needed.</i></td></tr>
+<tr><th id="222">222</th><td><i> * Since protection fault in copy_from/to_user is not a normal situation,</i></td></tr>
+<tr><th id="223">223</th><td><i> * it is not necessary to optimize tail handling.</i></td></tr>
+<tr><th id="224">224</th><td><i> *</i></td></tr>
+<tr><th id="225">225</th><td><i> * Input:</i></td></tr>
+<tr><th id="226">226</th><td><i> * rdi destination</i></td></tr>
+<tr><th id="227">227</th><td><i> * rsi source</i></td></tr>
+<tr><th id="228">228</th><td><i> * rdx count</i></td></tr>
+<tr><th id="229">229</th><td><i> *</i></td></tr>
+<tr><th id="230">230</th><td><i> * Output:</i></td></tr>
+<tr><th id="231">231</th><td><i> * eax uncopied bytes or 0 if successful.</i></td></tr>
+<tr><th id="232">232</th><td><i> */</i></td></tr>
+<tr><th id="233">233</th><td><a class="macro" href="../../../include/linux/linkage.h.html#79" title=".p2align 4, 0x90" data-ref="_M/ALIGN">ALIGN</a>;</td></tr>
+<tr><th id="234">234</th><td><span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="copy_user_handle_tail" title='copy_user_handle_tail' data-ref="copy_user_handle_tail" data-ref-filename="copy_user_handle_tail">copy_user_handle_tail</dfn></span><span class='error' title="expected &apos;;&apos; after top level declarator">:</span></td></tr>
+<tr><th id="235">235</th><td>	<span class='error' title="unknown type name &apos;movl&apos;">movl</span> <span class='error' title="expected identifier or &apos;(&apos;">%</span>edx,%ecx</td></tr>
+<tr><th id="236">236</th><td><var>1</var>:	rep movsb</td></tr>
+<tr><th id="237">237</th><td><var>2</var>:	mov %ecx,%eax</td></tr>
+<tr><th id="238">238</th><td>	<a class="macro" href="../include/asm/smap.h.html#25" title="ALTERNATIVE &quot;&quot;, &quot;.byte 0x0f,0x01,0xca&quot;, ( 9*32+20)" data-ref="_M/ASM_CLAC">ASM_CLAC</a></td></tr>
+<tr><th id="239">239</th><td>	ret</td></tr>
+<tr><th id="240">240</th><td></td></tr>
+<tr><th id="241">241</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (1b) - . ; .long (2b) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>1b</var>, <var>2b</var>)</td></tr>
+<tr><th id="242">242</th><td><a class="macro" href="../../../include/linux/linkage.h.html#104" title=".size copy_user_handle_tail, .-copy_user_handle_tail" data-ref="_M/END">END</a>(copy_user_handle_tail)</td></tr>
+<tr><th id="243">243</th><td></td></tr>
+<tr><th id="244">244</th><td><i>/*</i></td></tr>
+<tr><th id="245">245</th><td><i> * copy_user_nocache - Uncached memory copy with exception handling</i></td></tr>
+<tr><th id="246">246</th><td><i> * This will force destination out of cache for more performance.</i></td></tr>
+<tr><th id="247">247</th><td><i> *</i></td></tr>
+<tr><th id="248">248</th><td><i> * Note: Cached memory copy is used when destination or size is not</i></td></tr>
+<tr><th id="249">249</th><td><i> * naturally aligned. That is:</i></td></tr>
+<tr><th id="250">250</th><td><i> *  - Require 8-byte alignment when size is 8 bytes or larger.</i></td></tr>
+<tr><th id="251">251</th><td><i> *  - Require 4-byte alignment when size is 4 bytes.</i></td></tr>
+<tr><th id="252">252</th><td><i> */</i></td></tr>
+<tr><th id="253">253</th><td><a class="macro" href="../../../include/linux/linkage.h.html#89" title=".globl __copy_user_nocache ; .p2align 4, 0x90 ; __copy_user_nocache:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="__copy_user_nocache" title='__copy_user_nocache' data-ref="__copy_user_nocache" data-ref-filename="__copy_user_nocache">__copy_user_nocache</dfn></span>)</td></tr>
+<tr><th id="254">254</th><td>	<a class="macro" href="../include/asm/smap.h.html#28" title="ALTERNATIVE &quot;&quot;, &quot;.byte 0x0f,0x01,0xcb&quot;, ( 9*32+20)" data-ref="_M/ASM_STAC">ASM_STAC</a></td></tr>
+<tr><th id="255">255</th><td></td></tr>
+<tr><th id="256">256</th><td>	<i>/* If size is less than 8 bytes, go to 4-byte copy */</i></td></tr>
+<tr><th id="257">257</th><td>	cmpl $<var>8</var>,%edx</td></tr>
+<tr><th id="258">258</th><td>	jb .L_4b_nocache_copy_entry</td></tr>
+<tr><th id="259">259</th><td></td></tr>
+<tr><th id="260">260</th><td>	<i>/* If destination is not 8-byte aligned, "cache" copy to align it */</i></td></tr>
+<tr><th id="261">261</th><td>	ALIGN_DESTINATION</td></tr>
+<tr><th id="262">262</th><td></td></tr>
+<tr><th id="263">263</th><td>	<i>/* Set 4x8-byte copy count and remainder */</i></td></tr>
+<tr><th id="264">264</th><td>	movl %edx,%ecx</td></tr>
+<tr><th id="265">265</th><td>	andl $<var>63</var>,%edx</td></tr>
+<tr><th id="266">266</th><td>	shrl $<var>6</var>,%ecx</td></tr>
+<tr><th id="267">267</th><td>	jz .L_8b_nocache_copy_entry	<i>/* jump if count is 0 */</i></td></tr>
+<tr><th id="268">268</th><td></td></tr>
+<tr><th id="269">269</th><td>	<i>/* Perform 4x8-byte nocache loop-copy */</i></td></tr>
+<tr><th id="270">270</th><td>.L_4x8b_nocache_copy_loop:</td></tr>
+<tr><th id="271">271</th><td><var>1</var>:	movq (%rsi),%r8</td></tr>
+<tr><th id="272">272</th><td><var>2</var>:	movq <var>1</var>*<var>8</var>(%rsi),%r9</td></tr>
+<tr><th id="273">273</th><td><var>3</var>:	movq <var>2</var>*<var>8</var>(%rsi),%r10</td></tr>
+<tr><th id="274">274</th><td><var>4</var>:	movq <var>3</var>*<var>8</var>(%rsi),%r11</td></tr>
+<tr><th id="275">275</th><td><var>5</var>:	movnti %r8,(%rdi)</td></tr>
+<tr><th id="276">276</th><td><var>6</var>:	movnti %r9,<var>1</var>*<var>8</var>(%rdi)</td></tr>
+<tr><th id="277">277</th><td><var>7</var>:	movnti %r10,<var>2</var>*<var>8</var>(%rdi)</td></tr>
+<tr><th id="278">278</th><td><var>8</var>:	movnti %r11,<var>3</var>*<var>8</var>(%rdi)</td></tr>
+<tr><th id="279">279</th><td><var>9</var>:	movq <var>4</var>*<var>8</var>(%rsi),%r8</td></tr>
+<tr><th id="280">280</th><td><var>10</var>:	movq <var>5</var>*<var>8</var>(%rsi),%r9</td></tr>
+<tr><th id="281">281</th><td><var>11</var>:	movq <var>6</var>*<var>8</var>(%rsi),%r10</td></tr>
+<tr><th id="282">282</th><td><var>12</var>:	movq <var>7</var>*<var>8</var>(%rsi),%r11</td></tr>
+<tr><th id="283">283</th><td><var>13</var>:	movnti %r8,<var>4</var>*<var>8</var>(%rdi)</td></tr>
+<tr><th id="284">284</th><td><var>14</var>:	movnti %r9,<var>5</var>*<var>8</var>(%rdi)</td></tr>
+<tr><th id="285">285</th><td><var>15</var>:	movnti %r10,<var>6</var>*<var>8</var>(%rdi)</td></tr>
+<tr><th id="286">286</th><td><var>16</var>:	movnti %r11,<var>7</var>*<var>8</var>(%rdi)</td></tr>
+<tr><th id="287">287</th><td>	leaq <var>64</var>(%rsi),%rsi</td></tr>
+<tr><th id="288">288</th><td>	leaq <var>64</var>(%rdi),%rdi</td></tr>
+<tr><th id="289">289</th><td>	decl %ecx</td></tr>
+<tr><th id="290">290</th><td>	jnz .L_4x8b_nocache_copy_loop</td></tr>
+<tr><th id="291">291</th><td></td></tr>
+<tr><th id="292">292</th><td>	<i>/* Set 8-byte copy count and remainder */</i></td></tr>
+<tr><th id="293">293</th><td>.L_8b_nocache_copy_entry:</td></tr>
+<tr><th id="294">294</th><td>	movl %edx,%ecx</td></tr>
+<tr><th id="295">295</th><td>	andl $<var>7</var>,%edx</td></tr>
+<tr><th id="296">296</th><td>	shrl $<var>3</var>,%ecx</td></tr>
+<tr><th id="297">297</th><td>	jz .L_4b_nocache_copy_entry	<i>/* jump if count is 0 */</i></td></tr>
+<tr><th id="298">298</th><td></td></tr>
+<tr><th id="299">299</th><td>	<i>/* Perform 8-byte nocache loop-copy */</i></td></tr>
+<tr><th id="300">300</th><td>.L_8b_nocache_copy_loop:</td></tr>
+<tr><th id="301">301</th><td><var>20</var>:	movq (%rsi),%r8</td></tr>
+<tr><th id="302">302</th><td><var>21</var>:	movnti %r8,(%rdi)</td></tr>
+<tr><th id="303">303</th><td>	leaq <var>8</var>(%rsi),%rsi</td></tr>
+<tr><th id="304">304</th><td>	leaq <var>8</var>(%rdi),%rdi</td></tr>
+<tr><th id="305">305</th><td>	decl %ecx</td></tr>
+<tr><th id="306">306</th><td>	jnz .L_8b_nocache_copy_loop</td></tr>
+<tr><th id="307">307</th><td></td></tr>
+<tr><th id="308">308</th><td>	<i>/* If no byte left, we're done */</i></td></tr>
+<tr><th id="309">309</th><td>.L_4b_nocache_copy_entry:</td></tr>
+<tr><th id="310">310</th><td>	andl %edx,%edx</td></tr>
+<tr><th id="311">311</th><td>	jz .L_finish_copy</td></tr>
+<tr><th id="312">312</th><td></td></tr>
+<tr><th id="313">313</th><td>	<i>/* If destination is not 4-byte aligned, go to byte copy: */</i></td></tr>
+<tr><th id="314">314</th><td>	movl %edi,%ecx</td></tr>
+<tr><th id="315">315</th><td>	andl $<var>3</var>,%ecx</td></tr>
+<tr><th id="316">316</th><td>	jnz .L_1b_cache_copy_entry</td></tr>
+<tr><th id="317">317</th><td></td></tr>
+<tr><th id="318">318</th><td>	<i>/* Set 4-byte copy count (1 or 0) and remainder */</i></td></tr>
+<tr><th id="319">319</th><td>	movl %edx,%ecx</td></tr>
+<tr><th id="320">320</th><td>	andl $<var>3</var>,%edx</td></tr>
+<tr><th id="321">321</th><td>	shrl $<var>2</var>,%ecx</td></tr>
+<tr><th id="322">322</th><td>	jz .L_1b_cache_copy_entry	<i>/* jump if count is 0 */</i></td></tr>
+<tr><th id="323">323</th><td></td></tr>
+<tr><th id="324">324</th><td>	<i>/* Perform 4-byte nocache copy: */</i></td></tr>
+<tr><th id="325">325</th><td><var>30</var>:	movl (%rsi),%r8d</td></tr>
+<tr><th id="326">326</th><td><var>31</var>:	movnti %r8d,(%rdi)</td></tr>
+<tr><th id="327">327</th><td>	leaq <var>4</var>(%rsi),%rsi</td></tr>
+<tr><th id="328">328</th><td>	leaq <var>4</var>(%rdi),%rdi</td></tr>
+<tr><th id="329">329</th><td></td></tr>
+<tr><th id="330">330</th><td>	<i>/* If no bytes left, we're done: */</i></td></tr>
+<tr><th id="331">331</th><td>	andl %edx,%edx</td></tr>
+<tr><th id="332">332</th><td>	jz .L_finish_copy</td></tr>
+<tr><th id="333">333</th><td></td></tr>
+<tr><th id="334">334</th><td>	<i>/* Perform byte "cache" loop-copy for the remainder */</i></td></tr>
+<tr><th id="335">335</th><td>.L_1b_cache_copy_entry:</td></tr>
+<tr><th id="336">336</th><td>	movl %edx,%ecx</td></tr>
+<tr><th id="337">337</th><td>.L_1b_cache_copy_loop:</td></tr>
+<tr><th id="338">338</th><td><var>40</var>:	movb (%rsi),%al</td></tr>
+<tr><th id="339">339</th><td><var>41</var>:	movb %al,(%rdi)</td></tr>
+<tr><th id="340">340</th><td>	incq %rsi</td></tr>
+<tr><th id="341">341</th><td>	incq %rdi</td></tr>
+<tr><th id="342">342</th><td>	decl %ecx</td></tr>
+<tr><th id="343">343</th><td>	jnz .L_1b_cache_copy_loop</td></tr>
+<tr><th id="344">344</th><td></td></tr>
+<tr><th id="345">345</th><td>	<i>/* Finished copying; fence the prior stores */</i></td></tr>
+<tr><th id="346">346</th><td>.L_finish_copy:</td></tr>
+<tr><th id="347">347</th><td>	xorl %eax,%eax</td></tr>
+<tr><th id="348">348</th><td>	<a class="macro" href="../include/asm/smap.h.html#25" title="ALTERNATIVE &quot;&quot;, &quot;.byte 0x0f,0x01,0xca&quot;, ( 9*32+20)" data-ref="_M/ASM_CLAC">ASM_CLAC</a></td></tr>
+<tr><th id="349">349</th><td>	sfence</td></tr>
+<tr><th id="350">350</th><td>	ret</td></tr>
+<tr><th id="351">351</th><td></td></tr>
+<tr><th id="352">352</th><td>	.section .fixup,<q>"ax"</q></td></tr>
+<tr><th id="353">353</th><td>.L_fixup_4x8b_copy:</td></tr>
+<tr><th id="354">354</th><td>	shll $<var>6</var>,%ecx</td></tr>
+<tr><th id="355">355</th><td>	addl %ecx,%edx</td></tr>
+<tr><th id="356">356</th><td>	jmp .L_fixup_handle_tail</td></tr>
+<tr><th id="357">357</th><td>.L_fixup_8b_copy:</td></tr>
+<tr><th id="358">358</th><td>	lea (%rdx,%rcx,<var>8</var>),%rdx</td></tr>
+<tr><th id="359">359</th><td>	jmp .L_fixup_handle_tail</td></tr>
+<tr><th id="360">360</th><td>.L_fixup_4b_copy:</td></tr>
+<tr><th id="361">361</th><td>	lea (%rdx,%rcx,<var>4</var>),%rdx</td></tr>
+<tr><th id="362">362</th><td>	jmp .L_fixup_handle_tail</td></tr>
+<tr><th id="363">363</th><td>.L_fixup_1b_copy:</td></tr>
+<tr><th id="364">364</th><td>	movl %ecx,%edx</td></tr>
+<tr><th id="365">365</th><td>.L_fixup_handle_tail:</td></tr>
+<tr><th id="366">366</th><td>	sfence</td></tr>
+<tr><th id="367">367</th><td>	jmp copy_user_handle_tail</td></tr>
+<tr><th id="368">368</th><td>	.previous</td></tr>
+<tr><th id="369">369</th><td></td></tr>
+<tr><th id="370">370</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (1b) - . ; .long (.L_fixup_4x8b_copy) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>1b</var>, .L_fixup_4x8b_copy)</td></tr>
+<tr><th id="371">371</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (2b) - . ; .long (.L_fixup_4x8b_copy) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>2b</var>, .L_fixup_4x8b_copy)</td></tr>
+<tr><th id="372">372</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (3b) - . ; .long (.L_fixup_4x8b_copy) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>3b</var>, .L_fixup_4x8b_copy)</td></tr>
+<tr><th id="373">373</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (4b) - . ; .long (.L_fixup_4x8b_copy) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>4b</var>, .L_fixup_4x8b_copy)</td></tr>
+<tr><th id="374">374</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (5b) - . ; .long (.L_fixup_4x8b_copy) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>5b</var>, .L_fixup_4x8b_copy)</td></tr>
+<tr><th id="375">375</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (6b) - . ; .long (.L_fixup_4x8b_copy) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>6b</var>, .L_fixup_4x8b_copy)</td></tr>
+<tr><th id="376">376</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (7b) - . ; .long (.L_fixup_4x8b_copy) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>7b</var>, .L_fixup_4x8b_copy)</td></tr>
+<tr><th id="377">377</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (8b) - . ; .long (.L_fixup_4x8b_copy) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>8b</var>, .L_fixup_4x8b_copy)</td></tr>
+<tr><th id="378">378</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (9b) - . ; .long (.L_fixup_4x8b_copy) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>9b</var>, .L_fixup_4x8b_copy)</td></tr>
+<tr><th id="379">379</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (10b) - . ; .long (.L_fixup_4x8b_copy) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>10b</var>, .L_fixup_4x8b_copy)</td></tr>
+<tr><th id="380">380</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (11b) - . ; .long (.L_fixup_4x8b_copy) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>11b</var>, .L_fixup_4x8b_copy)</td></tr>
+<tr><th id="381">381</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (12b) - . ; .long (.L_fixup_4x8b_copy) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>12b</var>, .L_fixup_4x8b_copy)</td></tr>
+<tr><th id="382">382</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (13b) - . ; .long (.L_fixup_4x8b_copy) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>13b</var>, .L_fixup_4x8b_copy)</td></tr>
+<tr><th id="383">383</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (14b) - . ; .long (.L_fixup_4x8b_copy) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>14b</var>, .L_fixup_4x8b_copy)</td></tr>
+<tr><th id="384">384</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (15b) - . ; .long (.L_fixup_4x8b_copy) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>15b</var>, .L_fixup_4x8b_copy)</td></tr>
+<tr><th id="385">385</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (16b) - . ; .long (.L_fixup_4x8b_copy) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>16b</var>, .L_fixup_4x8b_copy)</td></tr>
+<tr><th id="386">386</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (20b) - . ; .long (.L_fixup_8b_copy) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>20b</var>, .L_fixup_8b_copy)</td></tr>
+<tr><th id="387">387</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (21b) - . ; .long (.L_fixup_8b_copy) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>21b</var>, .L_fixup_8b_copy)</td></tr>
+<tr><th id="388">388</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (30b) - . ; .long (.L_fixup_4b_copy) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>30b</var>, .L_fixup_4b_copy)</td></tr>
+<tr><th id="389">389</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (31b) - . ; .long (.L_fixup_4b_copy) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>31b</var>, .L_fixup_4b_copy)</td></tr>
+<tr><th id="390">390</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (40b) - . ; .long (.L_fixup_1b_copy) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>40b</var>, .L_fixup_1b_copy)</td></tr>
+<tr><th id="391">391</th><td>	<a class="macro" href="../include/asm/asm.h.html#133" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (41b) - . ; .long (.L_fixup_1b_copy) - . ; .long (ex_handler_uaccess) - . ; .popsection" data-ref="_M/_ASM_EXTABLE_UA">_ASM_EXTABLE_UA</a>(<var>41b</var>, .L_fixup_1b_copy)</td></tr>
+<tr><th id="392">392</th><td><a class="macro" href="../../../include/linux/linkage.h.html#113" title=".type __copy_user_nocache, @function ; .size __copy_user_nocache, .-__copy_user_nocache" data-ref="_M/ENDPROC">ENDPROC</a>(__copy_user_nocache)</td></tr>
+<tr><th id="393">393</th><td><a class="macro" href="../../../include/asm-generic/export.h.html#87" title="___EXPORT_SYMBOL __copy_user_nocache, __copy_user_nocache," data-ref="_M/EXPORT_SYMBOL">EXPORT_SYMBOL</a>(__copy_user_nocache)</td></tr>
+<tr><th id="394">394</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

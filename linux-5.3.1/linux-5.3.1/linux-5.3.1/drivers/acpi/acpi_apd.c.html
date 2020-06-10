@@ -1,0 +1,272 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>acpi_apd.c source code [linux-5.3.1/drivers/acpi/acpi_apd.c] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="apd_device_desc,apd_private_data "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/drivers/acpi/acpi_apd.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>drivers</a>/<a href='./'>acpi</a>/<a href='acpi_apd.c.html'>acpi_apd.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0-only</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * AMD ACPI support for ACPI2platform device.</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * Copyright (c) 2014,2015 AMD Corporation.</i></td></tr>
+<tr><th id="6">6</th><td><i> * Authors: Ken Xue &lt;Ken.Xue@amd.com&gt;</i></td></tr>
+<tr><th id="7">7</th><td><i> *	Wu, Jeff &lt;Jeff.Wu@amd.com&gt;</i></td></tr>
+<tr><th id="8">8</th><td><i> */</i></td></tr>
+<tr><th id="9">9</th><td></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="../../include/linux/clk-provider.h.html">&lt;linux/clk-provider.h&gt;</a></u></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../../include/linux/platform_data/clk-st.h.html">&lt;linux/platform_data/clk-st.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="../../include/linux/platform_device.h.html">&lt;linux/platform_device.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="../../include/linux/pm_domain.h.html">&lt;linux/pm_domain.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="../../include/linux/clkdev.h.html">&lt;linux/clkdev.h&gt;</a></u></td></tr>
+<tr><th id="15">15</th><td><u>#include <a href="../../include/linux/acpi.h.html">&lt;linux/acpi.h&gt;</a></u></td></tr>
+<tr><th id="16">16</th><td><u>#include <a href="../../include/linux/err.h.html">&lt;linux/err.h&gt;</a></u></td></tr>
+<tr><th id="17">17</th><td><u>#include <a href="../../include/linux/io.h.html">&lt;linux/io.h&gt;</a></u></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../../include/linux/pm.h.html">&lt;linux/pm.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="internal.h.html">"internal.h"</a></u></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td><a class="macro" href="../../include/acpi/acoutput.h.html#181" title="static const char __attribute__ ((unused)) _acpi_module_name[] = &quot;acpi_apd&quot;;" data-ref="_M/ACPI_MODULE_NAME">ACPI_MODULE_NAME</a>(<q>"acpi_apd"</q>);</td></tr>
+<tr><th id="23">23</th><td><b>struct</b> <a class="type" href="#apd_private_data" title='apd_private_data' data-ref="apd_private_data" data-ref-filename="apd_private_data">apd_private_data</a>;</td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="26">26</th><td><i class="doc"> * ACPI_APD_SYSFS : add device attributes in sysfs</i></td></tr>
+<tr><th id="27">27</th><td><i class="doc"> * ACPI_APD_PM : attach power domain to device</i></td></tr>
+<tr><th id="28">28</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="29">29</th><td><u>#define <dfn class="macro" id="_M/ACPI_APD_SYSFS" data-ref="_M/ACPI_APD_SYSFS">ACPI_APD_SYSFS</dfn>	BIT(0)</u></td></tr>
+<tr><th id="30">30</th><td><u>#define <dfn class="macro" id="_M/ACPI_APD_PM" data-ref="_M/ACPI_APD_PM">ACPI_APD_PM</dfn>	BIT(1)</u></td></tr>
+<tr><th id="31">31</th><td></td></tr>
+<tr><th id="32">32</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="33">33</th><td><i class="doc"> * struct apd_device_desc - a descriptor for apd device</i></td></tr>
+<tr><th id="34">34</th><td><i class="doc"> *<span class="command"> @flags</span>: device flags like %ACPI_APD_SYSFS, %ACPI_APD_PM</i></td></tr>
+<tr><th id="35">35</th><td><i class="doc"> *<span class="command"> @fixed</span>_clk_rate: fixed rate input clock source for acpi device;</i></td></tr>
+<tr><th id="36">36</th><td><i class="doc"> *			0 means no fixed rate input clock source</i></td></tr>
+<tr><th id="37">37</th><td><i class="doc"> *<span class="command"> @setup</span>: a hook routine to set device resource during create platform device</i></td></tr>
+<tr><th id="38">38</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="39">39</th><td><i class="doc"> * Device description defined as acpi_device_id.driver_data</i></td></tr>
+<tr><th id="40">40</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="41">41</th><td><b>struct</b> <dfn class="type def" id="apd_device_desc" title='apd_device_desc' data-ref="apd_device_desc" data-ref-filename="apd_device_desc">apd_device_desc</dfn> {</td></tr>
+<tr><th id="42">42</th><td>	<em>unsigned</em> <em>int</em> <dfn class="tu decl field" id="apd_device_desc::flags" title='apd_device_desc::flags' data-type='unsigned int' data-ref="apd_device_desc::flags" data-ref-filename="apd_device_desc..flags">flags</dfn>;</td></tr>
+<tr><th id="43">43</th><td>	<em>unsigned</em> <em>int</em> <dfn class="tu decl field" id="apd_device_desc::fixed_clk_rate" title='apd_device_desc::fixed_clk_rate' data-type='unsigned int' data-ref="apd_device_desc::fixed_clk_rate" data-ref-filename="apd_device_desc..fixed_clk_rate">fixed_clk_rate</dfn>;</td></tr>
+<tr><th id="44">44</th><td>	<b>struct</b> <a class="type" href="../../include/linux/property.h.html#property_entry" title='property_entry' data-ref="property_entry" data-ref-filename="property_entry">property_entry</a> *<dfn class="tu decl field" id="apd_device_desc::properties" title='apd_device_desc::properties' data-type='struct property_entry *' data-ref="apd_device_desc::properties" data-ref-filename="apd_device_desc..properties">properties</dfn>;</td></tr>
+<tr><th id="45">45</th><td>	<em>int</em> (*<dfn class="tu decl field" id="apd_device_desc::setup" title='apd_device_desc::setup' data-type='int (*)(struct apd_private_data *)' data-ref="apd_device_desc::setup" data-ref-filename="apd_device_desc..setup">setup</dfn>)(<b>struct</b> <a class="type" href="#apd_private_data" title='apd_private_data' data-ref="apd_private_data" data-ref-filename="apd_private_data">apd_private_data</a> *<dfn class="local col5 decl" id="555pdata" title='pdata' data-type='struct apd_private_data *' data-ref="555pdata" data-ref-filename="555pdata">pdata</dfn>);</td></tr>
+<tr><th id="46">46</th><td>};</td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td><b>struct</b> <dfn class="type def" id="apd_private_data" title='apd_private_data' data-ref="apd_private_data" data-ref-filename="apd_private_data">apd_private_data</dfn> {</td></tr>
+<tr><th id="49">49</th><td>	<b>struct</b> <a class="type" href="../../include/linux/clk-provider.h.html#clk" title='clk' data-ref="clk" data-ref-filename="clk">clk</a> *<dfn class="tu decl field" id="apd_private_data::clk" title='apd_private_data::clk' data-type='struct clk *' data-ref="apd_private_data::clk" data-ref-filename="apd_private_data..clk">clk</dfn>;</td></tr>
+<tr><th id="50">50</th><td>	<b>struct</b> <a class="type" href="../../include/acpi/acpi_bus.h.html#acpi_device" title='acpi_device' data-ref="acpi_device" data-ref-filename="acpi_device">acpi_device</a> *<dfn class="tu decl field" id="apd_private_data::adev" title='apd_private_data::adev' data-type='struct acpi_device *' data-ref="apd_private_data::adev" data-ref-filename="apd_private_data..adev">adev</dfn>;</td></tr>
+<tr><th id="51">51</th><td>	<em>const</em> <b>struct</b> <a class="type" href="#apd_device_desc" title='apd_device_desc' data-ref="apd_device_desc" data-ref-filename="apd_device_desc">apd_device_desc</a> *<dfn class="tu decl field" id="apd_private_data::dev_desc" title='apd_private_data::dev_desc' data-type='const struct apd_device_desc *' data-ref="apd_private_data::dev_desc" data-ref-filename="apd_private_data..dev_desc">dev_desc</dfn>;</td></tr>
+<tr><th id="52">52</th><td>};</td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td><u>#<span data-ppcond="54">if</span> defined(<span class="macro" data-ref="_M/CONFIG_X86_AMD_PLATFORM_DEVICE">CONFIG_X86_AMD_PLATFORM_DEVICE</span>) || defined(<span class="macro" data-ref="_M/CONFIG_ARM64">CONFIG_ARM64</span>)</u></td></tr>
+<tr><th id="55">55</th><td><u>#define APD_ADDR(desc)	((unsigned long)&amp;desc)</u></td></tr>
+<tr><th id="56">56</th><td></td></tr>
+<tr><th id="57">57</th><td><em>static</em> <em>int</em> acpi_apd_setup(<b>struct</b> apd_private_data *pdata)</td></tr>
+<tr><th id="58">58</th><td>{</td></tr>
+<tr><th id="59">59</th><td>	<em>const</em> <b>struct</b> apd_device_desc *dev_desc = pdata-&gt;dev_desc;</td></tr>
+<tr><th id="60">60</th><td>	<b>struct</b> clk *clk;</td></tr>
+<tr><th id="61">61</th><td></td></tr>
+<tr><th id="62">62</th><td>	<b>if</b> (dev_desc-&gt;fixed_clk_rate) {</td></tr>
+<tr><th id="63">63</th><td>		clk = clk_register_fixed_rate(&amp;pdata-&gt;adev-&gt;dev,</td></tr>
+<tr><th id="64">64</th><td>					dev_name(&amp;pdata-&gt;adev-&gt;dev),</td></tr>
+<tr><th id="65">65</th><td>					NULL, <var>0</var>, dev_desc-&gt;fixed_clk_rate);</td></tr>
+<tr><th id="66">66</th><td>		clk_register_clkdev(clk, NULL, dev_name(&amp;pdata-&gt;adev-&gt;dev));</td></tr>
+<tr><th id="67">67</th><td>		pdata-&gt;clk = clk;</td></tr>
+<tr><th id="68">68</th><td>	}</td></tr>
+<tr><th id="69">69</th><td></td></tr>
+<tr><th id="70">70</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="71">71</th><td>}</td></tr>
+<tr><th id="72">72</th><td></td></tr>
+<tr><th id="73">73</th><td><u>#ifdef CONFIG_X86_AMD_PLATFORM_DEVICE</u></td></tr>
+<tr><th id="74">74</th><td></td></tr>
+<tr><th id="75">75</th><td><em>static</em> <em>int</em> misc_check_res(<b>struct</b> acpi_resource *ares, <em>void</em> *data)</td></tr>
+<tr><th id="76">76</th><td>{</td></tr>
+<tr><th id="77">77</th><td>	<b>struct</b> resource res;</td></tr>
+<tr><th id="78">78</th><td></td></tr>
+<tr><th id="79">79</th><td>	<b>return</b> !acpi_dev_resource_memory(ares, &amp;res);</td></tr>
+<tr><th id="80">80</th><td>}</td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td><em>static</em> <em>int</em> st_misc_setup(<b>struct</b> apd_private_data *pdata)</td></tr>
+<tr><th id="83">83</th><td>{</td></tr>
+<tr><th id="84">84</th><td>	<b>struct</b> acpi_device *adev = pdata-&gt;adev;</td></tr>
+<tr><th id="85">85</th><td>	<b>struct</b> platform_device *clkdev;</td></tr>
+<tr><th id="86">86</th><td>	<b>struct</b> st_clk_data *clk_data;</td></tr>
+<tr><th id="87">87</th><td>	<b>struct</b> resource_entry *rentry;</td></tr>
+<tr><th id="88">88</th><td>	<b>struct</b> list_head resource_list;</td></tr>
+<tr><th id="89">89</th><td>	<em>int</em> ret;</td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td>	clk_data = devm_kzalloc(&amp;adev-&gt;dev, <b>sizeof</b>(*clk_data), GFP_KERNEL);</td></tr>
+<tr><th id="92">92</th><td>	<b>if</b> (!clk_data)</td></tr>
+<tr><th id="93">93</th><td>		<b>return</b> -ENOMEM;</td></tr>
+<tr><th id="94">94</th><td></td></tr>
+<tr><th id="95">95</th><td>	INIT_LIST_HEAD(&amp;resource_list);</td></tr>
+<tr><th id="96">96</th><td>	ret = acpi_dev_get_resources(adev, &amp;resource_list, misc_check_res,</td></tr>
+<tr><th id="97">97</th><td>				     NULL);</td></tr>
+<tr><th id="98">98</th><td>	<b>if</b> (ret &lt; <var>0</var>)</td></tr>
+<tr><th id="99">99</th><td>		<b>return</b> -ENOENT;</td></tr>
+<tr><th id="100">100</th><td></td></tr>
+<tr><th id="101">101</th><td>	list_for_each_entry(rentry, &amp;resource_list, node) {</td></tr>
+<tr><th id="102">102</th><td>		clk_data-&gt;base = devm_ioremap(&amp;adev-&gt;dev, rentry-&gt;res-&gt;start,</td></tr>
+<tr><th id="103">103</th><td>					      resource_size(rentry-&gt;res));</td></tr>
+<tr><th id="104">104</th><td>		<b>break</b>;</td></tr>
+<tr><th id="105">105</th><td>	}</td></tr>
+<tr><th id="106">106</th><td></td></tr>
+<tr><th id="107">107</th><td>	acpi_dev_free_resource_list(&amp;resource_list);</td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td>	clkdev = platform_device_register_data(&amp;adev-&gt;dev, <q>"clk-st"</q>,</td></tr>
+<tr><th id="110">110</th><td>					       PLATFORM_DEVID_NONE, clk_data,</td></tr>
+<tr><th id="111">111</th><td>					       <b>sizeof</b>(*clk_data));</td></tr>
+<tr><th id="112">112</th><td>	<b>return</b> PTR_ERR_OR_ZERO(clkdev);</td></tr>
+<tr><th id="113">113</th><td>}</td></tr>
+<tr><th id="114">114</th><td></td></tr>
+<tr><th id="115">115</th><td><em>static</em> <em>const</em> <b>struct</b> apd_device_desc cz_i2c_desc = {</td></tr>
+<tr><th id="116">116</th><td>	.setup = acpi_apd_setup,</td></tr>
+<tr><th id="117">117</th><td>	.fixed_clk_rate = <var>133000000</var>,</td></tr>
+<tr><th id="118">118</th><td>};</td></tr>
+<tr><th id="119">119</th><td></td></tr>
+<tr><th id="120">120</th><td><em>static</em> <em>const</em> <b>struct</b> apd_device_desc wt_i2c_desc = {</td></tr>
+<tr><th id="121">121</th><td>	.setup = acpi_apd_setup,</td></tr>
+<tr><th id="122">122</th><td>	.fixed_clk_rate = <var>150000000</var>,</td></tr>
+<tr><th id="123">123</th><td>};</td></tr>
+<tr><th id="124">124</th><td></td></tr>
+<tr><th id="125">125</th><td><em>static</em> <b>struct</b> property_entry uart_properties[] = {</td></tr>
+<tr><th id="126">126</th><td>	PROPERTY_ENTRY_U32(<q>"reg-io-width"</q>, <var>4</var>),</td></tr>
+<tr><th id="127">127</th><td>	PROPERTY_ENTRY_U32(<q>"reg-shift"</q>, <var>2</var>),</td></tr>
+<tr><th id="128">128</th><td>	PROPERTY_ENTRY_BOOL(<q>"snps,uart-16550-compatible"</q>),</td></tr>
+<tr><th id="129">129</th><td>	{ },</td></tr>
+<tr><th id="130">130</th><td>};</td></tr>
+<tr><th id="131">131</th><td></td></tr>
+<tr><th id="132">132</th><td><em>static</em> <em>const</em> <b>struct</b> apd_device_desc cz_uart_desc = {</td></tr>
+<tr><th id="133">133</th><td>	.setup = acpi_apd_setup,</td></tr>
+<tr><th id="134">134</th><td>	.fixed_clk_rate = <var>48000000</var>,</td></tr>
+<tr><th id="135">135</th><td>	.properties = uart_properties,</td></tr>
+<tr><th id="136">136</th><td>};</td></tr>
+<tr><th id="137">137</th><td></td></tr>
+<tr><th id="138">138</th><td><em>static</em> <em>const</em> <b>struct</b> apd_device_desc st_misc_desc = {</td></tr>
+<tr><th id="139">139</th><td>	.setup = st_misc_setup,</td></tr>
+<tr><th id="140">140</th><td>};</td></tr>
+<tr><th id="141">141</th><td><u>#endif</u></td></tr>
+<tr><th id="142">142</th><td></td></tr>
+<tr><th id="143">143</th><td><u>#ifdef CONFIG_ARM64</u></td></tr>
+<tr><th id="144">144</th><td><em>static</em> <em>const</em> <b>struct</b> apd_device_desc xgene_i2c_desc = {</td></tr>
+<tr><th id="145">145</th><td>	.setup = acpi_apd_setup,</td></tr>
+<tr><th id="146">146</th><td>	.fixed_clk_rate = <var>100000000</var>,</td></tr>
+<tr><th id="147">147</th><td>};</td></tr>
+<tr><th id="148">148</th><td></td></tr>
+<tr><th id="149">149</th><td><em>static</em> <em>const</em> <b>struct</b> apd_device_desc vulcan_spi_desc = {</td></tr>
+<tr><th id="150">150</th><td>	.setup = acpi_apd_setup,</td></tr>
+<tr><th id="151">151</th><td>	.fixed_clk_rate = <var>133000000</var>,</td></tr>
+<tr><th id="152">152</th><td>};</td></tr>
+<tr><th id="153">153</th><td></td></tr>
+<tr><th id="154">154</th><td><em>static</em> <em>const</em> <b>struct</b> apd_device_desc hip07_i2c_desc = {</td></tr>
+<tr><th id="155">155</th><td>	.setup = acpi_apd_setup,</td></tr>
+<tr><th id="156">156</th><td>	.fixed_clk_rate = <var>200000000</var>,</td></tr>
+<tr><th id="157">157</th><td>};</td></tr>
+<tr><th id="158">158</th><td></td></tr>
+<tr><th id="159">159</th><td><em>static</em> <em>const</em> <b>struct</b> apd_device_desc hip08_i2c_desc = {</td></tr>
+<tr><th id="160">160</th><td>	.setup = acpi_apd_setup,</td></tr>
+<tr><th id="161">161</th><td>	.fixed_clk_rate = <var>250000000</var>,</td></tr>
+<tr><th id="162">162</th><td>};</td></tr>
+<tr><th id="163">163</th><td><em>static</em> <em>const</em> <b>struct</b> apd_device_desc thunderx2_i2c_desc = {</td></tr>
+<tr><th id="164">164</th><td>	.setup = acpi_apd_setup,</td></tr>
+<tr><th id="165">165</th><td>	.fixed_clk_rate = <var>125000000</var>,</td></tr>
+<tr><th id="166">166</th><td>};</td></tr>
+<tr><th id="167">167</th><td></td></tr>
+<tr><th id="168">168</th><td><em>static</em> <em>const</em> <b>struct</b> apd_device_desc hip08_spi_desc = {</td></tr>
+<tr><th id="169">169</th><td>	.setup = acpi_apd_setup,</td></tr>
+<tr><th id="170">170</th><td>	.fixed_clk_rate = <var>250000000</var>,</td></tr>
+<tr><th id="171">171</th><td>};</td></tr>
+<tr><th id="172">172</th><td><u>#endif</u></td></tr>
+<tr><th id="173">173</th><td></td></tr>
+<tr><th id="174">174</th><td><u>#<span data-ppcond="54">else</span></u></td></tr>
+<tr><th id="175">175</th><td></td></tr>
+<tr><th id="176">176</th><td><u>#define <dfn class="macro" id="_M/APD_ADDR" data-ref="_M/APD_ADDR">APD_ADDR</dfn>(desc) (0UL)</u></td></tr>
+<tr><th id="177">177</th><td></td></tr>
+<tr><th id="178">178</th><td><u>#<span data-ppcond="54">endif</span> /* CONFIG_X86_AMD_PLATFORM_DEVICE */</u></td></tr>
+<tr><th id="179">179</th><td></td></tr>
+<tr><th id="180">180</th><td><i class="doc" data-doc="acpi_apd_create_device">/**</i></td></tr>
+<tr><th id="181">181</th><td><i class="doc" data-doc="acpi_apd_create_device">* Create platform device during acpi scan attach handle.</i></td></tr>
+<tr><th id="182">182</th><td><i class="doc" data-doc="acpi_apd_create_device">* Return value &gt; 0 on success of creating device.</i></td></tr>
+<tr><th id="183">183</th><td><i class="doc" data-doc="acpi_apd_create_device">*/</i></td></tr>
+<tr><th id="184">184</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="acpi_apd_create_device" title='acpi_apd_create_device' data-type='int acpi_apd_create_device(struct acpi_device * adev, const struct acpi_device_id * id)' data-ref="acpi_apd_create_device" data-ref-filename="acpi_apd_create_device">acpi_apd_create_device</dfn>(<b>struct</b> <a class="type" href="../../include/acpi/acpi_bus.h.html#acpi_device" title='acpi_device' data-ref="acpi_device" data-ref-filename="acpi_device">acpi_device</a> *<dfn class="local col6 decl" id="556adev" title='adev' data-type='struct acpi_device *' data-ref="556adev" data-ref-filename="556adev">adev</dfn>,</td></tr>
+<tr><th id="185">185</th><td>				   <em>const</em> <b>struct</b> <a class="type" href="../../include/linux/mod_devicetable.h.html#acpi_device_id" title='acpi_device_id' data-ref="acpi_device_id" data-ref-filename="acpi_device_id">acpi_device_id</a> *<dfn class="local col7 decl" id="557id" title='id' data-type='const struct acpi_device_id *' data-ref="557id" data-ref-filename="557id">id</dfn>)</td></tr>
+<tr><th id="186">186</th><td>{</td></tr>
+<tr><th id="187">187</th><td>	<em>const</em> <b>struct</b> <a class="type" href="#apd_device_desc" title='apd_device_desc' data-ref="apd_device_desc" data-ref-filename="apd_device_desc">apd_device_desc</a> *<dfn class="local col8 decl" id="558dev_desc" title='dev_desc' data-type='const struct apd_device_desc *' data-ref="558dev_desc" data-ref-filename="558dev_desc">dev_desc</dfn> = (<em>void</em> *)<a class="local col7 ref" href="#557id" title='id' data-ref="557id" data-ref-filename="557id">id</a>-&gt;<a class="ref field" href="../../include/linux/mod_devicetable.h.html#acpi_device_id::driver_data" title='acpi_device_id::driver_data' data-ref="acpi_device_id::driver_data" data-ref-filename="acpi_device_id..driver_data">driver_data</a>;</td></tr>
+<tr><th id="188">188</th><td>	<b>struct</b> <a class="type" href="#apd_private_data" title='apd_private_data' data-ref="apd_private_data" data-ref-filename="apd_private_data">apd_private_data</a> *<dfn class="local col9 decl" id="559pdata" title='pdata' data-type='struct apd_private_data *' data-ref="559pdata" data-ref-filename="559pdata">pdata</dfn>;</td></tr>
+<tr><th id="189">189</th><td>	<b>struct</b> <a class="type" href="../../include/linux/platform_device.h.html#platform_device" title='platform_device' data-ref="platform_device" data-ref-filename="platform_device">platform_device</a> *<dfn class="local col0 decl" id="560pdev" title='pdev' data-type='struct platform_device *' data-ref="560pdev" data-ref-filename="560pdev">pdev</dfn>;</td></tr>
+<tr><th id="190">190</th><td>	<em>int</em> <dfn class="local col1 decl" id="561ret" title='ret' data-type='int' data-ref="561ret" data-ref-filename="561ret">ret</dfn>;</td></tr>
+<tr><th id="191">191</th><td></td></tr>
+<tr><th id="192">192</th><td>	<b>if</b> (!<a class="local col8 ref" href="#558dev_desc" title='dev_desc' data-ref="558dev_desc" data-ref-filename="558dev_desc">dev_desc</a>) {</td></tr>
+<tr><th id="193">193</th><td>		<a class="local col0 ref" href="#560pdev" title='pdev' data-ref="560pdev" data-ref-filename="560pdev">pdev</a> = <a class="ref fn" href="../../include/linux/acpi.h.html#acpi_create_platform_device" title='acpi_create_platform_device' data-ref="acpi_create_platform_device" data-ref-filename="acpi_create_platform_device">acpi_create_platform_device</a>(<a class="local col6 ref" href="#556adev" title='adev' data-ref="556adev" data-ref-filename="556adev">adev</a>, <a class="macro" href="../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>);</td></tr>
+<tr><th id="194">194</th><td>		<b>return</b> <a class="ref fn" href="../../include/linux/err.h.html#IS_ERR_OR_NULL" title='IS_ERR_OR_NULL' data-ref="IS_ERR_OR_NULL" data-ref-filename="IS_ERR_OR_NULL">IS_ERR_OR_NULL</a>(<a class="local col0 ref" href="#560pdev" title='pdev' data-ref="560pdev" data-ref-filename="560pdev">pdev</a>) ? <a class="ref fn" href="../../include/linux/err.h.html#PTR_ERR" title='PTR_ERR' data-ref="PTR_ERR" data-ref-filename="PTR_ERR">PTR_ERR</a>(<a class="local col0 ref" href="#560pdev" title='pdev' data-ref="560pdev" data-ref-filename="560pdev">pdev</a>) : <var>1</var>;</td></tr>
+<tr><th id="195">195</th><td>	}</td></tr>
+<tr><th id="196">196</th><td></td></tr>
+<tr><th id="197">197</th><td>	<a class="local col9 ref" href="#559pdata" title='pdata' data-ref="559pdata" data-ref-filename="559pdata">pdata</a> = <a class="ref fn" href="../../include/linux/slab.h.html#kzalloc" title='kzalloc' data-ref="kzalloc" data-ref-filename="kzalloc">kzalloc</a>(<b>sizeof</b>(*<a class="local col9 ref" href="#559pdata" title='pdata' data-ref="559pdata" data-ref-filename="559pdata">pdata</a>), <a class="macro" href="../../include/linux/gfp.h.html#290" title="((( gfp_t)(0x400u|0x800u)) | (( gfp_t)0x40u) | (( gfp_t)0x80u))" data-ref="_M/GFP_KERNEL">GFP_KERNEL</a>);</td></tr>
+<tr><th id="198">198</th><td>	<b>if</b> (!<a class="local col9 ref" href="#559pdata" title='pdata' data-ref="559pdata" data-ref-filename="559pdata">pdata</a>)</td></tr>
+<tr><th id="199">199</th><td>		<b>return</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#16" title="12" data-ref="_M/ENOMEM">ENOMEM</a>;</td></tr>
+<tr><th id="200">200</th><td></td></tr>
+<tr><th id="201">201</th><td>	<a class="local col9 ref" href="#559pdata" title='pdata' data-ref="559pdata" data-ref-filename="559pdata">pdata</a>-&gt;<a class="tu ref field" href="#apd_private_data::adev" title='apd_private_data::adev' data-use='w' data-ref="apd_private_data::adev" data-ref-filename="apd_private_data..adev">adev</a> = <a class="local col6 ref" href="#556adev" title='adev' data-ref="556adev" data-ref-filename="556adev">adev</a>;</td></tr>
+<tr><th id="202">202</th><td>	<a class="local col9 ref" href="#559pdata" title='pdata' data-ref="559pdata" data-ref-filename="559pdata">pdata</a>-&gt;<a class="tu ref field" href="#apd_private_data::dev_desc" title='apd_private_data::dev_desc' data-use='w' data-ref="apd_private_data::dev_desc" data-ref-filename="apd_private_data..dev_desc">dev_desc</a> = <a class="local col8 ref" href="#558dev_desc" title='dev_desc' data-ref="558dev_desc" data-ref-filename="558dev_desc">dev_desc</a>;</td></tr>
+<tr><th id="203">203</th><td></td></tr>
+<tr><th id="204">204</th><td>	<b>if</b> (<a class="local col8 ref" href="#558dev_desc" title='dev_desc' data-ref="558dev_desc" data-ref-filename="558dev_desc">dev_desc</a>-&gt;<a class="tu ref field" href="#apd_device_desc::setup" title='apd_device_desc::setup' data-use='r' data-ref="apd_device_desc::setup" data-ref-filename="apd_device_desc..setup">setup</a>) {</td></tr>
+<tr><th id="205">205</th><td>		<a class="local col1 ref" href="#561ret" title='ret' data-ref="561ret" data-ref-filename="561ret">ret</a> = <a class="local col8 ref" href="#558dev_desc" title='dev_desc' data-ref="558dev_desc" data-ref-filename="558dev_desc">dev_desc</a>-&gt;<a class="tu ref field" href="#apd_device_desc::setup" title='apd_device_desc::setup' data-use='r' data-ref="apd_device_desc::setup" data-ref-filename="apd_device_desc..setup">setup</a>(<a class="local col9 ref" href="#559pdata" title='pdata' data-ref="559pdata" data-ref-filename="559pdata">pdata</a>);</td></tr>
+<tr><th id="206">206</th><td>		<b>if</b> (<a class="local col1 ref" href="#561ret" title='ret' data-ref="561ret" data-ref-filename="561ret">ret</a>)</td></tr>
+<tr><th id="207">207</th><td>			<b>goto</b> <a class="lbl" href="#562err_out" data-ref="562err_out" data-ref-filename="562err_out">err_out</a>;</td></tr>
+<tr><th id="208">208</th><td>	}</td></tr>
+<tr><th id="209">209</th><td></td></tr>
+<tr><th id="210">210</th><td>	<a class="local col6 ref" href="#556adev" title='adev' data-ref="556adev" data-ref-filename="556adev">adev</a>-&gt;<a class="ref field" href="../../include/acpi/acpi_bus.h.html#acpi_device::driver_data" title='acpi_device::driver_data' data-ref="acpi_device::driver_data" data-ref-filename="acpi_device..driver_data">driver_data</a> = <a class="local col9 ref" href="#559pdata" title='pdata' data-ref="559pdata" data-ref-filename="559pdata">pdata</a>;</td></tr>
+<tr><th id="211">211</th><td>	<a class="local col0 ref" href="#560pdev" title='pdev' data-ref="560pdev" data-ref-filename="560pdev">pdev</a> = <a class="ref fn" href="../../include/linux/acpi.h.html#acpi_create_platform_device" title='acpi_create_platform_device' data-ref="acpi_create_platform_device" data-ref-filename="acpi_create_platform_device">acpi_create_platform_device</a>(<a class="local col6 ref" href="#556adev" title='adev' data-ref="556adev" data-ref-filename="556adev">adev</a>, <a class="local col8 ref" href="#558dev_desc" title='dev_desc' data-ref="558dev_desc" data-ref-filename="558dev_desc">dev_desc</a>-&gt;<a class="tu ref field" href="#apd_device_desc::properties" title='apd_device_desc::properties' data-use='r' data-ref="apd_device_desc::properties" data-ref-filename="apd_device_desc..properties">properties</a>);</td></tr>
+<tr><th id="212">212</th><td>	<b>if</b> (!<a class="ref fn" href="../../include/linux/err.h.html#IS_ERR_OR_NULL" title='IS_ERR_OR_NULL' data-ref="IS_ERR_OR_NULL" data-ref-filename="IS_ERR_OR_NULL">IS_ERR_OR_NULL</a>(<a class="local col0 ref" href="#560pdev" title='pdev' data-ref="560pdev" data-ref-filename="560pdev">pdev</a>))</td></tr>
+<tr><th id="213">213</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="214">214</th><td></td></tr>
+<tr><th id="215">215</th><td>	<a class="local col1 ref" href="#561ret" title='ret' data-ref="561ret" data-ref-filename="561ret">ret</a> = <a class="ref fn" href="../../include/linux/err.h.html#PTR_ERR" title='PTR_ERR' data-ref="PTR_ERR" data-ref-filename="PTR_ERR">PTR_ERR</a>(<a class="local col0 ref" href="#560pdev" title='pdev' data-ref="560pdev" data-ref-filename="560pdev">pdev</a>);</td></tr>
+<tr><th id="216">216</th><td>	<a class="local col6 ref" href="#556adev" title='adev' data-ref="556adev" data-ref-filename="556adev">adev</a>-&gt;<a class="ref field" href="../../include/acpi/acpi_bus.h.html#acpi_device::driver_data" title='acpi_device::driver_data' data-ref="acpi_device::driver_data" data-ref-filename="acpi_device..driver_data">driver_data</a> = <a class="macro" href="../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="217">217</th><td></td></tr>
+<tr><th id="218">218</th><td> <dfn class="lbl" id="562err_out" data-ref="562err_out" data-ref-filename="562err_out">err_out</dfn>:</td></tr>
+<tr><th id="219">219</th><td>	<a class="ref fn" href="../../include/linux/slab.h.html#kfree" title='kfree' data-ref="kfree" data-ref-filename="kfree">kfree</a>(<a class="local col9 ref" href="#559pdata" title='pdata' data-ref="559pdata" data-ref-filename="559pdata">pdata</a>);</td></tr>
+<tr><th id="220">220</th><td>	<b>return</b> <a class="local col1 ref" href="#561ret" title='ret' data-ref="561ret" data-ref-filename="561ret">ret</a>;</td></tr>
+<tr><th id="221">221</th><td>}</td></tr>
+<tr><th id="222">222</th><td></td></tr>
+<tr><th id="223">223</th><td><em>static</em> <em>const</em> <b>struct</b> <a class="type" href="../../include/linux/mod_devicetable.h.html#acpi_device_id" title='acpi_device_id' data-ref="acpi_device_id" data-ref-filename="acpi_device_id">acpi_device_id</a> <dfn class="tu decl def" id="acpi_apd_device_ids" title='acpi_apd_device_ids' data-type='const struct acpi_device_id [1]' data-ref="acpi_apd_device_ids" data-ref-filename="acpi_apd_device_ids">acpi_apd_device_ids</dfn>[] = {</td></tr>
+<tr><th id="224">224</th><td>	<i>/* Generic apd devices */</i></td></tr>
+<tr><th id="225">225</th><td><u>#<span data-ppcond="225">ifdef</span> <span class="macro" data-ref="_M/CONFIG_X86_AMD_PLATFORM_DEVICE">CONFIG_X86_AMD_PLATFORM_DEVICE</span></u></td></tr>
+<tr><th id="226">226</th><td>	{ <q>"AMD0010"</q>, APD_ADDR(cz_i2c_desc) },</td></tr>
+<tr><th id="227">227</th><td>	{ <q>"AMDI0010"</q>, APD_ADDR(wt_i2c_desc) },</td></tr>
+<tr><th id="228">228</th><td>	{ <q>"AMD0020"</q>, APD_ADDR(cz_uart_desc) },</td></tr>
+<tr><th id="229">229</th><td>	{ <q>"AMDI0020"</q>, APD_ADDR(cz_uart_desc) },</td></tr>
+<tr><th id="230">230</th><td>	{ <q>"AMD0030"</q>, },</td></tr>
+<tr><th id="231">231</th><td>	{ <q>"AMD0040"</q>, APD_ADDR(st_misc_desc)},</td></tr>
+<tr><th id="232">232</th><td><u>#<span data-ppcond="225">endif</span></u></td></tr>
+<tr><th id="233">233</th><td><u>#<span data-ppcond="233">ifdef</span> <span class="macro" data-ref="_M/CONFIG_ARM64">CONFIG_ARM64</span></u></td></tr>
+<tr><th id="234">234</th><td>	{ <q>"APMC0D0F"</q>, APD_ADDR(xgene_i2c_desc) },</td></tr>
+<tr><th id="235">235</th><td>	{ <q>"BRCM900D"</q>, APD_ADDR(vulcan_spi_desc) },</td></tr>
+<tr><th id="236">236</th><td>	{ <q>"CAV900D"</q>,  APD_ADDR(vulcan_spi_desc) },</td></tr>
+<tr><th id="237">237</th><td>	{ <q>"CAV9007"</q>,  APD_ADDR(thunderx2_i2c_desc) },</td></tr>
+<tr><th id="238">238</th><td>	{ <q>"HISI02A1"</q>, APD_ADDR(hip07_i2c_desc) },</td></tr>
+<tr><th id="239">239</th><td>	{ <q>"HISI02A2"</q>, APD_ADDR(hip08_i2c_desc) },</td></tr>
+<tr><th id="240">240</th><td>	{ <q>"HISI0173"</q>, APD_ADDR(hip08_spi_desc) },</td></tr>
+<tr><th id="241">241</th><td><u>#<span data-ppcond="233">endif</span></u></td></tr>
+<tr><th id="242">242</th><td>	{ }</td></tr>
+<tr><th id="243">243</th><td>};</td></tr>
+<tr><th id="244">244</th><td></td></tr>
+<tr><th id="245">245</th><td><em>static</em> <b>struct</b> <a class="type" href="../../include/acpi/acpi_bus.h.html#acpi_scan_handler" title='acpi_scan_handler' data-ref="acpi_scan_handler" data-ref-filename="acpi_scan_handler">acpi_scan_handler</a> <dfn class="tu decl def" id="apd_handler" title='apd_handler' data-type='struct acpi_scan_handler' data-ref="apd_handler" data-ref-filename="apd_handler">apd_handler</dfn> = {</td></tr>
+<tr><th id="246">246</th><td>	.<a class="ref field" href="../../include/acpi/acpi_bus.h.html#acpi_scan_handler::ids" title='acpi_scan_handler::ids' data-ref="acpi_scan_handler::ids" data-ref-filename="acpi_scan_handler..ids">ids</a> = <a class="tu ref" href="#acpi_apd_device_ids" title='acpi_apd_device_ids' data-ref="acpi_apd_device_ids" data-ref-filename="acpi_apd_device_ids">acpi_apd_device_ids</a>,</td></tr>
+<tr><th id="247">247</th><td>	.<a class="ref field" href="../../include/acpi/acpi_bus.h.html#acpi_scan_handler::attach" title='acpi_scan_handler::attach' data-ref="acpi_scan_handler::attach" data-ref-filename="acpi_scan_handler..attach">attach</a> = <a class="tu ref fn" href="#acpi_apd_create_device" title='acpi_apd_create_device' data-ref="acpi_apd_create_device" data-ref-filename="acpi_apd_create_device">acpi_apd_create_device</a>,</td></tr>
+<tr><th id="248">248</th><td>};</td></tr>
+<tr><th id="249">249</th><td></td></tr>
+<tr><th id="250">250</th><td><em>void</em> <a class="macro" href="../../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="decl def fn" id="acpi_apd_init" title='acpi_apd_init' data-ref="acpi_apd_init" data-ref-filename="acpi_apd_init">acpi_apd_init</dfn>(<em>void</em>)</td></tr>
+<tr><th id="251">251</th><td>{</td></tr>
+<tr><th id="252">252</th><td>	<a class="ref fn" href="../../include/acpi/acpi_bus.h.html#acpi_scan_add_handler" title='acpi_scan_add_handler' data-ref="acpi_scan_add_handler" data-ref-filename="acpi_scan_add_handler">acpi_scan_add_handler</a>(&amp;<a class="tu ref" href="#apd_handler" title='apd_handler' data-use='a' data-ref="apd_handler" data-ref-filename="apd_handler">apd_handler</a>);</td></tr>
+<tr><th id="253">253</th><td>}</td></tr>
+<tr><th id="254">254</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

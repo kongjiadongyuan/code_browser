@@ -1,0 +1,103 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>system_call.S source code [linux-5.3.1/arch/x86/entry/vdso/vdso32/system_call.S] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/arch/x86/entry/vdso/vdso32/system_call.S'; var root_path = '../../../../../..'; var data_path = '../../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../../..'>linux-5.3.1</a>/<a href='../../../..'>arch</a>/<a href='../../..'>x86</a>/<a href='../..'>entry</a>/<a href='..'>vdso</a>/<a href='./'>vdso32</a>/<a href='system_call.S.html'>system_call.S</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0 */</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * AT_SYSINFO entry point</i></td></tr>
+<tr><th id="4">4</th><td><i>*/</i></td></tr>
+<tr><th id="5">5</th><td></td></tr>
+<tr><th id="6">6</th><td><u>#include <a href="../../../../../include/linux/linkage.h.html">&lt;linux/linkage.h&gt;</a></u></td></tr>
+<tr><th id="7">7</th><td><u>#include <a href="../../../include/asm/dwarf2.h.html">&lt;asm/dwarf2.h&gt;</a></u></td></tr>
+<tr><th id="8">8</th><td><u>#include <a href="../../../include/asm/cpufeatures.h.html">&lt;asm/cpufeatures.h&gt;</a></u></td></tr>
+<tr><th id="9">9</th><td><u>#include <a href="../../../include/asm/alternative-asm.h.html">&lt;asm/alternative-asm.h&gt;</a></u></td></tr>
+<tr><th id="10">10</th><td></td></tr>
+<tr><th id="11">11</th><td>	.text</td></tr>
+<tr><th id="12">12</th><td>	.globl __kernel_vsyscall</td></tr>
+<tr><th id="13">13</th><td>	.type __kernel_vsyscall,@function</td></tr>
+<tr><th id="14">14</th><td>	<a class="macro" href="../../../../../include/linux/linkage.h.html#79" title=".p2align 4, 0x90" data-ref="_M/ALIGN">ALIGN</a></td></tr>
+<tr><th id="15">15</th><td>__kernel_vsyscall:</td></tr>
+<tr><th id="16">16</th><td>	<a class="macro" href="../../../include/asm/dwarf2.h.html#18" title=".cfi_startproc" data-ref="_M/CFI_STARTPROC">CFI_STARTPROC</a></td></tr>
+<tr><th id="17">17</th><td>	<i>/*</i></td></tr>
+<tr><th id="18">18</th><td><i>	 * Reshuffle regs so that all of any of the entry instructions</i></td></tr>
+<tr><th id="19">19</th><td><i>	 * will preserve enough state.</i></td></tr>
+<tr><th id="20">20</th><td><i>	 *</i></td></tr>
+<tr><th id="21">21</th><td><i>	 * A really nice entry sequence would be:</i></td></tr>
+<tr><th id="22">22</th><td><i>	 *  pushl %edx</i></td></tr>
+<tr><th id="23">23</th><td><i>	 *  pushl %ecx</i></td></tr>
+<tr><th id="24">24</th><td><i>	 *  movl  %esp, %ecx</i></td></tr>
+<tr><th id="25">25</th><td><i>	 *</i></td></tr>
+<tr><th id="26">26</th><td><i>	 * Unfortunately, naughty Android versions between July and December</i></td></tr>
+<tr><th id="27">27</th><td><i>	 * 2015 actually hardcode the traditional Linux SYSENTER entry</i></td></tr>
+<tr><th id="28">28</th><td><i>	 * sequence.  That is severely broken for a number of reasons (ask</i></td></tr>
+<tr><th id="29">29</th><td><i>	 * anyone with an AMD CPU, for example).  Nonetheless, we try to keep</i></td></tr>
+<tr><th id="30">30</th><td><i>	 * it working approximately as well as it ever worked.</i></td></tr>
+<tr><th id="31">31</th><td><i>	 *</i></td></tr>
+<tr><th id="32">32</th><td><i>	 * This link may eludicate some of the history:</i></td></tr>
+<tr><th id="33">33</th><td><i>	 *   <a href="https://android-review.googlesource.com/#/q/Iac3295376d61ef83e713ac9b528f3b50aa780cd7">https://android-review.googlesource.com/#/q/Iac3295376d61ef83e713ac9b528f3b50aa780cd7</a></i></td></tr>
+<tr><th id="34">34</th><td><i>	 * personally, I find it hard to understand what's going on there.</i></td></tr>
+<tr><th id="35">35</th><td><i>	 *</i></td></tr>
+<tr><th id="36">36</th><td><i>	 * Note to future user developers: DO NOT USE SYSENTER IN YOUR CODE.</i></td></tr>
+<tr><th id="37">37</th><td><i>	 * Execute an indirect call to the address in the AT_SYSINFO auxv</i></td></tr>
+<tr><th id="38">38</th><td><i>	 * entry.  That is the ONLY correct way to make a fast 32-bit system</i></td></tr>
+<tr><th id="39">39</th><td><i>	 * call on Linux.  (Open-coding int $0x80 is also fine, but it's</i></td></tr>
+<tr><th id="40">40</th><td><i>	 * slow.)</i></td></tr>
+<tr><th id="41">41</th><td><i>	 */</i></td></tr>
+<tr><th id="42">42</th><td>	pushl	%ecx</td></tr>
+<tr><th id="43">43</th><td>	<a class="macro" href="../../../include/asm/dwarf2.h.html#23" title=".cfi_adjust_cfa_offset" data-ref="_M/CFI_ADJUST_CFA_OFFSET">CFI_ADJUST_CFA_OFFSET</a>	<var>4</var></td></tr>
+<tr><th id="44">44</th><td>	<a class="macro" href="../../../include/asm/dwarf2.h.html#25" title=".cfi_rel_offset" data-ref="_M/CFI_REL_OFFSET">CFI_REL_OFFSET</a>		ecx, <var>0</var></td></tr>
+<tr><th id="45">45</th><td>	pushl	%edx</td></tr>
+<tr><th id="46">46</th><td>	<a class="macro" href="../../../include/asm/dwarf2.h.html#23" title=".cfi_adjust_cfa_offset" data-ref="_M/CFI_ADJUST_CFA_OFFSET">CFI_ADJUST_CFA_OFFSET</a>	<var>4</var></td></tr>
+<tr><th id="47">47</th><td>	<a class="macro" href="../../../include/asm/dwarf2.h.html#25" title=".cfi_rel_offset" data-ref="_M/CFI_REL_OFFSET">CFI_REL_OFFSET</a>		edx, <var>0</var></td></tr>
+<tr><th id="48">48</th><td>	pushl	%ebp</td></tr>
+<tr><th id="49">49</th><td>	<a class="macro" href="../../../include/asm/dwarf2.h.html#23" title=".cfi_adjust_cfa_offset" data-ref="_M/CFI_ADJUST_CFA_OFFSET">CFI_ADJUST_CFA_OFFSET</a>	<var>4</var></td></tr>
+<tr><th id="50">50</th><td>	<a class="macro" href="../../../include/asm/dwarf2.h.html#25" title=".cfi_rel_offset" data-ref="_M/CFI_REL_OFFSET">CFI_REL_OFFSET</a>		ebp, <var>0</var></td></tr>
+<tr><th id="51">51</th><td></td></tr>
+<tr><th id="52">52</th><td>	<u>#define <dfn class="macro" id="_M/SYSENTER_SEQUENCE" data-ref="_M/SYSENTER_SEQUENCE">SYSENTER_SEQUENCE</dfn>	"movl %esp, %ebp; sysenter"</u></td></tr>
+<tr><th id="53">53</th><td>	<u>#define <dfn class="macro" id="_M/SYSCALL_SEQUENCE" data-ref="_M/SYSCALL_SEQUENCE">SYSCALL_SEQUENCE</dfn>	"movl %ecx, %ebp; syscall"</u></td></tr>
+<tr><th id="54">54</th><td></td></tr>
+<tr><th id="55">55</th><td><u>#<span data-ppcond="55">ifdef</span> <a class="macro" href="../../../../../include/generated/autoconf.h.html#961" data-ref="_M/CONFIG_X86_64">CONFIG_X86_64</a></u></td></tr>
+<tr><th id="56">56</th><td>	<i>/* If SYSENTER (Intel) or SYSCALL32 (AMD) is available, use it. */</i></td></tr>
+<tr><th id="57">57</th><td>	ALTERNATIVE_2 <q>""</q>, <a class="macro" href="#52" title="&quot;movl %esp, %ebp; sysenter&quot;" data-ref="_M/SYSENTER_SEQUENCE">SYSENTER_SEQUENCE</a>, <a class="macro" href="../../../include/asm/cpufeatures.h.html#97" title="( 3*32+15)" data-ref="_M/X86_FEATURE_SYSENTER32">X86_FEATURE_SYSENTER32</a>, \</td></tr>
+<tr><th id="58">58</th><td>	                  <a class="macro" href="#53" title="&quot;movl %ecx, %ebp; syscall&quot;" data-ref="_M/SYSCALL_SEQUENCE">SYSCALL_SEQUENCE</a>,  <a class="macro" href="../../../include/asm/cpufeatures.h.html#96" title="( 3*32+14)" data-ref="_M/X86_FEATURE_SYSCALL32">X86_FEATURE_SYSCALL32</a></td></tr>
+<tr><th id="59">59</th><td><u>#<span data-ppcond="55">else</span></u></td></tr>
+<tr><th id="60">60</th><td>	ALTERNATIVE <q>""</q>, SYSENTER_SEQUENCE, X86_FEATURE_SEP</td></tr>
+<tr><th id="61">61</th><td><u>#<span data-ppcond="55">endif</span></u></td></tr>
+<tr><th id="62">62</th><td></td></tr>
+<tr><th id="63">63</th><td>	<i>/* Enter using int $0x80 */</i></td></tr>
+<tr><th id="64">64</th><td>	<em>int</em>	$<var>0x80</var></td></tr>
+<tr><th id="65">65</th><td><a class="macro" href="../../../include/asm/linkage.h.html#16" title=".globl int80_landing_pad; int80_landing_pad:" data-ref="_M/GLOBAL">GLOBAL</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="int80_landing_pad" title='int80_landing_pad' data-ref="int80_landing_pad" data-ref-filename="int80_landing_pad">int80_landing_pad</dfn></span>)</td></tr>
+<tr><th id="66">66</th><td></td></tr>
+<tr><th id="67">67</th><td>	<i>/*</i></td></tr>
+<tr><th id="68">68</th><td><i>	 * Restore EDX and ECX in case they were clobbered.  EBP is not</i></td></tr>
+<tr><th id="69">69</th><td><i>	 * clobbered (the kernel restores it), but it's cleaner and</i></td></tr>
+<tr><th id="70">70</th><td><i>	 * probably faster to pop it than to adjust ESP using addl.</i></td></tr>
+<tr><th id="71">71</th><td><i>	 */</i></td></tr>
+<tr><th id="72">72</th><td>	<span class='error' title="unknown type name &apos;popl&apos;">popl</span>	<span class='error' title="expected identifier or &apos;(&apos;">%</span>ebp</td></tr>
+<tr><th id="73">73</th><td>	<a class="macro" href="../../../include/asm/dwarf2.h.html#27" title=".cfi_restore" data-ref="_M/CFI_RESTORE">CFI_RESTORE</a>		ebp</td></tr>
+<tr><th id="74">74</th><td>	<a class="macro" href="../../../include/asm/dwarf2.h.html#23" title=".cfi_adjust_cfa_offset" data-ref="_M/CFI_ADJUST_CFA_OFFSET">CFI_ADJUST_CFA_OFFSET</a>	-<var>4</var></td></tr>
+<tr><th id="75">75</th><td>	popl	%edx</td></tr>
+<tr><th id="76">76</th><td>	<a class="macro" href="../../../include/asm/dwarf2.h.html#27" title=".cfi_restore" data-ref="_M/CFI_RESTORE">CFI_RESTORE</a>		edx</td></tr>
+<tr><th id="77">77</th><td>	<a class="macro" href="../../../include/asm/dwarf2.h.html#23" title=".cfi_adjust_cfa_offset" data-ref="_M/CFI_ADJUST_CFA_OFFSET">CFI_ADJUST_CFA_OFFSET</a>	-<var>4</var></td></tr>
+<tr><th id="78">78</th><td>	popl	%ecx</td></tr>
+<tr><th id="79">79</th><td>	<a class="macro" href="../../../include/asm/dwarf2.h.html#27" title=".cfi_restore" data-ref="_M/CFI_RESTORE">CFI_RESTORE</a>		ecx</td></tr>
+<tr><th id="80">80</th><td>	<a class="macro" href="../../../include/asm/dwarf2.h.html#23" title=".cfi_adjust_cfa_offset" data-ref="_M/CFI_ADJUST_CFA_OFFSET">CFI_ADJUST_CFA_OFFSET</a>	-<var>4</var></td></tr>
+<tr><th id="81">81</th><td>	ret</td></tr>
+<tr><th id="82">82</th><td>	<a class="macro" href="../../../include/asm/dwarf2.h.html#19" title=".cfi_endproc" data-ref="_M/CFI_ENDPROC">CFI_ENDPROC</a></td></tr>
+<tr><th id="83">83</th><td></td></tr>
+<tr><th id="84">84</th><td>	.size __kernel_vsyscall,.-__kernel_vsyscall</td></tr>
+<tr><th id="85">85</th><td>	.previous</td></tr>
+<tr><th id="86">86</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

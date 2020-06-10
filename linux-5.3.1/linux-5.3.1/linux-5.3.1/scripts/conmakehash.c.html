@@ -1,0 +1,309 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>conmakehash.c source code [linux-5.3.1/scripts/conmakehash.c] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="main "/>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/scripts/conmakehash.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>linux-5.3.1</a>/<a href='./'>scripts</a>/<a href='conmakehash.c.html'>conmakehash.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0-or-later</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * conmakehash.c</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * Create arrays for initializing the kernel folded tables (using a hash</i></td></tr>
+<tr><th id="6">6</th><td><i> * table turned out to be to limiting...)  Unfortunately we can't simply</i></td></tr>
+<tr><th id="7">7</th><td><i> * preinitialize the tables at compile time since kfree() cannot accept</i></td></tr>
+<tr><th id="8">8</th><td><i> * memory not allocated by kmalloc(), and doing our own memory management</i></td></tr>
+<tr><th id="9">9</th><td><i> * just for this seems like massive overkill.</i></td></tr>
+<tr><th id="10">10</th><td><i> *</i></td></tr>
+<tr><th id="11">11</th><td><i> * Copyright (C) 1995-1997 H. Peter Anvin</i></td></tr>
+<tr><th id="12">12</th><td><i> */</i></td></tr>
+<tr><th id="13">13</th><td></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="../../include/stdio.h.html">&lt;stdio.h&gt;</a></u></td></tr>
+<tr><th id="15">15</th><td><u>#include <a href="../../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="16">16</th><td><u>#include <a href="../../include/sysexits.h.html">&lt;sysexits.h&gt;</a></u></td></tr>
+<tr><th id="17">17</th><td><u>#include <a href="../../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../../include/ctype.h.html">&lt;ctype.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#define <dfn class="macro" id="_M/MAX_FONTLEN" data-ref="_M/MAX_FONTLEN">MAX_FONTLEN</dfn> 256</u></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td><b>typedef</b> <em>unsigned</em> <em>short</em> <dfn class="typedef" id="unicode" title='unicode' data-type='unsigned short' data-ref="unicode" data-ref-filename="unicode">unicode</dfn>;</td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="usage" title='usage' data-type='void usage(char * argv0)' data-ref="usage" data-ref-filename="usage">usage</dfn>(<em>char</em> *<dfn class="local col1 decl" id="1argv0" title='argv0' data-type='char *' data-ref="1argv0" data-ref-filename="1argv0">argv0</dfn>)</td></tr>
+<tr><th id="25">25</th><td>{</td></tr>
+<tr><th id="26">26</th><td>  <a class="ref fn" href="../../include/stdio.h.html#fprintf" title='fprintf' data-ref="fprintf" data-ref-filename="fprintf">fprintf</a>(<a class="macro" href="../../include/stdio.h.html#141" title="stderr" data-ref="_M/stderr">stderr</a>, <q>"Usage: \n"</q></td></tr>
+<tr><th id="27">27</th><td>         <q>"        %s chartable [hashsize] [hashstep] [maxhashlevel]\n"</q>, <a class="local col1 ref" href="#1argv0" title='argv0' data-ref="1argv0" data-ref-filename="1argv0">argv0</a>);</td></tr>
+<tr><th id="28">28</th><td>  <a class="ref fn" href="../../include/stdlib.h.html#exit" title='exit' data-ref="exit" data-ref-filename="exit">exit</a>(<a class="macro" href="../../include/sysexits.h.html#96" title="64" data-ref="_M/EX_USAGE">EX_USAGE</a>);</td></tr>
+<tr><th id="29">29</th><td>}</td></tr>
+<tr><th id="30">30</th><td></td></tr>
+<tr><th id="31">31</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="getunicode" title='getunicode' data-type='int getunicode(char ** p0)' data-ref="getunicode" data-ref-filename="getunicode">getunicode</dfn>(<em>char</em> **<dfn class="local col2 decl" id="2p0" title='p0' data-type='char **' data-ref="2p0" data-ref-filename="2p0">p0</dfn>)</td></tr>
+<tr><th id="32">32</th><td>{</td></tr>
+<tr><th id="33">33</th><td>  <em>char</em> *<dfn class="local col3 decl" id="3p" title='p' data-type='char *' data-ref="3p" data-ref-filename="3p">p</dfn> = *<a class="local col2 ref" href="#2p0" title='p0' data-ref="2p0" data-ref-filename="2p0">p0</a>;</td></tr>
+<tr><th id="34">34</th><td></td></tr>
+<tr><th id="35">35</th><td>  <b>while</b> (*<a class="local col3 ref" href="#3p" title='p' data-ref="3p" data-ref-filename="3p">p</a> == <kbd>' '</kbd> || *<a class="local col3 ref" href="#3p" title='p' data-ref="3p" data-ref-filename="3p">p</a> == <kbd>'\t'</kbd>)</td></tr>
+<tr><th id="36">36</th><td>    <a class="local col3 ref" href="#3p" title='p' data-ref="3p" data-ref-filename="3p">p</a>++;</td></tr>
+<tr><th id="37">37</th><td>  <b>if</b> (*<a class="local col3 ref" href="#3p" title='p' data-ref="3p" data-ref-filename="3p">p</a> != <kbd>'U'</kbd> || <a class="local col3 ref" href="#3p" title='p' data-ref="3p" data-ref-filename="3p">p</a>[<var>1</var>] != <kbd>'+'</kbd> ||</td></tr>
+<tr><th id="38">38</th><td>      !<a class="macro" href="../../include/ctype.h.html#199" title="((*__ctype_b_loc ())[(int) ((p[2]))] &amp; (unsigned short int) _ISxdigit)" data-ref="_M/isxdigit">isxdigit</a>(<a class="local col3 ref" href="#3p" title='p' data-ref="3p" data-ref-filename="3p">p</a>[<var>2</var>]) || !<a class="macro" href="../../include/ctype.h.html#199" title="((*__ctype_b_loc ())[(int) ((p[3]))] &amp; (unsigned short int) _ISxdigit)" data-ref="_M/isxdigit">isxdigit</a>(<a class="local col3 ref" href="#3p" title='p' data-ref="3p" data-ref-filename="3p">p</a>[<var>3</var>]) || !<a class="macro" href="../../include/ctype.h.html#199" title="((*__ctype_b_loc ())[(int) ((p[4]))] &amp; (unsigned short int) _ISxdigit)" data-ref="_M/isxdigit">isxdigit</a>(<a class="local col3 ref" href="#3p" title='p' data-ref="3p" data-ref-filename="3p">p</a>[<var>4</var>]) ||</td></tr>
+<tr><th id="39">39</th><td>      !<a class="macro" href="../../include/ctype.h.html#199" title="((*__ctype_b_loc ())[(int) ((p[5]))] &amp; (unsigned short int) _ISxdigit)" data-ref="_M/isxdigit">isxdigit</a>(<a class="local col3 ref" href="#3p" title='p' data-ref="3p" data-ref-filename="3p">p</a>[<var>5</var>]) || <a class="macro" href="../../include/ctype.h.html#199" title="((*__ctype_b_loc ())[(int) ((p[6]))] &amp; (unsigned short int) _ISxdigit)" data-ref="_M/isxdigit">isxdigit</a>(<a class="local col3 ref" href="#3p" title='p' data-ref="3p" data-ref-filename="3p">p</a>[<var>6</var>]))</td></tr>
+<tr><th id="40">40</th><td>    <b>return</b> -<var>1</var>;</td></tr>
+<tr><th id="41">41</th><td>  *<a class="local col2 ref" href="#2p0" title='p0' data-ref="2p0" data-ref-filename="2p0">p0</a> = <a class="local col3 ref" href="#3p" title='p' data-ref="3p" data-ref-filename="3p">p</a>+<var>6</var>;</td></tr>
+<tr><th id="42">42</th><td>  <b>return</b> <a class="ref fn" href="../../include/stdlib.h.html#strtol" title='strtol' data-ref="strtol" data-ref-filename="strtol">strtol</a>(<a class="local col3 ref" href="#3p" title='p' data-ref="3p" data-ref-filename="3p">p</a>+<var>2</var>,<var>0</var>,<var>16</var>);</td></tr>
+<tr><th id="43">43</th><td>}</td></tr>
+<tr><th id="44">44</th><td></td></tr>
+<tr><th id="45">45</th><td><a class="typedef" href="#unicode" title='unicode' data-type='unsigned short' data-ref="unicode" data-ref-filename="unicode">unicode</a> <dfn class="decl def" id="unitable" title='unitable' data-ref="unitable" data-ref-filename="unitable">unitable</dfn>[<a class="macro" href="#20" title="256" data-ref="_M/MAX_FONTLEN">MAX_FONTLEN</a>][<var>255</var>];</td></tr>
+<tr><th id="46">46</th><td>				<i>/* Massive overkill, but who cares? */</i></td></tr>
+<tr><th id="47">47</th><td><em>int</em> <dfn class="decl def" id="unicount" title='unicount' data-ref="unicount" data-ref-filename="unicount">unicount</dfn>[<a class="macro" href="#20" title="256" data-ref="_M/MAX_FONTLEN">MAX_FONTLEN</a>];</td></tr>
+<tr><th id="48">48</th><td></td></tr>
+<tr><th id="49">49</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="addpair" title='addpair' data-type='void addpair(int fp, int un)' data-ref="addpair" data-ref-filename="addpair">addpair</dfn>(<em>int</em> <dfn class="local col4 decl" id="4fp" title='fp' data-type='int' data-ref="4fp" data-ref-filename="4fp">fp</dfn>, <em>int</em> <dfn class="local col5 decl" id="5un" title='un' data-type='int' data-ref="5un" data-ref-filename="5un">un</dfn>)</td></tr>
+<tr><th id="50">50</th><td>{</td></tr>
+<tr><th id="51">51</th><td>  <em>int</em> <dfn class="local col6 decl" id="6i" title='i' data-type='int' data-ref="6i" data-ref-filename="6i">i</dfn>;</td></tr>
+<tr><th id="52">52</th><td></td></tr>
+<tr><th id="53">53</th><td>  <b>if</b> ( <a class="local col5 ref" href="#5un" title='un' data-ref="5un" data-ref-filename="5un">un</a> &lt;= <var>0xfffe</var> )</td></tr>
+<tr><th id="54">54</th><td>    {</td></tr>
+<tr><th id="55">55</th><td>      <i>/* Check it isn't a duplicate */</i></td></tr>
+<tr><th id="56">56</th><td></td></tr>
+<tr><th id="57">57</th><td>      <b>for</b> ( <a class="local col6 ref" href="#6i" title='i' data-ref="6i" data-ref-filename="6i">i</a> = <var>0</var> ; <a class="local col6 ref" href="#6i" title='i' data-ref="6i" data-ref-filename="6i">i</a> &lt; <a class="ref" href="#unicount" title='unicount' data-ref="unicount" data-ref-filename="unicount">unicount</a>[<a class="local col4 ref" href="#4fp" title='fp' data-ref="4fp" data-ref-filename="4fp">fp</a>] ; <a class="local col6 ref" href="#6i" title='i' data-ref="6i" data-ref-filename="6i">i</a>++ )</td></tr>
+<tr><th id="58">58</th><td>	<b>if</b> ( <a class="ref" href="#unitable" title='unitable' data-ref="unitable" data-ref-filename="unitable">unitable</a>[<a class="local col4 ref" href="#4fp" title='fp' data-ref="4fp" data-ref-filename="4fp">fp</a>][<a class="local col6 ref" href="#6i" title='i' data-ref="6i" data-ref-filename="6i">i</a>] == <a class="local col5 ref" href="#5un" title='un' data-ref="5un" data-ref-filename="5un">un</a> )</td></tr>
+<tr><th id="59">59</th><td>	  <b>return</b>;</td></tr>
+<tr><th id="60">60</th><td></td></tr>
+<tr><th id="61">61</th><td>      <i>/* Add to list */</i></td></tr>
+<tr><th id="62">62</th><td></td></tr>
+<tr><th id="63">63</th><td>      <b>if</b> ( <a class="ref" href="#unicount" title='unicount' data-ref="unicount" data-ref-filename="unicount">unicount</a>[<a class="local col4 ref" href="#4fp" title='fp' data-ref="4fp" data-ref-filename="4fp">fp</a>] &gt; <var>254</var> )</td></tr>
+<tr><th id="64">64</th><td>	{</td></tr>
+<tr><th id="65">65</th><td>	  <a class="ref fn" href="../../include/stdio.h.html#fprintf" title='fprintf' data-ref="fprintf" data-ref-filename="fprintf">fprintf</a>(<a class="macro" href="../../include/stdio.h.html#141" title="stderr" data-ref="_M/stderr">stderr</a>, <q>"ERROR: Only 255 unicodes/glyph permitted!\n"</q>);</td></tr>
+<tr><th id="66">66</th><td>	  <a class="ref fn" href="../../include/stdlib.h.html#exit" title='exit' data-ref="exit" data-ref-filename="exit">exit</a>(<a class="macro" href="../../include/sysexits.h.html#97" title="65" data-ref="_M/EX_DATAERR">EX_DATAERR</a>);</td></tr>
+<tr><th id="67">67</th><td>	}</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td>      <a class="ref" href="#unitable" title='unitable' data-ref="unitable" data-ref-filename="unitable">unitable</a>[<a class="local col4 ref" href="#4fp" title='fp' data-ref="4fp" data-ref-filename="4fp">fp</a>][<a class="ref" href="#unicount" title='unicount' data-ref="unicount" data-ref-filename="unicount">unicount</a>[<a class="local col4 ref" href="#4fp" title='fp' data-ref="4fp" data-ref-filename="4fp">fp</a>]] = <a class="local col5 ref" href="#5un" title='un' data-ref="5un" data-ref-filename="5un">un</a>;</td></tr>
+<tr><th id="70">70</th><td>      <a class="ref" href="#unicount" title='unicount' data-ref="unicount" data-ref-filename="unicount">unicount</a>[<a class="local col4 ref" href="#4fp" title='fp' data-ref="4fp" data-ref-filename="4fp">fp</a>]++;</td></tr>
+<tr><th id="71">71</th><td>    }</td></tr>
+<tr><th id="72">72</th><td></td></tr>
+<tr><th id="73">73</th><td>  <i>/* otherwise: ignore */</i></td></tr>
+<tr><th id="74">74</th><td>}</td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td><em>int</em> <dfn class="decl def fn" id="main" title='main' data-ref="main" data-ref-filename="main">main</dfn>(<em>int</em> <dfn class="local col7 decl" id="7argc" title='argc' data-type='int' data-ref="7argc" data-ref-filename="7argc">argc</dfn>, <em>char</em> *<dfn class="local col8 decl" id="8argv" title='argv' data-type='char **' data-ref="8argv" data-ref-filename="8argv">argv</dfn>[])</td></tr>
+<tr><th id="77">77</th><td>{</td></tr>
+<tr><th id="78">78</th><td>  <a class="typedef" href="../../include/x86_64-linux-gnu/bits/types/FILE.h.html#FILE" title='FILE' data-type='struct _IO_FILE' data-ref="FILE" data-ref-filename="FILE">FILE</a> *<dfn class="local col9 decl" id="9ctbl" title='ctbl' data-type='FILE *' data-ref="9ctbl" data-ref-filename="9ctbl">ctbl</dfn>;</td></tr>
+<tr><th id="79">79</th><td>  <em>char</em> *<dfn class="local col0 decl" id="10tblname" title='tblname' data-type='char *' data-ref="10tblname" data-ref-filename="10tblname">tblname</dfn>;</td></tr>
+<tr><th id="80">80</th><td>  <em>char</em> <dfn class="local col1 decl" id="11buffer" title='buffer' data-type='char [65536]' data-ref="11buffer" data-ref-filename="11buffer">buffer</dfn>[<var>65536</var>];</td></tr>
+<tr><th id="81">81</th><td>  <em>int</em> <dfn class="local col2 decl" id="12fontlen" title='fontlen' data-type='int' data-ref="12fontlen" data-ref-filename="12fontlen">fontlen</dfn>;</td></tr>
+<tr><th id="82">82</th><td>  <em>int</em> <dfn class="local col3 decl" id="13i" title='i' data-type='int' data-ref="13i" data-ref-filename="13i">i</dfn>, <dfn class="local col4 decl" id="14nuni" title='nuni' data-type='int' data-ref="14nuni" data-ref-filename="14nuni">nuni</dfn>, <dfn class="local col5 decl" id="15nent" title='nent' data-type='int' data-ref="15nent" data-ref-filename="15nent">nent</dfn>;</td></tr>
+<tr><th id="83">83</th><td>  <em>int</em> <dfn class="local col6 decl" id="16fp0" title='fp0' data-type='int' data-ref="16fp0" data-ref-filename="16fp0">fp0</dfn>, <dfn class="local col7 decl" id="17fp1" title='fp1' data-type='int' data-ref="17fp1" data-ref-filename="17fp1">fp1</dfn>, <dfn class="local col8 decl" id="18un0" title='un0' data-type='int' data-ref="18un0" data-ref-filename="18un0">un0</dfn>, <dfn class="local col9 decl" id="19un1" title='un1' data-type='int' data-ref="19un1" data-ref-filename="19un1">un1</dfn>;</td></tr>
+<tr><th id="84">84</th><td>  <em>char</em> *<dfn class="local col0 decl" id="20p" title='p' data-type='char *' data-ref="20p" data-ref-filename="20p">p</dfn>, *<dfn class="local col1 decl" id="21p1" title='p1' data-type='char *' data-ref="21p1" data-ref-filename="21p1">p1</dfn>;</td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td>  <b>if</b> ( <a class="local col7 ref" href="#7argc" title='argc' data-ref="7argc" data-ref-filename="7argc">argc</a> &lt; <var>2</var> || <a class="local col7 ref" href="#7argc" title='argc' data-ref="7argc" data-ref-filename="7argc">argc</a> &gt; <var>5</var> )</td></tr>
+<tr><th id="87">87</th><td>    <a class="tu ref fn" href="#usage" title='usage' data-use='c' data-ref="usage" data-ref-filename="usage">usage</a>(<a class="local col8 ref" href="#8argv" title='argv' data-ref="8argv" data-ref-filename="8argv">argv</a>[<var>0</var>]);</td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td>  <b>if</b> ( !<a class="ref fn" href="../../include/string.h.html#strcmp" title='strcmp' data-ref="strcmp" data-ref-filename="strcmp">strcmp</a>(<a class="local col8 ref" href="#8argv" title='argv' data-ref="8argv" data-ref-filename="8argv">argv</a>[<var>1</var>],<q>"-"</q>) )</td></tr>
+<tr><th id="90">90</th><td>    {</td></tr>
+<tr><th id="91">91</th><td>      <a class="local col9 ref" href="#9ctbl" title='ctbl' data-ref="9ctbl" data-ref-filename="9ctbl">ctbl</a> = <a class="macro" href="../../include/stdio.h.html#139" title="stdin" data-ref="_M/stdin">stdin</a>;</td></tr>
+<tr><th id="92">92</th><td>      <a class="local col0 ref" href="#10tblname" title='tblname' data-ref="10tblname" data-ref-filename="10tblname">tblname</a> = <q>"stdin"</q>;</td></tr>
+<tr><th id="93">93</th><td>    }</td></tr>
+<tr><th id="94">94</th><td>  <b>else</b></td></tr>
+<tr><th id="95">95</th><td>    {</td></tr>
+<tr><th id="96">96</th><td>      <a class="local col9 ref" href="#9ctbl" title='ctbl' data-ref="9ctbl" data-ref-filename="9ctbl">ctbl</a> = <a class="ref fn" href="../../include/stdio.h.html#fopen" title='fopen' data-ref="fopen" data-ref-filename="fopen">fopen</a>(<a class="local col0 ref" href="#10tblname" title='tblname' data-ref="10tblname" data-ref-filename="10tblname">tblname</a> = <a class="local col8 ref" href="#8argv" title='argv' data-ref="8argv" data-ref-filename="8argv">argv</a>[<var>1</var>], <q>"r"</q>);</td></tr>
+<tr><th id="97">97</th><td>      <b>if</b> ( !<a class="local col9 ref" href="#9ctbl" title='ctbl' data-ref="9ctbl" data-ref-filename="9ctbl">ctbl</a> )</td></tr>
+<tr><th id="98">98</th><td>	{</td></tr>
+<tr><th id="99">99</th><td>	  <a class="ref fn" href="../../include/stdio.h.html#perror" title='perror' data-ref="perror" data-ref-filename="perror">perror</a>(<a class="local col0 ref" href="#10tblname" title='tblname' data-ref="10tblname" data-ref-filename="10tblname">tblname</a>);</td></tr>
+<tr><th id="100">100</th><td>	  <a class="ref fn" href="../../include/stdlib.h.html#exit" title='exit' data-ref="exit" data-ref-filename="exit">exit</a>(<a class="macro" href="../../include/sysexits.h.html#98" title="66" data-ref="_M/EX_NOINPUT">EX_NOINPUT</a>);</td></tr>
+<tr><th id="101">101</th><td>	}</td></tr>
+<tr><th id="102">102</th><td>    }</td></tr>
+<tr><th id="103">103</th><td></td></tr>
+<tr><th id="104">104</th><td>  <i>/* For now we assume the default font is always 256 characters. */</i></td></tr>
+<tr><th id="105">105</th><td>  <a class="local col2 ref" href="#12fontlen" title='fontlen' data-ref="12fontlen" data-ref-filename="12fontlen">fontlen</a> = <var>256</var>;</td></tr>
+<tr><th id="106">106</th><td></td></tr>
+<tr><th id="107">107</th><td>  <i>/* Initialize table */</i></td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td>  <b>for</b> ( <a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a> = <var>0</var> ; <a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a> &lt; <a class="local col2 ref" href="#12fontlen" title='fontlen' data-ref="12fontlen" data-ref-filename="12fontlen">fontlen</a> ; <a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a>++ )</td></tr>
+<tr><th id="110">110</th><td>    <a class="ref" href="#unicount" title='unicount' data-ref="unicount" data-ref-filename="unicount">unicount</a>[<a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a>] = <var>0</var>;</td></tr>
+<tr><th id="111">111</th><td></td></tr>
+<tr><th id="112">112</th><td>  <i>/* Now we come to the tricky part.  Parse the input table. */</i></td></tr>
+<tr><th id="113">113</th><td></td></tr>
+<tr><th id="114">114</th><td>  <b>while</b> ( <a class="ref fn" href="../../include/stdio.h.html#fgets" title='fgets' data-ref="fgets" data-ref-filename="fgets">fgets</a>(<a class="local col1 ref" href="#11buffer" title='buffer' data-ref="11buffer" data-ref-filename="11buffer">buffer</a>, <b>sizeof</b>(<a class="local col1 ref" href="#11buffer" title='buffer' data-ref="11buffer" data-ref-filename="11buffer">buffer</a>), <a class="local col9 ref" href="#9ctbl" title='ctbl' data-ref="9ctbl" data-ref-filename="9ctbl">ctbl</a>) != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span> )</td></tr>
+<tr><th id="115">115</th><td>    {</td></tr>
+<tr><th id="116">116</th><td>      <b>if</b> ( (<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a> = <a class="ref fn" href="../../include/string.h.html#strchr" title='strchr' data-ref="strchr" data-ref-filename="strchr">strchr</a>(<a class="local col1 ref" href="#11buffer" title='buffer' data-ref="11buffer" data-ref-filename="11buffer">buffer</a>, <kbd>'\n'</kbd>)) != <span class="macro" title="((void*)0)" data-ref="_M/NULL">NULL</span> )</td></tr>
+<tr><th id="117">117</th><td>	*<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a> = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="118">118</th><td>      <b>else</b></td></tr>
+<tr><th id="119">119</th><td>	<a class="ref fn" href="../../include/stdio.h.html#fprintf" title='fprintf' data-ref="fprintf" data-ref-filename="fprintf">fprintf</a>(<a class="macro" href="../../include/stdio.h.html#141" title="stderr" data-ref="_M/stderr">stderr</a>, <q>"%s: Warning: line too long\n"</q>, <a class="local col0 ref" href="#10tblname" title='tblname' data-ref="10tblname" data-ref-filename="10tblname">tblname</a>);</td></tr>
+<tr><th id="120">120</th><td></td></tr>
+<tr><th id="121">121</th><td>      <a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a> = <a class="local col1 ref" href="#11buffer" title='buffer' data-ref="11buffer" data-ref-filename="11buffer">buffer</a>;</td></tr>
+<tr><th id="122">122</th><td></td></tr>
+<tr><th id="123">123</th><td><i>/*</i></td></tr>
+<tr><th id="124">124</th><td><i> * Syntax accepted:</i></td></tr>
+<tr><th id="125">125</th><td><i> *	&lt;fontpos&gt;	&lt;unicode&gt; &lt;unicode&gt; ...</i></td></tr>
+<tr><th id="126">126</th><td><i> *	&lt;range&gt;		idem</i></td></tr>
+<tr><th id="127">127</th><td><i> *	&lt;range&gt;		&lt;unicode range&gt;</i></td></tr>
+<tr><th id="128">128</th><td><i> *</i></td></tr>
+<tr><th id="129">129</th><td><i> * where &lt;range&gt; ::= &lt;fontpos&gt;-&lt;fontpos&gt;</i></td></tr>
+<tr><th id="130">130</th><td><i> * and &lt;unicode&gt; ::= U+&lt;h&gt;&lt;h&gt;&lt;h&gt;&lt;h&gt;</i></td></tr>
+<tr><th id="131">131</th><td><i> * and &lt;h&gt; ::= &lt;hexadecimal digit&gt;</i></td></tr>
+<tr><th id="132">132</th><td><i> */</i></td></tr>
+<tr><th id="133">133</th><td></td></tr>
+<tr><th id="134">134</th><td>      <b>while</b> (*<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a> == <kbd>' '</kbd> || *<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a> == <kbd>'\t'</kbd>)</td></tr>
+<tr><th id="135">135</th><td>	<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a>++;</td></tr>
+<tr><th id="136">136</th><td>      <b>if</b> (!*<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a> || *<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a> == <kbd>'#'</kbd>)</td></tr>
+<tr><th id="137">137</th><td>	<b>continue</b>;	<i>/* skip comment or blank line */</i></td></tr>
+<tr><th id="138">138</th><td></td></tr>
+<tr><th id="139">139</th><td>      <a class="local col6 ref" href="#16fp0" title='fp0' data-ref="16fp0" data-ref-filename="16fp0">fp0</a> = <a class="ref fn" href="../../include/stdlib.h.html#strtol" title='strtol' data-ref="strtol" data-ref-filename="strtol">strtol</a>(<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a>, &amp;<a class="local col1 ref" href="#21p1" title='p1' data-ref="21p1" data-ref-filename="21p1">p1</a>, <var>0</var>);</td></tr>
+<tr><th id="140">140</th><td>      <b>if</b> (<a class="local col1 ref" href="#21p1" title='p1' data-ref="21p1" data-ref-filename="21p1">p1</a> == <a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a>)</td></tr>
+<tr><th id="141">141</th><td>	{</td></tr>
+<tr><th id="142">142</th><td>	  <a class="ref fn" href="../../include/stdio.h.html#fprintf" title='fprintf' data-ref="fprintf" data-ref-filename="fprintf">fprintf</a>(<a class="macro" href="../../include/stdio.h.html#141" title="stderr" data-ref="_M/stderr">stderr</a>, <q>"Bad input line: %s\n"</q>, <a class="local col1 ref" href="#11buffer" title='buffer' data-ref="11buffer" data-ref-filename="11buffer">buffer</a>);</td></tr>
+<tr><th id="143">143</th><td>	  <a class="ref fn" href="../../include/stdlib.h.html#exit" title='exit' data-ref="exit" data-ref-filename="exit">exit</a>(<a class="macro" href="../../include/sysexits.h.html#97" title="65" data-ref="_M/EX_DATAERR">EX_DATAERR</a>);</td></tr>
+<tr><th id="144">144</th><td>        }</td></tr>
+<tr><th id="145">145</th><td>      <a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a> = <a class="local col1 ref" href="#21p1" title='p1' data-ref="21p1" data-ref-filename="21p1">p1</a>;</td></tr>
+<tr><th id="146">146</th><td></td></tr>
+<tr><th id="147">147</th><td>      <b>while</b> (*<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a> == <kbd>' '</kbd> || *<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a> == <kbd>'\t'</kbd>)</td></tr>
+<tr><th id="148">148</th><td>	<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a>++;</td></tr>
+<tr><th id="149">149</th><td>      <b>if</b> (*<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a> == <kbd>'-'</kbd>)</td></tr>
+<tr><th id="150">150</th><td>	{</td></tr>
+<tr><th id="151">151</th><td>	  <a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a>++;</td></tr>
+<tr><th id="152">152</th><td>	  <a class="local col7 ref" href="#17fp1" title='fp1' data-ref="17fp1" data-ref-filename="17fp1">fp1</a> = <a class="ref fn" href="../../include/stdlib.h.html#strtol" title='strtol' data-ref="strtol" data-ref-filename="strtol">strtol</a>(<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a>, &amp;<a class="local col1 ref" href="#21p1" title='p1' data-ref="21p1" data-ref-filename="21p1">p1</a>, <var>0</var>);</td></tr>
+<tr><th id="153">153</th><td>	  <b>if</b> (<a class="local col1 ref" href="#21p1" title='p1' data-ref="21p1" data-ref-filename="21p1">p1</a> == <a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a>)</td></tr>
+<tr><th id="154">154</th><td>	    {</td></tr>
+<tr><th id="155">155</th><td>	      <a class="ref fn" href="../../include/stdio.h.html#fprintf" title='fprintf' data-ref="fprintf" data-ref-filename="fprintf">fprintf</a>(<a class="macro" href="../../include/stdio.h.html#141" title="stderr" data-ref="_M/stderr">stderr</a>, <q>"Bad input line: %s\n"</q>, <a class="local col1 ref" href="#11buffer" title='buffer' data-ref="11buffer" data-ref-filename="11buffer">buffer</a>);</td></tr>
+<tr><th id="156">156</th><td>	      <a class="ref fn" href="../../include/stdlib.h.html#exit" title='exit' data-ref="exit" data-ref-filename="exit">exit</a>(<a class="macro" href="../../include/sysexits.h.html#97" title="65" data-ref="_M/EX_DATAERR">EX_DATAERR</a>);</td></tr>
+<tr><th id="157">157</th><td>	    }</td></tr>
+<tr><th id="158">158</th><td>	  <a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a> = <a class="local col1 ref" href="#21p1" title='p1' data-ref="21p1" data-ref-filename="21p1">p1</a>;</td></tr>
+<tr><th id="159">159</th><td>        }</td></tr>
+<tr><th id="160">160</th><td>      <b>else</b></td></tr>
+<tr><th id="161">161</th><td>	<a class="local col7 ref" href="#17fp1" title='fp1' data-ref="17fp1" data-ref-filename="17fp1">fp1</a> = <var>0</var>;</td></tr>
+<tr><th id="162">162</th><td></td></tr>
+<tr><th id="163">163</th><td>      <b>if</b> ( <a class="local col6 ref" href="#16fp0" title='fp0' data-ref="16fp0" data-ref-filename="16fp0">fp0</a> &lt; <var>0</var> || <a class="local col6 ref" href="#16fp0" title='fp0' data-ref="16fp0" data-ref-filename="16fp0">fp0</a> &gt;= <a class="local col2 ref" href="#12fontlen" title='fontlen' data-ref="12fontlen" data-ref-filename="12fontlen">fontlen</a> )</td></tr>
+<tr><th id="164">164</th><td>	{</td></tr>
+<tr><th id="165">165</th><td>	    <a class="ref fn" href="../../include/stdio.h.html#fprintf" title='fprintf' data-ref="fprintf" data-ref-filename="fprintf">fprintf</a>(<a class="macro" href="../../include/stdio.h.html#141" title="stderr" data-ref="_M/stderr">stderr</a>,</td></tr>
+<tr><th id="166">166</th><td>		    <q>"%s: Glyph number (0x%x) larger than font length\n"</q>,</td></tr>
+<tr><th id="167">167</th><td>		    <a class="local col0 ref" href="#10tblname" title='tblname' data-ref="10tblname" data-ref-filename="10tblname">tblname</a>, <a class="local col6 ref" href="#16fp0" title='fp0' data-ref="16fp0" data-ref-filename="16fp0">fp0</a>);</td></tr>
+<tr><th id="168">168</th><td>	    <a class="ref fn" href="../../include/stdlib.h.html#exit" title='exit' data-ref="exit" data-ref-filename="exit">exit</a>(<a class="macro" href="../../include/sysexits.h.html#97" title="65" data-ref="_M/EX_DATAERR">EX_DATAERR</a>);</td></tr>
+<tr><th id="169">169</th><td>	}</td></tr>
+<tr><th id="170">170</th><td>      <b>if</b> ( <a class="local col7 ref" href="#17fp1" title='fp1' data-ref="17fp1" data-ref-filename="17fp1">fp1</a> &amp;&amp; (<a class="local col7 ref" href="#17fp1" title='fp1' data-ref="17fp1" data-ref-filename="17fp1">fp1</a> &lt; <a class="local col6 ref" href="#16fp0" title='fp0' data-ref="16fp0" data-ref-filename="16fp0">fp0</a> || <a class="local col7 ref" href="#17fp1" title='fp1' data-ref="17fp1" data-ref-filename="17fp1">fp1</a> &gt;= <a class="local col2 ref" href="#12fontlen" title='fontlen' data-ref="12fontlen" data-ref-filename="12fontlen">fontlen</a>) )</td></tr>
+<tr><th id="171">171</th><td>	{</td></tr>
+<tr><th id="172">172</th><td>	    <a class="ref fn" href="../../include/stdio.h.html#fprintf" title='fprintf' data-ref="fprintf" data-ref-filename="fprintf">fprintf</a>(<a class="macro" href="../../include/stdio.h.html#141" title="stderr" data-ref="_M/stderr">stderr</a>,</td></tr>
+<tr><th id="173">173</th><td>		    <q>"%s: Bad end of range (0x%x)\n"</q>,</td></tr>
+<tr><th id="174">174</th><td>		    <a class="local col0 ref" href="#10tblname" title='tblname' data-ref="10tblname" data-ref-filename="10tblname">tblname</a>, <a class="local col7 ref" href="#17fp1" title='fp1' data-ref="17fp1" data-ref-filename="17fp1">fp1</a>);</td></tr>
+<tr><th id="175">175</th><td>	    <a class="ref fn" href="../../include/stdlib.h.html#exit" title='exit' data-ref="exit" data-ref-filename="exit">exit</a>(<a class="macro" href="../../include/sysexits.h.html#97" title="65" data-ref="_M/EX_DATAERR">EX_DATAERR</a>);</td></tr>
+<tr><th id="176">176</th><td>	}</td></tr>
+<tr><th id="177">177</th><td></td></tr>
+<tr><th id="178">178</th><td>      <b>if</b> (<a class="local col7 ref" href="#17fp1" title='fp1' data-ref="17fp1" data-ref-filename="17fp1">fp1</a>)</td></tr>
+<tr><th id="179">179</th><td>	{</td></tr>
+<tr><th id="180">180</th><td>	  <i>/* we have a range; expect the word "idem" or a Unicode range of the</i></td></tr>
+<tr><th id="181">181</th><td><i>	     same length */</i></td></tr>
+<tr><th id="182">182</th><td>	  <b>while</b> (*<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a> == <kbd>' '</kbd> || *<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a> == <kbd>'\t'</kbd>)</td></tr>
+<tr><th id="183">183</th><td>	    <a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a>++;</td></tr>
+<tr><th id="184">184</th><td>	  <b>if</b> (!<a class="ref fn" href="../../include/string.h.html#strncmp" title='strncmp' data-ref="strncmp" data-ref-filename="strncmp">strncmp</a>(<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a>, <q>"idem"</q>, <var>4</var>))</td></tr>
+<tr><th id="185">185</th><td>	    {</td></tr>
+<tr><th id="186">186</th><td>	      <b>for</b> (<a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a>=<a class="local col6 ref" href="#16fp0" title='fp0' data-ref="16fp0" data-ref-filename="16fp0">fp0</a>; <a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a>&lt;=<a class="local col7 ref" href="#17fp1" title='fp1' data-ref="17fp1" data-ref-filename="17fp1">fp1</a>; <a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a>++)</td></tr>
+<tr><th id="187">187</th><td>		<a class="tu ref fn" href="#addpair" title='addpair' data-use='c' data-ref="addpair" data-ref-filename="addpair">addpair</a>(<a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a>,<a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a>);</td></tr>
+<tr><th id="188">188</th><td>	      <a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a> += <var>4</var>;</td></tr>
+<tr><th id="189">189</th><td>	    }</td></tr>
+<tr><th id="190">190</th><td>	  <b>else</b></td></tr>
+<tr><th id="191">191</th><td>	    {</td></tr>
+<tr><th id="192">192</th><td>	      <a class="local col8 ref" href="#18un0" title='un0' data-ref="18un0" data-ref-filename="18un0">un0</a> = <a class="tu ref fn" href="#getunicode" title='getunicode' data-use='c' data-ref="getunicode" data-ref-filename="getunicode">getunicode</a>(&amp;<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a>);</td></tr>
+<tr><th id="193">193</th><td>	      <b>while</b> (*<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a> == <kbd>' '</kbd> || *<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a> == <kbd>'\t'</kbd>)</td></tr>
+<tr><th id="194">194</th><td>		<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a>++;</td></tr>
+<tr><th id="195">195</th><td>	      <b>if</b> (*<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a> != <kbd>'-'</kbd>)</td></tr>
+<tr><th id="196">196</th><td>		{</td></tr>
+<tr><th id="197">197</th><td>		  <a class="ref fn" href="../../include/stdio.h.html#fprintf" title='fprintf' data-ref="fprintf" data-ref-filename="fprintf">fprintf</a>(<a class="macro" href="../../include/stdio.h.html#141" title="stderr" data-ref="_M/stderr">stderr</a>,</td></tr>
+<tr><th id="198">198</th><td><q>"%s: Corresponding to a range of font positions, there should be a Unicode range\n"</q>,</td></tr>
+<tr><th id="199">199</th><td>			  <a class="local col0 ref" href="#10tblname" title='tblname' data-ref="10tblname" data-ref-filename="10tblname">tblname</a>);</td></tr>
+<tr><th id="200">200</th><td>		  <a class="ref fn" href="../../include/stdlib.h.html#exit" title='exit' data-ref="exit" data-ref-filename="exit">exit</a>(<a class="macro" href="../../include/sysexits.h.html#97" title="65" data-ref="_M/EX_DATAERR">EX_DATAERR</a>);</td></tr>
+<tr><th id="201">201</th><td>	        }</td></tr>
+<tr><th id="202">202</th><td>	      <a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a>++;</td></tr>
+<tr><th id="203">203</th><td>	      <a class="local col9 ref" href="#19un1" title='un1' data-ref="19un1" data-ref-filename="19un1">un1</a> = <a class="tu ref fn" href="#getunicode" title='getunicode' data-use='c' data-ref="getunicode" data-ref-filename="getunicode">getunicode</a>(&amp;<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a>);</td></tr>
+<tr><th id="204">204</th><td>	      <b>if</b> (<a class="local col8 ref" href="#18un0" title='un0' data-ref="18un0" data-ref-filename="18un0">un0</a> &lt; <var>0</var> || <a class="local col9 ref" href="#19un1" title='un1' data-ref="19un1" data-ref-filename="19un1">un1</a> &lt; <var>0</var>)</td></tr>
+<tr><th id="205">205</th><td>		{</td></tr>
+<tr><th id="206">206</th><td>		  <a class="ref fn" href="../../include/stdio.h.html#fprintf" title='fprintf' data-ref="fprintf" data-ref-filename="fprintf">fprintf</a>(<a class="macro" href="../../include/stdio.h.html#141" title="stderr" data-ref="_M/stderr">stderr</a>,</td></tr>
+<tr><th id="207">207</th><td><q>"%s: Bad Unicode range corresponding to font position range 0x%x-0x%x\n"</q>,</td></tr>
+<tr><th id="208">208</th><td>			  <a class="local col0 ref" href="#10tblname" title='tblname' data-ref="10tblname" data-ref-filename="10tblname">tblname</a>, <a class="local col6 ref" href="#16fp0" title='fp0' data-ref="16fp0" data-ref-filename="16fp0">fp0</a>, <a class="local col7 ref" href="#17fp1" title='fp1' data-ref="17fp1" data-ref-filename="17fp1">fp1</a>);</td></tr>
+<tr><th id="209">209</th><td>		  <a class="ref fn" href="../../include/stdlib.h.html#exit" title='exit' data-ref="exit" data-ref-filename="exit">exit</a>(<a class="macro" href="../../include/sysexits.h.html#97" title="65" data-ref="_M/EX_DATAERR">EX_DATAERR</a>);</td></tr>
+<tr><th id="210">210</th><td>	        }</td></tr>
+<tr><th id="211">211</th><td>	      <b>if</b> (<a class="local col9 ref" href="#19un1" title='un1' data-ref="19un1" data-ref-filename="19un1">un1</a> - <a class="local col8 ref" href="#18un0" title='un0' data-ref="18un0" data-ref-filename="18un0">un0</a> != <a class="local col7 ref" href="#17fp1" title='fp1' data-ref="17fp1" data-ref-filename="17fp1">fp1</a> - <a class="local col6 ref" href="#16fp0" title='fp0' data-ref="16fp0" data-ref-filename="16fp0">fp0</a>)</td></tr>
+<tr><th id="212">212</th><td>		{</td></tr>
+<tr><th id="213">213</th><td>		  <a class="ref fn" href="../../include/stdio.h.html#fprintf" title='fprintf' data-ref="fprintf" data-ref-filename="fprintf">fprintf</a>(<a class="macro" href="../../include/stdio.h.html#141" title="stderr" data-ref="_M/stderr">stderr</a>,</td></tr>
+<tr><th id="214">214</th><td><q>"%s: Unicode range U+%x-U+%x not of the same length as font position range 0x%x-0x%x\n"</q>,</td></tr>
+<tr><th id="215">215</th><td>			  <a class="local col0 ref" href="#10tblname" title='tblname' data-ref="10tblname" data-ref-filename="10tblname">tblname</a>, <a class="local col8 ref" href="#18un0" title='un0' data-ref="18un0" data-ref-filename="18un0">un0</a>, <a class="local col9 ref" href="#19un1" title='un1' data-ref="19un1" data-ref-filename="19un1">un1</a>, <a class="local col6 ref" href="#16fp0" title='fp0' data-ref="16fp0" data-ref-filename="16fp0">fp0</a>, <a class="local col7 ref" href="#17fp1" title='fp1' data-ref="17fp1" data-ref-filename="17fp1">fp1</a>);</td></tr>
+<tr><th id="216">216</th><td>		  <a class="ref fn" href="../../include/stdlib.h.html#exit" title='exit' data-ref="exit" data-ref-filename="exit">exit</a>(<a class="macro" href="../../include/sysexits.h.html#97" title="65" data-ref="_M/EX_DATAERR">EX_DATAERR</a>);</td></tr>
+<tr><th id="217">217</th><td>	        }</td></tr>
+<tr><th id="218">218</th><td>	      <b>for</b>(<a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a>=<a class="local col6 ref" href="#16fp0" title='fp0' data-ref="16fp0" data-ref-filename="16fp0">fp0</a>; <a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a>&lt;=<a class="local col7 ref" href="#17fp1" title='fp1' data-ref="17fp1" data-ref-filename="17fp1">fp1</a>; <a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a>++)</td></tr>
+<tr><th id="219">219</th><td>		<a class="tu ref fn" href="#addpair" title='addpair' data-use='c' data-ref="addpair" data-ref-filename="addpair">addpair</a>(<a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a>,<a class="local col8 ref" href="#18un0" title='un0' data-ref="18un0" data-ref-filename="18un0">un0</a>-<a class="local col6 ref" href="#16fp0" title='fp0' data-ref="16fp0" data-ref-filename="16fp0">fp0</a>+<a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a>);</td></tr>
+<tr><th id="220">220</th><td>	    }</td></tr>
+<tr><th id="221">221</th><td>        }</td></tr>
+<tr><th id="222">222</th><td>      <b>else</b></td></tr>
+<tr><th id="223">223</th><td>	{</td></tr>
+<tr><th id="224">224</th><td>	    <i>/* no range; expect a list of unicode values for a single font position */</i></td></tr>
+<tr><th id="225">225</th><td></td></tr>
+<tr><th id="226">226</th><td>	    <b>while</b> ( (<a class="local col8 ref" href="#18un0" title='un0' data-ref="18un0" data-ref-filename="18un0">un0</a> = <a class="tu ref fn" href="#getunicode" title='getunicode' data-use='c' data-ref="getunicode" data-ref-filename="getunicode">getunicode</a>(&amp;<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a>)) &gt;= <var>0</var> )</td></tr>
+<tr><th id="227">227</th><td>	      <a class="tu ref fn" href="#addpair" title='addpair' data-use='c' data-ref="addpair" data-ref-filename="addpair">addpair</a>(<a class="local col6 ref" href="#16fp0" title='fp0' data-ref="16fp0" data-ref-filename="16fp0">fp0</a>, <a class="local col8 ref" href="#18un0" title='un0' data-ref="18un0" data-ref-filename="18un0">un0</a>);</td></tr>
+<tr><th id="228">228</th><td>	}</td></tr>
+<tr><th id="229">229</th><td>      <b>while</b> (*<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a> == <kbd>' '</kbd> || *<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a> == <kbd>'\t'</kbd>)</td></tr>
+<tr><th id="230">230</th><td>	<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a>++;</td></tr>
+<tr><th id="231">231</th><td>      <b>if</b> (*<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a> &amp;&amp; *<a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a> != <kbd>'#'</kbd>)</td></tr>
+<tr><th id="232">232</th><td>	<a class="ref fn" href="../../include/stdio.h.html#fprintf" title='fprintf' data-ref="fprintf" data-ref-filename="fprintf">fprintf</a>(<a class="macro" href="../../include/stdio.h.html#141" title="stderr" data-ref="_M/stderr">stderr</a>, <q>"%s: trailing junk (%s) ignored\n"</q>, <a class="local col0 ref" href="#10tblname" title='tblname' data-ref="10tblname" data-ref-filename="10tblname">tblname</a>, <a class="local col0 ref" href="#20p" title='p' data-ref="20p" data-ref-filename="20p">p</a>);</td></tr>
+<tr><th id="233">233</th><td>    }</td></tr>
+<tr><th id="234">234</th><td></td></tr>
+<tr><th id="235">235</th><td>  <i>/* Okay, we hit EOF, now output hash table */</i></td></tr>
+<tr><th id="236">236</th><td></td></tr>
+<tr><th id="237">237</th><td>  <a class="ref fn" href="../../include/stdio.h.html#fclose" title='fclose' data-ref="fclose" data-ref-filename="fclose">fclose</a>(<a class="local col9 ref" href="#9ctbl" title='ctbl' data-ref="9ctbl" data-ref-filename="9ctbl">ctbl</a>);</td></tr>
+<tr><th id="238">238</th><td></td></tr>
+<tr><th id="239">239</th><td></td></tr>
+<tr><th id="240">240</th><td>  <i>/* Compute total size of Unicode list */</i></td></tr>
+<tr><th id="241">241</th><td>  <a class="local col4 ref" href="#14nuni" title='nuni' data-ref="14nuni" data-ref-filename="14nuni">nuni</a> = <var>0</var>;</td></tr>
+<tr><th id="242">242</th><td>  <b>for</b> ( <a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a> = <var>0</var> ; <a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a> &lt; <a class="local col2 ref" href="#12fontlen" title='fontlen' data-ref="12fontlen" data-ref-filename="12fontlen">fontlen</a> ; <a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a>++ )</td></tr>
+<tr><th id="243">243</th><td>    <a class="local col4 ref" href="#14nuni" title='nuni' data-ref="14nuni" data-ref-filename="14nuni">nuni</a> += <a class="ref" href="#unicount" title='unicount' data-ref="unicount" data-ref-filename="unicount">unicount</a>[<a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a>];</td></tr>
+<tr><th id="244">244</th><td></td></tr>
+<tr><th id="245">245</th><td>  <a class="ref fn" href="../../include/stdio.h.html#printf" title='printf' data-ref="printf" data-ref-filename="printf">printf</a>(<q>"\</q></td></tr>
+<tr><th id="246">246</th><td><q>/*\n\</q></td></tr>
+<tr><th id="247">247</th><td><q> * Do not edit this file; it was automatically generated by\n\</q></td></tr>
+<tr><th id="248">248</th><td><q> *\n\</q></td></tr>
+<tr><th id="249">249</th><td><q> * conmakehash %s &gt; [this file]\n\</q></td></tr>
+<tr><th id="250">250</th><td><q> *\n\</q></td></tr>
+<tr><th id="251">251</th><td><q> */\n\</q></td></tr>
+<tr><th id="252">252</th><td><q>\n\</q></td></tr>
+<tr><th id="253">253</th><td><q>#include &lt;linux/types.h&gt;\n\</q></td></tr>
+<tr><th id="254">254</th><td><q>\n\</q></td></tr>
+<tr><th id="255">255</th><td><q>u8 dfont_unicount[%d] = \n\</q></td></tr>
+<tr><th id="256">256</th><td><q>{\n\t"</q>, <a class="local col8 ref" href="#8argv" title='argv' data-ref="8argv" data-ref-filename="8argv">argv</a>[<var>1</var>], <a class="local col2 ref" href="#12fontlen" title='fontlen' data-ref="12fontlen" data-ref-filename="12fontlen">fontlen</a>);</td></tr>
+<tr><th id="257">257</th><td></td></tr>
+<tr><th id="258">258</th><td>  <b>for</b> ( <a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a> = <var>0</var> ; <a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a> &lt; <a class="local col2 ref" href="#12fontlen" title='fontlen' data-ref="12fontlen" data-ref-filename="12fontlen">fontlen</a> ; <a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a>++ )</td></tr>
+<tr><th id="259">259</th><td>    {</td></tr>
+<tr><th id="260">260</th><td>      <a class="ref fn" href="../../include/stdio.h.html#printf" title='printf' data-ref="printf" data-ref-filename="printf">printf</a>(<q>"%3d"</q>, <a class="ref" href="#unicount" title='unicount' data-ref="unicount" data-ref-filename="unicount">unicount</a>[<a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a>]);</td></tr>
+<tr><th id="261">261</th><td>      <b>if</b> ( <a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a> == <a class="local col2 ref" href="#12fontlen" title='fontlen' data-ref="12fontlen" data-ref-filename="12fontlen">fontlen</a>-<var>1</var> )</td></tr>
+<tr><th id="262">262</th><td>        <a class="ref fn" href="../../include/stdio.h.html#printf" title='printf' data-ref="printf" data-ref-filename="printf">printf</a>(<q>"\n};\n"</q>);</td></tr>
+<tr><th id="263">263</th><td>      <b>else</b> <b>if</b> ( <a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a> % <var>8</var> == <var>7</var> )</td></tr>
+<tr><th id="264">264</th><td>        <a class="ref fn" href="../../include/stdio.h.html#printf" title='printf' data-ref="printf" data-ref-filename="printf">printf</a>(<q>",\n\t"</q>);</td></tr>
+<tr><th id="265">265</th><td>      <b>else</b></td></tr>
+<tr><th id="266">266</th><td>        <a class="ref fn" href="../../include/stdio.h.html#printf" title='printf' data-ref="printf" data-ref-filename="printf">printf</a>(<q>", "</q>);</td></tr>
+<tr><th id="267">267</th><td>    }</td></tr>
+<tr><th id="268">268</th><td></td></tr>
+<tr><th id="269">269</th><td>  <a class="ref fn" href="../../include/stdio.h.html#printf" title='printf' data-ref="printf" data-ref-filename="printf">printf</a>(<q>"\nu16 dfont_unitable[%d] = \n{\n\t"</q>, <a class="local col4 ref" href="#14nuni" title='nuni' data-ref="14nuni" data-ref-filename="14nuni">nuni</a>);</td></tr>
+<tr><th id="270">270</th><td></td></tr>
+<tr><th id="271">271</th><td>  <a class="local col6 ref" href="#16fp0" title='fp0' data-ref="16fp0" data-ref-filename="16fp0">fp0</a> = <var>0</var>;</td></tr>
+<tr><th id="272">272</th><td>  <a class="local col5 ref" href="#15nent" title='nent' data-ref="15nent" data-ref-filename="15nent">nent</a> = <var>0</var>;</td></tr>
+<tr><th id="273">273</th><td>  <b>for</b> ( <a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a> = <var>0</var> ; <a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a> &lt; <a class="local col4 ref" href="#14nuni" title='nuni' data-ref="14nuni" data-ref-filename="14nuni">nuni</a> ; <a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a>++ )</td></tr>
+<tr><th id="274">274</th><td>    {</td></tr>
+<tr><th id="275">275</th><td>      <b>while</b> ( <a class="local col5 ref" href="#15nent" title='nent' data-ref="15nent" data-ref-filename="15nent">nent</a> &gt;= <a class="ref" href="#unicount" title='unicount' data-ref="unicount" data-ref-filename="unicount">unicount</a>[<a class="local col6 ref" href="#16fp0" title='fp0' data-ref="16fp0" data-ref-filename="16fp0">fp0</a>] )</td></tr>
+<tr><th id="276">276</th><td>	{</td></tr>
+<tr><th id="277">277</th><td>	  <a class="local col6 ref" href="#16fp0" title='fp0' data-ref="16fp0" data-ref-filename="16fp0">fp0</a>++;</td></tr>
+<tr><th id="278">278</th><td>	  <a class="local col5 ref" href="#15nent" title='nent' data-ref="15nent" data-ref-filename="15nent">nent</a> = <var>0</var>;</td></tr>
+<tr><th id="279">279</th><td>	}</td></tr>
+<tr><th id="280">280</th><td>      <a class="ref fn" href="../../include/stdio.h.html#printf" title='printf' data-ref="printf" data-ref-filename="printf">printf</a>(<q>"0x%04x"</q>, <a class="ref" href="#unitable" title='unitable' data-ref="unitable" data-ref-filename="unitable">unitable</a>[<a class="local col6 ref" href="#16fp0" title='fp0' data-ref="16fp0" data-ref-filename="16fp0">fp0</a>][<a class="local col5 ref" href="#15nent" title='nent' data-ref="15nent" data-ref-filename="15nent">nent</a>++]);</td></tr>
+<tr><th id="281">281</th><td>      <b>if</b> ( <a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a> == <a class="local col4 ref" href="#14nuni" title='nuni' data-ref="14nuni" data-ref-filename="14nuni">nuni</a>-<var>1</var> )</td></tr>
+<tr><th id="282">282</th><td>         <a class="ref fn" href="../../include/stdio.h.html#printf" title='printf' data-ref="printf" data-ref-filename="printf">printf</a>(<q>"\n};\n"</q>);</td></tr>
+<tr><th id="283">283</th><td>       <b>else</b> <b>if</b> ( <a class="local col3 ref" href="#13i" title='i' data-ref="13i" data-ref-filename="13i">i</a> % <var>8</var> == <var>7</var> )</td></tr>
+<tr><th id="284">284</th><td>         <a class="ref fn" href="../../include/stdio.h.html#printf" title='printf' data-ref="printf" data-ref-filename="printf">printf</a>(<q>",\n\t"</q>);</td></tr>
+<tr><th id="285">285</th><td>       <b>else</b></td></tr>
+<tr><th id="286">286</th><td>         <a class="ref fn" href="../../include/stdio.h.html#printf" title='printf' data-ref="printf" data-ref-filename="printf">printf</a>(<q>", "</q>);</td></tr>
+<tr><th id="287">287</th><td>    }</td></tr>
+<tr><th id="288">288</th><td></td></tr>
+<tr><th id="289">289</th><td>  <a class="ref fn" href="../../include/stdlib.h.html#exit" title='exit' data-ref="exit" data-ref-filename="exit">exit</a>(<a class="macro" href="../../include/sysexits.h.html#92" title="0" data-ref="_M/EX_OK">EX_OK</a>);</td></tr>
+<tr><th id="290">290</th><td>}</td></tr>
+<tr><th id="291">291</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

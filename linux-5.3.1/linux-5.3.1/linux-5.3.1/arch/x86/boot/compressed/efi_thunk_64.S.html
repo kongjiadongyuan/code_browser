@@ -1,0 +1,215 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>efi_thunk_64.S source code [linux-5.3.1/arch/x86/boot/compressed/efi_thunk_64.S] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/arch/x86/boot/compressed/efi_thunk_64.S'; var root_path = '../../../../..'; var data_path = '../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../..'>linux-5.3.1</a>/<a href='../../..'>arch</a>/<a href='../..'>x86</a>/<a href='..'>boot</a>/<a href='./'>compressed</a>/<a href='efi_thunk_64.S.html'>efi_thunk_64.S</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0 */</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * Copyright (C) 2014, 2015 Intel Corporation; author Matt Fleming</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * Early support for invoking 32-bit EFI services from a 64-bit kernel.</i></td></tr>
+<tr><th id="6">6</th><td><i> *</i></td></tr>
+<tr><th id="7">7</th><td><i> * Because this thunking occurs before ExitBootServices() we have to</i></td></tr>
+<tr><th id="8">8</th><td><i> * restore the firmware's 32-bit GDT before we make EFI serivce calls,</i></td></tr>
+<tr><th id="9">9</th><td><i> * since the firmware's 32-bit IDT is still currently installed and it</i></td></tr>
+<tr><th id="10">10</th><td><i> * needs to be able to service interrupts.</i></td></tr>
+<tr><th id="11">11</th><td><i> *</i></td></tr>
+<tr><th id="12">12</th><td><i> * On the plus side, we don't have to worry about mangling 64-bit</i></td></tr>
+<tr><th id="13">13</th><td><i> * addresses into 32-bits because we're executing with an identify</i></td></tr>
+<tr><th id="14">14</th><td><i> * mapped pagetable and haven't transitioned to 64-bit virtual addresses</i></td></tr>
+<tr><th id="15">15</th><td><i> * yet.</i></td></tr>
+<tr><th id="16">16</th><td><i> */</i></td></tr>
+<tr><th id="17">17</th><td></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../../../../include/linux/linkage.h.html">&lt;linux/linkage.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../include/asm/msr.h.html">&lt;asm/msr.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../include/asm/page_types.h.html">&lt;asm/page_types.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../include/asm/processor-flags.h.html">&lt;asm/processor-flags.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../../include/asm/segment.h.html">&lt;asm/segment.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>code64</td></tr>
+<tr><th id="25">25</th><td>	.text</td></tr>
+<tr><th id="26">26</th><td><a class="macro" href="../../../../include/linux/linkage.h.html#89" title=".globl efi64_thunk ; .p2align 4, 0x90 ; efi64_thunk:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="efi64_thunk" title='efi64_thunk' data-ref="efi64_thunk" data-ref-filename="efi64_thunk">efi64_thunk</dfn></span>)</td></tr>
+<tr><th id="27">27</th><td>	<span class='error' title="unknown type name &apos;push&apos;">push</span>	<span class='error' title="expected identifier or &apos;(&apos;">%</span>rbp</td></tr>
+<tr><th id="28">28</th><td>	push	%rbx</td></tr>
+<tr><th id="29">29</th><td></td></tr>
+<tr><th id="30">30</th><td>	subq	$<var>8</var>, %rsp</td></tr>
+<tr><th id="31">31</th><td>	leaq	efi_exit32(%rip), %rax</td></tr>
+<tr><th id="32">32</th><td>	movl	%eax, <var>4</var>(%rsp)</td></tr>
+<tr><th id="33">33</th><td>	leaq	efi_gdt64(%rip), %rax</td></tr>
+<tr><th id="34">34</th><td>	movl	%eax, (%rsp)</td></tr>
+<tr><th id="35">35</th><td>	movl	%eax, <var>2</var>(%rax)		<i>/* Fixup the gdt base address */</i></td></tr>
+<tr><th id="36">36</th><td></td></tr>
+<tr><th id="37">37</th><td>	movl	%ds, %eax</td></tr>
+<tr><th id="38">38</th><td>	push	%rax</td></tr>
+<tr><th id="39">39</th><td>	movl	%es, %eax</td></tr>
+<tr><th id="40">40</th><td>	push	%rax</td></tr>
+<tr><th id="41">41</th><td>	movl	%ss, %eax</td></tr>
+<tr><th id="42">42</th><td>	push	%rax</td></tr>
+<tr><th id="43">43</th><td></td></tr>
+<tr><th id="44">44</th><td>	<i>/*</i></td></tr>
+<tr><th id="45">45</th><td><i>	 * Convert x86-64 ABI params to i386 ABI</i></td></tr>
+<tr><th id="46">46</th><td><i>	 */</i></td></tr>
+<tr><th id="47">47</th><td>	subq	$<var>32</var>, %rsp</td></tr>
+<tr><th id="48">48</th><td>	movl	%esi, <var>0x0</var>(%rsp)</td></tr>
+<tr><th id="49">49</th><td>	movl	%edx, <var>0x4</var>(%rsp)</td></tr>
+<tr><th id="50">50</th><td>	movl	%ecx, <var>0x8</var>(%rsp)</td></tr>
+<tr><th id="51">51</th><td>	movq	%r8, %rsi</td></tr>
+<tr><th id="52">52</th><td>	movl	%esi, <var>0xc</var>(%rsp)</td></tr>
+<tr><th id="53">53</th><td>	movq	%r9, %rsi</td></tr>
+<tr><th id="54">54</th><td>	movl	%esi,  <var>0x10</var>(%rsp)</td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td>	sgdt	save_gdt(%rip)</td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td>	leaq	<var>1f</var>(%rip), %rbx</td></tr>
+<tr><th id="59">59</th><td>	movq	%rbx, func_rt_ptr(%rip)</td></tr>
+<tr><th id="60">60</th><td></td></tr>
+<tr><th id="61">61</th><td>	<i>/*</i></td></tr>
+<tr><th id="62">62</th><td><i>	 * Switch to gdt with 32-bit segments. This is the firmware GDT</i></td></tr>
+<tr><th id="63">63</th><td><i>	 * that was installed when the kernel started executing. This</i></td></tr>
+<tr><th id="64">64</th><td><i>	 * pointer was saved at the EFI stub entry point in head_64.S.</i></td></tr>
+<tr><th id="65">65</th><td><i>	 */</i></td></tr>
+<tr><th id="66">66</th><td>	leaq	efi32_boot_gdt(%rip), %rax</td></tr>
+<tr><th id="67">67</th><td>	lgdt	(%rax)</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td>	pushq	$<a class="macro" href="../../include/asm/segment.h.html#203" title="(2*8)" data-ref="_M/__KERNEL_CS">__KERNEL_CS</a></td></tr>
+<tr><th id="70">70</th><td>	leaq	efi_enter32(%rip), %rax</td></tr>
+<tr><th id="71">71</th><td>	pushq	%rax</td></tr>
+<tr><th id="72">72</th><td>	lretq</td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td><var>1</var>:	addq	$<var>32</var>, %rsp</td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td>	lgdt	save_gdt(%rip)</td></tr>
+<tr><th id="77">77</th><td></td></tr>
+<tr><th id="78">78</th><td>	pop	%rbx</td></tr>
+<tr><th id="79">79</th><td>	movl	%ebx, %ss</td></tr>
+<tr><th id="80">80</th><td>	pop	%rbx</td></tr>
+<tr><th id="81">81</th><td>	movl	%ebx, %es</td></tr>
+<tr><th id="82">82</th><td>	pop	%rbx</td></tr>
+<tr><th id="83">83</th><td>	movl	%ebx, %ds</td></tr>
+<tr><th id="84">84</th><td></td></tr>
+<tr><th id="85">85</th><td>	<i>/*</i></td></tr>
+<tr><th id="86">86</th><td><i>	 * Convert 32-bit status code into 64-bit.</i></td></tr>
+<tr><th id="87">87</th><td><i>	 */</i></td></tr>
+<tr><th id="88">88</th><td>	test	%rax, %rax</td></tr>
+<tr><th id="89">89</th><td>	jz	<var>1f</var></td></tr>
+<tr><th id="90">90</th><td>	movl	%eax, %ecx</td></tr>
+<tr><th id="91">91</th><td>	andl	$<var>0x0fffffff</var>, %ecx</td></tr>
+<tr><th id="92">92</th><td>	andl	$<var>0xf0000000</var>, %eax</td></tr>
+<tr><th id="93">93</th><td>	shl	$<var>32</var>, %rax</td></tr>
+<tr><th id="94">94</th><td>	or	%rcx, %rax</td></tr>
+<tr><th id="95">95</th><td><var>1</var>:</td></tr>
+<tr><th id="96">96</th><td>	addq	$<var>8</var>, %rsp</td></tr>
+<tr><th id="97">97</th><td>	pop	%rbx</td></tr>
+<tr><th id="98">98</th><td>	pop	%rbp</td></tr>
+<tr><th id="99">99</th><td>	ret</td></tr>
+<tr><th id="100">100</th><td><a class="macro" href="../../../../include/linux/linkage.h.html#113" title=".type efi64_thunk, @function ; .size efi64_thunk, .-efi64_thunk" data-ref="_M/ENDPROC">ENDPROC</a>(efi64_thunk)</td></tr>
+<tr><th id="101">101</th><td></td></tr>
+<tr><th id="102">102</th><td><a class="macro" href="../../../../include/linux/linkage.h.html#89" title=".globl efi_exit32 ; .p2align 4, 0x90 ; efi_exit32:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="efi_exit32" title='efi_exit32' data-ref="efi_exit32" data-ref-filename="efi_exit32">efi_exit32</dfn></span>)</td></tr>
+<tr><th id="103">103</th><td>	<span class='error' title="unknown type name &apos;movq&apos;">movq</span>	<dfn class="decl fn" id="func_rt_ptr" title='func_rt_ptr' data-ref="func_rt_ptr" data-ref-filename="func_rt_ptr">func_rt_ptr</dfn>(<span class='error' title="expected parameter declarator"><span class='error' title="expected &apos;)&apos;">%</span></span>rip),<span class='error' title="expected &apos;;&apos; after top level declarator"></span> <span class='error' title="expected identifier or &apos;(&apos;">%</span>rax</td></tr>
+<tr><th id="104">104</th><td>	push	%rax</td></tr>
+<tr><th id="105">105</th><td>	mov	%rdi, %rax</td></tr>
+<tr><th id="106">106</th><td>	ret</td></tr>
+<tr><th id="107">107</th><td><a class="macro" href="../../../../include/linux/linkage.h.html#113" title=".type efi_exit32, @function ; .size efi_exit32, .-efi_exit32" data-ref="_M/ENDPROC">ENDPROC</a>(efi_exit32)</td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td>	.code32</td></tr>
+<tr><th id="110">110</th><td><i>/*</i></td></tr>
+<tr><th id="111">111</th><td><i> * EFI service pointer must be in %edi.</i></td></tr>
+<tr><th id="112">112</th><td><i> *</i></td></tr>
+<tr><th id="113">113</th><td><i> * The stack should represent the 32-bit calling convention.</i></td></tr>
+<tr><th id="114">114</th><td><i> */</i></td></tr>
+<tr><th id="115">115</th><td><a class="macro" href="../../../../include/linux/linkage.h.html#89" title=".globl efi_enter32 ; .p2align 4, 0x90 ; efi_enter32:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="efi_enter32" title='efi_enter32' data-ref="efi_enter32" data-ref-filename="efi_enter32">efi_enter32</dfn></span>)</td></tr>
+<tr><th id="116">116</th><td>	<span class='error' title="unknown type name &apos;movl&apos;">movl</span>	<span class='error' title="expected identifier or &apos;(&apos;">$</span><a class="macro" href="../../include/asm/segment.h.html#204" title="(3*8)" data-ref="_M/__KERNEL_DS">__KERNEL_DS</a>, %eax</td></tr>
+<tr><th id="117">117</th><td>	movl	%eax, %ds</td></tr>
+<tr><th id="118">118</th><td>	movl	%eax, %es</td></tr>
+<tr><th id="119">119</th><td>	movl	%eax, %ss</td></tr>
+<tr><th id="120">120</th><td></td></tr>
+<tr><th id="121">121</th><td>	<i>/* Reload pgtables */</i></td></tr>
+<tr><th id="122">122</th><td>	movl	%cr3, %eax</td></tr>
+<tr><th id="123">123</th><td>	movl	%eax, %cr3</td></tr>
+<tr><th id="124">124</th><td></td></tr>
+<tr><th id="125">125</th><td>	<i>/* Disable paging */</i></td></tr>
+<tr><th id="126">126</th><td>	movl	%cr0, %eax</td></tr>
+<tr><th id="127">127</th><td>	btrl	$<a class="macro" href="../../include/uapi/asm/processor-flags.h.html#71" title="31" data-ref="_M/X86_CR0_PG_BIT">X86_CR0_PG_BIT</a>, %eax</td></tr>
+<tr><th id="128">128</th><td>	movl	%eax, %cr0</td></tr>
+<tr><th id="129">129</th><td></td></tr>
+<tr><th id="130">130</th><td>	<i>/* Disable long mode via EFER */</i></td></tr>
+<tr><th id="131">131</th><td>	movl	$<a class="macro" href="../../include/asm/msr-index.h.html#15" title="0xc0000080" data-ref="_M/MSR_EFER">MSR_EFER</a>, %ecx</td></tr>
+<tr><th id="132">132</th><td>	rdmsr</td></tr>
+<tr><th id="133">133</th><td>	btrl	$<a class="macro" href="../../include/asm/msr-index.h.html#27" title="8" data-ref="_M/_EFER_LME">_EFER_LME</a>, %eax</td></tr>
+<tr><th id="134">134</th><td>	wrmsr</td></tr>
+<tr><th id="135">135</th><td></td></tr>
+<tr><th id="136">136</th><td>	call	*%edi</td></tr>
+<tr><th id="137">137</th><td></td></tr>
+<tr><th id="138">138</th><td>	<i>/* We must preserve return value */</i></td></tr>
+<tr><th id="139">139</th><td>	movl	%eax, %edi</td></tr>
+<tr><th id="140">140</th><td></td></tr>
+<tr><th id="141">141</th><td>	<i>/*</i></td></tr>
+<tr><th id="142">142</th><td><i>	 * Some firmware will return with interrupts enabled. Be sure to</i></td></tr>
+<tr><th id="143">143</th><td><i>	 * disable them before we switch GDTs.</i></td></tr>
+<tr><th id="144">144</th><td><i>	 */</i></td></tr>
+<tr><th id="145">145</th><td>	cli</td></tr>
+<tr><th id="146">146</th><td></td></tr>
+<tr><th id="147">147</th><td>	movl	<var>56</var>(%esp), %eax</td></tr>
+<tr><th id="148">148</th><td>	movl	%eax, <var>2</var>(%eax)</td></tr>
+<tr><th id="149">149</th><td>	lgdtl	(%eax)</td></tr>
+<tr><th id="150">150</th><td></td></tr>
+<tr><th id="151">151</th><td>	movl	%cr4, %eax</td></tr>
+<tr><th id="152">152</th><td>	btsl	$(<a class="macro" href="../../include/uapi/asm/processor-flags.h.html#101" title="5" data-ref="_M/X86_CR4_PAE_BIT">X86_CR4_PAE_BIT</a>), %eax</td></tr>
+<tr><th id="153">153</th><td>	movl	%eax, %cr4</td></tr>
+<tr><th id="154">154</th><td></td></tr>
+<tr><th id="155">155</th><td>	movl	%cr3, %eax</td></tr>
+<tr><th id="156">156</th><td>	movl	%eax, %cr3</td></tr>
+<tr><th id="157">157</th><td></td></tr>
+<tr><th id="158">158</th><td>	movl	$<a class="macro" href="../../include/asm/msr-index.h.html#15" title="0xc0000080" data-ref="_M/MSR_EFER">MSR_EFER</a>, %ecx</td></tr>
+<tr><th id="159">159</th><td>	rdmsr</td></tr>
+<tr><th id="160">160</th><td>	btsl	$<a class="macro" href="../../include/asm/msr-index.h.html#27" title="8" data-ref="_M/_EFER_LME">_EFER_LME</a>, %eax</td></tr>
+<tr><th id="161">161</th><td>	wrmsr</td></tr>
+<tr><th id="162">162</th><td></td></tr>
+<tr><th id="163">163</th><td>	xorl	%eax, %eax</td></tr>
+<tr><th id="164">164</th><td>	lldt	%ax</td></tr>
+<tr><th id="165">165</th><td></td></tr>
+<tr><th id="166">166</th><td>	movl	<var>60</var>(%esp), %eax</td></tr>
+<tr><th id="167">167</th><td>	pushl	$<a class="macro" href="../../include/asm/segment.h.html#203" title="(2*8)" data-ref="_M/__KERNEL_CS">__KERNEL_CS</a></td></tr>
+<tr><th id="168">168</th><td>	pushl	%eax</td></tr>
+<tr><th id="169">169</th><td></td></tr>
+<tr><th id="170">170</th><td>	<i>/* Enable paging */</i></td></tr>
+<tr><th id="171">171</th><td>	movl	%cr0, %eax</td></tr>
+<tr><th id="172">172</th><td>	btsl	$<a class="macro" href="../../include/uapi/asm/processor-flags.h.html#71" title="31" data-ref="_M/X86_CR0_PG_BIT">X86_CR0_PG_BIT</a>, %eax</td></tr>
+<tr><th id="173">173</th><td>	movl	%eax, %cr0</td></tr>
+<tr><th id="174">174</th><td>	lret</td></tr>
+<tr><th id="175">175</th><td><a class="macro" href="../../../../include/linux/linkage.h.html#113" title=".type efi_enter32, @function ; .size efi_enter32, .-efi_enter32" data-ref="_M/ENDPROC">ENDPROC</a>(efi_enter32)</td></tr>
+<tr><th id="176">176</th><td></td></tr>
+<tr><th id="177">177</th><td>	.data</td></tr>
+<tr><th id="178">178</th><td>	.balign	<var>8</var></td></tr>
+<tr><th id="179">179</th><td>	.global	efi32_boot_gdt</td></tr>
+<tr><th id="180">180</th><td>efi32_boot_gdt:	.word	<var>0</var></td></tr>
+<tr><th id="181">181</th><td>		.quad	<var>0</var></td></tr>
+<tr><th id="182">182</th><td></td></tr>
+<tr><th id="183">183</th><td>save_gdt:	.word	<var>0</var></td></tr>
+<tr><th id="184">184</th><td>		.quad	<var>0</var></td></tr>
+<tr><th id="185">185</th><td>func_rt_ptr:	.quad	<var>0</var></td></tr>
+<tr><th id="186">186</th><td></td></tr>
+<tr><th id="187">187</th><td>	.global efi_gdt64</td></tr>
+<tr><th id="188">188</th><td>efi_gdt64:</td></tr>
+<tr><th id="189">189</th><td>	.word	efi_gdt64_end - efi_gdt64</td></tr>
+<tr><th id="190">190</th><td>	.<em>long</em>	<var>0</var>			<i>/* Filled out by user */</i></td></tr>
+<tr><th id="191">191</th><td>	.word	<var>0</var></td></tr>
+<tr><th id="192">192</th><td>	.quad	<var>0x0000000000000000</var>	<i>/* NULL descriptor */</i></td></tr>
+<tr><th id="193">193</th><td>	.quad	<var>0x00af9a000000ffff</var>	<i>/* __KERNEL_CS */</i></td></tr>
+<tr><th id="194">194</th><td>	.quad	<var>0x00cf92000000ffff</var>	<i>/* __KERNEL_DS */</i></td></tr>
+<tr><th id="195">195</th><td>	.quad	<var>0x0080890000000000</var>	<i>/* TS descriptor */</i></td></tr>
+<tr><th id="196">196</th><td>	.quad   <var>0x0000000000000000</var>	<i>/* TS continued */</i></td></tr>
+<tr><th id="197">197</th><td>efi_gdt64_end:</td></tr>
+<tr><th id="198">198</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

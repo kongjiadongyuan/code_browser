@@ -1,0 +1,577 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>thermal.h source code [linux-5.3.1/include/linux/thermal.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="thermal_attr,thermal_bind_params,thermal_cooling_device,thermal_cooling_device_ops,thermal_device_mode,thermal_genl_event,thermal_governor,thermal_notify_event,thermal_trend,thermal_trip,thermal_trip_type,thermal_zone_device,thermal_zone_device_ops,thermal_zone_of_device_ops,thermal_zone_params "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/include/linux/thermal.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>include</a>/<a href='./'>linux</a>/<a href='thermal.h.html'>thermal.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0 */</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> *  thermal.h  ($Revision: 0 $)</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> *  Copyright (C) 2008  Intel Corp</i></td></tr>
+<tr><th id="6">6</th><td><i> *  Copyright (C) 2008  Zhang Rui &lt;rui.zhang@intel.com&gt;</i></td></tr>
+<tr><th id="7">7</th><td><i> *  Copyright (C) 2008  Sujith Thomas &lt;sujith.thomas@intel.com&gt;</i></td></tr>
+<tr><th id="8">8</th><td><i> */</i></td></tr>
+<tr><th id="9">9</th><td></td></tr>
+<tr><th id="10">10</th><td><u>#<span data-ppcond="10">ifndef</span> <span class="macro" data-ref="_M/__THERMAL_H__">__THERMAL_H__</span></u></td></tr>
+<tr><th id="11">11</th><td><u>#define <dfn class="macro" id="_M/__THERMAL_H__" data-ref="_M/__THERMAL_H__">__THERMAL_H__</dfn></u></td></tr>
+<tr><th id="12">12</th><td></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="of.h.html">&lt;linux/of.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="idr.h.html">&lt;linux/idr.h&gt;</a></u></td></tr>
+<tr><th id="15">15</th><td><u>#include <a href="device.h.html">&lt;linux/device.h&gt;</a></u></td></tr>
+<tr><th id="16">16</th><td><u>#include <a href="sysfs.h.html">&lt;linux/sysfs.h&gt;</a></u></td></tr>
+<tr><th id="17">17</th><td><u>#include <a href="workqueue.h.html">&lt;linux/workqueue.h&gt;</a></u></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../uapi/linux/thermal.h.html">&lt;uapi/linux/thermal.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#define <dfn class="macro" id="_M/THERMAL_TRIPS_NONE" data-ref="_M/THERMAL_TRIPS_NONE">THERMAL_TRIPS_NONE</dfn>	-1</u></td></tr>
+<tr><th id="21">21</th><td><u>#define <dfn class="macro" id="_M/THERMAL_MAX_TRIPS" data-ref="_M/THERMAL_MAX_TRIPS">THERMAL_MAX_TRIPS</dfn>	12</u></td></tr>
+<tr><th id="22">22</th><td></td></tr>
+<tr><th id="23">23</th><td><i>/* invalid cooling state */</i></td></tr>
+<tr><th id="24">24</th><td><u>#define <dfn class="macro" id="_M/THERMAL_CSTATE_INVALID" data-ref="_M/THERMAL_CSTATE_INVALID">THERMAL_CSTATE_INVALID</dfn> -1UL</u></td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td><i>/* No upper/lower limit requirement */</i></td></tr>
+<tr><th id="27">27</th><td><u>#define <dfn class="macro" id="_M/THERMAL_NO_LIMIT" data-ref="_M/THERMAL_NO_LIMIT">THERMAL_NO_LIMIT</dfn>	((u32)~0)</u></td></tr>
+<tr><th id="28">28</th><td></td></tr>
+<tr><th id="29">29</th><td><i>/* Default weight of a bound cooling device */</i></td></tr>
+<tr><th id="30">30</th><td><u>#define <dfn class="macro" id="_M/THERMAL_WEIGHT_DEFAULT" data-ref="_M/THERMAL_WEIGHT_DEFAULT">THERMAL_WEIGHT_DEFAULT</dfn> 0</u></td></tr>
+<tr><th id="31">31</th><td></td></tr>
+<tr><th id="32">32</th><td><i>/* use value, which &lt; 0K, to indicate an invalid/uninitialized temperature */</i></td></tr>
+<tr><th id="33">33</th><td><u>#define <dfn class="macro" id="_M/THERMAL_TEMP_INVALID" data-ref="_M/THERMAL_TEMP_INVALID">THERMAL_TEMP_INVALID</dfn>	-274000</u></td></tr>
+<tr><th id="34">34</th><td></td></tr>
+<tr><th id="35">35</th><td><i>/* Unit conversion macros */</i></td></tr>
+<tr><th id="36">36</th><td><u>#define <dfn class="macro" id="_M/DECI_KELVIN_TO_CELSIUS" data-ref="_M/DECI_KELVIN_TO_CELSIUS">DECI_KELVIN_TO_CELSIUS</dfn>(t)	({			\</u></td></tr>
+<tr><th id="37">37</th><td><u>	long _t = (t);						\</u></td></tr>
+<tr><th id="38">38</th><td><u>	((_t-2732 &gt;= 0) ? (_t-2732+5)/10 : (_t-2732-5)/10);	\</u></td></tr>
+<tr><th id="39">39</th><td><u>})</u></td></tr>
+<tr><th id="40">40</th><td><u>#define <dfn class="macro" id="_M/CELSIUS_TO_DECI_KELVIN" data-ref="_M/CELSIUS_TO_DECI_KELVIN">CELSIUS_TO_DECI_KELVIN</dfn>(t)	((t)*10+2732)</u></td></tr>
+<tr><th id="41">41</th><td><u>#define <dfn class="macro" id="_M/DECI_KELVIN_TO_MILLICELSIUS_WITH_OFFSET" data-ref="_M/DECI_KELVIN_TO_MILLICELSIUS_WITH_OFFSET">DECI_KELVIN_TO_MILLICELSIUS_WITH_OFFSET</dfn>(t, off) (((t) - (off)) * 100)</u></td></tr>
+<tr><th id="42">42</th><td><u>#define <dfn class="macro" id="_M/DECI_KELVIN_TO_MILLICELSIUS" data-ref="_M/DECI_KELVIN_TO_MILLICELSIUS">DECI_KELVIN_TO_MILLICELSIUS</dfn>(t) DECI_KELVIN_TO_MILLICELSIUS_WITH_OFFSET(t, 2732)</u></td></tr>
+<tr><th id="43">43</th><td><u>#define <dfn class="macro" id="_M/MILLICELSIUS_TO_DECI_KELVIN_WITH_OFFSET" data-ref="_M/MILLICELSIUS_TO_DECI_KELVIN_WITH_OFFSET">MILLICELSIUS_TO_DECI_KELVIN_WITH_OFFSET</dfn>(t, off) (((t) / 100) + (off))</u></td></tr>
+<tr><th id="44">44</th><td><u>#define <dfn class="macro" id="_M/MILLICELSIUS_TO_DECI_KELVIN" data-ref="_M/MILLICELSIUS_TO_DECI_KELVIN">MILLICELSIUS_TO_DECI_KELVIN</dfn>(t) MILLICELSIUS_TO_DECI_KELVIN_WITH_OFFSET(t, 2732)</u></td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td><i>/* Default Thermal Governor */</i></td></tr>
+<tr><th id="47">47</th><td><u>#<span data-ppcond="47">if</span> defined(<a class="macro" href="../generated/autoconf.h.html#1209" data-ref="_M/CONFIG_THERMAL_DEFAULT_GOV_STEP_WISE">CONFIG_THERMAL_DEFAULT_GOV_STEP_WISE</a>)</u></td></tr>
+<tr><th id="48">48</th><td><u>#define <dfn class="macro" id="_M/DEFAULT_THERMAL_GOVERNOR" data-ref="_M/DEFAULT_THERMAL_GOVERNOR">DEFAULT_THERMAL_GOVERNOR</dfn>       "step_wise"</u></td></tr>
+<tr><th id="49">49</th><td><u>#<span data-ppcond="47">elif</span> defined(CONFIG_THERMAL_DEFAULT_GOV_FAIR_SHARE)</u></td></tr>
+<tr><th id="50">50</th><td><u>#define DEFAULT_THERMAL_GOVERNOR       "fair_share"</u></td></tr>
+<tr><th id="51">51</th><td><u>#elif defined(CONFIG_THERMAL_DEFAULT_GOV_USER_SPACE)</u></td></tr>
+<tr><th id="52">52</th><td><u>#define DEFAULT_THERMAL_GOVERNOR       "user_space"</u></td></tr>
+<tr><th id="53">53</th><td><u>#elif defined(CONFIG_THERMAL_DEFAULT_GOV_POWER_ALLOCATOR)</u></td></tr>
+<tr><th id="54">54</th><td><u>#define DEFAULT_THERMAL_GOVERNOR       "power_allocator"</u></td></tr>
+<tr><th id="55">55</th><td><u>#<span data-ppcond="47">endif</span></u></td></tr>
+<tr><th id="56">56</th><td></td></tr>
+<tr><th id="57">57</th><td><b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a>;</td></tr>
+<tr><th id="58">58</th><td><b>struct</b> <a class="type" href="#thermal_cooling_device" title='thermal_cooling_device' data-ref="thermal_cooling_device" data-ref-filename="thermal_cooling_device">thermal_cooling_device</a>;</td></tr>
+<tr><th id="59">59</th><td><b>struct</b> <dfn class="type" id="thermal_instance" title='thermal_instance' data-ref="thermal_instance" data-ref-filename="thermal_instance">thermal_instance</dfn>;</td></tr>
+<tr><th id="60">60</th><td></td></tr>
+<tr><th id="61">61</th><td><b>enum</b> <dfn class="type def" id="thermal_device_mode" title='thermal_device_mode' data-ref="thermal_device_mode" data-ref-filename="thermal_device_mode">thermal_device_mode</dfn> {</td></tr>
+<tr><th id="62">62</th><td>	<dfn class="enum" id="THERMAL_DEVICE_DISABLED" title='THERMAL_DEVICE_DISABLED' data-ref="THERMAL_DEVICE_DISABLED" data-ref-filename="THERMAL_DEVICE_DISABLED">THERMAL_DEVICE_DISABLED</dfn> = <var>0</var>,</td></tr>
+<tr><th id="63">63</th><td>	<dfn class="enum" id="THERMAL_DEVICE_ENABLED" title='THERMAL_DEVICE_ENABLED' data-ref="THERMAL_DEVICE_ENABLED" data-ref-filename="THERMAL_DEVICE_ENABLED">THERMAL_DEVICE_ENABLED</dfn>,</td></tr>
+<tr><th id="64">64</th><td>};</td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td><b>enum</b> <dfn class="type def" id="thermal_trip_type" title='thermal_trip_type' data-ref="thermal_trip_type" data-ref-filename="thermal_trip_type">thermal_trip_type</dfn> {</td></tr>
+<tr><th id="67">67</th><td>	<dfn class="enum" id="THERMAL_TRIP_ACTIVE" title='THERMAL_TRIP_ACTIVE' data-ref="THERMAL_TRIP_ACTIVE" data-ref-filename="THERMAL_TRIP_ACTIVE">THERMAL_TRIP_ACTIVE</dfn> = <var>0</var>,</td></tr>
+<tr><th id="68">68</th><td>	<dfn class="enum" id="THERMAL_TRIP_PASSIVE" title='THERMAL_TRIP_PASSIVE' data-ref="THERMAL_TRIP_PASSIVE" data-ref-filename="THERMAL_TRIP_PASSIVE">THERMAL_TRIP_PASSIVE</dfn>,</td></tr>
+<tr><th id="69">69</th><td>	<dfn class="enum" id="THERMAL_TRIP_HOT" title='THERMAL_TRIP_HOT' data-ref="THERMAL_TRIP_HOT" data-ref-filename="THERMAL_TRIP_HOT">THERMAL_TRIP_HOT</dfn>,</td></tr>
+<tr><th id="70">70</th><td>	<dfn class="enum" id="THERMAL_TRIP_CRITICAL" title='THERMAL_TRIP_CRITICAL' data-ref="THERMAL_TRIP_CRITICAL" data-ref-filename="THERMAL_TRIP_CRITICAL">THERMAL_TRIP_CRITICAL</dfn>,</td></tr>
+<tr><th id="71">71</th><td>};</td></tr>
+<tr><th id="72">72</th><td></td></tr>
+<tr><th id="73">73</th><td><b>enum</b> <dfn class="type def" id="thermal_trend" title='thermal_trend' data-ref="thermal_trend" data-ref-filename="thermal_trend">thermal_trend</dfn> {</td></tr>
+<tr><th id="74">74</th><td>	<dfn class="enum" id="THERMAL_TREND_STABLE" title='THERMAL_TREND_STABLE' data-ref="THERMAL_TREND_STABLE" data-ref-filename="THERMAL_TREND_STABLE">THERMAL_TREND_STABLE</dfn>, <i>/* temperature is stable */</i></td></tr>
+<tr><th id="75">75</th><td>	<dfn class="enum" id="THERMAL_TREND_RAISING" title='THERMAL_TREND_RAISING' data-ref="THERMAL_TREND_RAISING" data-ref-filename="THERMAL_TREND_RAISING">THERMAL_TREND_RAISING</dfn>, <i>/* temperature is raising */</i></td></tr>
+<tr><th id="76">76</th><td>	<dfn class="enum" id="THERMAL_TREND_DROPPING" title='THERMAL_TREND_DROPPING' data-ref="THERMAL_TREND_DROPPING" data-ref-filename="THERMAL_TREND_DROPPING">THERMAL_TREND_DROPPING</dfn>, <i>/* temperature is dropping */</i></td></tr>
+<tr><th id="77">77</th><td>	<dfn class="enum" id="THERMAL_TREND_RAISE_FULL" title='THERMAL_TREND_RAISE_FULL' data-ref="THERMAL_TREND_RAISE_FULL" data-ref-filename="THERMAL_TREND_RAISE_FULL">THERMAL_TREND_RAISE_FULL</dfn>, <i>/* apply highest cooling action */</i></td></tr>
+<tr><th id="78">78</th><td>	<dfn class="enum" id="THERMAL_TREND_DROP_FULL" title='THERMAL_TREND_DROP_FULL' data-ref="THERMAL_TREND_DROP_FULL" data-ref-filename="THERMAL_TREND_DROP_FULL">THERMAL_TREND_DROP_FULL</dfn>, <i>/* apply lowest cooling action */</i></td></tr>
+<tr><th id="79">79</th><td>};</td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td><i>/* Thermal notification reason */</i></td></tr>
+<tr><th id="82">82</th><td><b>enum</b> <dfn class="type def" id="thermal_notify_event" title='thermal_notify_event' data-ref="thermal_notify_event" data-ref-filename="thermal_notify_event">thermal_notify_event</dfn> {</td></tr>
+<tr><th id="83">83</th><td>	<dfn class="enum" id="THERMAL_EVENT_UNSPECIFIED" title='THERMAL_EVENT_UNSPECIFIED' data-ref="THERMAL_EVENT_UNSPECIFIED" data-ref-filename="THERMAL_EVENT_UNSPECIFIED">THERMAL_EVENT_UNSPECIFIED</dfn>, <i>/* Unspecified event */</i></td></tr>
+<tr><th id="84">84</th><td>	<dfn class="enum" id="THERMAL_EVENT_TEMP_SAMPLE" title='THERMAL_EVENT_TEMP_SAMPLE' data-ref="THERMAL_EVENT_TEMP_SAMPLE" data-ref-filename="THERMAL_EVENT_TEMP_SAMPLE">THERMAL_EVENT_TEMP_SAMPLE</dfn>, <i>/* New Temperature sample */</i></td></tr>
+<tr><th id="85">85</th><td>	<dfn class="enum" id="THERMAL_TRIP_VIOLATED" title='THERMAL_TRIP_VIOLATED' data-ref="THERMAL_TRIP_VIOLATED" data-ref-filename="THERMAL_TRIP_VIOLATED">THERMAL_TRIP_VIOLATED</dfn>, <i>/* TRIP Point violation */</i></td></tr>
+<tr><th id="86">86</th><td>	<dfn class="enum" id="THERMAL_TRIP_CHANGED" title='THERMAL_TRIP_CHANGED' data-ref="THERMAL_TRIP_CHANGED" data-ref-filename="THERMAL_TRIP_CHANGED">THERMAL_TRIP_CHANGED</dfn>, <i>/* TRIP Point temperature changed */</i></td></tr>
+<tr><th id="87">87</th><td>	<dfn class="enum" id="THERMAL_DEVICE_DOWN" title='THERMAL_DEVICE_DOWN' data-ref="THERMAL_DEVICE_DOWN" data-ref-filename="THERMAL_DEVICE_DOWN">THERMAL_DEVICE_DOWN</dfn>, <i>/* Thermal device is down */</i></td></tr>
+<tr><th id="88">88</th><td>	<dfn class="enum" id="THERMAL_DEVICE_UP" title='THERMAL_DEVICE_UP' data-ref="THERMAL_DEVICE_UP" data-ref-filename="THERMAL_DEVICE_UP">THERMAL_DEVICE_UP</dfn>, <i>/* Thermal device is up after a down event */</i></td></tr>
+<tr><th id="89">89</th><td>	<dfn class="enum" id="THERMAL_DEVICE_POWER_CAPABILITY_CHANGED" title='THERMAL_DEVICE_POWER_CAPABILITY_CHANGED' data-ref="THERMAL_DEVICE_POWER_CAPABILITY_CHANGED" data-ref-filename="THERMAL_DEVICE_POWER_CAPABILITY_CHANGED">THERMAL_DEVICE_POWER_CAPABILITY_CHANGED</dfn>, <i>/* power capability changed */</i></td></tr>
+<tr><th id="90">90</th><td>	<dfn class="enum" id="THERMAL_TABLE_CHANGED" title='THERMAL_TABLE_CHANGED' data-ref="THERMAL_TABLE_CHANGED" data-ref-filename="THERMAL_TABLE_CHANGED">THERMAL_TABLE_CHANGED</dfn>, <i>/* Thermal table(s) changed */</i></td></tr>
+<tr><th id="91">91</th><td>};</td></tr>
+<tr><th id="92">92</th><td></td></tr>
+<tr><th id="93">93</th><td><b>struct</b> <dfn class="type def" id="thermal_zone_device_ops" title='thermal_zone_device_ops' data-ref="thermal_zone_device_ops" data-ref-filename="thermal_zone_device_ops">thermal_zone_device_ops</dfn> {</td></tr>
+<tr><th id="94">94</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_zone_device_ops::bind" title='thermal_zone_device_ops::bind' data-ref="thermal_zone_device_ops::bind" data-ref-filename="thermal_zone_device_ops..bind">bind</dfn>) (<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *,</td></tr>
+<tr><th id="95">95</th><td>		     <b>struct</b> <a class="type" href="#thermal_cooling_device" title='thermal_cooling_device' data-ref="thermal_cooling_device" data-ref-filename="thermal_cooling_device">thermal_cooling_device</a> *);</td></tr>
+<tr><th id="96">96</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_zone_device_ops::unbind" title='thermal_zone_device_ops::unbind' data-ref="thermal_zone_device_ops::unbind" data-ref-filename="thermal_zone_device_ops..unbind">unbind</dfn>) (<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *,</td></tr>
+<tr><th id="97">97</th><td>		       <b>struct</b> <a class="type" href="#thermal_cooling_device" title='thermal_cooling_device' data-ref="thermal_cooling_device" data-ref-filename="thermal_cooling_device">thermal_cooling_device</a> *);</td></tr>
+<tr><th id="98">98</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_zone_device_ops::get_temp" title='thermal_zone_device_ops::get_temp' data-ref="thermal_zone_device_ops::get_temp" data-ref-filename="thermal_zone_device_ops..get_temp">get_temp</dfn>) (<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *, <em>int</em> *);</td></tr>
+<tr><th id="99">99</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_zone_device_ops::set_trips" title='thermal_zone_device_ops::set_trips' data-ref="thermal_zone_device_ops::set_trips" data-ref-filename="thermal_zone_device_ops..set_trips">set_trips</dfn>) (<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *, <em>int</em>, <em>int</em>);</td></tr>
+<tr><th id="100">100</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_zone_device_ops::get_mode" title='thermal_zone_device_ops::get_mode' data-ref="thermal_zone_device_ops::get_mode" data-ref-filename="thermal_zone_device_ops..get_mode">get_mode</dfn>) (<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *,</td></tr>
+<tr><th id="101">101</th><td>			 <b>enum</b> <a class="type" href="#thermal_device_mode" title='thermal_device_mode' data-ref="thermal_device_mode" data-ref-filename="thermal_device_mode">thermal_device_mode</a> *);</td></tr>
+<tr><th id="102">102</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_zone_device_ops::set_mode" title='thermal_zone_device_ops::set_mode' data-ref="thermal_zone_device_ops::set_mode" data-ref-filename="thermal_zone_device_ops..set_mode">set_mode</dfn>) (<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *,</td></tr>
+<tr><th id="103">103</th><td>		<b>enum</b> <a class="type" href="#thermal_device_mode" title='thermal_device_mode' data-ref="thermal_device_mode" data-ref-filename="thermal_device_mode">thermal_device_mode</a>);</td></tr>
+<tr><th id="104">104</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_zone_device_ops::get_trip_type" title='thermal_zone_device_ops::get_trip_type' data-ref="thermal_zone_device_ops::get_trip_type" data-ref-filename="thermal_zone_device_ops..get_trip_type">get_trip_type</dfn>) (<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *, <em>int</em>,</td></tr>
+<tr><th id="105">105</th><td>		<b>enum</b> <a class="type" href="#thermal_trip_type" title='thermal_trip_type' data-ref="thermal_trip_type" data-ref-filename="thermal_trip_type">thermal_trip_type</a> *);</td></tr>
+<tr><th id="106">106</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_zone_device_ops::get_trip_temp" title='thermal_zone_device_ops::get_trip_temp' data-ref="thermal_zone_device_ops::get_trip_temp" data-ref-filename="thermal_zone_device_ops..get_trip_temp">get_trip_temp</dfn>) (<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *, <em>int</em>, <em>int</em> *);</td></tr>
+<tr><th id="107">107</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_zone_device_ops::set_trip_temp" title='thermal_zone_device_ops::set_trip_temp' data-ref="thermal_zone_device_ops::set_trip_temp" data-ref-filename="thermal_zone_device_ops..set_trip_temp">set_trip_temp</dfn>) (<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *, <em>int</em>, <em>int</em>);</td></tr>
+<tr><th id="108">108</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_zone_device_ops::get_trip_hyst" title='thermal_zone_device_ops::get_trip_hyst' data-ref="thermal_zone_device_ops::get_trip_hyst" data-ref-filename="thermal_zone_device_ops..get_trip_hyst">get_trip_hyst</dfn>) (<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *, <em>int</em>, <em>int</em> *);</td></tr>
+<tr><th id="109">109</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_zone_device_ops::set_trip_hyst" title='thermal_zone_device_ops::set_trip_hyst' data-ref="thermal_zone_device_ops::set_trip_hyst" data-ref-filename="thermal_zone_device_ops..set_trip_hyst">set_trip_hyst</dfn>) (<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *, <em>int</em>, <em>int</em>);</td></tr>
+<tr><th id="110">110</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_zone_device_ops::get_crit_temp" title='thermal_zone_device_ops::get_crit_temp' data-ref="thermal_zone_device_ops::get_crit_temp" data-ref-filename="thermal_zone_device_ops..get_crit_temp">get_crit_temp</dfn>) (<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *, <em>int</em> *);</td></tr>
+<tr><th id="111">111</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_zone_device_ops::set_emul_temp" title='thermal_zone_device_ops::set_emul_temp' data-ref="thermal_zone_device_ops::set_emul_temp" data-ref-filename="thermal_zone_device_ops..set_emul_temp">set_emul_temp</dfn>) (<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *, <em>int</em>);</td></tr>
+<tr><th id="112">112</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_zone_device_ops::get_trend" title='thermal_zone_device_ops::get_trend' data-ref="thermal_zone_device_ops::get_trend" data-ref-filename="thermal_zone_device_ops..get_trend">get_trend</dfn>) (<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *, <em>int</em>,</td></tr>
+<tr><th id="113">113</th><td>			  <b>enum</b> <a class="type" href="#thermal_trend" title='thermal_trend' data-ref="thermal_trend" data-ref-filename="thermal_trend">thermal_trend</a> *);</td></tr>
+<tr><th id="114">114</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_zone_device_ops::notify" title='thermal_zone_device_ops::notify' data-ref="thermal_zone_device_ops::notify" data-ref-filename="thermal_zone_device_ops..notify">notify</dfn>) (<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *, <em>int</em>,</td></tr>
+<tr><th id="115">115</th><td>		       <b>enum</b> <a class="type" href="#thermal_trip_type" title='thermal_trip_type' data-ref="thermal_trip_type" data-ref-filename="thermal_trip_type">thermal_trip_type</a>);</td></tr>
+<tr><th id="116">116</th><td>};</td></tr>
+<tr><th id="117">117</th><td></td></tr>
+<tr><th id="118">118</th><td><b>struct</b> <dfn class="type def" id="thermal_cooling_device_ops" title='thermal_cooling_device_ops' data-ref="thermal_cooling_device_ops" data-ref-filename="thermal_cooling_device_ops">thermal_cooling_device_ops</dfn> {</td></tr>
+<tr><th id="119">119</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_cooling_device_ops::get_max_state" title='thermal_cooling_device_ops::get_max_state' data-ref="thermal_cooling_device_ops::get_max_state" data-ref-filename="thermal_cooling_device_ops..get_max_state">get_max_state</dfn>) (<b>struct</b> <a class="type" href="#thermal_cooling_device" title='thermal_cooling_device' data-ref="thermal_cooling_device" data-ref-filename="thermal_cooling_device">thermal_cooling_device</a> *, <em>unsigned</em> <em>long</em> *);</td></tr>
+<tr><th id="120">120</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_cooling_device_ops::get_cur_state" title='thermal_cooling_device_ops::get_cur_state' data-ref="thermal_cooling_device_ops::get_cur_state" data-ref-filename="thermal_cooling_device_ops..get_cur_state">get_cur_state</dfn>) (<b>struct</b> <a class="type" href="#thermal_cooling_device" title='thermal_cooling_device' data-ref="thermal_cooling_device" data-ref-filename="thermal_cooling_device">thermal_cooling_device</a> *, <em>unsigned</em> <em>long</em> *);</td></tr>
+<tr><th id="121">121</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_cooling_device_ops::set_cur_state" title='thermal_cooling_device_ops::set_cur_state' data-ref="thermal_cooling_device_ops::set_cur_state" data-ref-filename="thermal_cooling_device_ops..set_cur_state">set_cur_state</dfn>) (<b>struct</b> <a class="type" href="#thermal_cooling_device" title='thermal_cooling_device' data-ref="thermal_cooling_device" data-ref-filename="thermal_cooling_device">thermal_cooling_device</a> *, <em>unsigned</em> <em>long</em>);</td></tr>
+<tr><th id="122">122</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_cooling_device_ops::get_requested_power" title='thermal_cooling_device_ops::get_requested_power' data-ref="thermal_cooling_device_ops::get_requested_power" data-ref-filename="thermal_cooling_device_ops..get_requested_power">get_requested_power</dfn>)(<b>struct</b> <a class="type" href="#thermal_cooling_device" title='thermal_cooling_device' data-ref="thermal_cooling_device" data-ref-filename="thermal_cooling_device">thermal_cooling_device</a> *,</td></tr>
+<tr><th id="123">123</th><td>				   <b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> *);</td></tr>
+<tr><th id="124">124</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_cooling_device_ops::state2power" title='thermal_cooling_device_ops::state2power' data-ref="thermal_cooling_device_ops::state2power" data-ref-filename="thermal_cooling_device_ops..state2power">state2power</dfn>)(<b>struct</b> <a class="type" href="#thermal_cooling_device" title='thermal_cooling_device' data-ref="thermal_cooling_device" data-ref-filename="thermal_cooling_device">thermal_cooling_device</a> *,</td></tr>
+<tr><th id="125">125</th><td>			   <b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *, <em>unsigned</em> <em>long</em>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> *);</td></tr>
+<tr><th id="126">126</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_cooling_device_ops::power2state" title='thermal_cooling_device_ops::power2state' data-ref="thermal_cooling_device_ops::power2state" data-ref-filename="thermal_cooling_device_ops..power2state">power2state</dfn>)(<b>struct</b> <a class="type" href="#thermal_cooling_device" title='thermal_cooling_device' data-ref="thermal_cooling_device" data-ref-filename="thermal_cooling_device">thermal_cooling_device</a> *,</td></tr>
+<tr><th id="127">127</th><td>			   <b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>, <em>unsigned</em> <em>long</em> *);</td></tr>
+<tr><th id="128">128</th><td>};</td></tr>
+<tr><th id="129">129</th><td></td></tr>
+<tr><th id="130">130</th><td><b>struct</b> <dfn class="type def" id="thermal_cooling_device" title='thermal_cooling_device' data-ref="thermal_cooling_device" data-ref-filename="thermal_cooling_device">thermal_cooling_device</dfn> {</td></tr>
+<tr><th id="131">131</th><td>	<em>int</em> <dfn class="decl field" id="thermal_cooling_device::id" title='thermal_cooling_device::id' data-ref="thermal_cooling_device::id" data-ref-filename="thermal_cooling_device..id">id</dfn>;</td></tr>
+<tr><th id="132">132</th><td>	<em>char</em> <dfn class="decl field" id="thermal_cooling_device::type" title='thermal_cooling_device::type' data-ref="thermal_cooling_device::type" data-ref-filename="thermal_cooling_device..type">type</dfn>[<a class="macro" href="../uapi/linux/thermal.h.html#5" title="20" data-ref="_M/THERMAL_NAME_LENGTH">THERMAL_NAME_LENGTH</a>];</td></tr>
+<tr><th id="133">133</th><td>	<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> <dfn class="decl field" id="thermal_cooling_device::device" title='thermal_cooling_device::device' data-ref="thermal_cooling_device::device" data-ref-filename="thermal_cooling_device..device">device</dfn>;</td></tr>
+<tr><th id="134">134</th><td>	<b>struct</b> <a class="type" href="of.h.html#device_node" title='device_node' data-ref="device_node" data-ref-filename="device_node">device_node</a> *<dfn class="decl field" id="thermal_cooling_device::np" title='thermal_cooling_device::np' data-ref="thermal_cooling_device::np" data-ref-filename="thermal_cooling_device..np">np</dfn>;</td></tr>
+<tr><th id="135">135</th><td>	<em>void</em> *<dfn class="decl field" id="thermal_cooling_device::devdata" title='thermal_cooling_device::devdata' data-ref="thermal_cooling_device::devdata" data-ref-filename="thermal_cooling_device..devdata">devdata</dfn>;</td></tr>
+<tr><th id="136">136</th><td>	<em>void</em> *<dfn class="decl field" id="thermal_cooling_device::stats" title='thermal_cooling_device::stats' data-ref="thermal_cooling_device::stats" data-ref-filename="thermal_cooling_device..stats">stats</dfn>;</td></tr>
+<tr><th id="137">137</th><td>	<em>const</em> <b>struct</b> <a class="type" href="#thermal_cooling_device_ops" title='thermal_cooling_device_ops' data-ref="thermal_cooling_device_ops" data-ref-filename="thermal_cooling_device_ops">thermal_cooling_device_ops</a> *<dfn class="decl field" id="thermal_cooling_device::ops" title='thermal_cooling_device::ops' data-ref="thermal_cooling_device::ops" data-ref-filename="thermal_cooling_device..ops">ops</dfn>;</td></tr>
+<tr><th id="138">138</th><td>	<a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="thermal_cooling_device::updated" title='thermal_cooling_device::updated' data-ref="thermal_cooling_device::updated" data-ref-filename="thermal_cooling_device..updated">updated</dfn>; <i>/* true if the cooling device does not need update */</i></td></tr>
+<tr><th id="139">139</th><td>	<b>struct</b> <a class="type" href="mutex.h.html#mutex" title='mutex' data-ref="mutex" data-ref-filename="mutex">mutex</a> <dfn class="decl field" id="thermal_cooling_device::lock" title='thermal_cooling_device::lock' data-ref="thermal_cooling_device::lock" data-ref-filename="thermal_cooling_device..lock">lock</dfn>; <i>/* protect thermal_instances list */</i></td></tr>
+<tr><th id="140">140</th><td>	<b>struct</b> <a class="type" href="types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="thermal_cooling_device::thermal_instances" title='thermal_cooling_device::thermal_instances' data-ref="thermal_cooling_device::thermal_instances" data-ref-filename="thermal_cooling_device..thermal_instances">thermal_instances</dfn>;</td></tr>
+<tr><th id="141">141</th><td>	<b>struct</b> <a class="type" href="types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="thermal_cooling_device::node" title='thermal_cooling_device::node' data-ref="thermal_cooling_device::node" data-ref-filename="thermal_cooling_device..node">node</dfn>;</td></tr>
+<tr><th id="142">142</th><td>};</td></tr>
+<tr><th id="143">143</th><td></td></tr>
+<tr><th id="144">144</th><td><b>struct</b> <dfn class="type def" id="thermal_attr" title='thermal_attr' data-ref="thermal_attr" data-ref-filename="thermal_attr">thermal_attr</dfn> {</td></tr>
+<tr><th id="145">145</th><td>	<b>struct</b> <a class="type" href="device.h.html#device_attribute" title='device_attribute' data-ref="device_attribute" data-ref-filename="device_attribute">device_attribute</a> <dfn class="decl field" id="thermal_attr::attr" title='thermal_attr::attr' data-ref="thermal_attr::attr" data-ref-filename="thermal_attr..attr">attr</dfn>;</td></tr>
+<tr><th id="146">146</th><td>	<em>char</em> <dfn class="decl field" id="thermal_attr::name" title='thermal_attr::name' data-ref="thermal_attr::name" data-ref-filename="thermal_attr..name">name</dfn>[<a class="macro" href="../uapi/linux/thermal.h.html#5" title="20" data-ref="_M/THERMAL_NAME_LENGTH">THERMAL_NAME_LENGTH</a>];</td></tr>
+<tr><th id="147">147</th><td>};</td></tr>
+<tr><th id="148">148</th><td></td></tr>
+<tr><th id="149">149</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="150">150</th><td><i class="doc"> * struct thermal_zone_device - structure for a thermal zone</i></td></tr>
+<tr><th id="151">151</th><td><i class="doc"> *<span class="command"> @id</span>:		unique id number for each thermal zone</i></td></tr>
+<tr><th id="152">152</th><td><i class="doc"> *<span class="command"> @type</span>:	the thermal zone device type</i></td></tr>
+<tr><th id="153">153</th><td><i class="doc"> *<span class="command"> @device</span>:	&amp;struct device for this thermal zone</i></td></tr>
+<tr><th id="154">154</th><td><i class="doc"> *<span class="command"> @trip</span>_temp_attrs:	attributes for trip points for sysfs: trip temperature</i></td></tr>
+<tr><th id="155">155</th><td><i class="doc"> *<span class="command"> @trip</span>_type_attrs:	attributes for trip points for sysfs: trip type</i></td></tr>
+<tr><th id="156">156</th><td><i class="doc"> *<span class="command"> @trip</span>_hyst_attrs:	attributes for trip points for sysfs: trip hysteresis</i></td></tr>
+<tr><th id="157">157</th><td><i class="doc"> *<span class="command"> @devdata</span>:	private pointer for device private data</i></td></tr>
+<tr><th id="158">158</th><td><i class="doc"> *<span class="command"> @trips</span>:	number of trip points the thermal zone supports</i></td></tr>
+<tr><th id="159">159</th><td><i class="doc"> *<span class="command"> @trips</span>_disabled;	bitmap for disabled trips</i></td></tr>
+<tr><th id="160">160</th><td><i class="doc"> *<span class="command"> @passive</span>_delay:	number of milliseconds to wait between polls when</i></td></tr>
+<tr><th id="161">161</th><td><i class="doc"> *			performing passive cooling.</i></td></tr>
+<tr><th id="162">162</th><td><i class="doc"> *<span class="command"> @polling</span>_delay:	number of milliseconds to wait between polls when</i></td></tr>
+<tr><th id="163">163</th><td><i class="doc"> *			checking whether trip points have been crossed (0 for</i></td></tr>
+<tr><th id="164">164</th><td><i class="doc"> *			interrupt driven systems)</i></td></tr>
+<tr><th id="165">165</th><td><i class="doc"> *<span class="command"> @temperature</span>:	current temperature.  This is only for core code,</i></td></tr>
+<tr><th id="166">166</th><td><i class="doc"> *			drivers should use thermal_zone_get_temp() to get the</i></td></tr>
+<tr><th id="167">167</th><td><i class="doc"> *			current temperature</i></td></tr>
+<tr><th id="168">168</th><td><i class="doc"> *<span class="command"> @last</span>_temperature:	previous temperature read</i></td></tr>
+<tr><th id="169">169</th><td><i class="doc"> *<span class="command"> @emul</span>_temperature:	emulated temperature when using CONFIG_THERMAL_EMULATION</i></td></tr>
+<tr><th id="170">170</th><td><i class="doc"> *<span class="command"> @passive</span>:		1 if you've crossed a passive trip point, 0 otherwise.</i></td></tr>
+<tr><th id="171">171</th><td><i class="doc"> * <span class="command">@pre</span>v_low_trip:	the low current temperature if you've crossed a passive</i></td></tr>
+<tr><th id="172">172</th><td><i class="doc">			trip point.</i></td></tr>
+<tr><th id="173">173</th><td><i class="doc"> * <span class="command">@pre</span>v_high_trip:	the above current temperature if you've crossed a</i></td></tr>
+<tr><th id="174">174</th><td><i class="doc">			passive trip point.</i></td></tr>
+<tr><th id="175">175</th><td><i class="doc"> *<span class="command"> @forced</span>_passive:	If &gt; 0, temperature at which to switch on all ACPI</i></td></tr>
+<tr><th id="176">176</th><td><i class="doc"> *			processor cooling devices.  Currently only used by the</i></td></tr>
+<tr><th id="177">177</th><td><i class="doc"> *			step-wise governor.</i></td></tr>
+<tr><th id="178">178</th><td><i class="doc"> *<span class="command"> @need</span>_update:	if equals 1, thermal_zone_device_update needs to be invoked.</i></td></tr>
+<tr><th id="179">179</th><td><i class="doc"> *<span class="command"> @ops</span>:	operations this &amp;thermal_zone_device supports</i></td></tr>
+<tr><th id="180">180</th><td><i class="doc"> *<span class="command"> @tzp</span>:	thermal zone parameters</i></td></tr>
+<tr><th id="181">181</th><td><i class="doc"> *<span class="command"> @governor</span>:	pointer to the governor for this thermal zone</i></td></tr>
+<tr><th id="182">182</th><td><i class="doc"> *<span class="command"> @governor</span>_data:	private pointer for governor data</i></td></tr>
+<tr><th id="183">183</th><td><i class="doc"> *<span class="command"> @thermal</span>_instances:	list of &amp;struct thermal_instance of this thermal zone</i></td></tr>
+<tr><th id="184">184</th><td><i class="doc"> *<span class="command"> @ida</span>:	&amp;struct ida to generate unique id for this zone's cooling</i></td></tr>
+<tr><th id="185">185</th><td><i class="doc"> *		devices</i></td></tr>
+<tr><th id="186">186</th><td><i class="doc"> *<span class="command"> @lock</span>:	lock to protect thermal_instances list</i></td></tr>
+<tr><th id="187">187</th><td><i class="doc"> *<span class="command"> @node</span>:	node in thermal_tz_list (in thermal_core.c)</i></td></tr>
+<tr><th id="188">188</th><td><i class="doc"> *<span class="command"> @poll</span>_queue:	delayed work for polling</i></td></tr>
+<tr><th id="189">189</th><td><i class="doc"> *<span class="command"> @notify</span>_event: Last notification event</i></td></tr>
+<tr><th id="190">190</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="191">191</th><td><b>struct</b> <dfn class="type def" id="thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</dfn> {</td></tr>
+<tr><th id="192">192</th><td>	<em>int</em> <dfn class="decl field" id="thermal_zone_device::id" title='thermal_zone_device::id' data-ref="thermal_zone_device::id" data-ref-filename="thermal_zone_device..id">id</dfn>;</td></tr>
+<tr><th id="193">193</th><td>	<em>char</em> <dfn class="decl field" id="thermal_zone_device::type" title='thermal_zone_device::type' data-ref="thermal_zone_device::type" data-ref-filename="thermal_zone_device..type">type</dfn>[<a class="macro" href="../uapi/linux/thermal.h.html#5" title="20" data-ref="_M/THERMAL_NAME_LENGTH">THERMAL_NAME_LENGTH</a>];</td></tr>
+<tr><th id="194">194</th><td>	<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> <dfn class="decl field" id="thermal_zone_device::device" title='thermal_zone_device::device' data-ref="thermal_zone_device::device" data-ref-filename="thermal_zone_device..device">device</dfn>;</td></tr>
+<tr><th id="195">195</th><td>	<b>struct</b> <a class="type" href="sysfs.h.html#attribute_group" title='attribute_group' data-ref="attribute_group" data-ref-filename="attribute_group">attribute_group</a> <dfn class="decl field" id="thermal_zone_device::trips_attribute_group" title='thermal_zone_device::trips_attribute_group' data-ref="thermal_zone_device::trips_attribute_group" data-ref-filename="thermal_zone_device..trips_attribute_group">trips_attribute_group</dfn>;</td></tr>
+<tr><th id="196">196</th><td>	<b>struct</b> <a class="type" href="#thermal_attr" title='thermal_attr' data-ref="thermal_attr" data-ref-filename="thermal_attr">thermal_attr</a> *<dfn class="decl field" id="thermal_zone_device::trip_temp_attrs" title='thermal_zone_device::trip_temp_attrs' data-ref="thermal_zone_device::trip_temp_attrs" data-ref-filename="thermal_zone_device..trip_temp_attrs">trip_temp_attrs</dfn>;</td></tr>
+<tr><th id="197">197</th><td>	<b>struct</b> <a class="type" href="#thermal_attr" title='thermal_attr' data-ref="thermal_attr" data-ref-filename="thermal_attr">thermal_attr</a> *<dfn class="decl field" id="thermal_zone_device::trip_type_attrs" title='thermal_zone_device::trip_type_attrs' data-ref="thermal_zone_device::trip_type_attrs" data-ref-filename="thermal_zone_device..trip_type_attrs">trip_type_attrs</dfn>;</td></tr>
+<tr><th id="198">198</th><td>	<b>struct</b> <a class="type" href="#thermal_attr" title='thermal_attr' data-ref="thermal_attr" data-ref-filename="thermal_attr">thermal_attr</a> *<dfn class="decl field" id="thermal_zone_device::trip_hyst_attrs" title='thermal_zone_device::trip_hyst_attrs' data-ref="thermal_zone_device::trip_hyst_attrs" data-ref-filename="thermal_zone_device..trip_hyst_attrs">trip_hyst_attrs</dfn>;</td></tr>
+<tr><th id="199">199</th><td>	<em>void</em> *<dfn class="decl field" id="thermal_zone_device::devdata" title='thermal_zone_device::devdata' data-ref="thermal_zone_device::devdata" data-ref-filename="thermal_zone_device..devdata">devdata</dfn>;</td></tr>
+<tr><th id="200">200</th><td>	<em>int</em> <dfn class="decl field" id="thermal_zone_device::trips" title='thermal_zone_device::trips' data-ref="thermal_zone_device::trips" data-ref-filename="thermal_zone_device..trips">trips</dfn>;</td></tr>
+<tr><th id="201">201</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="thermal_zone_device::trips_disabled" title='thermal_zone_device::trips_disabled' data-ref="thermal_zone_device::trips_disabled" data-ref-filename="thermal_zone_device..trips_disabled">trips_disabled</dfn>;	<i>/* bitmap for disabled trips */</i></td></tr>
+<tr><th id="202">202</th><td>	<em>int</em> <dfn class="decl field" id="thermal_zone_device::passive_delay" title='thermal_zone_device::passive_delay' data-ref="thermal_zone_device::passive_delay" data-ref-filename="thermal_zone_device..passive_delay">passive_delay</dfn>;</td></tr>
+<tr><th id="203">203</th><td>	<em>int</em> <dfn class="decl field" id="thermal_zone_device::polling_delay" title='thermal_zone_device::polling_delay' data-ref="thermal_zone_device::polling_delay" data-ref-filename="thermal_zone_device..polling_delay">polling_delay</dfn>;</td></tr>
+<tr><th id="204">204</th><td>	<em>int</em> <dfn class="decl field" id="thermal_zone_device::temperature" title='thermal_zone_device::temperature' data-ref="thermal_zone_device::temperature" data-ref-filename="thermal_zone_device..temperature">temperature</dfn>;</td></tr>
+<tr><th id="205">205</th><td>	<em>int</em> <dfn class="decl field" id="thermal_zone_device::last_temperature" title='thermal_zone_device::last_temperature' data-ref="thermal_zone_device::last_temperature" data-ref-filename="thermal_zone_device..last_temperature">last_temperature</dfn>;</td></tr>
+<tr><th id="206">206</th><td>	<em>int</em> <dfn class="decl field" id="thermal_zone_device::emul_temperature" title='thermal_zone_device::emul_temperature' data-ref="thermal_zone_device::emul_temperature" data-ref-filename="thermal_zone_device..emul_temperature">emul_temperature</dfn>;</td></tr>
+<tr><th id="207">207</th><td>	<em>int</em> <dfn class="decl field" id="thermal_zone_device::passive" title='thermal_zone_device::passive' data-ref="thermal_zone_device::passive" data-ref-filename="thermal_zone_device..passive">passive</dfn>;</td></tr>
+<tr><th id="208">208</th><td>	<em>int</em> <dfn class="decl field" id="thermal_zone_device::prev_low_trip" title='thermal_zone_device::prev_low_trip' data-ref="thermal_zone_device::prev_low_trip" data-ref-filename="thermal_zone_device..prev_low_trip">prev_low_trip</dfn>;</td></tr>
+<tr><th id="209">209</th><td>	<em>int</em> <dfn class="decl field" id="thermal_zone_device::prev_high_trip" title='thermal_zone_device::prev_high_trip' data-ref="thermal_zone_device::prev_high_trip" data-ref-filename="thermal_zone_device..prev_high_trip">prev_high_trip</dfn>;</td></tr>
+<tr><th id="210">210</th><td>	<em>unsigned</em> <em>int</em> <dfn class="decl field" id="thermal_zone_device::forced_passive" title='thermal_zone_device::forced_passive' data-ref="thermal_zone_device::forced_passive" data-ref-filename="thermal_zone_device..forced_passive">forced_passive</dfn>;</td></tr>
+<tr><th id="211">211</th><td>	<a class="typedef" href="types.h.html#atomic_t" title='atomic_t' data-type='struct atomic_t' data-ref="atomic_t" data-ref-filename="atomic_t">atomic_t</a> <dfn class="decl field" id="thermal_zone_device::need_update" title='thermal_zone_device::need_update' data-ref="thermal_zone_device::need_update" data-ref-filename="thermal_zone_device..need_update">need_update</dfn>;</td></tr>
+<tr><th id="212">212</th><td>	<b>struct</b> <a class="type" href="#thermal_zone_device_ops" title='thermal_zone_device_ops' data-ref="thermal_zone_device_ops" data-ref-filename="thermal_zone_device_ops">thermal_zone_device_ops</a> *<dfn class="decl field" id="thermal_zone_device::ops" title='thermal_zone_device::ops' data-ref="thermal_zone_device::ops" data-ref-filename="thermal_zone_device..ops">ops</dfn>;</td></tr>
+<tr><th id="213">213</th><td>	<b>struct</b> <a class="type" href="#thermal_zone_params" title='thermal_zone_params' data-ref="thermal_zone_params" data-ref-filename="thermal_zone_params">thermal_zone_params</a> *<dfn class="decl field" id="thermal_zone_device::tzp" title='thermal_zone_device::tzp' data-ref="thermal_zone_device::tzp" data-ref-filename="thermal_zone_device..tzp">tzp</dfn>;</td></tr>
+<tr><th id="214">214</th><td>	<b>struct</b> <a class="type" href="#thermal_governor" title='thermal_governor' data-ref="thermal_governor" data-ref-filename="thermal_governor">thermal_governor</a> *<dfn class="decl field" id="thermal_zone_device::governor" title='thermal_zone_device::governor' data-ref="thermal_zone_device::governor" data-ref-filename="thermal_zone_device..governor">governor</dfn>;</td></tr>
+<tr><th id="215">215</th><td>	<em>void</em> *<dfn class="decl field" id="thermal_zone_device::governor_data" title='thermal_zone_device::governor_data' data-ref="thermal_zone_device::governor_data" data-ref-filename="thermal_zone_device..governor_data">governor_data</dfn>;</td></tr>
+<tr><th id="216">216</th><td>	<b>struct</b> <a class="type" href="types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="thermal_zone_device::thermal_instances" title='thermal_zone_device::thermal_instances' data-ref="thermal_zone_device::thermal_instances" data-ref-filename="thermal_zone_device..thermal_instances">thermal_instances</dfn>;</td></tr>
+<tr><th id="217">217</th><td>	<b>struct</b> <a class="type" href="idr.h.html#ida" title='ida' data-ref="ida" data-ref-filename="ida">ida</a> <dfn class="decl field" id="thermal_zone_device::ida" title='thermal_zone_device::ida' data-ref="thermal_zone_device::ida" data-ref-filename="thermal_zone_device..ida">ida</dfn>;</td></tr>
+<tr><th id="218">218</th><td>	<b>struct</b> <a class="type" href="mutex.h.html#mutex" title='mutex' data-ref="mutex" data-ref-filename="mutex">mutex</a> <dfn class="decl field" id="thermal_zone_device::lock" title='thermal_zone_device::lock' data-ref="thermal_zone_device::lock" data-ref-filename="thermal_zone_device..lock">lock</dfn>;</td></tr>
+<tr><th id="219">219</th><td>	<b>struct</b> <a class="type" href="types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="thermal_zone_device::node" title='thermal_zone_device::node' data-ref="thermal_zone_device::node" data-ref-filename="thermal_zone_device..node">node</dfn>;</td></tr>
+<tr><th id="220">220</th><td>	<b>struct</b> <a class="type" href="workqueue.h.html#delayed_work" title='delayed_work' data-ref="delayed_work" data-ref-filename="delayed_work">delayed_work</a> <dfn class="decl field" id="thermal_zone_device::poll_queue" title='thermal_zone_device::poll_queue' data-ref="thermal_zone_device::poll_queue" data-ref-filename="thermal_zone_device..poll_queue">poll_queue</dfn>;</td></tr>
+<tr><th id="221">221</th><td>	<b>enum</b> <a class="type" href="#thermal_notify_event" title='thermal_notify_event' data-ref="thermal_notify_event" data-ref-filename="thermal_notify_event">thermal_notify_event</a> <dfn class="decl field" id="thermal_zone_device::notify_event" title='thermal_zone_device::notify_event' data-ref="thermal_zone_device::notify_event" data-ref-filename="thermal_zone_device..notify_event">notify_event</dfn>;</td></tr>
+<tr><th id="222">222</th><td>};</td></tr>
+<tr><th id="223">223</th><td></td></tr>
+<tr><th id="224">224</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="225">225</th><td><i class="doc"> * struct thermal_governor - structure that holds thermal governor information</i></td></tr>
+<tr><th id="226">226</th><td><i class="doc"> * <span class="command">@name</span>:<span class="verb">	name of the governor</span></i></td></tr>
+<tr><th id="227">227</th><td><i class="doc"> *<span class="command"> @bind</span>_to_tz: callback called when binding to a thermal zone.  If it</i></td></tr>
+<tr><th id="228">228</th><td><i class="doc"> *		returns 0, the governor is bound to the thermal zone,</i></td></tr>
+<tr><th id="229">229</th><td><i class="doc"> *		otherwise it fails.</i></td></tr>
+<tr><th id="230">230</th><td><i class="doc"> *<span class="command"> @unbind</span>_from_tz:	callback called when a governor is unbound from a</i></td></tr>
+<tr><th id="231">231</th><td><i class="doc"> *			thermal zone.</i></td></tr>
+<tr><th id="232">232</th><td><i class="doc"> *<span class="command"> @throttle</span>:	callback called for every trip point even if temperature is</i></td></tr>
+<tr><th id="233">233</th><td><i class="doc"> *		below the trip point temperature</i></td></tr>
+<tr><th id="234">234</th><td><i class="doc"> *<span class="command"> @governor</span>_list:	node in thermal_governor_list (in thermal_core.c)</i></td></tr>
+<tr><th id="235">235</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="236">236</th><td><b>struct</b> <dfn class="type def" id="thermal_governor" title='thermal_governor' data-ref="thermal_governor" data-ref-filename="thermal_governor">thermal_governor</dfn> {</td></tr>
+<tr><th id="237">237</th><td>	<em>char</em> <dfn class="decl field" id="thermal_governor::name" title='thermal_governor::name' data-ref="thermal_governor::name" data-ref-filename="thermal_governor..name">name</dfn>[<a class="macro" href="../uapi/linux/thermal.h.html#5" title="20" data-ref="_M/THERMAL_NAME_LENGTH">THERMAL_NAME_LENGTH</a>];</td></tr>
+<tr><th id="238">238</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_governor::bind_to_tz" title='thermal_governor::bind_to_tz' data-ref="thermal_governor::bind_to_tz" data-ref-filename="thermal_governor..bind_to_tz">bind_to_tz</dfn>)(<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *<dfn class="local col1 decl" id="1331tz" title='tz' data-type='struct thermal_zone_device *' data-ref="1331tz" data-ref-filename="1331tz">tz</dfn>);</td></tr>
+<tr><th id="239">239</th><td>	<em>void</em> (*<dfn class="decl field" id="thermal_governor::unbind_from_tz" title='thermal_governor::unbind_from_tz' data-ref="thermal_governor::unbind_from_tz" data-ref-filename="thermal_governor..unbind_from_tz">unbind_from_tz</dfn>)(<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *<dfn class="local col2 decl" id="1332tz" title='tz' data-type='struct thermal_zone_device *' data-ref="1332tz" data-ref-filename="1332tz">tz</dfn>);</td></tr>
+<tr><th id="240">240</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_governor::throttle" title='thermal_governor::throttle' data-ref="thermal_governor::throttle" data-ref-filename="thermal_governor..throttle">throttle</dfn>)(<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *<dfn class="local col3 decl" id="1333tz" title='tz' data-type='struct thermal_zone_device *' data-ref="1333tz" data-ref-filename="1333tz">tz</dfn>, <em>int</em> <dfn class="local col4 decl" id="1334trip" title='trip' data-type='int' data-ref="1334trip" data-ref-filename="1334trip">trip</dfn>);</td></tr>
+<tr><th id="241">241</th><td>	<b>struct</b> <a class="type" href="types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="thermal_governor::governor_list" title='thermal_governor::governor_list' data-ref="thermal_governor::governor_list" data-ref-filename="thermal_governor..governor_list">governor_list</dfn>;</td></tr>
+<tr><th id="242">242</th><td>};</td></tr>
+<tr><th id="243">243</th><td></td></tr>
+<tr><th id="244">244</th><td><i>/* Structure that holds binding parameters for a zone */</i></td></tr>
+<tr><th id="245">245</th><td><b>struct</b> <dfn class="type def" id="thermal_bind_params" title='thermal_bind_params' data-ref="thermal_bind_params" data-ref-filename="thermal_bind_params">thermal_bind_params</dfn> {</td></tr>
+<tr><th id="246">246</th><td>	<b>struct</b> <a class="type" href="#thermal_cooling_device" title='thermal_cooling_device' data-ref="thermal_cooling_device" data-ref-filename="thermal_cooling_device">thermal_cooling_device</a> *<dfn class="decl field" id="thermal_bind_params::cdev" title='thermal_bind_params::cdev' data-ref="thermal_bind_params::cdev" data-ref-filename="thermal_bind_params..cdev">cdev</dfn>;</td></tr>
+<tr><th id="247">247</th><td></td></tr>
+<tr><th id="248">248</th><td>	<i>/*</i></td></tr>
+<tr><th id="249">249</th><td><i>	 * This is a measure of 'how effectively these devices can</i></td></tr>
+<tr><th id="250">250</th><td><i>	 * cool 'this' thermal zone. It shall be determined by</i></td></tr>
+<tr><th id="251">251</th><td><i>	 * platform characterization. This value is relative to the</i></td></tr>
+<tr><th id="252">252</th><td><i>	 * rest of the weights so a cooling device whose weight is</i></td></tr>
+<tr><th id="253">253</th><td><i>	 * double that of another cooling device is twice as</i></td></tr>
+<tr><th id="254">254</th><td><i>	 * effective. See Documentation/thermal/sysfs-api.rst for more</i></td></tr>
+<tr><th id="255">255</th><td><i>	 * information.</i></td></tr>
+<tr><th id="256">256</th><td><i>	 */</i></td></tr>
+<tr><th id="257">257</th><td>	<em>int</em> <dfn class="decl field" id="thermal_bind_params::weight" title='thermal_bind_params::weight' data-ref="thermal_bind_params::weight" data-ref-filename="thermal_bind_params..weight">weight</dfn>;</td></tr>
+<tr><th id="258">258</th><td></td></tr>
+<tr><th id="259">259</th><td>	<i>/*</i></td></tr>
+<tr><th id="260">260</th><td><i>	 * This is a bit mask that gives the binding relation between this</i></td></tr>
+<tr><th id="261">261</th><td><i>	 * thermal zone and cdev, for a particular trip point.</i></td></tr>
+<tr><th id="262">262</th><td><i>	 * See Documentation/thermal/sysfs-api.rst for more information.</i></td></tr>
+<tr><th id="263">263</th><td><i>	 */</i></td></tr>
+<tr><th id="264">264</th><td>	<em>int</em> <dfn class="decl field" id="thermal_bind_params::trip_mask" title='thermal_bind_params::trip_mask' data-ref="thermal_bind_params::trip_mask" data-ref-filename="thermal_bind_params..trip_mask">trip_mask</dfn>;</td></tr>
+<tr><th id="265">265</th><td></td></tr>
+<tr><th id="266">266</th><td>	<i>/*</i></td></tr>
+<tr><th id="267">267</th><td><i>	 * This is an array of cooling state limits. Must have exactly</i></td></tr>
+<tr><th id="268">268</th><td><i>	 * 2 * thermal_zone.number_of_trip_points. It is an array consisting</i></td></tr>
+<tr><th id="269">269</th><td><i>	 * of tuples &lt;lower-state upper-state&gt; of state limits. Each trip</i></td></tr>
+<tr><th id="270">270</th><td><i>	 * will be associated with one state limit tuple when binding.</i></td></tr>
+<tr><th id="271">271</th><td><i>	 * A NULL pointer means &lt;THERMAL_NO_LIMITS THERMAL_NO_LIMITS&gt;</i></td></tr>
+<tr><th id="272">272</th><td><i>	 * on all trips.</i></td></tr>
+<tr><th id="273">273</th><td><i>	 */</i></td></tr>
+<tr><th id="274">274</th><td>	<em>unsigned</em> <em>long</em> *<dfn class="decl field" id="thermal_bind_params::binding_limits" title='thermal_bind_params::binding_limits' data-ref="thermal_bind_params::binding_limits" data-ref-filename="thermal_bind_params..binding_limits">binding_limits</dfn>;</td></tr>
+<tr><th id="275">275</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_bind_params::match" title='thermal_bind_params::match' data-ref="thermal_bind_params::match" data-ref-filename="thermal_bind_params..match">match</dfn>) (<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *<dfn class="local col5 decl" id="1335tz" title='tz' data-type='struct thermal_zone_device *' data-ref="1335tz" data-ref-filename="1335tz">tz</dfn>,</td></tr>
+<tr><th id="276">276</th><td>			<b>struct</b> <a class="type" href="#thermal_cooling_device" title='thermal_cooling_device' data-ref="thermal_cooling_device" data-ref-filename="thermal_cooling_device">thermal_cooling_device</a> *<dfn class="local col6 decl" id="1336cdev" title='cdev' data-type='struct thermal_cooling_device *' data-ref="1336cdev" data-ref-filename="1336cdev">cdev</dfn>);</td></tr>
+<tr><th id="277">277</th><td>};</td></tr>
+<tr><th id="278">278</th><td></td></tr>
+<tr><th id="279">279</th><td><i>/* Structure to define Thermal Zone parameters */</i></td></tr>
+<tr><th id="280">280</th><td><b>struct</b> <dfn class="type def" id="thermal_zone_params" title='thermal_zone_params' data-ref="thermal_zone_params" data-ref-filename="thermal_zone_params">thermal_zone_params</dfn> {</td></tr>
+<tr><th id="281">281</th><td>	<em>char</em> <dfn class="decl field" id="thermal_zone_params::governor_name" title='thermal_zone_params::governor_name' data-ref="thermal_zone_params::governor_name" data-ref-filename="thermal_zone_params..governor_name">governor_name</dfn>[<a class="macro" href="../uapi/linux/thermal.h.html#5" title="20" data-ref="_M/THERMAL_NAME_LENGTH">THERMAL_NAME_LENGTH</a>];</td></tr>
+<tr><th id="282">282</th><td></td></tr>
+<tr><th id="283">283</th><td>	<i>/*</i></td></tr>
+<tr><th id="284">284</th><td><i>	 * a boolean to indicate if the thermal to hwmon sysfs interface</i></td></tr>
+<tr><th id="285">285</th><td><i>	 * is required. when no_hwmon == false, a hwmon sysfs interface</i></td></tr>
+<tr><th id="286">286</th><td><i>	 * will be created. when no_hwmon == true, nothing will be done</i></td></tr>
+<tr><th id="287">287</th><td><i>	 */</i></td></tr>
+<tr><th id="288">288</th><td>	<a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="thermal_zone_params::no_hwmon" title='thermal_zone_params::no_hwmon' data-ref="thermal_zone_params::no_hwmon" data-ref-filename="thermal_zone_params..no_hwmon">no_hwmon</dfn>;</td></tr>
+<tr><th id="289">289</th><td></td></tr>
+<tr><th id="290">290</th><td>	<em>int</em> <dfn class="decl field" id="thermal_zone_params::num_tbps" title='thermal_zone_params::num_tbps' data-ref="thermal_zone_params::num_tbps" data-ref-filename="thermal_zone_params..num_tbps">num_tbps</dfn>;	<i>/* Number of tbp entries */</i></td></tr>
+<tr><th id="291">291</th><td>	<b>struct</b> <a class="type" href="#thermal_bind_params" title='thermal_bind_params' data-ref="thermal_bind_params" data-ref-filename="thermal_bind_params">thermal_bind_params</a> *<dfn class="decl field" id="thermal_zone_params::tbp" title='thermal_zone_params::tbp' data-ref="thermal_zone_params::tbp" data-ref-filename="thermal_zone_params..tbp">tbp</dfn>;</td></tr>
+<tr><th id="292">292</th><td></td></tr>
+<tr><th id="293">293</th><td>	<i>/*</i></td></tr>
+<tr><th id="294">294</th><td><i>	 * Sustainable power (heat) that this thermal zone can dissipate in</i></td></tr>
+<tr><th id="295">295</th><td><i>	 * mW</i></td></tr>
+<tr><th id="296">296</th><td><i>	 */</i></td></tr>
+<tr><th id="297">297</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl field" id="thermal_zone_params::sustainable_power" title='thermal_zone_params::sustainable_power' data-ref="thermal_zone_params::sustainable_power" data-ref-filename="thermal_zone_params..sustainable_power">sustainable_power</dfn>;</td></tr>
+<tr><th id="298">298</th><td></td></tr>
+<tr><th id="299">299</th><td>	<i>/*</i></td></tr>
+<tr><th id="300">300</th><td><i>	 * Proportional parameter of the PID controller when</i></td></tr>
+<tr><th id="301">301</th><td><i>	 * overshooting (i.e., when temperature is below the target)</i></td></tr>
+<tr><th id="302">302</th><td><i>	 */</i></td></tr>
+<tr><th id="303">303</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#s32" title='s32' data-type='__s32' data-ref="s32" data-ref-filename="s32">s32</a> <dfn class="decl field" id="thermal_zone_params::k_po" title='thermal_zone_params::k_po' data-ref="thermal_zone_params::k_po" data-ref-filename="thermal_zone_params..k_po">k_po</dfn>;</td></tr>
+<tr><th id="304">304</th><td></td></tr>
+<tr><th id="305">305</th><td>	<i>/*</i></td></tr>
+<tr><th id="306">306</th><td><i>	 * Proportional parameter of the PID controller when</i></td></tr>
+<tr><th id="307">307</th><td><i>	 * undershooting</i></td></tr>
+<tr><th id="308">308</th><td><i>	 */</i></td></tr>
+<tr><th id="309">309</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#s32" title='s32' data-type='__s32' data-ref="s32" data-ref-filename="s32">s32</a> <dfn class="decl field" id="thermal_zone_params::k_pu" title='thermal_zone_params::k_pu' data-ref="thermal_zone_params::k_pu" data-ref-filename="thermal_zone_params..k_pu">k_pu</dfn>;</td></tr>
+<tr><th id="310">310</th><td></td></tr>
+<tr><th id="311">311</th><td>	<i>/* Integral parameter of the PID controller */</i></td></tr>
+<tr><th id="312">312</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#s32" title='s32' data-type='__s32' data-ref="s32" data-ref-filename="s32">s32</a> <dfn class="decl field" id="thermal_zone_params::k_i" title='thermal_zone_params::k_i' data-ref="thermal_zone_params::k_i" data-ref-filename="thermal_zone_params..k_i">k_i</dfn>;</td></tr>
+<tr><th id="313">313</th><td></td></tr>
+<tr><th id="314">314</th><td>	<i>/* Derivative parameter of the PID controller */</i></td></tr>
+<tr><th id="315">315</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#s32" title='s32' data-type='__s32' data-ref="s32" data-ref-filename="s32">s32</a> <dfn class="decl field" id="thermal_zone_params::k_d" title='thermal_zone_params::k_d' data-ref="thermal_zone_params::k_d" data-ref-filename="thermal_zone_params..k_d">k_d</dfn>;</td></tr>
+<tr><th id="316">316</th><td></td></tr>
+<tr><th id="317">317</th><td>	<i>/* threshold below which the error is no longer accumulated */</i></td></tr>
+<tr><th id="318">318</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#s32" title='s32' data-type='__s32' data-ref="s32" data-ref-filename="s32">s32</a> <dfn class="decl field" id="thermal_zone_params::integral_cutoff" title='thermal_zone_params::integral_cutoff' data-ref="thermal_zone_params::integral_cutoff" data-ref-filename="thermal_zone_params..integral_cutoff">integral_cutoff</dfn>;</td></tr>
+<tr><th id="319">319</th><td></td></tr>
+<tr><th id="320">320</th><td>	<i>/*</i></td></tr>
+<tr><th id="321">321</th><td><i>	 * @slope:	slope of a linear temperature adjustment curve.</i></td></tr>
+<tr><th id="322">322</th><td><i>	 * 		Used by thermal zone drivers.</i></td></tr>
+<tr><th id="323">323</th><td><i>	 */</i></td></tr>
+<tr><th id="324">324</th><td>	<em>int</em> <dfn class="decl field" id="thermal_zone_params::slope" title='thermal_zone_params::slope' data-ref="thermal_zone_params::slope" data-ref-filename="thermal_zone_params..slope">slope</dfn>;</td></tr>
+<tr><th id="325">325</th><td>	<i>/*</i></td></tr>
+<tr><th id="326">326</th><td><i>	 * @offset:	offset of a linear temperature adjustment curve.</i></td></tr>
+<tr><th id="327">327</th><td><i>	 * 		Used by thermal zone drivers (default 0).</i></td></tr>
+<tr><th id="328">328</th><td><i>	 */</i></td></tr>
+<tr><th id="329">329</th><td>	<em>int</em> <dfn class="decl field" id="thermal_zone_params::offset" title='thermal_zone_params::offset' data-ref="thermal_zone_params::offset" data-ref-filename="thermal_zone_params..offset">offset</dfn>;</td></tr>
+<tr><th id="330">330</th><td>};</td></tr>
+<tr><th id="331">331</th><td></td></tr>
+<tr><th id="332">332</th><td><b>struct</b> <dfn class="type def" id="thermal_genl_event" title='thermal_genl_event' data-ref="thermal_genl_event" data-ref-filename="thermal_genl_event">thermal_genl_event</dfn> {</td></tr>
+<tr><th id="333">333</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl field" id="thermal_genl_event::orig" title='thermal_genl_event::orig' data-ref="thermal_genl_event::orig" data-ref-filename="thermal_genl_event..orig">orig</dfn>;</td></tr>
+<tr><th id="334">334</th><td>	<b>enum</b> <a class="type" href="../uapi/linux/thermal.h.html#events" title='events' data-ref="events" data-ref-filename="events">events</a> <dfn class="decl field" id="thermal_genl_event::event" title='thermal_genl_event::event' data-ref="thermal_genl_event::event" data-ref-filename="thermal_genl_event..event">event</dfn>;</td></tr>
+<tr><th id="335">335</th><td>};</td></tr>
+<tr><th id="336">336</th><td></td></tr>
+<tr><th id="337">337</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="338">338</th><td><i class="doc"> * struct thermal_zone_of_device_ops - scallbacks for handling DT based zones</i></td></tr>
+<tr><th id="339">339</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="340">340</th><td><i class="doc"> * Mandatory:</i></td></tr>
+<tr><th id="341">341</th><td><i class="doc"> *<span class="command"> @get</span>_temp: a pointer to a function that reads the sensor temperature.</i></td></tr>
+<tr><th id="342">342</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="343">343</th><td><i class="doc"> * Optional:</i></td></tr>
+<tr><th id="344">344</th><td><i class="doc"> *<span class="command"> @get</span>_trend: a pointer to a function that reads the sensor temperature trend.</i></td></tr>
+<tr><th id="345">345</th><td><i class="doc"> * <span class="command">@set</span>_trips: a pointer to a function that sets a temperature window. When</i></td></tr>
+<tr><th id="346">346</th><td><i class="doc"> *	       this window is left the driver must inform the thermal core via</i></td></tr>
+<tr><th id="347">347</th><td><i class="doc"> *	       thermal_zone_device_update.</i></td></tr>
+<tr><th id="348">348</th><td><i class="doc"> * <span class="command">@set</span>_emul_temp: a pointer to a function that sets sensor emulated</i></td></tr>
+<tr><th id="349">349</th><td><i class="doc"> *		   temperature.</i></td></tr>
+<tr><th id="350">350</th><td><i class="doc"> * <span class="command">@set</span>_trip_temp: a pointer to a function that sets the trip temperature on</i></td></tr>
+<tr><th id="351">351</th><td><i class="doc"> *		   hardware.</i></td></tr>
+<tr><th id="352">352</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="353">353</th><td><b>struct</b> <dfn class="type def" id="thermal_zone_of_device_ops" title='thermal_zone_of_device_ops' data-ref="thermal_zone_of_device_ops" data-ref-filename="thermal_zone_of_device_ops">thermal_zone_of_device_ops</dfn> {</td></tr>
+<tr><th id="354">354</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_zone_of_device_ops::get_temp" title='thermal_zone_of_device_ops::get_temp' data-ref="thermal_zone_of_device_ops::get_temp" data-ref-filename="thermal_zone_of_device_ops..get_temp">get_temp</dfn>)(<em>void</em> *, <em>int</em> *);</td></tr>
+<tr><th id="355">355</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_zone_of_device_ops::get_trend" title='thermal_zone_of_device_ops::get_trend' data-ref="thermal_zone_of_device_ops::get_trend" data-ref-filename="thermal_zone_of_device_ops..get_trend">get_trend</dfn>)(<em>void</em> *, <em>int</em>, <b>enum</b> <a class="type" href="#thermal_trend" title='thermal_trend' data-ref="thermal_trend" data-ref-filename="thermal_trend">thermal_trend</a> *);</td></tr>
+<tr><th id="356">356</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_zone_of_device_ops::set_trips" title='thermal_zone_of_device_ops::set_trips' data-ref="thermal_zone_of_device_ops::set_trips" data-ref-filename="thermal_zone_of_device_ops..set_trips">set_trips</dfn>)(<em>void</em> *, <em>int</em>, <em>int</em>);</td></tr>
+<tr><th id="357">357</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_zone_of_device_ops::set_emul_temp" title='thermal_zone_of_device_ops::set_emul_temp' data-ref="thermal_zone_of_device_ops::set_emul_temp" data-ref-filename="thermal_zone_of_device_ops..set_emul_temp">set_emul_temp</dfn>)(<em>void</em> *, <em>int</em>);</td></tr>
+<tr><th id="358">358</th><td>	<em>int</em> (*<dfn class="decl field" id="thermal_zone_of_device_ops::set_trip_temp" title='thermal_zone_of_device_ops::set_trip_temp' data-ref="thermal_zone_of_device_ops::set_trip_temp" data-ref-filename="thermal_zone_of_device_ops..set_trip_temp">set_trip_temp</dfn>)(<em>void</em> *, <em>int</em>, <em>int</em>);</td></tr>
+<tr><th id="359">359</th><td>};</td></tr>
+<tr><th id="360">360</th><td></td></tr>
+<tr><th id="361">361</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="362">362</th><td><i class="doc"> * struct thermal_trip - representation of a point in temperature domain</i></td></tr>
+<tr><th id="363">363</th><td><i class="doc"> *<span class="command"> @np</span><span class="arg">:</span> pointer to struct device_node that this trip point was created from</i></td></tr>
+<tr><th id="364">364</th><td><i class="doc"> *<span class="command"> @temperature</span>: temperature value in miliCelsius</i></td></tr>
+<tr><th id="365">365</th><td><i class="doc"> *<span class="command"> @hysteresis</span>: relative hysteresis in miliCelsius</i></td></tr>
+<tr><th id="366">366</th><td><i class="doc"> *<span class="command"> @type</span>: trip point type</i></td></tr>
+<tr><th id="367">367</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="368">368</th><td></td></tr>
+<tr><th id="369">369</th><td><b>struct</b> <dfn class="type def" id="thermal_trip" title='thermal_trip' data-ref="thermal_trip" data-ref-filename="thermal_trip">thermal_trip</dfn> {</td></tr>
+<tr><th id="370">370</th><td>	<b>struct</b> <a class="type" href="of.h.html#device_node" title='device_node' data-ref="device_node" data-ref-filename="device_node">device_node</a> *<dfn class="decl field" id="thermal_trip::np" title='thermal_trip::np' data-ref="thermal_trip::np" data-ref-filename="thermal_trip..np">np</dfn>;</td></tr>
+<tr><th id="371">371</th><td>	<em>int</em> <dfn class="decl field" id="thermal_trip::temperature" title='thermal_trip::temperature' data-ref="thermal_trip::temperature" data-ref-filename="thermal_trip..temperature">temperature</dfn>;</td></tr>
+<tr><th id="372">372</th><td>	<em>int</em> <dfn class="decl field" id="thermal_trip::hysteresis" title='thermal_trip::hysteresis' data-ref="thermal_trip::hysteresis" data-ref-filename="thermal_trip..hysteresis">hysteresis</dfn>;</td></tr>
+<tr><th id="373">373</th><td>	<b>enum</b> <a class="type" href="#thermal_trip_type" title='thermal_trip_type' data-ref="thermal_trip_type" data-ref-filename="thermal_trip_type">thermal_trip_type</a> <dfn class="decl field" id="thermal_trip::type" title='thermal_trip::type' data-ref="thermal_trip::type" data-ref-filename="thermal_trip..type">type</dfn>;</td></tr>
+<tr><th id="374">374</th><td>};</td></tr>
+<tr><th id="375">375</th><td></td></tr>
+<tr><th id="376">376</th><td><i>/* Function declarations */</i></td></tr>
+<tr><th id="377">377</th><td><u>#<span data-ppcond="377">ifdef</span> <span class="macro" data-ref="_M/CONFIG_THERMAL_OF">CONFIG_THERMAL_OF</span></u></td></tr>
+<tr><th id="378">378</th><td><b>struct</b> thermal_zone_device *</td></tr>
+<tr><th id="379">379</th><td>thermal_zone_of_sensor_register(<b>struct</b> device *dev, <em>int</em> id, <em>void</em> *data,</td></tr>
+<tr><th id="380">380</th><td>				<em>const</em> <b>struct</b> thermal_zone_of_device_ops *ops);</td></tr>
+<tr><th id="381">381</th><td><em>void</em> thermal_zone_of_sensor_unregister(<b>struct</b> device *dev,</td></tr>
+<tr><th id="382">382</th><td>				       <b>struct</b> thermal_zone_device *tz);</td></tr>
+<tr><th id="383">383</th><td><b>struct</b> thermal_zone_device *devm_thermal_zone_of_sensor_register(</td></tr>
+<tr><th id="384">384</th><td>		<b>struct</b> device *dev, <em>int</em> id, <em>void</em> *data,</td></tr>
+<tr><th id="385">385</th><td>		<em>const</em> <b>struct</b> thermal_zone_of_device_ops *ops);</td></tr>
+<tr><th id="386">386</th><td><em>void</em> devm_thermal_zone_of_sensor_unregister(<b>struct</b> device *dev,</td></tr>
+<tr><th id="387">387</th><td>					    <b>struct</b> thermal_zone_device *tz);</td></tr>
+<tr><th id="388">388</th><td><u>#<span data-ppcond="377">else</span></u></td></tr>
+<tr><th id="389">389</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *</td></tr>
+<tr><th id="390">390</th><td><dfn class="decl def fn" id="thermal_zone_of_sensor_register" title='thermal_zone_of_sensor_register' data-ref="thermal_zone_of_sensor_register" data-ref-filename="thermal_zone_of_sensor_register">thermal_zone_of_sensor_register</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col7 decl" id="1337dev" title='dev' data-type='struct device *' data-ref="1337dev" data-ref-filename="1337dev">dev</dfn>, <em>int</em> <dfn class="local col8 decl" id="1338id" title='id' data-type='int' data-ref="1338id" data-ref-filename="1338id">id</dfn>, <em>void</em> *<dfn class="local col9 decl" id="1339data" title='data' data-type='void *' data-ref="1339data" data-ref-filename="1339data">data</dfn>,</td></tr>
+<tr><th id="391">391</th><td>				<em>const</em> <b>struct</b> <a class="type" href="#thermal_zone_of_device_ops" title='thermal_zone_of_device_ops' data-ref="thermal_zone_of_device_ops" data-ref-filename="thermal_zone_of_device_ops">thermal_zone_of_device_ops</a> *<dfn class="local col0 decl" id="1340ops" title='ops' data-type='const struct thermal_zone_of_device_ops *' data-ref="1340ops" data-ref-filename="1340ops">ops</dfn>)</td></tr>
+<tr><th id="392">392</th><td>{</td></tr>
+<tr><th id="393">393</th><td>	<b>return</b> <a class="ref fn" href="err.h.html#ERR_PTR" title='ERR_PTR' data-ref="ERR_PTR" data-ref-filename="ERR_PTR">ERR_PTR</a>(-<a class="macro" href="../uapi/asm-generic/errno-base.h.html#23" title="19" data-ref="_M/ENODEV">ENODEV</a>);</td></tr>
+<tr><th id="394">394</th><td>}</td></tr>
+<tr><th id="395">395</th><td></td></tr>
+<tr><th id="396">396</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a></td></tr>
+<tr><th id="397">397</th><td><em>void</em> <dfn class="decl def fn" id="thermal_zone_of_sensor_unregister" title='thermal_zone_of_sensor_unregister' data-ref="thermal_zone_of_sensor_unregister" data-ref-filename="thermal_zone_of_sensor_unregister">thermal_zone_of_sensor_unregister</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col1 decl" id="1341dev" title='dev' data-type='struct device *' data-ref="1341dev" data-ref-filename="1341dev">dev</dfn>,</td></tr>
+<tr><th id="398">398</th><td>				       <b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *<dfn class="local col2 decl" id="1342tz" title='tz' data-type='struct thermal_zone_device *' data-ref="1342tz" data-ref-filename="1342tz">tz</dfn>)</td></tr>
+<tr><th id="399">399</th><td>{</td></tr>
+<tr><th id="400">400</th><td>}</td></tr>
+<tr><th id="401">401</th><td></td></tr>
+<tr><th id="402">402</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *<dfn class="decl def fn" id="devm_thermal_zone_of_sensor_register" title='devm_thermal_zone_of_sensor_register' data-ref="devm_thermal_zone_of_sensor_register" data-ref-filename="devm_thermal_zone_of_sensor_register">devm_thermal_zone_of_sensor_register</dfn>(</td></tr>
+<tr><th id="403">403</th><td>		<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col3 decl" id="1343dev" title='dev' data-type='struct device *' data-ref="1343dev" data-ref-filename="1343dev">dev</dfn>, <em>int</em> <dfn class="local col4 decl" id="1344id" title='id' data-type='int' data-ref="1344id" data-ref-filename="1344id">id</dfn>, <em>void</em> *<dfn class="local col5 decl" id="1345data" title='data' data-type='void *' data-ref="1345data" data-ref-filename="1345data">data</dfn>,</td></tr>
+<tr><th id="404">404</th><td>		<em>const</em> <b>struct</b> <a class="type" href="#thermal_zone_of_device_ops" title='thermal_zone_of_device_ops' data-ref="thermal_zone_of_device_ops" data-ref-filename="thermal_zone_of_device_ops">thermal_zone_of_device_ops</a> *<dfn class="local col6 decl" id="1346ops" title='ops' data-type='const struct thermal_zone_of_device_ops *' data-ref="1346ops" data-ref-filename="1346ops">ops</dfn>)</td></tr>
+<tr><th id="405">405</th><td>{</td></tr>
+<tr><th id="406">406</th><td>	<b>return</b> <a class="ref fn" href="err.h.html#ERR_PTR" title='ERR_PTR' data-ref="ERR_PTR" data-ref-filename="ERR_PTR">ERR_PTR</a>(-<a class="macro" href="../uapi/asm-generic/errno-base.h.html#23" title="19" data-ref="_M/ENODEV">ENODEV</a>);</td></tr>
+<tr><th id="407">407</th><td>}</td></tr>
+<tr><th id="408">408</th><td></td></tr>
+<tr><th id="409">409</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a></td></tr>
+<tr><th id="410">410</th><td><em>void</em> <dfn class="decl def fn" id="devm_thermal_zone_of_sensor_unregister" title='devm_thermal_zone_of_sensor_unregister' data-ref="devm_thermal_zone_of_sensor_unregister" data-ref-filename="devm_thermal_zone_of_sensor_unregister">devm_thermal_zone_of_sensor_unregister</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col7 decl" id="1347dev" title='dev' data-type='struct device *' data-ref="1347dev" data-ref-filename="1347dev">dev</dfn>,</td></tr>
+<tr><th id="411">411</th><td>					    <b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *<dfn class="local col8 decl" id="1348tz" title='tz' data-type='struct thermal_zone_device *' data-ref="1348tz" data-ref-filename="1348tz">tz</dfn>)</td></tr>
+<tr><th id="412">412</th><td>{</td></tr>
+<tr><th id="413">413</th><td>}</td></tr>
+<tr><th id="414">414</th><td></td></tr>
+<tr><th id="415">415</th><td><u>#<span data-ppcond="377">endif</span></u></td></tr>
+<tr><th id="416">416</th><td></td></tr>
+<tr><th id="417">417</th><td><u>#<span data-ppcond="417">if</span> <a class="macro" href="kconfig.h.html#71" title="1" data-ref="_M/IS_ENABLED">IS_ENABLED</a>(<a class="macro" href="../generated/autoconf.h.html#1124" title="1" data-ref="_M/CONFIG_THERMAL">CONFIG_THERMAL</a>)</u></td></tr>
+<tr><th id="418">418</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="cdev_is_power_actor" title='cdev_is_power_actor' data-ref="cdev_is_power_actor" data-ref-filename="cdev_is_power_actor">cdev_is_power_actor</dfn>(<b>struct</b> <a class="type" href="#thermal_cooling_device" title='thermal_cooling_device' data-ref="thermal_cooling_device" data-ref-filename="thermal_cooling_device">thermal_cooling_device</a> *<dfn class="local col9 decl" id="1349cdev" title='cdev' data-type='struct thermal_cooling_device *' data-ref="1349cdev" data-ref-filename="1349cdev">cdev</dfn>)</td></tr>
+<tr><th id="419">419</th><td>{</td></tr>
+<tr><th id="420">420</th><td>	<b>return</b> <a class="local col9 ref" href="#1349cdev" title='cdev' data-ref="1349cdev" data-ref-filename="1349cdev">cdev</a>-&gt;<a class="ref field" href="#thermal_cooling_device::ops" title='thermal_cooling_device::ops' data-ref="thermal_cooling_device::ops" data-ref-filename="thermal_cooling_device..ops">ops</a>-&gt;<a class="ref field" href="#thermal_cooling_device_ops::get_requested_power" title='thermal_cooling_device_ops::get_requested_power' data-ref="thermal_cooling_device_ops::get_requested_power" data-ref-filename="thermal_cooling_device_ops..get_requested_power">get_requested_power</a> &amp;&amp; <a class="local col9 ref" href="#1349cdev" title='cdev' data-ref="1349cdev" data-ref-filename="1349cdev">cdev</a>-&gt;<a class="ref field" href="#thermal_cooling_device::ops" title='thermal_cooling_device::ops' data-ref="thermal_cooling_device::ops" data-ref-filename="thermal_cooling_device..ops">ops</a>-&gt;<a class="ref field" href="#thermal_cooling_device_ops::state2power" title='thermal_cooling_device_ops::state2power' data-ref="thermal_cooling_device_ops::state2power" data-ref-filename="thermal_cooling_device_ops..state2power">state2power</a> &amp;&amp;</td></tr>
+<tr><th id="421">421</th><td>		<a class="local col9 ref" href="#1349cdev" title='cdev' data-ref="1349cdev" data-ref-filename="1349cdev">cdev</a>-&gt;<a class="ref field" href="#thermal_cooling_device::ops" title='thermal_cooling_device::ops' data-ref="thermal_cooling_device::ops" data-ref-filename="thermal_cooling_device..ops">ops</a>-&gt;<a class="ref field" href="#thermal_cooling_device_ops::power2state" title='thermal_cooling_device_ops::power2state' data-ref="thermal_cooling_device_ops::power2state" data-ref-filename="thermal_cooling_device_ops..power2state">power2state</a>;</td></tr>
+<tr><th id="422">422</th><td>}</td></tr>
+<tr><th id="423">423</th><td></td></tr>
+<tr><th id="424">424</th><td><em>int</em> <dfn class="decl fn" id="power_actor_get_max_power" title='power_actor_get_max_power' data-ref="power_actor_get_max_power" data-ref-filename="power_actor_get_max_power">power_actor_get_max_power</dfn>(<b>struct</b> <a class="type" href="#thermal_cooling_device" title='thermal_cooling_device' data-ref="thermal_cooling_device" data-ref-filename="thermal_cooling_device">thermal_cooling_device</a> *,</td></tr>
+<tr><th id="425">425</th><td>			      <b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *<dfn class="local col0 decl" id="1350tz" title='tz' data-type='struct thermal_zone_device *' data-ref="1350tz" data-ref-filename="1350tz">tz</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> *<dfn class="local col1 decl" id="1351max_power" title='max_power' data-type='u32 *' data-ref="1351max_power" data-ref-filename="1351max_power">max_power</dfn>);</td></tr>
+<tr><th id="426">426</th><td><em>int</em> <dfn class="decl fn" id="power_actor_get_min_power" title='power_actor_get_min_power' data-ref="power_actor_get_min_power" data-ref-filename="power_actor_get_min_power">power_actor_get_min_power</dfn>(<b>struct</b> <a class="type" href="#thermal_cooling_device" title='thermal_cooling_device' data-ref="thermal_cooling_device" data-ref-filename="thermal_cooling_device">thermal_cooling_device</a> *,</td></tr>
+<tr><th id="427">427</th><td>			      <b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *<dfn class="local col2 decl" id="1352tz" title='tz' data-type='struct thermal_zone_device *' data-ref="1352tz" data-ref-filename="1352tz">tz</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> *<dfn class="local col3 decl" id="1353min_power" title='min_power' data-type='u32 *' data-ref="1353min_power" data-ref-filename="1353min_power">min_power</dfn>);</td></tr>
+<tr><th id="428">428</th><td><em>int</em> <dfn class="decl fn" id="power_actor_set_power" title='power_actor_set_power' data-ref="power_actor_set_power" data-ref-filename="power_actor_set_power">power_actor_set_power</dfn>(<b>struct</b> <a class="type" href="#thermal_cooling_device" title='thermal_cooling_device' data-ref="thermal_cooling_device" data-ref-filename="thermal_cooling_device">thermal_cooling_device</a> *,</td></tr>
+<tr><th id="429">429</th><td>			  <b>struct</b> <a class="type" href="#thermal_instance" title='thermal_instance' data-ref="thermal_instance" data-ref-filename="thermal_instance">thermal_instance</a> *, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>);</td></tr>
+<tr><th id="430">430</th><td><b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *<dfn class="decl fn" id="thermal_zone_device_register" title='thermal_zone_device_register' data-ref="thermal_zone_device_register" data-ref-filename="thermal_zone_device_register">thermal_zone_device_register</dfn>(<em>const</em> <em>char</em> *, <em>int</em>, <em>int</em>,</td></tr>
+<tr><th id="431">431</th><td>		<em>void</em> *, <b>struct</b> <a class="type" href="#thermal_zone_device_ops" title='thermal_zone_device_ops' data-ref="thermal_zone_device_ops" data-ref-filename="thermal_zone_device_ops">thermal_zone_device_ops</a> *,</td></tr>
+<tr><th id="432">432</th><td>		<b>struct</b> <a class="type" href="#thermal_zone_params" title='thermal_zone_params' data-ref="thermal_zone_params" data-ref-filename="thermal_zone_params">thermal_zone_params</a> *, <em>int</em>, <em>int</em>);</td></tr>
+<tr><th id="433">433</th><td><em>void</em> <dfn class="decl fn" id="thermal_zone_device_unregister" title='thermal_zone_device_unregister' data-ref="thermal_zone_device_unregister" data-ref-filename="thermal_zone_device_unregister">thermal_zone_device_unregister</dfn>(<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *);</td></tr>
+<tr><th id="434">434</th><td></td></tr>
+<tr><th id="435">435</th><td><em>int</em> <dfn class="decl fn" id="thermal_zone_bind_cooling_device" title='thermal_zone_bind_cooling_device' data-ref="thermal_zone_bind_cooling_device" data-ref-filename="thermal_zone_bind_cooling_device">thermal_zone_bind_cooling_device</dfn>(<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *, <em>int</em>,</td></tr>
+<tr><th id="436">436</th><td>				     <b>struct</b> <a class="type" href="#thermal_cooling_device" title='thermal_cooling_device' data-ref="thermal_cooling_device" data-ref-filename="thermal_cooling_device">thermal_cooling_device</a> *,</td></tr>
+<tr><th id="437">437</th><td>				     <em>unsigned</em> <em>long</em>, <em>unsigned</em> <em>long</em>,</td></tr>
+<tr><th id="438">438</th><td>				     <em>unsigned</em> <em>int</em>);</td></tr>
+<tr><th id="439">439</th><td><em>int</em> <dfn class="decl fn" id="thermal_zone_unbind_cooling_device" title='thermal_zone_unbind_cooling_device' data-ref="thermal_zone_unbind_cooling_device" data-ref-filename="thermal_zone_unbind_cooling_device">thermal_zone_unbind_cooling_device</dfn>(<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *, <em>int</em>,</td></tr>
+<tr><th id="440">440</th><td>				       <b>struct</b> <a class="type" href="#thermal_cooling_device" title='thermal_cooling_device' data-ref="thermal_cooling_device" data-ref-filename="thermal_cooling_device">thermal_cooling_device</a> *);</td></tr>
+<tr><th id="441">441</th><td><em>void</em> <dfn class="decl fn" id="thermal_zone_device_update" title='thermal_zone_device_update' data-ref="thermal_zone_device_update" data-ref-filename="thermal_zone_device_update">thermal_zone_device_update</dfn>(<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *,</td></tr>
+<tr><th id="442">442</th><td>				<b>enum</b> <a class="type" href="#thermal_notify_event" title='thermal_notify_event' data-ref="thermal_notify_event" data-ref-filename="thermal_notify_event">thermal_notify_event</a>);</td></tr>
+<tr><th id="443">443</th><td><em>void</em> <dfn class="decl fn" id="thermal_zone_set_trips" title='thermal_zone_set_trips' data-ref="thermal_zone_set_trips" data-ref-filename="thermal_zone_set_trips">thermal_zone_set_trips</dfn>(<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *);</td></tr>
+<tr><th id="444">444</th><td></td></tr>
+<tr><th id="445">445</th><td><b>struct</b> <a class="type" href="#thermal_cooling_device" title='thermal_cooling_device' data-ref="thermal_cooling_device" data-ref-filename="thermal_cooling_device">thermal_cooling_device</a> *<dfn class="decl fn" id="thermal_cooling_device_register" title='thermal_cooling_device_register' data-ref="thermal_cooling_device_register" data-ref-filename="thermal_cooling_device_register">thermal_cooling_device_register</dfn>(<em>const</em> <em>char</em> *,</td></tr>
+<tr><th id="446">446</th><td>		<em>void</em> *, <em>const</em> <b>struct</b> <a class="type" href="#thermal_cooling_device_ops" title='thermal_cooling_device_ops' data-ref="thermal_cooling_device_ops" data-ref-filename="thermal_cooling_device_ops">thermal_cooling_device_ops</a> *);</td></tr>
+<tr><th id="447">447</th><td><b>struct</b> <a class="type" href="#thermal_cooling_device" title='thermal_cooling_device' data-ref="thermal_cooling_device" data-ref-filename="thermal_cooling_device">thermal_cooling_device</a> *</td></tr>
+<tr><th id="448">448</th><td><dfn class="decl fn" id="thermal_of_cooling_device_register" title='thermal_of_cooling_device_register' data-ref="thermal_of_cooling_device_register" data-ref-filename="thermal_of_cooling_device_register">thermal_of_cooling_device_register</dfn>(<b>struct</b> <a class="type" href="of.h.html#device_node" title='device_node' data-ref="device_node" data-ref-filename="device_node">device_node</a> *<dfn class="local col4 decl" id="1354np" title='np' data-type='struct device_node *' data-ref="1354np" data-ref-filename="1354np">np</dfn>, <em>const</em> <em>char</em> *, <em>void</em> *,</td></tr>
+<tr><th id="449">449</th><td>				   <em>const</em> <b>struct</b> <a class="type" href="#thermal_cooling_device_ops" title='thermal_cooling_device_ops' data-ref="thermal_cooling_device_ops" data-ref-filename="thermal_cooling_device_ops">thermal_cooling_device_ops</a> *);</td></tr>
+<tr><th id="450">450</th><td><b>struct</b> <a class="type" href="#thermal_cooling_device" title='thermal_cooling_device' data-ref="thermal_cooling_device" data-ref-filename="thermal_cooling_device">thermal_cooling_device</a> *</td></tr>
+<tr><th id="451">451</th><td><dfn class="decl fn" id="devm_thermal_of_cooling_device_register" title='devm_thermal_of_cooling_device_register' data-ref="devm_thermal_of_cooling_device_register" data-ref-filename="devm_thermal_of_cooling_device_register">devm_thermal_of_cooling_device_register</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col5 decl" id="1355dev" title='dev' data-type='struct device *' data-ref="1355dev" data-ref-filename="1355dev">dev</dfn>,</td></tr>
+<tr><th id="452">452</th><td>				<b>struct</b> <a class="type" href="of.h.html#device_node" title='device_node' data-ref="device_node" data-ref-filename="device_node">device_node</a> *<dfn class="local col6 decl" id="1356np" title='np' data-type='struct device_node *' data-ref="1356np" data-ref-filename="1356np">np</dfn>,</td></tr>
+<tr><th id="453">453</th><td>				<em>char</em> *<dfn class="local col7 decl" id="1357type" title='type' data-type='char *' data-ref="1357type" data-ref-filename="1357type">type</dfn>, <em>void</em> *<dfn class="local col8 decl" id="1358devdata" title='devdata' data-type='void *' data-ref="1358devdata" data-ref-filename="1358devdata">devdata</dfn>,</td></tr>
+<tr><th id="454">454</th><td>				<em>const</em> <b>struct</b> <a class="type" href="#thermal_cooling_device_ops" title='thermal_cooling_device_ops' data-ref="thermal_cooling_device_ops" data-ref-filename="thermal_cooling_device_ops">thermal_cooling_device_ops</a> *<dfn class="local col9 decl" id="1359ops" title='ops' data-type='const struct thermal_cooling_device_ops *' data-ref="1359ops" data-ref-filename="1359ops">ops</dfn>);</td></tr>
+<tr><th id="455">455</th><td><em>void</em> <dfn class="decl fn" id="thermal_cooling_device_unregister" title='thermal_cooling_device_unregister' data-ref="thermal_cooling_device_unregister" data-ref-filename="thermal_cooling_device_unregister">thermal_cooling_device_unregister</dfn>(<b>struct</b> <a class="type" href="#thermal_cooling_device" title='thermal_cooling_device' data-ref="thermal_cooling_device" data-ref-filename="thermal_cooling_device">thermal_cooling_device</a> *);</td></tr>
+<tr><th id="456">456</th><td><b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *<dfn class="decl fn" id="thermal_zone_get_zone_by_name" title='thermal_zone_get_zone_by_name' data-ref="thermal_zone_get_zone_by_name" data-ref-filename="thermal_zone_get_zone_by_name">thermal_zone_get_zone_by_name</dfn>(<em>const</em> <em>char</em> *<dfn class="local col0 decl" id="1360name" title='name' data-type='const char *' data-ref="1360name" data-ref-filename="1360name">name</dfn>);</td></tr>
+<tr><th id="457">457</th><td><em>int</em> <dfn class="decl fn" id="thermal_zone_get_temp" title='thermal_zone_get_temp' data-ref="thermal_zone_get_temp" data-ref-filename="thermal_zone_get_temp">thermal_zone_get_temp</dfn>(<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *<dfn class="local col1 decl" id="1361tz" title='tz' data-type='struct thermal_zone_device *' data-ref="1361tz" data-ref-filename="1361tz">tz</dfn>, <em>int</em> *<dfn class="local col2 decl" id="1362temp" title='temp' data-type='int *' data-ref="1362temp" data-ref-filename="1362temp">temp</dfn>);</td></tr>
+<tr><th id="458">458</th><td><em>int</em> <dfn class="decl fn" id="thermal_zone_get_slope" title='thermal_zone_get_slope' data-ref="thermal_zone_get_slope" data-ref-filename="thermal_zone_get_slope">thermal_zone_get_slope</dfn>(<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *<dfn class="local col3 decl" id="1363tz" title='tz' data-type='struct thermal_zone_device *' data-ref="1363tz" data-ref-filename="1363tz">tz</dfn>);</td></tr>
+<tr><th id="459">459</th><td><em>int</em> <dfn class="decl fn" id="thermal_zone_get_offset" title='thermal_zone_get_offset' data-ref="thermal_zone_get_offset" data-ref-filename="thermal_zone_get_offset">thermal_zone_get_offset</dfn>(<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *<dfn class="local col4 decl" id="1364tz" title='tz' data-type='struct thermal_zone_device *' data-ref="1364tz" data-ref-filename="1364tz">tz</dfn>);</td></tr>
+<tr><th id="460">460</th><td></td></tr>
+<tr><th id="461">461</th><td><em>int</em> <dfn class="decl fn" id="get_tz_trend" title='get_tz_trend' data-ref="get_tz_trend" data-ref-filename="get_tz_trend">get_tz_trend</dfn>(<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *, <em>int</em>);</td></tr>
+<tr><th id="462">462</th><td><b>struct</b> <a class="type" href="#thermal_instance" title='thermal_instance' data-ref="thermal_instance" data-ref-filename="thermal_instance">thermal_instance</a> *<dfn class="decl fn" id="get_thermal_instance" title='get_thermal_instance' data-ref="get_thermal_instance" data-ref-filename="get_thermal_instance">get_thermal_instance</dfn>(<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *,</td></tr>
+<tr><th id="463">463</th><td>		<b>struct</b> <a class="type" href="#thermal_cooling_device" title='thermal_cooling_device' data-ref="thermal_cooling_device" data-ref-filename="thermal_cooling_device">thermal_cooling_device</a> *, <em>int</em>);</td></tr>
+<tr><th id="464">464</th><td><em>void</em> <dfn class="decl fn" id="thermal_cdev_update" title='thermal_cdev_update' data-ref="thermal_cdev_update" data-ref-filename="thermal_cdev_update">thermal_cdev_update</dfn>(<b>struct</b> <a class="type" href="#thermal_cooling_device" title='thermal_cooling_device' data-ref="thermal_cooling_device" data-ref-filename="thermal_cooling_device">thermal_cooling_device</a> *);</td></tr>
+<tr><th id="465">465</th><td><em>void</em> <dfn class="decl fn" id="thermal_notify_framework" title='thermal_notify_framework' data-ref="thermal_notify_framework" data-ref-filename="thermal_notify_framework">thermal_notify_framework</dfn>(<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *, <em>int</em>);</td></tr>
+<tr><th id="466">466</th><td><u>#<span data-ppcond="417">else</span></u></td></tr>
+<tr><th id="467">467</th><td><em>static</em> <b>inline</b> bool cdev_is_power_actor(<b>struct</b> thermal_cooling_device *cdev)</td></tr>
+<tr><th id="468">468</th><td>{ <b>return</b> false; }</td></tr>
+<tr><th id="469">469</th><td><em>static</em> <b>inline</b> <em>int</em> power_actor_get_max_power(<b>struct</b> thermal_cooling_device *cdev,</td></tr>
+<tr><th id="470">470</th><td>			      <b>struct</b> thermal_zone_device *tz, u32 *max_power)</td></tr>
+<tr><th id="471">471</th><td>{ <b>return</b> <var>0</var>; }</td></tr>
+<tr><th id="472">472</th><td><em>static</em> <b>inline</b> <em>int</em> power_actor_get_min_power(<b>struct</b> thermal_cooling_device *cdev,</td></tr>
+<tr><th id="473">473</th><td>					    <b>struct</b> thermal_zone_device *tz,</td></tr>
+<tr><th id="474">474</th><td>					    u32 *min_power)</td></tr>
+<tr><th id="475">475</th><td>{ <b>return</b> -ENODEV; }</td></tr>
+<tr><th id="476">476</th><td><em>static</em> <b>inline</b> <em>int</em> power_actor_set_power(<b>struct</b> thermal_cooling_device *cdev,</td></tr>
+<tr><th id="477">477</th><td>			  <b>struct</b> thermal_instance *tz, u32 power)</td></tr>
+<tr><th id="478">478</th><td>{ <b>return</b> <var>0</var>; }</td></tr>
+<tr><th id="479">479</th><td><em>static</em> <b>inline</b> <b>struct</b> thermal_zone_device *thermal_zone_device_register(</td></tr>
+<tr><th id="480">480</th><td>	<em>const</em> <em>char</em> *type, <em>int</em> trips, <em>int</em> mask, <em>void</em> *devdata,</td></tr>
+<tr><th id="481">481</th><td>	<b>struct</b> thermal_zone_device_ops *ops,</td></tr>
+<tr><th id="482">482</th><td>	<b>struct</b> thermal_zone_params *tzp,</td></tr>
+<tr><th id="483">483</th><td>	<em>int</em> passive_delay, <em>int</em> polling_delay)</td></tr>
+<tr><th id="484">484</th><td>{ <b>return</b> ERR_PTR(-ENODEV); }</td></tr>
+<tr><th id="485">485</th><td><em>static</em> <b>inline</b> <em>void</em> thermal_zone_device_unregister(</td></tr>
+<tr><th id="486">486</th><td>	<b>struct</b> thermal_zone_device *tz)</td></tr>
+<tr><th id="487">487</th><td>{ }</td></tr>
+<tr><th id="488">488</th><td><em>static</em> <b>inline</b> <em>int</em> thermal_zone_bind_cooling_device(</td></tr>
+<tr><th id="489">489</th><td>	<b>struct</b> thermal_zone_device *tz, <em>int</em> trip,</td></tr>
+<tr><th id="490">490</th><td>	<b>struct</b> thermal_cooling_device *cdev,</td></tr>
+<tr><th id="491">491</th><td>	<em>unsigned</em> <em>long</em> upper, <em>unsigned</em> <em>long</em> lower,</td></tr>
+<tr><th id="492">492</th><td>	<em>unsigned</em> <em>int</em> weight)</td></tr>
+<tr><th id="493">493</th><td>{ <b>return</b> -ENODEV; }</td></tr>
+<tr><th id="494">494</th><td><em>static</em> <b>inline</b> <em>int</em> thermal_zone_unbind_cooling_device(</td></tr>
+<tr><th id="495">495</th><td>	<b>struct</b> thermal_zone_device *tz, <em>int</em> trip,</td></tr>
+<tr><th id="496">496</th><td>	<b>struct</b> thermal_cooling_device *cdev)</td></tr>
+<tr><th id="497">497</th><td>{ <b>return</b> -ENODEV; }</td></tr>
+<tr><th id="498">498</th><td><em>static</em> <b>inline</b> <em>void</em> thermal_zone_device_update(<b>struct</b> thermal_zone_device *tz,</td></tr>
+<tr><th id="499">499</th><td>					      <b>enum</b> thermal_notify_event event)</td></tr>
+<tr><th id="500">500</th><td>{ }</td></tr>
+<tr><th id="501">501</th><td><em>static</em> <b>inline</b> <em>void</em> thermal_zone_set_trips(<b>struct</b> thermal_zone_device *tz)</td></tr>
+<tr><th id="502">502</th><td>{ }</td></tr>
+<tr><th id="503">503</th><td><em>static</em> <b>inline</b> <b>struct</b> thermal_cooling_device *</td></tr>
+<tr><th id="504">504</th><td>thermal_cooling_device_register(<em>char</em> *type, <em>void</em> *devdata,</td></tr>
+<tr><th id="505">505</th><td>	<em>const</em> <b>struct</b> thermal_cooling_device_ops *ops)</td></tr>
+<tr><th id="506">506</th><td>{ <b>return</b> ERR_PTR(-ENODEV); }</td></tr>
+<tr><th id="507">507</th><td><em>static</em> <b>inline</b> <b>struct</b> thermal_cooling_device *</td></tr>
+<tr><th id="508">508</th><td>thermal_of_cooling_device_register(<b>struct</b> device_node *np,</td></tr>
+<tr><th id="509">509</th><td>	<em>char</em> *type, <em>void</em> *devdata, <em>const</em> <b>struct</b> thermal_cooling_device_ops *ops)</td></tr>
+<tr><th id="510">510</th><td>{ <b>return</b> ERR_PTR(-ENODEV); }</td></tr>
+<tr><th id="511">511</th><td><em>static</em> <b>inline</b> <b>struct</b> thermal_cooling_device *</td></tr>
+<tr><th id="512">512</th><td>devm_thermal_of_cooling_device_register(<b>struct</b> device *dev,</td></tr>
+<tr><th id="513">513</th><td>				<b>struct</b> device_node *np,</td></tr>
+<tr><th id="514">514</th><td>				<em>char</em> *type, <em>void</em> *devdata,</td></tr>
+<tr><th id="515">515</th><td>				<em>const</em> <b>struct</b> thermal_cooling_device_ops *ops)</td></tr>
+<tr><th id="516">516</th><td>{</td></tr>
+<tr><th id="517">517</th><td>	<b>return</b> ERR_PTR(-ENODEV);</td></tr>
+<tr><th id="518">518</th><td>}</td></tr>
+<tr><th id="519">519</th><td><em>static</em> <b>inline</b> <em>void</em> thermal_cooling_device_unregister(</td></tr>
+<tr><th id="520">520</th><td>	<b>struct</b> thermal_cooling_device *cdev)</td></tr>
+<tr><th id="521">521</th><td>{ }</td></tr>
+<tr><th id="522">522</th><td><em>static</em> <b>inline</b> <b>struct</b> thermal_zone_device *thermal_zone_get_zone_by_name(</td></tr>
+<tr><th id="523">523</th><td>		<em>const</em> <em>char</em> *name)</td></tr>
+<tr><th id="524">524</th><td>{ <b>return</b> ERR_PTR(-ENODEV); }</td></tr>
+<tr><th id="525">525</th><td><em>static</em> <b>inline</b> <em>int</em> thermal_zone_get_temp(</td></tr>
+<tr><th id="526">526</th><td>		<b>struct</b> thermal_zone_device *tz, <em>int</em> *temp)</td></tr>
+<tr><th id="527">527</th><td>{ <b>return</b> -ENODEV; }</td></tr>
+<tr><th id="528">528</th><td><em>static</em> <b>inline</b> <em>int</em> thermal_zone_get_slope(</td></tr>
+<tr><th id="529">529</th><td>		<b>struct</b> thermal_zone_device *tz)</td></tr>
+<tr><th id="530">530</th><td>{ <b>return</b> -ENODEV; }</td></tr>
+<tr><th id="531">531</th><td><em>static</em> <b>inline</b> <em>int</em> thermal_zone_get_offset(</td></tr>
+<tr><th id="532">532</th><td>		<b>struct</b> thermal_zone_device *tz)</td></tr>
+<tr><th id="533">533</th><td>{ <b>return</b> -ENODEV; }</td></tr>
+<tr><th id="534">534</th><td><em>static</em> <b>inline</b> <em>int</em> get_tz_trend(<b>struct</b> thermal_zone_device *tz, <em>int</em> trip)</td></tr>
+<tr><th id="535">535</th><td>{ <b>return</b> -ENODEV; }</td></tr>
+<tr><th id="536">536</th><td><em>static</em> <b>inline</b> <b>struct</b> thermal_instance *</td></tr>
+<tr><th id="537">537</th><td>get_thermal_instance(<b>struct</b> thermal_zone_device *tz,</td></tr>
+<tr><th id="538">538</th><td>	<b>struct</b> thermal_cooling_device *cdev, <em>int</em> trip)</td></tr>
+<tr><th id="539">539</th><td>{ <b>return</b> ERR_PTR(-ENODEV); }</td></tr>
+<tr><th id="540">540</th><td><em>static</em> <b>inline</b> <em>void</em> thermal_cdev_update(<b>struct</b> thermal_cooling_device *cdev)</td></tr>
+<tr><th id="541">541</th><td>{ }</td></tr>
+<tr><th id="542">542</th><td><em>static</em> <b>inline</b> <em>void</em> thermal_notify_framework(<b>struct</b> thermal_zone_device *tz,</td></tr>
+<tr><th id="543">543</th><td>	<em>int</em> trip)</td></tr>
+<tr><th id="544">544</th><td>{ }</td></tr>
+<tr><th id="545">545</th><td><u>#<span data-ppcond="417">endif</span> /* CONFIG_THERMAL */</u></td></tr>
+<tr><th id="546">546</th><td></td></tr>
+<tr><th id="547">547</th><td><u>#<span data-ppcond="547">if</span> defined(<a class="macro" href="../generated/autoconf.h.html#736" data-ref="_M/CONFIG_NET">CONFIG_NET</a>) &amp;&amp; <a class="macro" href="kconfig.h.html#71" title="1" data-ref="_M/IS_ENABLED">IS_ENABLED</a>(<a class="macro" href="../generated/autoconf.h.html#1124" title="1" data-ref="_M/CONFIG_THERMAL">CONFIG_THERMAL</a>)</u></td></tr>
+<tr><th id="548">548</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="thermal_generate_netlink_event" title='thermal_generate_netlink_event' data-ref="thermal_generate_netlink_event" data-ref-filename="thermal_generate_netlink_event">thermal_generate_netlink_event</dfn>(<b>struct</b> <a class="type" href="#thermal_zone_device" title='thermal_zone_device' data-ref="thermal_zone_device" data-ref-filename="thermal_zone_device">thermal_zone_device</a> *<dfn class="local col5 decl" id="1365tz" title='tz' data-type='struct thermal_zone_device *' data-ref="1365tz" data-ref-filename="1365tz">tz</dfn>,</td></tr>
+<tr><th id="549">549</th><td>						<b>enum</b> <a class="type" href="../uapi/linux/thermal.h.html#events" title='events' data-ref="events" data-ref-filename="events">events</a> <dfn class="local col6 decl" id="1366event" title='event' data-type='enum events' data-ref="1366event" data-ref-filename="1366event">event</dfn>);</td></tr>
+<tr><th id="550">550</th><td><u>#<span data-ppcond="547">else</span></u></td></tr>
+<tr><th id="551">551</th><td><em>static</em> <b>inline</b> <em>int</em> thermal_generate_netlink_event(<b>struct</b> thermal_zone_device *tz,</td></tr>
+<tr><th id="552">552</th><td>						<b>enum</b> events event)</td></tr>
+<tr><th id="553">553</th><td>{</td></tr>
+<tr><th id="554">554</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="555">555</th><td>}</td></tr>
+<tr><th id="556">556</th><td><u>#<span data-ppcond="547">endif</span></u></td></tr>
+<tr><th id="557">557</th><td></td></tr>
+<tr><th id="558">558</th><td><u>#<span data-ppcond="10">endif</span> /* __THERMAL_H__ */</u></td></tr>
+<tr><th id="559">559</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../arch/x86/kernel/acpi/boot.c.html'>linux-5.3.1/arch/x86/kernel/acpi/boot.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

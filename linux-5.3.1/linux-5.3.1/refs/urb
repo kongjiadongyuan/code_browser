@@ -1,0 +1,522 @@
+<use f='linux-5.3.1/include/linux/usb.h' l='1360'/>
+<def f='linux-5.3.1/include/linux/usb.h' l='1545' ll='1582'/>
+<use f='linux-5.3.1/include/linux/usb.h' l='1600' c='usb_fill_control_urb'/>
+<use f='linux-5.3.1/include/linux/usb.h' l='1631' c='usb_fill_bulk_urb'/>
+<use f='linux-5.3.1/include/linux/usb.h' l='1672' c='usb_fill_int_urb'/>
+<use f='linux-5.3.1/include/linux/usb.h' l='1700' c='usb_init_urb'/>
+<use f='linux-5.3.1/include/linux/usb.h' l='1701' c='usb_alloc_urb'/>
+<use f='linux-5.3.1/include/linux/usb.h' l='1702' c='usb_free_urb'/>
+<use f='linux-5.3.1/include/linux/usb.h' l='1704' c='usb_get_urb'/>
+<use f='linux-5.3.1/include/linux/usb.h' l='1704' c='usb_get_urb'/>
+<use f='linux-5.3.1/include/linux/usb.h' l='1705' c='usb_submit_urb'/>
+<use f='linux-5.3.1/include/linux/usb.h' l='1706' c='usb_unlink_urb'/>
+<use f='linux-5.3.1/include/linux/usb.h' l='1707' c='usb_kill_urb'/>
+<use f='linux-5.3.1/include/linux/usb.h' l='1708' c='usb_poison_urb'/>
+<use f='linux-5.3.1/include/linux/usb.h' l='1709' c='usb_unpoison_urb'/>
+<use f='linux-5.3.1/include/linux/usb.h' l='1710' c='usb_block_urb'/>
+<use f='linux-5.3.1/include/linux/usb.h' l='1717' c='usb_anchor_urb'/>
+<use f='linux-5.3.1/include/linux/usb.h' l='1718' c='usb_unanchor_urb'/>
+<use f='linux-5.3.1/include/linux/usb.h' l='1721' c='usb_get_from_anchor'/>
+<use f='linux-5.3.1/include/linux/usb.h' l='1734' c='usb_urb_dir_in'/>
+<use f='linux-5.3.1/include/linux/usb.h' l='1746' c='usb_urb_dir_out'/>
+<use f='linux-5.3.1/include/linux/usb.h' l='1751' c='usb_urb_ep_type_check'/>
+<use f='linux-5.3.1/include/linux/usb.h' l='1862'/>
+<size>184</size>
+<doc f='linux-5.3.1/include/linux/usb.h' l='1362'>/**
+ * struct urb - USB Request Block
+ * @urb_list: For use by current owner of the URB.
+ * @anchor_list: membership in the list of an anchor
+ * @anchor: to anchor URBs to a common mooring
+ * @ep: Points to the endpoint&apos;s data structure.  Will eventually
+ *	replace @pipe.
+ * @pipe: Holds endpoint number, direction, type, and more.
+ *	Create these values with the eight macros available;
+ *	usb_{snd,rcv}TYPEpipe(dev,endpoint), where the TYPE is &quot;ctrl&quot;
+ *	(control), &quot;bulk&quot;, &quot;int&quot; (interrupt), or &quot;iso&quot; (isochronous).
+ *	For example usb_sndbulkpipe() or usb_rcvintpipe().  Endpoint
+ *	numbers range from zero to fifteen.  Note that &quot;in&quot; endpoint two
+ *	is a different endpoint (and pipe) from &quot;out&quot; endpoint two.
+ *	The current configuration controls the existence, type, and
+ *	maximum packet size of any given endpoint.
+ * @stream_id: the endpoint&apos;s stream ID for bulk streams
+ * @dev: Identifies the USB device to perform the request.
+ * @status: This is read in non-iso completion functions to get the
+ *	status of the particular request.  ISO requests only use it
+ *	to tell whether the URB was unlinked; detailed status for
+ *	each frame is in the fields of the iso_frame-desc.
+ * @transfer_flags: A variety of flags may be used to affect how URB
+ *	submission, unlinking, or operation are handled.  Different
+ *	kinds of URB can use different flags.
+ * @transfer_buffer:  This identifies the buffer to (or from) which the I/O
+ *	request will be performed unless URB_NO_TRANSFER_DMA_MAP is set
+ *	(however, do not leave garbage in transfer_buffer even then).
+ *	This buffer must be suitable for DMA; allocate it with
+ *	kmalloc() or equivalent.  For transfers to &quot;in&quot; endpoints, contents
+ *	of this buffer will be modified.  This buffer is used for the data
+ *	stage of control transfers.
+ * @transfer_dma: When transfer_flags includes URB_NO_TRANSFER_DMA_MAP,
+ *	the device driver is saying that it provided this DMA address,
+ *	which the host controller driver should use in preference to the
+ *	transfer_buffer.
+ * @sg: scatter gather buffer list, the buffer size of each element in
+ * 	the list (except the last) must be divisible by the endpoint&apos;s
+ * 	max packet size if no_sg_constraint isn&apos;t set in &apos;struct usb_bus&apos;
+ * @num_mapped_sgs: (internal) number of mapped sg entries
+ * @num_sgs: number of entries in the sg list
+ * @transfer_buffer_length: How big is transfer_buffer.  The transfer may
+ *	be broken up into chunks according to the current maximum packet
+ *	size for the endpoint, which is a function of the configuration
+ *	and is encoded in the pipe.  When the length is zero, neither
+ *	transfer_buffer nor transfer_dma is used.
+ * @actual_length: This is read in non-iso completion functions, and
+ *	it tells how many bytes (out of transfer_buffer_length) were
+ *	transferred.  It will normally be the same as requested, unless
+ *	either an error was reported or a short read was performed.
+ *	The URB_SHORT_NOT_OK transfer flag may be used to make such
+ *	short reads be reported as errors.
+ * @setup_packet: Only used for control transfers, this points to eight bytes
+ *	of setup data.  Control transfers always start by sending this data
+ *	to the device.  Then transfer_buffer is read or written, if needed.
+ * @setup_dma: DMA pointer for the setup packet.  The caller must not use
+ *	this field; setup_packet must point to a valid buffer.
+ * @start_frame: Returns the initial frame for isochronous transfers.
+ * @number_of_packets: Lists the number of ISO transfer buffers.
+ * @interval: Specifies the polling interval for interrupt or isochronous
+ *	transfers.  The units are frames (milliseconds) for full and low
+ *	speed devices, and microframes (1/8 millisecond) for highspeed
+ *	and SuperSpeed devices.
+ * @error_count: Returns the number of ISO transfers that reported errors.
+ * @context: For use in completion functions.  This normally points to
+ *	request-specific driver context.
+ * @complete: Completion handler. This URB is passed as the parameter to the
+ *	completion function.  The completion function may then do what
+ *	it likes with the URB, including resubmitting or freeing it.
+ * @iso_frame_desc: Used to provide arrays of ISO transfer buffers and to
+ *	collect the transfer status for each buffer.
+ *
+ * This structure identifies USB transfer requests.  URBs must be allocated by
+ * calling usb_alloc_urb() and freed with a call to usb_free_urb().
+ * Initialization may be done using various usb_fill_*_urb() functions.  URBs
+ * are submitted using usb_submit_urb(), and pending requests may be canceled
+ * using usb_unlink_urb() or usb_kill_urb().
+ *
+ * Data Transfer Buffers:
+ *
+ * Normally drivers provide I/O buffers allocated with kmalloc() or otherwise
+ * taken from the general page pool.  That is provided by transfer_buffer
+ * (control requests also use setup_packet), and host controller drivers
+ * perform a dma mapping (and unmapping) for each buffer transferred.  Those
+ * mapping operations can be expensive on some platforms (perhaps using a dma
+ * bounce buffer or talking to an IOMMU),
+ * although they&apos;re cheap on commodity x86 and ppc hardware.
+ *
+ * Alternatively, drivers may pass the URB_NO_TRANSFER_DMA_MAP transfer flag,
+ * which tells the host controller driver that no such mapping is needed for
+ * the transfer_buffer since
+ * the device driver is DMA-aware.  For example, a device driver might
+ * allocate a DMA buffer with usb_alloc_coherent() or call usb_buffer_map().
+ * When this transfer flag is provided, host controller drivers will
+ * attempt to use the dma address found in the transfer_dma
+ * field rather than determining a dma address themselves.
+ *
+ * Note that transfer_buffer must still be set if the controller
+ * does not support DMA (as indicated by hcd_uses_dma()) and when talking
+ * to root hub. If you have to trasfer between highmem zone and the device
+ * on such controller, create a bounce buffer or bail out with an error.
+ * If transfer_buffer cannot be set (is in highmem) and the controller is DMA
+ * capable, assign NULL to it, so that usbmon knows not to use the value.
+ * The setup_packet must always be set, so it cannot be located in highmem.
+ *
+ * Initialization:
+ *
+ * All URBs submitted must initialize the dev, pipe, transfer_flags (may be
+ * zero), and complete fields.  All URBs must also initialize
+ * transfer_buffer and transfer_buffer_length.  They may provide the
+ * URB_SHORT_NOT_OK transfer flag, indicating that short reads are
+ * to be treated as errors; that flag is invalid for write requests.
+ *
+ * Bulk URBs may
+ * use the URB_ZERO_PACKET transfer flag, indicating that bulk OUT transfers
+ * should always terminate with a short packet, even if it means adding an
+ * extra zero length packet.
+ *
+ * Control URBs must provide a valid pointer in the setup_packet field.
+ * Unlike the transfer_buffer, the setup_packet may not be mapped for DMA
+ * beforehand.
+ *
+ * Interrupt URBs must provide an interval, saying how often (in milliseconds
+ * or, for highspeed devices, 125 microsecond units)
+ * to poll for transfers.  After the URB has been submitted, the interval
+ * field reflects how the transfer was actually scheduled.
+ * The polling interval may be more frequent than requested.
+ * For example, some controllers have a maximum interval of 32 milliseconds,
+ * while others support intervals of up to 1024 milliseconds.
+ * Isochronous URBs also have transfer intervals.  (Note that for isochronous
+ * endpoints, as well as high speed interrupt endpoints, the encoding of
+ * the transfer interval in the endpoint descriptor is logarithmic.
+ * Device drivers must convert that value to linear units themselves.)
+ *
+ * If an isochronous endpoint queue isn&apos;t already running, the host
+ * controller will schedule a new URB to start as soon as bandwidth
+ * utilization allows.  If the queue is running then a new URB will be
+ * scheduled to start in the first transfer slot following the end of the
+ * preceding URB, if that slot has not already expired.  If the slot has
+ * expired (which can happen when IRQ delivery is delayed for a long time),
+ * the scheduling behavior depends on the URB_ISO_ASAP flag.  If the flag
+ * is clear then the URB will be scheduled to start in the expired slot,
+ * implying that some of its packets will not be transferred; if the flag
+ * is set then the URB will be scheduled in the first unexpired slot,
+ * breaking the queue&apos;s synchronization.  Upon URB completion, the
+ * start_frame field will be set to the (micro)frame number in which the
+ * transfer was scheduled.  Ranges for frame counter values are HC-specific
+ * and can go from as low as 256 to as high as 65536 frames.
+ *
+ * Isochronous URBs have a different data transfer model, in part because
+ * the quality of service is only &quot;best effort&quot;.  Callers provide specially
+ * allocated URBs, with number_of_packets worth of iso_frame_desc structures
+ * at the end.  Each such packet is an individual ISO transfer.  Isochronous
+ * URBs are normally queued, submitted by drivers to arrange that
+ * transfers are at least double buffered, and then explicitly resubmitted
+ * in completion handlers, so
+ * that data (such as audio or video) streams at as constant a rate as the
+ * host controller scheduler can support.
+ *
+ * Completion Callbacks:
+ *
+ * The completion callback is made in_interrupt(), and one of the first
+ * things that a completion handler should do is check the status field.
+ * The status field is provided for all URBs.  It is used to report
+ * unlinked URBs, and status for all non-ISO transfers.  It should not
+ * be examined before the URB is returned to the completion handler.
+ *
+ * The context field is normally used to link URBs back to the relevant
+ * driver or request state.
+ *
+ * When the completion callback is invoked for non-isochronous URBs, the
+ * actual_length field tells how many bytes were transferred.  This field
+ * is updated even when the URB terminated with an error or was unlinked.
+ *
+ * ISO transfer status is reported in the status and actual_length fields
+ * of the iso_frame_desc array, and the number of errors is reported in
+ * error_count.  Completion callbacks for ISO transfers will normally
+ * (re)submit URBs to ensure a constant transfer rate.
+ *
+ * Note that even fields marked &quot;public&quot; should not be touched by the driver
+ * when the urb is owned by the hcd, that is, since the call to
+ * usb_submit_urb() till the entry into the completion routine.
+ */</doc>
+<mbr r='urb::kref' o='0' t='struct kref'/>
+<mbr r='urb::unlinked' o='32' t='int'/>
+<mbr r='urb::hcpriv' o='64' t='void *'/>
+<mbr r='urb::use_count' o='128' t='atomic_t'/>
+<mbr r='urb::reject' o='160' t='atomic_t'/>
+<mbr r='urb::urb_list' o='192' t='struct list_head'/>
+<mbr r='urb::anchor_list' o='320' t='struct list_head'/>
+<mbr r='urb::anchor' o='448' t='struct usb_anchor *'/>
+<mbr r='urb::dev' o='512' t='struct usb_device *'/>
+<mbr r='urb::ep' o='576' t='struct usb_host_endpoint *'/>
+<mbr r='urb::pipe' o='640' t='unsigned int'/>
+<mbr r='urb::stream_id' o='672' t='unsigned int'/>
+<mbr r='urb::status' o='704' t='int'/>
+<mbr r='urb::transfer_flags' o='736' t='unsigned int'/>
+<mbr r='urb::transfer_buffer' o='768' t='void *'/>
+<mbr r='urb::transfer_dma' o='832' t='dma_addr_t'/>
+<mbr r='urb::sg' o='896' t='struct scatterlist *'/>
+<mbr r='urb::num_mapped_sgs' o='960' t='int'/>
+<mbr r='urb::num_sgs' o='992' t='int'/>
+<mbr r='urb::transfer_buffer_length' o='1024' t='u32'/>
+<mbr r='urb::actual_length' o='1056' t='u32'/>
+<mbr r='urb::setup_packet' o='1088' t='unsigned char *'/>
+<mbr r='urb::setup_dma' o='1152' t='dma_addr_t'/>
+<mbr r='urb::start_frame' o='1216' t='int'/>
+<mbr r='urb::number_of_packets' o='1248' t='int'/>
+<mbr r='urb::interval' o='1280' t='int'/>
+<mbr r='urb::error_count' o='1312' t='int'/>
+<mbr r='urb::context' o='1344' t='void *'/>
+<mbr r='urb::complete' o='1408' t='usb_complete_t'/>
+<mbr r='urb::iso_frame_desc' o='1472' t='struct usb_iso_packet_descriptor [0]'/>
+<use f='linux-5.3.1/drivers/hid/usbhid/usbhid.h' l='64'/>
+<use f='linux-5.3.1/drivers/hid/usbhid/usbhid.h' l='68'/>
+<use f='linux-5.3.1/drivers/hid/usbhid/usbhid.h' l='76'/>
+<size>184</size>
+<use f='linux-5.3.1/drivers/hid/usbhid/hid-core.c' l='271' c='hid_irq_in'/>
+<use f='linux-5.3.1/drivers/hid/usbhid/hid-core.c' l='429' c='hid_irq_out'/>
+<use f='linux-5.3.1/drivers/hid/usbhid/hid-core.c' l='476' c='hid_ctrl'/>
+<size>184</size>
+<use f='linux-5.3.1/drivers/usb/class/usblp.c' l='291' c='usblp_bulk_read'/>
+<use f='linux-5.3.1/drivers/usb/class/usblp.c' l='315' c='usblp_bulk_write'/>
+<use f='linux-5.3.1/drivers/usb/class/usblp.c' l='690' c='usblp_new_writeurb'/>
+<use f='linux-5.3.1/drivers/usb/class/usblp.c' l='692' c='usblp_new_writeurb'/>
+<use f='linux-5.3.1/drivers/usb/class/usblp.c' l='716' c='usblp_write'/>
+<use f='linux-5.3.1/drivers/usb/class/usblp.c' l='980' c='usblp_submit_read'/>
+<size>184</size>
+<use f='linux-5.3.1/include/linux/usb/hcd.h' l='97'/>
+<use f='linux-5.3.1/include/linux/usb/hcd.h' l='293'/>
+<use f='linux-5.3.1/include/linux/usb/hcd.h' l='295'/>
+<use f='linux-5.3.1/include/linux/usb/hcd.h' l='306'/>
+<use f='linux-5.3.1/include/linux/usb/hcd.h' l='308'/>
+<use f='linux-5.3.1/include/linux/usb/hcd.h' l='428' c='usb_hcd_link_urb_to_ep'/>
+<use f='linux-5.3.1/include/linux/usb/hcd.h' l='429' c='usb_hcd_check_unlink_urb'/>
+<use f='linux-5.3.1/include/linux/usb/hcd.h' l='431' c='usb_hcd_unlink_urb_from_ep'/>
+<use f='linux-5.3.1/include/linux/usb/hcd.h' l='433' c='usb_hcd_submit_urb'/>
+<use f='linux-5.3.1/include/linux/usb/hcd.h' l='434' c='usb_hcd_unlink_urb'/>
+<use f='linux-5.3.1/include/linux/usb/hcd.h' l='435' c='usb_hcd_giveback_urb'/>
+<use f='linux-5.3.1/include/linux/usb/hcd.h' l='437' c='usb_hcd_map_urb_for_dma'/>
+<use f='linux-5.3.1/include/linux/usb/hcd.h' l='439' c='usb_hcd_unmap_urb_setup_for_dma'/>
+<use f='linux-5.3.1/include/linux/usb/hcd.h' l='440' c='usb_hcd_unmap_urb_for_dma'/>
+<use f='linux-5.3.1/include/linux/usb/hcd.h' l='570' c='usb_hub_clear_tt_buffer'/>
+<use f='linux-5.3.1/include/linux/usb/hcd.h' l='684'/>
+<use f='linux-5.3.1/include/linux/usb/hcd.h' l='685'/>
+<use f='linux-5.3.1/include/linux/usb/hcd.h' l='686'/>
+<use f='linux-5.3.1/include/linux/usb/hcd.h' l='692' c='usbmon_urb_submit'/>
+<use f='linux-5.3.1/include/linux/usb/hcd.h' l='698' c='usbmon_urb_submit_error'/>
+<use f='linux-5.3.1/include/linux/usb/hcd.h' l='705' c='usbmon_urb_complete'/>
+<size>184</size>
+<use f='linux-5.3.1/drivers/usb/core/devio.c' l='91'/>
+<use f='linux-5.3.1/drivers/usb/core/devio.c' l='490' c='snoop_urb_data'/>
+<use f='linux-5.3.1/drivers/usb/core/devio.c' l='512' c='copy_urb_data_to_user'/>
+<use f='linux-5.3.1/drivers/usb/core/devio.c' l='545' c='cancel_bulk_urbs'/>
+<use f='linux-5.3.1/drivers/usb/core/devio.c' l='579' c='async_completed'/>
+<use f='linux-5.3.1/drivers/usb/core/devio.c' l='621' c='destroy_async'/>
+<use f='linux-5.3.1/drivers/usb/core/devio.c' l='1070' c='proc_control'/>
+<use f='linux-5.3.1/drivers/usb/core/devio.c' l='1134' c='proc_control'/>
+<use f='linux-5.3.1/drivers/usb/core/devio.c' l='1163' c='proc_bulk'/>
+<use f='linux-5.3.1/drivers/usb/core/devio.c' l='1165' c='proc_bulk'/>
+<use f='linux-5.3.1/drivers/usb/core/devio.c' l='1209' c='proc_bulk'/>
+<use f='linux-5.3.1/drivers/usb/core/devio.c' l='1630' c='proc_do_submiturb'/>
+<use f='linux-5.3.1/drivers/usb/core/devio.c' l='1840' c='proc_unlinkurb'/>
+<use f='linux-5.3.1/drivers/usb/core/devio.c' l='1861' c='compute_isochronous_actual_length'/>
+<use f='linux-5.3.1/drivers/usb/core/devio.c' l='1875' c='processcompl'/>
+<use f='linux-5.3.1/drivers/usb/core/devio.c' l='2048' c='processcompl_compat'/>
+<size>184</size>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='477' c='rh_call_control'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='754' c='usb_hcd_poll_rh_status'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='805' c='rh_queue_status'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='836' c='rh_urb_enqueue'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='850' c='usb_rh_urb_dequeue'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='1144' c='usb_hcd_link_urb_to_ep'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='1202' c='usb_hcd_check_unlink_urb'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='1235' c='usb_hcd_unlink_urb_from_ep'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='1325' c='usb_hcd_unmap_urb_setup_for_dma'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='1345' c='unmap_urb_for_dma'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='1353' c='usb_hcd_unmap_urb_for_dma'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='1391' c='map_urb_for_dma'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='1400' c='usb_hcd_map_urb_for_dma'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='1528' c='usb_hcd_submit_urb'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='1581' c='unlink1'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='1603' c='usb_hcd_unlink_urb'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='1636' c='__usb_hcd_giveback_urb'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='1678' c='usb_giveback_urb_bh'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='1680' c='usb_giveback_urb_bh'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='1680' c='usb_giveback_urb_bh'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='1680' c='usb_giveback_urb_bh'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='1712' c='usb_hcd_giveback_urb'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='1758' c='usb_hcd_flush_endpoint'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='1799' c='usb_hcd_flush_endpoint'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='1799' c='usb_hcd_flush_endpoint'/>
+<use f='linux-5.3.1/drivers/usb/core/hcd.c' l='1799' c='usb_hcd_flush_endpoint'/>
+<size>184</size>
+<use f='linux-5.3.1/drivers/usb/core/hub.h' l='23'/>
+<use f='linux-5.3.1/drivers/usb/core/hub.c' l='707' c='hub_irq'/>
+<use f='linux-5.3.1/drivers/usb/core/hub.c' l='854' c='usb_hub_clear_tt_buffer'/>
+<size>184</size>
+<use f='linux-5.3.1/drivers/usb/core/message.c' l='33' c='usb_api_blocking_completion'/>
+<use f='linux-5.3.1/drivers/usb/core/message.c' l='48' c='usb_start_wait_urb'/>
+<use f='linux-5.3.1/drivers/usb/core/message.c' l='90' c='usb_internal_control_msg'/>
+<use f='linux-5.3.1/drivers/usb/core/message.c' l='232' c='usb_bulk_msg'/>
+<use f='linux-5.3.1/drivers/usb/core/message.c' l='270' c='sg_complete'/>
+<use f='linux-5.3.1/drivers/usb/core/message.c' l='403' c='usb_sg_init'/>
+<size>184</size>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='21' c='urb_destroy'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='16' c='urb_destroy'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='16' c='urb_destroy'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='16' c='urb_destroy'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='43' c='usb_init_urb'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='69' c='usb_alloc_urb'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='71' c='usb_alloc_urb'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='92' c='usb_free_urb'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='109' c='usb_get_urb'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='109' c='usb_get_urb'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='125' c='usb_anchor_urb'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='148' c='__usb_unanchor_urb'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='163' c='usb_unanchor_urb'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='201' c='usb_urb_ep_type_check'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='351' c='usb_submit_urb'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='648' c='usb_unlink_urb'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='687' c='usb_kill_urb'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='728' c='usb_poison_urb'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='743' c='usb_unpoison_urb'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='764' c='usb_block_urb'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='785' c='usb_kill_anchored_urbs'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='789' c='usb_kill_anchored_urbs'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='789' c='usb_kill_anchored_urbs'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='789' c='usb_kill_anchored_urbs'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='817' c='usb_poison_anchored_urbs'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='822' c='usb_poison_anchored_urbs'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='822' c='usb_poison_anchored_urbs'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='822' c='usb_poison_anchored_urbs'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='846' c='usb_unpoison_anchored_urbs'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='870' c='usb_unlink_anchored_urbs'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='941' c='usb_get_from_anchor'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='943' c='usb_get_from_anchor'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='948' c='usb_get_from_anchor'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='948' c='usb_get_from_anchor'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='948' c='usb_get_from_anchor'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='970' c='usb_scuttle_anchored_urbs'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='975' c='usb_scuttle_anchored_urbs'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='975' c='usb_scuttle_anchored_urbs'/>
+<use f='linux-5.3.1/drivers/usb/core/urb.c' l='975' c='usb_scuttle_anchored_urbs'/>
+<size>184</size>
+<use f='linux-5.3.1/drivers/usb/host/ehci.h' l='316'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci.h' l='528'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci.h' l='574'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-q.c' l='152' c='ehci_clear_tt_buffer'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-q.c' l='185' c='qtd_copy_status'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-q.c' l='240' c='ehci_urb_done'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-q.c' l='313' c='qh_completions'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-q.c' l='546' c='qtd_list_free'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-q.c' l='566' c='qh_urb_transaction'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-q.c' l='751' c='qh_make'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-q.c' l='1011' c='qh_append_tds'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-q.c' l='1093' c='submit_async'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-sched.c' l='919' c='intr_submit'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-sched.c' l='1033' c='iso_stream_init'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-sched.c' l='1139' c='iso_stream_find'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-sched.c' l='1197' c='itd_sched_init'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-sched.c' l='1251' c='itd_urb_transaction'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-sched.c' l='1482' c='iso_stream_schedule'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-sched.c' l='1752' c='itd_link_urb'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-sched.c' l='1832' c='itd_complete'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-sched.c' l='1923' c='itd_submit'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-sched.c' l='1996' c='sitd_sched_init'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-sched.c' l='2044' c='sitd_urb_transaction'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-sched.c' l='2153' c='sitd_link_urb'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-sched.c' l='2226' c='sitd_complete'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-sched.c' l='2302' c='sitd_submit'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-hcd.c' l='854' c='ehci_urb_enqueue'/>
+<use f='linux-5.3.1/drivers/usb/host/ehci-hcd.c' l='893' c='ehci_urb_dequeue'/>
+<size>184</size>
+<use f='linux-5.3.1/drivers/usb/host/ohci.h' l='134'/>
+<use f='linux-5.3.1/drivers/usb/host/ohci-q.c' l='41' c='finish_urb'/>
+<use f='linux-5.3.1/drivers/usb/host/ohci-q.c' l='92' c='finish_urb'/>
+<use f='linux-5.3.1/drivers/usb/host/ohci-q.c' l='92' c='finish_urb'/>
+<use f='linux-5.3.1/drivers/usb/host/ohci-q.c' l='92' c='finish_urb'/>
+<use f='linux-5.3.1/drivers/usb/host/ohci-q.c' l='518' c='td_fill'/>
+<use f='linux-5.3.1/drivers/usb/host/ohci-q.c' l='593' c='td_submit_urb'/>
+<use f='linux-5.3.1/drivers/usb/host/ohci-q.c' l='756' c='td_done'/>
+<use f='linux-5.3.1/drivers/usb/host/ohci-q.c' l='835' c='ed_halted'/>
+<use f='linux-5.3.1/drivers/usb/host/ohci-q.c' l='1039' c='finish_unlinks'/>
+<use f='linux-5.3.1/drivers/usb/host/ohci-q.c' l='1152' c='takeback_td'/>
+<use f='linux-5.3.1/drivers/usb/host/ohci-hcd.c' l='117' c='number_of_tds'/>
+<use f='linux-5.3.1/drivers/usb/host/ohci-hcd.c' l='149' c='ohci_urb_enqueue'/>
+<use f='linux-5.3.1/drivers/usb/host/ohci-hcd.c' l='315' c='ohci_urb_dequeue'/>
+<use f='linux-5.3.1/drivers/usb/host/ohci-hcd.c' l='1042' c='ohci_restart'/>
+<size>184</size>
+<use f='linux-5.3.1/drivers/usb/host/uhci-hcd.h' l='486'/>
+<use f='linux-5.3.1/drivers/usb/host/uhci-q.c' l='72' c='uhci_add_fsbr'/>
+<use f='linux-5.3.1/drivers/usb/host/uhci-q.c' l='236' c='uhci_unlink_isochronous_tds'/>
+<use f='linux-5.3.1/drivers/usb/host/uhci-q.c' l='315' c='uhci_cleanup_queue'/>
+<use f='linux-5.3.1/drivers/usb/host/uhci-q.c' l='723' c='uhci_alloc_urb_priv'/>
+<use f='linux-5.3.1/drivers/usb/host/uhci-q.c' l='789' c='uhci_submit_control'/>
+<use f='linux-5.3.1/drivers/usb/host/uhci-q.c' l='915' c='uhci_submit_common'/>
+<use f='linux-5.3.1/drivers/usb/host/uhci-q.c' l='1056' c='uhci_submit_bulk'/>
+<use f='linux-5.3.1/drivers/usb/host/uhci-q.c' l='1073' c='uhci_submit_interrupt'/>
+<use f='linux-5.3.1/drivers/usb/host/uhci-q.c' l='1170' c='uhci_result_common'/>
+<use f='linux-5.3.1/drivers/usb/host/uhci-q.c' l='1254' c='uhci_submit_isochronous'/>
+<use f='linux-5.3.1/drivers/usb/host/uhci-q.c' l='1295' c='uhci_submit_isochronous'/>
+<use f='linux-5.3.1/drivers/usb/host/uhci-q.c' l='1369' c='uhci_result_isochronous'/>
+<use f='linux-5.3.1/drivers/usb/host/uhci-q.c' l='1409' c='uhci_urb_enqueue'/>
+<use f='linux-5.3.1/drivers/usb/host/uhci-q.c' l='1481' c='uhci_urb_dequeue'/>
+<use f='linux-5.3.1/drivers/usb/host/uhci-q.c' l='1517' c='uhci_giveback_urb'/>
+<use f='linux-5.3.1/drivers/usb/host/uhci-q.c' l='1536' c='uhci_giveback_urb'/>
+<use f='linux-5.3.1/drivers/usb/host/uhci-q.c' l='1578' c='uhci_scan_qh'/>
+<size>184</size>
+<use f='linux-5.3.1/drivers/usb/host/xhci.h' l='1537'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.h' l='2084' c='xhci_queue_ctrl_tx'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.h' l='2086' c='xhci_queue_bulk_tx'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.h' l='2088' c='xhci_queue_intr_tx'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.h' l='2091' c='xhci_queue_isoc_tx_prepare'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.h' l='2161' c='xhci_urb_to_transfer_ring'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.h' l='2173' c='xhci_urb_suitable_for_idt'/>
+<size>184</size>
+<use f='linux-5.3.1/drivers/usb/host/xhci-trace.h' l='315' c='trace_xhci_urb_enqueue'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-trace.h' l='315' c='trace_xhci_urb_enqueue'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-trace.h' l='315' c='trace_xhci_urb_enqueue_rcuidle'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-trace.h' l='315' c='trace_xhci_urb_enqueue_rcuidle'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-trace.h' l='315' c='register_trace_xhci_urb_enqueue'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-trace.h' l='315' c='register_trace_prio_xhci_urb_enqueue'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-trace.h' l='315' c='unregister_trace_xhci_urb_enqueue'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-trace.h' l='315' c='check_trace_callback_type_xhci_urb_enqueue'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-trace.h' l='320' c='trace_xhci_urb_giveback'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-trace.h' l='320' c='trace_xhci_urb_giveback'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-trace.h' l='320' c='trace_xhci_urb_giveback_rcuidle'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-trace.h' l='320' c='trace_xhci_urb_giveback_rcuidle'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-trace.h' l='320' c='register_trace_xhci_urb_giveback'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-trace.h' l='320' c='register_trace_prio_xhci_urb_giveback'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-trace.h' l='320' c='unregister_trace_xhci_urb_giveback'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-trace.h' l='320' c='check_trace_callback_type_xhci_urb_giveback'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-trace.h' l='325' c='trace_xhci_urb_dequeue'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-trace.h' l='325' c='trace_xhci_urb_dequeue'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-trace.h' l='325' c='trace_xhci_urb_dequeue_rcuidle'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-trace.h' l='325' c='trace_xhci_urb_dequeue_rcuidle'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-trace.h' l='325' c='register_trace_xhci_urb_dequeue'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-trace.h' l='325' c='register_trace_prio_xhci_urb_dequeue'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-trace.h' l='325' c='unregister_trace_xhci_urb_dequeue'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-trace.h' l='325' c='check_trace_callback_type_xhci_urb_dequeue'/>
+<size>184</size>
+<use f='linux-5.3.1/drivers/usb/host/xhci-ring.c' l='113' c='inc_td_cnt'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-ring.c' l='641' c='xhci_giveback_urb_in_irq'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-ring.c' l='665' c='xhci_unmap_td_bounce_buffer'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-ring.c' l='1900' c='xhci_td_cleanup'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-ring.c' l='2954' c='prepare_transfer'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-ring.c' l='3009' c='count_trbs_needed'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-ring.c' l='3014' c='count_sg_trbs_needed'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-ring.c' l='3033' c='count_isoc_trbs_needed'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-ring.c' l='3043' c='check_trb_math'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-ring.c' l='3071' c='check_interval'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-ring.c' l='3108' c='xhci_queue_intr_tx'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-ring.c' l='3140' c='xhci_td_remainder'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-ring.c' l='3165' c='xhci_align_td'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-ring.c' l='3232' c='xhci_queue_bulk_tx'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-ring.c' l='3390' c='xhci_queue_ctrl_tx'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-ring.c' l='3529' c='xhci_get_burst_count'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-ring.c' l='3549' c='xhci_get_last_burst_packet_count'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-ring.c' l='3581' c='xhci_get_isoc_frame_id'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-ring.c' l='3666' c='xhci_queue_isoc_tx'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-ring.c' l='3861' c='xhci_queue_isoc_tx_prepare'/>
+<size>184</size>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='1254' c='xhci_map_urb_for_dma'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='1374' c='xhci_check_maxpacket'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='1446' c='xhci_urb_enqueue'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='1588' c='xhci_urb_dequeue'/>
+<size>184</size>
+<use f='linux-5.3.1/drivers/usb/mon/usb_mon.h' l='48'/>
+<use f='linux-5.3.1/drivers/usb/mon/usb_mon.h' l='49'/>
+<use f='linux-5.3.1/drivers/usb/mon/usb_mon.h' l='50'/>
+<use f='linux-5.3.1/drivers/usb/mon/mon_bin.c' l='394' c='mon_bin_get_setup'/>
+<use f='linux-5.3.1/drivers/usb/mon/mon_bin.c' l='404' c='mon_bin_get_data'/>
+<use f='linux-5.3.1/drivers/usb/mon/mon_bin.c' l='448' c='mon_bin_collate_isodesc'/>
+<use f='linux-5.3.1/drivers/usb/mon/mon_bin.c' l='466' c='mon_bin_get_isodesc'/>
+<use f='linux-5.3.1/drivers/usb/mon/mon_bin.c' l='485' c='mon_bin_event'/>
+<use f='linux-5.3.1/drivers/usb/mon/mon_bin.c' l='620' c='mon_bin_submit'/>
+<use f='linux-5.3.1/drivers/usb/mon/mon_bin.c' l='626' c='mon_bin_complete'/>
+<use f='linux-5.3.1/drivers/usb/mon/mon_bin.c' l='632' c='mon_bin_error'/>
+<size>184</size>
+<use f='linux-5.3.1/drivers/usb/mon/mon_main.c' l='81' c='mon_bus_submit'/>
+<use f='linux-5.3.1/drivers/usb/mon/mon_main.c' l='96' c='mon_submit'/>
+<use f='linux-5.3.1/drivers/usb/mon/mon_main.c' l='108' c='mon_bus_submit_error'/>
+<use f='linux-5.3.1/drivers/usb/mon/mon_main.c' l='123' c='mon_submit_error'/>
+<use f='linux-5.3.1/drivers/usb/mon/mon_main.c' l='135' c='mon_bus_complete'/>
+<use f='linux-5.3.1/drivers/usb/mon/mon_main.c' l='150' c='mon_complete'/>
+<size>184</size>
+<use f='linux-5.3.1/drivers/usb/mon/mon_text.c' l='132' c='mon_text_get_setup'/>
+<use f='linux-5.3.1/drivers/usb/mon/mon_text.c' l='145' c='mon_text_get_data'/>
+<use f='linux-5.3.1/drivers/usb/mon/mon_text.c' l='193' c='mon_text_event'/>
+<use f='linux-5.3.1/drivers/usb/mon/mon_text.c' l='259' c='mon_text_submit'/>
+<use f='linux-5.3.1/drivers/usb/mon/mon_text.c' l='265' c='mon_text_complete'/>
+<use f='linux-5.3.1/drivers/usb/mon/mon_text.c' l='271' c='mon_text_error'/>
+<size>184</size>
+<use f='linux-5.3.1/drivers/usb/storage/usb.h' l='127'/>
+<size>184</size>
+<use f='linux-5.3.1/drivers/usb/storage/transport.c' l='101' c='usb_stor_blocking_completion'/>
+<size>184</size>

@@ -1,0 +1,198 @@
+<dec f='linux-5.3.1/drivers/gpu/drm/drm_crtc_internal.h' l='181' type='int drm_connector_create_standard_properties(struct drm_device * dev)'/>
+<def f='linux-5.3.1/drivers/gpu/drm/drm_connector.c' l='1046' ll='1099' type='int drm_connector_create_standard_properties(struct drm_device * dev)'/>
+<doc f='linux-5.3.1/drivers/gpu/drm/drm_connector.c' l='850'>/**
+ * DOC: standard connector properties
+ *
+ * DRM connectors have a few standardized properties:
+ *
+ * EDID:
+ * 	Blob property which contains the current EDID read from the sink. This
+ * 	is useful to parse sink identification information like vendor, model
+ * 	and serial. Drivers should update this property by calling
+ * 	drm_connector_update_edid_property(), usually after having parsed
+ * 	the EDID using drm_add_edid_modes(). Userspace cannot change this
+ * 	property.
+ * DPMS:
+ * 	Legacy property for setting the power state of the connector. For atomic
+ * 	drivers this is only provided for backwards compatibility with existing
+ * 	drivers, it remaps to controlling the &quot;ACTIVE&quot; property on the CRTC the
+ * 	connector is linked to. Drivers should never set this property directly,
+ * 	it is handled by the DRM core by calling the &amp;drm_connector_funcs.dpms
+ * 	callback. For atomic drivers the remapping to the &quot;ACTIVE&quot; property is
+ * 	implemented in the DRM core.  This is the only standard connector
+ * 	property that userspace can change.
+ *
+ * 	Note that this property cannot be set through the MODE_ATOMIC ioctl,
+ * 	userspace must use &quot;ACTIVE&quot; on the CRTC instead.
+ *
+ * 	WARNING:
+ *
+ * 	For userspace also running on legacy drivers the &quot;DPMS&quot; semantics are a
+ * 	lot more complicated. First, userspace cannot rely on the &quot;DPMS&quot; value
+ * 	returned by the GETCONNECTOR actually reflecting reality, because many
+ * 	drivers fail to update it. For atomic drivers this is taken care of in
+ * 	drm_atomic_helper_update_legacy_modeset_state().
+ *
+ * 	The second issue is that the DPMS state is only well-defined when the
+ * 	connector is connected to a CRTC. In atomic the DRM core enforces that
+ * 	&quot;ACTIVE&quot; is off in such a case, no such checks exists for &quot;DPMS&quot;.
+ *
+ * 	Finally, when enabling an output using the legacy SETCONFIG ioctl then
+ * 	&quot;DPMS&quot; is forced to ON. But see above, that might not be reflected in
+ * 	the software value on legacy drivers.
+ *
+ * 	Summarizing: Only set &quot;DPMS&quot; when the connector is known to be enabled,
+ * 	assume that a successful SETCONFIG call also sets &quot;DPMS&quot; to on, and
+ * 	never read back the value of &quot;DPMS&quot; because it can be incorrect.
+ * PATH:
+ * 	Connector path property to identify how this sink is physically
+ * 	connected. Used by DP MST. This should be set by calling
+ * 	drm_connector_set_path_property(), in the case of DP MST with the
+ * 	path property the MST manager created. Userspace cannot change this
+ * 	property.
+ * TILE:
+ * 	Connector tile group property to indicate how a set of DRM connector
+ * 	compose together into one logical screen. This is used by both high-res
+ * 	external screens (often only using a single cable, but exposing multiple
+ * 	DP MST sinks), or high-res integrated panels (like dual-link DSI) which
+ * 	are not gen-locked. Note that for tiled panels which are genlocked, like
+ * 	dual-link LVDS or dual-link DSI, the driver should try to not expose the
+ * 	tiling and virtualize both &amp;drm_crtc and &amp;drm_plane if needed. Drivers
+ * 	should update this value using drm_connector_set_tile_property().
+ * 	Userspace cannot change this property.
+ * link-status:
+ *      Connector link-status property to indicate the status of link. The
+ *      default value of link-status is &quot;GOOD&quot;. If something fails during or
+ *      after modeset, the kernel driver may set this to &quot;BAD&quot; and issue a
+ *      hotplug uevent. Drivers should update this value using
+ *      drm_connector_set_link_status_property().
+ * non_desktop:
+ * 	Indicates the output should be ignored for purposes of displaying a
+ * 	standard desktop environment or console. This is most likely because
+ * 	the output device is not rectilinear.
+ * Content Protection:
+ *	This property is used by userspace to request the kernel protect future
+ *	content communicated over the link. When requested, kernel will apply
+ *	the appropriate means of protection (most often HDCP), and use the
+ *	property to tell userspace the protection is active.
+ *
+ *	Drivers can set this up by calling
+ *	drm_connector_attach_content_protection_property() on initialization.
+ *
+ *	The value of this property can be one of the following:
+ *
+ *	DRM_MODE_CONTENT_PROTECTION_UNDESIRED = 0
+ *		The link is not protected, content is transmitted in the clear.
+ *	DRM_MODE_CONTENT_PROTECTION_DESIRED = 1
+ *		Userspace has requested content protection, but the link is not
+ *		currently protected. When in this state, kernel should enable
+ *		Content Protection as soon as possible.
+ *	DRM_MODE_CONTENT_PROTECTION_ENABLED = 2
+ *		Userspace has requested content protection, and the link is
+ *		protected. Only the driver can set the property to this value.
+ *		If userspace attempts to set to ENABLED, kernel will return
+ *		-EINVAL.
+ *
+ *	A few guidelines:
+ *
+ *	- DESIRED state should be preserved until userspace de-asserts it by
+ *	  setting the property to UNDESIRED. This means ENABLED should only
+ *	  transition to UNDESIRED when the user explicitly requests it.
+ *	- If the state is DESIRED, kernel should attempt to re-authenticate the
+ *	  link whenever possible. This includes across disable/enable, dpms,
+ *	  hotplug, downstream device changes, link status failures, etc..
+ *	- Userspace is responsible for polling the property to determine when
+ *	  the value transitions from ENABLED to DESIRED. This signifies the link
+ *	  is no longer protected and userspace should take appropriate action
+ *	  (whatever that might be).
+ *
+ * HDR_OUTPUT_METADATA:
+ *	Connector property to enable userspace to send HDR Metadata to
+ *	driver. This metadata is based on the composition and blending
+ *	policies decided by user, taking into account the hardware and
+ *	sink capabilities. The driver gets this metadata and creates a
+ *	Dynamic Range and Mastering Infoframe (DRM) in case of HDMI,
+ *	SDP packet (Non-audio INFOFRAME SDP v1.3) for DP. This is then
+ *	sent to sink. This notifies the sink of the upcoming frame&apos;s Color
+ *	Encoding and Luminance parameters.
+ *
+ *	Userspace first need to detect the HDR capabilities of sink by
+ *	reading and parsing the EDID. Details of HDR metadata for HDMI
+ *	are added in CTA 861.G spec. For DP , its defined in VESA DP
+ *	Standard v1.4. It needs to then get the metadata information
+ *	of the video/game/app content which are encoded in HDR (basically
+ *	using HDR transfer functions). With this information it needs to
+ *	decide on a blending policy and compose the relevant
+ *	layers/overlays into a common format. Once this blending is done,
+ *	userspace will be aware of the metadata of the composed frame to
+ *	be send to sink. It then uses this property to communicate this
+ *	metadata to driver which then make a Infoframe packet and sends
+ *	to sink based on the type of encoder connected.
+ *
+ *	Userspace will be responsible to do Tone mapping operation in case:
+ *		- Some layers are HDR and others are SDR
+ *		- HDR layers luminance is not same as sink
+ *
+ *	It will even need to do colorspace conversion and get all layers
+ *	to one common colorspace for blending. It can use either GL, Media
+ *	or display engine to get this done based on the capabilties of the
+ *	associated hardware.
+ *
+ *	Driver expects metadata to be put in &amp;struct hdr_output_metadata
+ *	structure from userspace. This is received as blob and stored in
+ *	&amp;drm_connector_state.hdr_output_metadata. It parses EDID and saves the
+ *	sink metadata in &amp;struct hdr_sink_metadata, as
+ *	&amp;drm_connector.hdr_sink_metadata.  Driver uses
+ *	drm_hdmi_infoframe_set_hdr_metadata() helper to set the HDR metadata,
+ *	hdmi_drm_infoframe_pack() to pack the infoframe as per spec, in case of
+ *	HDMI encoder.
+ *
+ * max bpc:
+ *	This range property is used by userspace to limit the bit depth. When
+ *	used the driver would limit the bpc in accordance with the valid range
+ *	supported by the hardware and sink. Drivers to use the function
+ *	drm_connector_attach_max_bpc_property() to create and attach the
+ *	property to the connector during initialization.
+ *
+ * Connectors also have one standardized atomic property:
+ *
+ * CRTC_ID:
+ * 	Mode object ID of the &amp;drm_crtc this connector should be connected to.
+ *
+ * Connectors for LCD panels may also have one standardized property:
+ *
+ * panel orientation:
+ *	On some devices the LCD panel is mounted in the casing in such a way
+ *	that the up/top side of the panel does not match with the top side of
+ *	the device. Userspace can use this property to check for this.
+ *	Note that input coordinates from touchscreens (input devices with
+ *	INPUT_PROP_DIRECT) will still map 1:1 to the actual LCD panel
+ *	coordinates, so if userspace rotates the picture to adjust for
+ *	the orientation it must also apply the same transformation to the
+ *	touchscreen input coordinates. This property is initialized by calling
+ *	drm_connector_init_panel_orientation_property().
+ *
+ * scaling mode:
+ *	This property defines how a non-native mode is upscaled to the native
+ *	mode of an LCD panel:
+ *
+ *	None:
+ *		No upscaling happens, scaling is left to the panel. Not all
+ *		drivers expose this mode.
+ *	Full:
+ *		The output is upscaled to the full resolution of the panel,
+ *		ignoring the aspect ratio.
+ *	Center:
+ *		No upscaling happens, the output is centered within the native
+ *		resolution the panel.
+ *	Full aspect:
+ *		The output is upscaled to maximize either the width or height
+ *		while retaining the aspect ratio.
+ *
+ *	This property should be set up by calling
+ *	drm_connector_attach_scaling_mode_property(). Note that drivers
+ *	can also expose this property to external outputs, in which case they
+ *	must support &quot;None&quot;, which should be the default (since external screens
+ *	have a built-in scaler).
+ */</doc>
+<use f='linux-5.3.1/drivers/gpu/drm/drm_mode_config.c' l='221' u='c' c='drm_mode_create_standard_properties'/>

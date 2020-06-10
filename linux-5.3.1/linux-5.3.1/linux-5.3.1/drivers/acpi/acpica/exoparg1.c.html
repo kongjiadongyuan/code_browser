@@ -1,0 +1,1082 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>exoparg1.c source code [linux-5.3.1/drivers/acpi/acpica/exoparg1.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/drivers/acpi/acpica/exoparg1.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>linux-5.3.1</a>/<a href='../..'>drivers</a>/<a href='..'>acpi</a>/<a href='./'>acpica</a>/<a href='exoparg1.c.html'>exoparg1.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><i>/******************************************************************************</i></td></tr>
+<tr><th id="3">3</th><td><i> *</i></td></tr>
+<tr><th id="4">4</th><td><i> * Module Name: exoparg1 - AML execution - opcodes with 1 argument</i></td></tr>
+<tr><th id="5">5</th><td><i> *</i></td></tr>
+<tr><th id="6">6</th><td><i> * Copyright (C) 2000 - 2019, Intel Corp.</i></td></tr>
+<tr><th id="7">7</th><td><i> *</i></td></tr>
+<tr><th id="8">8</th><td><i> *****************************************************************************/</i></td></tr>
+<tr><th id="9">9</th><td></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="../../../include/acpi/acpi.h.html">&lt;acpi/acpi.h&gt;</a></u></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="accommon.h.html">"accommon.h"</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="acparser.h.html">"acparser.h"</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="acdispat.h.html">"acdispat.h"</a></u></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="acinterp.h.html">"acinterp.h"</a></u></td></tr>
+<tr><th id="15">15</th><td><u>#include <a href="amlcode.h.html">"amlcode.h"</a></u></td></tr>
+<tr><th id="16">16</th><td><u>#include <a href="acnamesp.h.html">"acnamesp.h"</a></u></td></tr>
+<tr><th id="17">17</th><td></td></tr>
+<tr><th id="18">18</th><td><u>#define <dfn class="macro" id="_M/_COMPONENT" data-ref="_M/_COMPONENT">_COMPONENT</dfn>          ACPI_EXECUTER</u></td></tr>
+<tr><th id="19">19</th><td><a class="macro" href="../../../include/acpi/acoutput.h.html#181" title="static const char __attribute__ ((unused)) _acpi_module_name[] = &quot;exoparg1&quot;;" data-ref="_M/ACPI_MODULE_NAME">ACPI_MODULE_NAME</a>(<q>"exoparg1"</q>)</td></tr>
+<tr><th id="20">20</th><td></td></tr>
+<tr><th id="21">21</th><td><i class="doc">/*!</i></td></tr>
+<tr><th id="22">22</th><td><i class="doc"> * Naming convention for AML interpreter execution routines.</i></td></tr>
+<tr><th id="23">23</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="24">24</th><td><i class="doc"> * The routines that begin execution of AML opcodes are named with a common</i></td></tr>
+<tr><th id="25">25</th><td><i class="doc"> * convention based upon the number of arguments, the number of target operands,</i></td></tr>
+<tr><th id="26">26</th><td><i class="doc"> * and whether or not a value is returned:</i></td></tr>
+<tr><th id="27">27</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="28">28</th><td><i class="doc"> *      AcpiExOpcode_xA_yT_zR</i></td></tr>
+<tr><th id="29">29</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="30">30</th><td><i class="doc"> * Where:</i></td></tr>
+<tr><th id="31">31</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="32">32</th><td><i class="doc"> * xA - ARGUMENTS:    The number of arguments (input operands) that are</i></td></tr>
+<tr><th id="33">33</th><td><i class="doc"> *                    required for this opcode type (0 through 6 args).</i></td></tr>
+<tr><th id="34">34</th><td><i class="doc"> * yT - TARGETS:      The number of targets (output operands) that are required</i></td></tr>
+<tr><th id="35">35</th><td><i class="doc"> *                    for this opcode type (0, 1, or 2 targets).</i></td></tr>
+<tr><th id="36">36</th><td><i class="doc"> * zR - RETURN VALUE: Indicates whether this opcode type returns a value</i></td></tr>
+<tr><th id="37">37</th><td><i class="doc"> *                    as the function return (0 or 1).</i></td></tr>
+<tr><th id="38">38</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="39">39</th><td><i class="doc"> * The AcpiExOpcode* functions are called via the Dispatcher component with</i></td></tr>
+<tr><th id="40">40</th><td><i class="doc"> * fully resolved operands.</i></td></tr>
+<tr><th id="41">41</th><td><i class="doc">!*/</i></td></tr>
+<tr><th id="42">42</th><td><i>/*******************************************************************************</i></td></tr>
+<tr><th id="43">43</th><td><i> *</i></td></tr>
+<tr><th id="44">44</th><td><i> * FUNCTION:    acpi_ex_opcode_0A_0T_1R</i></td></tr>
+<tr><th id="45">45</th><td><i> *</i></td></tr>
+<tr><th id="46">46</th><td><i> * PARAMETERS:  walk_state          - Current state (contains AML opcode)</i></td></tr>
+<tr><th id="47">47</th><td><i> *</i></td></tr>
+<tr><th id="48">48</th><td><i> * RETURN:      Status</i></td></tr>
+<tr><th id="49">49</th><td><i> *</i></td></tr>
+<tr><th id="50">50</th><td><i> * DESCRIPTION: Execute operator with no operands, one return value</i></td></tr>
+<tr><th id="51">51</th><td><i> *</i></td></tr>
+<tr><th id="52">52</th><td><i> ******************************************************************************/</i></td></tr>
+<tr><th id="53">53</th><td><a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_status" title='acpi_status' data-type='u32' data-ref="acpi_status" data-ref-filename="acpi_status">acpi_status</a> <dfn class="decl def fn" id="acpi_ex_opcode_0A_0T_1R" title='acpi_ex_opcode_0A_0T_1R' data-ref="acpi_ex_opcode_0A_0T_1R" data-ref-filename="acpi_ex_opcode_0A_0T_1R">acpi_ex_opcode_0A_0T_1R</dfn>(<b>struct</b> <a class="type" href="acstruct.h.html#acpi_walk_state" title='acpi_walk_state' data-ref="acpi_walk_state" data-ref-filename="acpi_walk_state">acpi_walk_state</a> *<dfn class="local col1 decl" id="1walk_state" title='walk_state' data-type='struct acpi_walk_state *' data-ref="1walk_state" data-ref-filename="1walk_state">walk_state</dfn>)</td></tr>
+<tr><th id="54">54</th><td>{</td></tr>
+<tr><th id="55">55</th><td>	<a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_status" title='acpi_status' data-type='u32' data-ref="acpi_status" data-ref-filename="acpi_status">acpi_status</a> <dfn class="local col2 decl" id="2status" title='status' data-type='acpi_status' data-ref="2status" data-ref-filename="2status">status</dfn> = <a class="macro" href="../../../include/acpi/acexcep.h.html#60" title="(acpi_status) 0x0000" data-ref="_M/AE_OK">AE_OK</a>;</td></tr>
+<tr><th id="56">56</th><td>	<b>union</b> <a class="type" href="acobject.h.html#acpi_operand_object" title='acpi_operand_object' data-ref="acpi_operand_object" data-ref-filename="acpi_operand_object">acpi_operand_object</a> *<dfn class="local col3 decl" id="3return_desc" title='return_desc' data-type='union acpi_operand_object *' data-ref="3return_desc" data-ref-filename="3return_desc">return_desc</dfn> = <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#444" title="" data-ref="_M/ACPI_FUNCTION_TRACE_STR">ACPI_FUNCTION_TRACE_STR</a>(ex_opcode_0A_0T_1R,</td></tr>
+<tr><th id="59">59</th><td>				acpi_ps_get_opcode_name(walk_state-&gt;opcode));</td></tr>
+<tr><th id="60">60</th><td></td></tr>
+<tr><th id="61">61</th><td>	<i>/* Examine the AML opcode */</i></td></tr>
+<tr><th id="62">62</th><td></td></tr>
+<tr><th id="63">63</th><td>	<b>switch</b> (<a class="local col1 ref" href="#1walk_state" title='walk_state' data-ref="1walk_state" data-ref-filename="1walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::opcode" title='acpi_walk_state::opcode' data-ref="acpi_walk_state::opcode" data-ref-filename="acpi_walk_state..opcode">opcode</a>) {</td></tr>
+<tr><th id="64">64</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#143" title="(u16) 0x5b33" data-ref="_M/AML_TIMER_OP">AML_TIMER_OP</a>:	<i>/*  Timer () */</i></td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td>		<i>/* Create a return object of type Integer */</i></td></tr>
+<tr><th id="67">67</th><td></td></tr>
+<tr><th id="68">68</th><td>		<a class="local col3 ref" href="#3return_desc" title='return_desc' data-ref="3return_desc" data-ref-filename="3return_desc">return_desc</a> =</td></tr>
+<tr><th id="69">69</th><td>		    <a class="ref fn" href="acutils.h.html#acpi_ut_create_integer_object" title='acpi_ut_create_integer_object' data-ref="acpi_ut_create_integer_object" data-ref-filename="acpi_ut_create_integer_object">acpi_ut_create_integer_object</a>(<a class="ref fn" href="../../../include/acpi/acpiosxf.h.html#acpi_os_get_timer" title='acpi_os_get_timer' data-ref="acpi_os_get_timer" data-ref-filename="acpi_os_get_timer">acpi_os_get_timer</a>());</td></tr>
+<tr><th id="70">70</th><td>		<b>if</b> (!<a class="local col3 ref" href="#3return_desc" title='return_desc' data-ref="3return_desc" data-ref-filename="3return_desc">return_desc</a>) {</td></tr>
+<tr><th id="71">71</th><td>			<a class="local col2 ref" href="#2status" title='status' data-ref="2status" data-ref-filename="2status">status</a> = <a class="macro" href="../../../include/acpi/acexcep.h.html#74" title="((acpi_status) (0x0004 | 0x0000))" data-ref="_M/AE_NO_MEMORY">AE_NO_MEMORY</a>;</td></tr>
+<tr><th id="72">72</th><td>			<b>goto</b> <a class="lbl" href="#4cleanup" data-ref="4cleanup" data-ref-filename="4cleanup">cleanup</a>;</td></tr>
+<tr><th id="73">73</th><td>		}</td></tr>
+<tr><th id="74">74</th><td>		<b>break</b>;</td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td>	<b>default</b>:		<i>/*  Unknown opcode  */</i></td></tr>
+<tr><th id="77">77</th><td></td></tr>
+<tr><th id="78">78</th><td>		<a class="macro" href="../../../include/acpi/acoutput.h.html#205" title="acpi_error (_acpi_module_name, 78, &quot;Unknown AML opcode 0x%X&quot;, walk_state-&gt;opcode)" data-ref="_M/ACPI_ERROR">ACPI_ERROR</a>((<a class="macro" href="../../../include/acpi/acoutput.h.html#195" title="_acpi_module_name, 78" data-ref="_M/AE_INFO">AE_INFO</a>, <q>"Unknown AML opcode 0x%X"</q>,</td></tr>
+<tr><th id="79">79</th><td>			    <a class="local col1 ref" href="#1walk_state" title='walk_state' data-ref="1walk_state" data-ref-filename="1walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::opcode" title='acpi_walk_state::opcode' data-ref="acpi_walk_state::opcode" data-ref-filename="acpi_walk_state..opcode">opcode</a>));</td></tr>
+<tr><th id="80">80</th><td>		<a class="local col2 ref" href="#2status" title='status' data-ref="2status" data-ref-filename="2status">status</a> = <a class="macro" href="../../../include/acpi/acexcep.h.html#139" title="((acpi_status) (0x0001 | 0x3000))" data-ref="_M/AE_AML_BAD_OPCODE">AE_AML_BAD_OPCODE</a>;</td></tr>
+<tr><th id="81">81</th><td>		<b>break</b>;</td></tr>
+<tr><th id="82">82</th><td>	}</td></tr>
+<tr><th id="83">83</th><td></td></tr>
+<tr><th id="84">84</th><td><dfn class="lbl" id="4cleanup" data-ref="4cleanup" data-ref-filename="4cleanup">cleanup</dfn>:</td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td>	<i>/* Delete return object on error */</i></td></tr>
+<tr><th id="87">87</th><td></td></tr>
+<tr><th id="88">88</th><td>	<b>if</b> ((<a class="macro" href="../../../include/acpi/acexcep.h.html#58" title="(status)" data-ref="_M/ACPI_FAILURE">ACPI_FAILURE</a>(<a class="local col2 ref" href="#2status" title='status' data-ref="2status" data-ref-filename="2status">status</a>)) || <a class="local col1 ref" href="#1walk_state" title='walk_state' data-ref="1walk_state" data-ref-filename="1walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::result_obj" title='acpi_walk_state::result_obj' data-ref="acpi_walk_state::result_obj" data-ref-filename="acpi_walk_state..result_obj">result_obj</a>) {</td></tr>
+<tr><th id="89">89</th><td>		<a class="ref fn" href="acutils.h.html#acpi_ut_remove_reference" title='acpi_ut_remove_reference' data-ref="acpi_ut_remove_reference" data-ref-filename="acpi_ut_remove_reference">acpi_ut_remove_reference</a>(<a class="local col3 ref" href="#3return_desc" title='return_desc' data-ref="3return_desc" data-ref-filename="3return_desc">return_desc</a>);</td></tr>
+<tr><th id="90">90</th><td>		<a class="local col1 ref" href="#1walk_state" title='walk_state' data-ref="1walk_state" data-ref-filename="1walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::result_obj" title='acpi_walk_state::result_obj' data-ref="acpi_walk_state::result_obj" data-ref-filename="acpi_walk_state..result_obj">result_obj</a> = <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="91">91</th><td>	} <b>else</b> {</td></tr>
+<tr><th id="92">92</th><td>		<i>/* Save the return value */</i></td></tr>
+<tr><th id="93">93</th><td></td></tr>
+<tr><th id="94">94</th><td>		<a class="local col1 ref" href="#1walk_state" title='walk_state' data-ref="1walk_state" data-ref-filename="1walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::result_obj" title='acpi_walk_state::result_obj' data-ref="acpi_walk_state::result_obj" data-ref-filename="acpi_walk_state..result_obj">result_obj</a> = <a class="local col3 ref" href="#3return_desc" title='return_desc' data-ref="3return_desc" data-ref-filename="3return_desc">return_desc</a>;</td></tr>
+<tr><th id="95">95</th><td>	}</td></tr>
+<tr><th id="96">96</th><td></td></tr>
+<tr><th id="97">97</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#457" title="return(status)" data-ref="_M/return_ACPI_STATUS">return_ACPI_STATUS</a>(<a class="local col2 ref" href="#2status" title='status' data-ref="2status" data-ref-filename="2status">status</a>);</td></tr>
+<tr><th id="98">98</th><td>}</td></tr>
+<tr><th id="99">99</th><td></td></tr>
+<tr><th id="100">100</th><td><i>/*******************************************************************************</i></td></tr>
+<tr><th id="101">101</th><td><i> *</i></td></tr>
+<tr><th id="102">102</th><td><i> * FUNCTION:    acpi_ex_opcode_1A_0T_0R</i></td></tr>
+<tr><th id="103">103</th><td><i> *</i></td></tr>
+<tr><th id="104">104</th><td><i> * PARAMETERS:  walk_state          - Current state (contains AML opcode)</i></td></tr>
+<tr><th id="105">105</th><td><i> *</i></td></tr>
+<tr><th id="106">106</th><td><i> * RETURN:      Status</i></td></tr>
+<tr><th id="107">107</th><td><i> *</i></td></tr>
+<tr><th id="108">108</th><td><i> * DESCRIPTION: Execute Type 1 monadic operator with numeric operand on</i></td></tr>
+<tr><th id="109">109</th><td><i> *              object stack</i></td></tr>
+<tr><th id="110">110</th><td><i> *</i></td></tr>
+<tr><th id="111">111</th><td><i> ******************************************************************************/</i></td></tr>
+<tr><th id="112">112</th><td></td></tr>
+<tr><th id="113">113</th><td><a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_status" title='acpi_status' data-type='u32' data-ref="acpi_status" data-ref-filename="acpi_status">acpi_status</a> <dfn class="decl def fn" id="acpi_ex_opcode_1A_0T_0R" title='acpi_ex_opcode_1A_0T_0R' data-ref="acpi_ex_opcode_1A_0T_0R" data-ref-filename="acpi_ex_opcode_1A_0T_0R">acpi_ex_opcode_1A_0T_0R</dfn>(<b>struct</b> <a class="type" href="acstruct.h.html#acpi_walk_state" title='acpi_walk_state' data-ref="acpi_walk_state" data-ref-filename="acpi_walk_state">acpi_walk_state</a> *<dfn class="local col5 decl" id="5walk_state" title='walk_state' data-type='struct acpi_walk_state *' data-ref="5walk_state" data-ref-filename="5walk_state">walk_state</dfn>)</td></tr>
+<tr><th id="114">114</th><td>{</td></tr>
+<tr><th id="115">115</th><td>	<b>union</b> <a class="type" href="acobject.h.html#acpi_operand_object" title='acpi_operand_object' data-ref="acpi_operand_object" data-ref-filename="acpi_operand_object">acpi_operand_object</a> **<dfn class="local col6 decl" id="6operand" title='operand' data-type='union acpi_operand_object **' data-ref="6operand" data-ref-filename="6operand">operand</dfn> = &amp;<a class="local col5 ref" href="#5walk_state" title='walk_state' data-ref="5walk_state" data-ref-filename="5walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::operands" title='acpi_walk_state::operands' data-ref="acpi_walk_state::operands" data-ref-filename="acpi_walk_state..operands">operands</a>[<var>0</var>];</td></tr>
+<tr><th id="116">116</th><td>	<a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_status" title='acpi_status' data-type='u32' data-ref="acpi_status" data-ref-filename="acpi_status">acpi_status</a> <dfn class="local col7 decl" id="7status" title='status' data-type='acpi_status' data-ref="7status" data-ref-filename="7status">status</dfn> = <a class="macro" href="../../../include/acpi/acexcep.h.html#60" title="(acpi_status) 0x0000" data-ref="_M/AE_OK">AE_OK</a>;</td></tr>
+<tr><th id="117">117</th><td></td></tr>
+<tr><th id="118">118</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#444" title="" data-ref="_M/ACPI_FUNCTION_TRACE_STR">ACPI_FUNCTION_TRACE_STR</a>(ex_opcode_1A_0T_0R,</td></tr>
+<tr><th id="119">119</th><td>				acpi_ps_get_opcode_name(walk_state-&gt;opcode));</td></tr>
+<tr><th id="120">120</th><td></td></tr>
+<tr><th id="121">121</th><td>	<i>/* Examine the AML opcode */</i></td></tr>
+<tr><th id="122">122</th><td></td></tr>
+<tr><th id="123">123</th><td>	<b>switch</b> (<a class="local col5 ref" href="#5walk_state" title='walk_state' data-ref="5walk_state" data-ref-filename="5walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::opcode" title='acpi_walk_state::opcode' data-ref="acpi_walk_state::opcode" data-ref-filename="acpi_walk_state..opcode">opcode</a>) {</td></tr>
+<tr><th id="124">124</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#136" title="(u16) 0x5b27" data-ref="_M/AML_RELEASE_OP">AML_RELEASE_OP</a>:	<i>/*  Release (mutex_object) */</i></td></tr>
+<tr><th id="125">125</th><td></td></tr>
+<tr><th id="126">126</th><td>		<a class="local col7 ref" href="#7status" title='status' data-ref="7status" data-ref-filename="7status">status</a> = <a class="ref fn" href="acinterp.h.html#acpi_ex_release_mutex" title='acpi_ex_release_mutex' data-ref="acpi_ex_release_mutex" data-ref-filename="acpi_ex_release_mutex">acpi_ex_release_mutex</a>(<a class="local col6 ref" href="#6operand" title='operand' data-ref="6operand" data-ref-filename="6operand">operand</a>[<var>0</var>], <a class="local col5 ref" href="#5walk_state" title='walk_state' data-ref="5walk_state" data-ref-filename="5walk_state">walk_state</a>);</td></tr>
+<tr><th id="127">127</th><td>		<b>break</b>;</td></tr>
+<tr><th id="128">128</th><td></td></tr>
+<tr><th id="129">129</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#135" title="(u16) 0x5b26" data-ref="_M/AML_RESET_OP">AML_RESET_OP</a>:	<i>/*  Reset (event_object) */</i></td></tr>
+<tr><th id="130">130</th><td></td></tr>
+<tr><th id="131">131</th><td>		<a class="local col7 ref" href="#7status" title='status' data-ref="7status" data-ref-filename="7status">status</a> = <a class="ref fn" href="acinterp.h.html#acpi_ex_system_reset_event" title='acpi_ex_system_reset_event' data-ref="acpi_ex_system_reset_event" data-ref-filename="acpi_ex_system_reset_event">acpi_ex_system_reset_event</a>(<a class="local col6 ref" href="#6operand" title='operand' data-ref="6operand" data-ref-filename="6operand">operand</a>[<var>0</var>]);</td></tr>
+<tr><th id="132">132</th><td>		<b>break</b>;</td></tr>
+<tr><th id="133">133</th><td></td></tr>
+<tr><th id="134">134</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#133" title="(u16) 0x5b24" data-ref="_M/AML_SIGNAL_OP">AML_SIGNAL_OP</a>:	<i>/*  Signal (event_object) */</i></td></tr>
+<tr><th id="135">135</th><td></td></tr>
+<tr><th id="136">136</th><td>		<a class="local col7 ref" href="#7status" title='status' data-ref="7status" data-ref-filename="7status">status</a> = <a class="ref fn" href="acinterp.h.html#acpi_ex_system_signal_event" title='acpi_ex_system_signal_event' data-ref="acpi_ex_system_signal_event" data-ref-filename="acpi_ex_system_signal_event">acpi_ex_system_signal_event</a>(<a class="local col6 ref" href="#6operand" title='operand' data-ref="6operand" data-ref-filename="6operand">operand</a>[<var>0</var>]);</td></tr>
+<tr><th id="137">137</th><td>		<b>break</b>;</td></tr>
+<tr><th id="138">138</th><td></td></tr>
+<tr><th id="139">139</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#131" title="(u16) 0x5b22" data-ref="_M/AML_SLEEP_OP">AML_SLEEP_OP</a>:	<i>/*  Sleep (msec_time) */</i></td></tr>
+<tr><th id="140">140</th><td></td></tr>
+<tr><th id="141">141</th><td>		<a class="local col7 ref" href="#7status" title='status' data-ref="7status" data-ref-filename="7status">status</a> = <a class="ref fn" href="acinterp.h.html#acpi_ex_system_do_sleep" title='acpi_ex_system_do_sleep' data-ref="acpi_ex_system_do_sleep" data-ref-filename="acpi_ex_system_do_sleep">acpi_ex_system_do_sleep</a>(<a class="local col6 ref" href="#6operand" title='operand' data-ref="6operand" data-ref-filename="6operand">operand</a>[<var>0</var>]-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a>);</td></tr>
+<tr><th id="142">142</th><td>		<b>break</b>;</td></tr>
+<tr><th id="143">143</th><td></td></tr>
+<tr><th id="144">144</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#130" title="(u16) 0x5b21" data-ref="_M/AML_STALL_OP">AML_STALL_OP</a>:	<i>/*  Stall (usec_time) */</i></td></tr>
+<tr><th id="145">145</th><td></td></tr>
+<tr><th id="146">146</th><td>		<a class="local col7 ref" href="#7status" title='status' data-ref="7status" data-ref-filename="7status">status</a> =</td></tr>
+<tr><th id="147">147</th><td>		    <a class="ref fn" href="acinterp.h.html#acpi_ex_system_do_stall" title='acpi_ex_system_do_stall' data-ref="acpi_ex_system_do_stall" data-ref-filename="acpi_ex_system_do_stall">acpi_ex_system_do_stall</a>((<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>) <a class="local col6 ref" href="#6operand" title='operand' data-ref="6operand" data-ref-filename="6operand">operand</a>[<var>0</var>]-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a>);</td></tr>
+<tr><th id="148">148</th><td>		<b>break</b>;</td></tr>
+<tr><th id="149">149</th><td></td></tr>
+<tr><th id="150">150</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#139" title="(u16) 0x5b2a" data-ref="_M/AML_UNLOAD_OP">AML_UNLOAD_OP</a>:	<i>/*  Unload (Handle) */</i></td></tr>
+<tr><th id="151">151</th><td></td></tr>
+<tr><th id="152">152</th><td>		<a class="local col7 ref" href="#7status" title='status' data-ref="7status" data-ref-filename="7status">status</a> = <a class="ref fn" href="acinterp.h.html#acpi_ex_unload_table" title='acpi_ex_unload_table' data-ref="acpi_ex_unload_table" data-ref-filename="acpi_ex_unload_table">acpi_ex_unload_table</a>(<a class="local col6 ref" href="#6operand" title='operand' data-ref="6operand" data-ref-filename="6operand">operand</a>[<var>0</var>]);</td></tr>
+<tr><th id="153">153</th><td>		<b>break</b>;</td></tr>
+<tr><th id="154">154</th><td></td></tr>
+<tr><th id="155">155</th><td>	<b>default</b>:		<i>/*  Unknown opcode  */</i></td></tr>
+<tr><th id="156">156</th><td></td></tr>
+<tr><th id="157">157</th><td>		<a class="macro" href="../../../include/acpi/acoutput.h.html#205" title="acpi_error (_acpi_module_name, 157, &quot;Unknown AML opcode 0x%X&quot;, walk_state-&gt;opcode)" data-ref="_M/ACPI_ERROR">ACPI_ERROR</a>((<a class="macro" href="../../../include/acpi/acoutput.h.html#195" title="_acpi_module_name, 157" data-ref="_M/AE_INFO">AE_INFO</a>, <q>"Unknown AML opcode 0x%X"</q>,</td></tr>
+<tr><th id="158">158</th><td>			    <a class="local col5 ref" href="#5walk_state" title='walk_state' data-ref="5walk_state" data-ref-filename="5walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::opcode" title='acpi_walk_state::opcode' data-ref="acpi_walk_state::opcode" data-ref-filename="acpi_walk_state..opcode">opcode</a>));</td></tr>
+<tr><th id="159">159</th><td>		<a class="local col7 ref" href="#7status" title='status' data-ref="7status" data-ref-filename="7status">status</a> = <a class="macro" href="../../../include/acpi/acexcep.h.html#139" title="((acpi_status) (0x0001 | 0x3000))" data-ref="_M/AE_AML_BAD_OPCODE">AE_AML_BAD_OPCODE</a>;</td></tr>
+<tr><th id="160">160</th><td>		<b>break</b>;</td></tr>
+<tr><th id="161">161</th><td>	}</td></tr>
+<tr><th id="162">162</th><td></td></tr>
+<tr><th id="163">163</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#457" title="return(status)" data-ref="_M/return_ACPI_STATUS">return_ACPI_STATUS</a>(<a class="local col7 ref" href="#7status" title='status' data-ref="7status" data-ref-filename="7status">status</a>);</td></tr>
+<tr><th id="164">164</th><td>}</td></tr>
+<tr><th id="165">165</th><td></td></tr>
+<tr><th id="166">166</th><td><i>/*******************************************************************************</i></td></tr>
+<tr><th id="167">167</th><td><i> *</i></td></tr>
+<tr><th id="168">168</th><td><i> * FUNCTION:    acpi_ex_opcode_1A_1T_0R</i></td></tr>
+<tr><th id="169">169</th><td><i> *</i></td></tr>
+<tr><th id="170">170</th><td><i> * PARAMETERS:  walk_state          - Current state (contains AML opcode)</i></td></tr>
+<tr><th id="171">171</th><td><i> *</i></td></tr>
+<tr><th id="172">172</th><td><i> * RETURN:      Status</i></td></tr>
+<tr><th id="173">173</th><td><i> *</i></td></tr>
+<tr><th id="174">174</th><td><i> * DESCRIPTION: Execute opcode with one argument, one target, and no</i></td></tr>
+<tr><th id="175">175</th><td><i> *              return value.</i></td></tr>
+<tr><th id="176">176</th><td><i> *</i></td></tr>
+<tr><th id="177">177</th><td><i> ******************************************************************************/</i></td></tr>
+<tr><th id="178">178</th><td></td></tr>
+<tr><th id="179">179</th><td><a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_status" title='acpi_status' data-type='u32' data-ref="acpi_status" data-ref-filename="acpi_status">acpi_status</a> <dfn class="decl def fn" id="acpi_ex_opcode_1A_1T_0R" title='acpi_ex_opcode_1A_1T_0R' data-ref="acpi_ex_opcode_1A_1T_0R" data-ref-filename="acpi_ex_opcode_1A_1T_0R">acpi_ex_opcode_1A_1T_0R</dfn>(<b>struct</b> <a class="type" href="acstruct.h.html#acpi_walk_state" title='acpi_walk_state' data-ref="acpi_walk_state" data-ref-filename="acpi_walk_state">acpi_walk_state</a> *<dfn class="local col8 decl" id="8walk_state" title='walk_state' data-type='struct acpi_walk_state *' data-ref="8walk_state" data-ref-filename="8walk_state">walk_state</dfn>)</td></tr>
+<tr><th id="180">180</th><td>{</td></tr>
+<tr><th id="181">181</th><td>	<a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_status" title='acpi_status' data-type='u32' data-ref="acpi_status" data-ref-filename="acpi_status">acpi_status</a> <dfn class="local col9 decl" id="9status" title='status' data-type='acpi_status' data-ref="9status" data-ref-filename="9status">status</dfn> = <a class="macro" href="../../../include/acpi/acexcep.h.html#60" title="(acpi_status) 0x0000" data-ref="_M/AE_OK">AE_OK</a>;</td></tr>
+<tr><th id="182">182</th><td>	<b>union</b> <a class="type" href="acobject.h.html#acpi_operand_object" title='acpi_operand_object' data-ref="acpi_operand_object" data-ref-filename="acpi_operand_object">acpi_operand_object</a> **<dfn class="local col0 decl" id="10operand" title='operand' data-type='union acpi_operand_object **' data-ref="10operand" data-ref-filename="10operand">operand</dfn> = &amp;<a class="local col8 ref" href="#8walk_state" title='walk_state' data-ref="8walk_state" data-ref-filename="8walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::operands" title='acpi_walk_state::operands' data-ref="acpi_walk_state::operands" data-ref-filename="acpi_walk_state..operands">operands</a>[<var>0</var>];</td></tr>
+<tr><th id="183">183</th><td></td></tr>
+<tr><th id="184">184</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#444" title="" data-ref="_M/ACPI_FUNCTION_TRACE_STR">ACPI_FUNCTION_TRACE_STR</a>(ex_opcode_1A_1T_0R,</td></tr>
+<tr><th id="185">185</th><td>				acpi_ps_get_opcode_name(walk_state-&gt;opcode));</td></tr>
+<tr><th id="186">186</th><td></td></tr>
+<tr><th id="187">187</th><td>	<i>/* Examine the AML opcode */</i></td></tr>
+<tr><th id="188">188</th><td></td></tr>
+<tr><th id="189">189</th><td>	<b>switch</b> (<a class="local col8 ref" href="#8walk_state" title='walk_state' data-ref="8walk_state" data-ref-filename="8walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::opcode" title='acpi_walk_state::opcode' data-ref="acpi_walk_state::opcode" data-ref-filename="acpi_walk_state..opcode">opcode</a>) {</td></tr>
+<tr><th id="190">190</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#129" title="(u16) 0x5b20" data-ref="_M/AML_LOAD_OP">AML_LOAD_OP</a>:</td></tr>
+<tr><th id="191">191</th><td></td></tr>
+<tr><th id="192">192</th><td>		<a class="local col9 ref" href="#9status" title='status' data-ref="9status" data-ref-filename="9status">status</a> = <a class="ref fn" href="acinterp.h.html#acpi_ex_load_op" title='acpi_ex_load_op' data-ref="acpi_ex_load_op" data-ref-filename="acpi_ex_load_op">acpi_ex_load_op</a>(<a class="local col0 ref" href="#10operand" title='operand' data-ref="10operand" data-ref-filename="10operand">operand</a>[<var>0</var>], <a class="local col0 ref" href="#10operand" title='operand' data-ref="10operand" data-ref-filename="10operand">operand</a>[<var>1</var>], <a class="local col8 ref" href="#8walk_state" title='walk_state' data-ref="8walk_state" data-ref-filename="8walk_state">walk_state</a>);</td></tr>
+<tr><th id="193">193</th><td>		<b>break</b>;</td></tr>
+<tr><th id="194">194</th><td></td></tr>
+<tr><th id="195">195</th><td>	<b>default</b>:		<i>/* Unknown opcode */</i></td></tr>
+<tr><th id="196">196</th><td></td></tr>
+<tr><th id="197">197</th><td>		<a class="macro" href="../../../include/acpi/acoutput.h.html#205" title="acpi_error (_acpi_module_name, 197, &quot;Unknown AML opcode 0x%X&quot;, walk_state-&gt;opcode)" data-ref="_M/ACPI_ERROR">ACPI_ERROR</a>((<a class="macro" href="../../../include/acpi/acoutput.h.html#195" title="_acpi_module_name, 197" data-ref="_M/AE_INFO">AE_INFO</a>, <q>"Unknown AML opcode 0x%X"</q>,</td></tr>
+<tr><th id="198">198</th><td>			    <a class="local col8 ref" href="#8walk_state" title='walk_state' data-ref="8walk_state" data-ref-filename="8walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::opcode" title='acpi_walk_state::opcode' data-ref="acpi_walk_state::opcode" data-ref-filename="acpi_walk_state..opcode">opcode</a>));</td></tr>
+<tr><th id="199">199</th><td>		<a class="local col9 ref" href="#9status" title='status' data-ref="9status" data-ref-filename="9status">status</a> = <a class="macro" href="../../../include/acpi/acexcep.h.html#139" title="((acpi_status) (0x0001 | 0x3000))" data-ref="_M/AE_AML_BAD_OPCODE">AE_AML_BAD_OPCODE</a>;</td></tr>
+<tr><th id="200">200</th><td>		<b>goto</b> <a class="lbl" href="#11cleanup" data-ref="11cleanup" data-ref-filename="11cleanup">cleanup</a>;</td></tr>
+<tr><th id="201">201</th><td>	}</td></tr>
+<tr><th id="202">202</th><td></td></tr>
+<tr><th id="203">203</th><td><dfn class="lbl" id="11cleanup" data-ref="11cleanup" data-ref-filename="11cleanup">cleanup</dfn>:</td></tr>
+<tr><th id="204">204</th><td></td></tr>
+<tr><th id="205">205</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#457" title="return(status)" data-ref="_M/return_ACPI_STATUS">return_ACPI_STATUS</a>(<a class="local col9 ref" href="#9status" title='status' data-ref="9status" data-ref-filename="9status">status</a>);</td></tr>
+<tr><th id="206">206</th><td>}</td></tr>
+<tr><th id="207">207</th><td></td></tr>
+<tr><th id="208">208</th><td><i>/*******************************************************************************</i></td></tr>
+<tr><th id="209">209</th><td><i> *</i></td></tr>
+<tr><th id="210">210</th><td><i> * FUNCTION:    acpi_ex_opcode_1A_1T_1R</i></td></tr>
+<tr><th id="211">211</th><td><i> *</i></td></tr>
+<tr><th id="212">212</th><td><i> * PARAMETERS:  walk_state          - Current state (contains AML opcode)</i></td></tr>
+<tr><th id="213">213</th><td><i> *</i></td></tr>
+<tr><th id="214">214</th><td><i> * RETURN:      Status</i></td></tr>
+<tr><th id="215">215</th><td><i> *</i></td></tr>
+<tr><th id="216">216</th><td><i> * DESCRIPTION: Execute opcode with one argument, one target, and a</i></td></tr>
+<tr><th id="217">217</th><td><i> *              return value.</i></td></tr>
+<tr><th id="218">218</th><td><i> *</i></td></tr>
+<tr><th id="219">219</th><td><i> ******************************************************************************/</i></td></tr>
+<tr><th id="220">220</th><td></td></tr>
+<tr><th id="221">221</th><td><a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_status" title='acpi_status' data-type='u32' data-ref="acpi_status" data-ref-filename="acpi_status">acpi_status</a> <dfn class="decl def fn" id="acpi_ex_opcode_1A_1T_1R" title='acpi_ex_opcode_1A_1T_1R' data-ref="acpi_ex_opcode_1A_1T_1R" data-ref-filename="acpi_ex_opcode_1A_1T_1R">acpi_ex_opcode_1A_1T_1R</dfn>(<b>struct</b> <a class="type" href="acstruct.h.html#acpi_walk_state" title='acpi_walk_state' data-ref="acpi_walk_state" data-ref-filename="acpi_walk_state">acpi_walk_state</a> *<dfn class="local col2 decl" id="12walk_state" title='walk_state' data-type='struct acpi_walk_state *' data-ref="12walk_state" data-ref-filename="12walk_state">walk_state</dfn>)</td></tr>
+<tr><th id="222">222</th><td>{</td></tr>
+<tr><th id="223">223</th><td>	<a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_status" title='acpi_status' data-type='u32' data-ref="acpi_status" data-ref-filename="acpi_status">acpi_status</a> <dfn class="local col3 decl" id="13status" title='status' data-type='acpi_status' data-ref="13status" data-ref-filename="13status">status</dfn> = <a class="macro" href="../../../include/acpi/acexcep.h.html#60" title="(acpi_status) 0x0000" data-ref="_M/AE_OK">AE_OK</a>;</td></tr>
+<tr><th id="224">224</th><td>	<b>union</b> <a class="type" href="acobject.h.html#acpi_operand_object" title='acpi_operand_object' data-ref="acpi_operand_object" data-ref-filename="acpi_operand_object">acpi_operand_object</a> **<dfn class="local col4 decl" id="14operand" title='operand' data-type='union acpi_operand_object **' data-ref="14operand" data-ref-filename="14operand">operand</dfn> = &amp;<a class="local col2 ref" href="#12walk_state" title='walk_state' data-ref="12walk_state" data-ref-filename="12walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::operands" title='acpi_walk_state::operands' data-ref="acpi_walk_state::operands" data-ref-filename="acpi_walk_state..operands">operands</a>[<var>0</var>];</td></tr>
+<tr><th id="225">225</th><td>	<b>union</b> <a class="type" href="acobject.h.html#acpi_operand_object" title='acpi_operand_object' data-ref="acpi_operand_object" data-ref-filename="acpi_operand_object">acpi_operand_object</a> *<dfn class="local col5 decl" id="15return_desc" title='return_desc' data-type='union acpi_operand_object *' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</dfn> = <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="226">226</th><td>	<b>union</b> <a class="type" href="acobject.h.html#acpi_operand_object" title='acpi_operand_object' data-ref="acpi_operand_object" data-ref-filename="acpi_operand_object">acpi_operand_object</a> *<dfn class="local col6 decl" id="16return_desc2" title='return_desc2' data-type='union acpi_operand_object *' data-ref="16return_desc2" data-ref-filename="16return_desc2">return_desc2</dfn> = <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="227">227</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col7 decl" id="17temp32" title='temp32' data-type='u32' data-ref="17temp32" data-ref-filename="17temp32">temp32</dfn>;</td></tr>
+<tr><th id="228">228</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col8 decl" id="18i" title='i' data-type='u32' data-ref="18i" data-ref-filename="18i">i</dfn>;</td></tr>
+<tr><th id="229">229</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col9 decl" id="19power_of_ten" title='power_of_ten' data-type='u64' data-ref="19power_of_ten" data-ref-filename="19power_of_ten">power_of_ten</dfn>;</td></tr>
+<tr><th id="230">230</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col0 decl" id="20digit" title='digit' data-type='u64' data-ref="20digit" data-ref-filename="20digit">digit</dfn>;</td></tr>
+<tr><th id="231">231</th><td></td></tr>
+<tr><th id="232">232</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#444" title="" data-ref="_M/ACPI_FUNCTION_TRACE_STR">ACPI_FUNCTION_TRACE_STR</a>(ex_opcode_1A_1T_1R,</td></tr>
+<tr><th id="233">233</th><td>				acpi_ps_get_opcode_name(walk_state-&gt;opcode));</td></tr>
+<tr><th id="234">234</th><td></td></tr>
+<tr><th id="235">235</th><td>	<i>/* Examine the AML opcode */</i></td></tr>
+<tr><th id="236">236</th><td></td></tr>
+<tr><th id="237">237</th><td>	<b>switch</b> (<a class="local col2 ref" href="#12walk_state" title='walk_state' data-ref="12walk_state" data-ref-filename="12walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::opcode" title='acpi_walk_state::opcode' data-ref="acpi_walk_state::opcode" data-ref-filename="acpi_walk_state..opcode">opcode</a>) {</td></tr>
+<tr><th id="238">238</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#70" title="(u16) 0x80" data-ref="_M/AML_BIT_NOT_OP">AML_BIT_NOT_OP</a>:</td></tr>
+<tr><th id="239">239</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#71" title="(u16) 0x81" data-ref="_M/AML_FIND_SET_LEFT_BIT_OP">AML_FIND_SET_LEFT_BIT_OP</a>:</td></tr>
+<tr><th id="240">240</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#72" title="(u16) 0x82" data-ref="_M/AML_FIND_SET_RIGHT_BIT_OP">AML_FIND_SET_RIGHT_BIT_OP</a>:</td></tr>
+<tr><th id="241">241</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#137" title="(u16) 0x5b28" data-ref="_M/AML_FROM_BCD_OP">AML_FROM_BCD_OP</a>:</td></tr>
+<tr><th id="242">242</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#138" title="(u16) 0x5b29" data-ref="_M/AML_TO_BCD_OP">AML_TO_BCD_OP</a>:</td></tr>
+<tr><th id="243">243</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#126" title="(u16) 0x5b12" data-ref="_M/AML_CONDITIONAL_REF_OF_OP">AML_CONDITIONAL_REF_OF_OP</a>:</td></tr>
+<tr><th id="244">244</th><td></td></tr>
+<tr><th id="245">245</th><td>		<i>/* Create a return object of type Integer for these opcodes */</i></td></tr>
+<tr><th id="246">246</th><td></td></tr>
+<tr><th id="247">247</th><td>		<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a> = <a class="macro" href="acutils.h.html#429" title="acpi_ut_create_internal_object_dbg (_acpi_module_name,247,0x00000080,0x01)" data-ref="_M/acpi_ut_create_internal_object">acpi_ut_create_internal_object</a>(<a class="macro" href="../../../include/acpi/actypes.h.html#637" title="0x01" data-ref="_M/ACPI_TYPE_INTEGER">ACPI_TYPE_INTEGER</a>);</td></tr>
+<tr><th id="248">248</th><td>		<b>if</b> (!<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>) {</td></tr>
+<tr><th id="249">249</th><td>			<a class="local col3 ref" href="#13status" title='status' data-ref="13status" data-ref-filename="13status">status</a> = <a class="macro" href="../../../include/acpi/acexcep.h.html#74" title="((acpi_status) (0x0004 | 0x0000))" data-ref="_M/AE_NO_MEMORY">AE_NO_MEMORY</a>;</td></tr>
+<tr><th id="250">250</th><td>			<b>goto</b> <a class="lbl" href="#21cleanup" data-ref="21cleanup" data-ref-filename="21cleanup">cleanup</a>;</td></tr>
+<tr><th id="251">251</th><td>		}</td></tr>
+<tr><th id="252">252</th><td></td></tr>
+<tr><th id="253">253</th><td>		<b>switch</b> (<a class="local col2 ref" href="#12walk_state" title='walk_state' data-ref="12walk_state" data-ref-filename="12walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::opcode" title='acpi_walk_state::opcode' data-ref="acpi_walk_state::opcode" data-ref-filename="acpi_walk_state..opcode">opcode</a>) {</td></tr>
+<tr><th id="254">254</th><td>		<b>case</b> <a class="macro" href="amlcode.h.html#70" title="(u16) 0x80" data-ref="_M/AML_BIT_NOT_OP">AML_BIT_NOT_OP</a>:	<i>/* Not (Operand, Result)  */</i></td></tr>
+<tr><th id="255">255</th><td></td></tr>
+<tr><th id="256">256</th><td>			<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a> = ~<a class="local col4 ref" href="#14operand" title='operand' data-ref="14operand" data-ref-filename="14operand">operand</a>[<var>0</var>]-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a>;</td></tr>
+<tr><th id="257">257</th><td>			<b>break</b>;</td></tr>
+<tr><th id="258">258</th><td></td></tr>
+<tr><th id="259">259</th><td>		<b>case</b> <a class="macro" href="amlcode.h.html#71" title="(u16) 0x81" data-ref="_M/AML_FIND_SET_LEFT_BIT_OP">AML_FIND_SET_LEFT_BIT_OP</a>:	<i>/* find_set_left_bit (Operand, Result) */</i></td></tr>
+<tr><th id="260">260</th><td></td></tr>
+<tr><th id="261">261</th><td>			<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a> = <a class="local col4 ref" href="#14operand" title='operand' data-ref="14operand" data-ref-filename="14operand">operand</a>[<var>0</var>]-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a>;</td></tr>
+<tr><th id="262">262</th><td></td></tr>
+<tr><th id="263">263</th><td>			<i>/*</i></td></tr>
+<tr><th id="264">264</th><td><i>			 * Acpi specification describes Integer type as a little</i></td></tr>
+<tr><th id="265">265</th><td><i>			 * endian unsigned value, so this boundary condition is valid.</i></td></tr>
+<tr><th id="266">266</th><td><i>			 */</i></td></tr>
+<tr><th id="267">267</th><td>			<b>for</b> (<a class="local col7 ref" href="#17temp32" title='temp32' data-ref="17temp32" data-ref-filename="17temp32">temp32</a> = <var>0</var>; <a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a> &amp;&amp;</td></tr>
+<tr><th id="268">268</th><td>			     <a class="local col7 ref" href="#17temp32" title='temp32' data-ref="17temp32" data-ref-filename="17temp32">temp32</a> &lt; <a class="macro" href="../../../include/acpi/actypes.h.html#448" title="64" data-ref="_M/ACPI_INTEGER_BIT_SIZE">ACPI_INTEGER_BIT_SIZE</a>; ++<a class="local col7 ref" href="#17temp32" title='temp32' data-ref="17temp32" data-ref-filename="17temp32">temp32</a>) {</td></tr>
+<tr><th id="269">269</th><td>				<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a> &gt;&gt;= <var>1</var>;</td></tr>
+<tr><th id="270">270</th><td>			}</td></tr>
+<tr><th id="271">271</th><td></td></tr>
+<tr><th id="272">272</th><td>			<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a> = <a class="local col7 ref" href="#17temp32" title='temp32' data-ref="17temp32" data-ref-filename="17temp32">temp32</a>;</td></tr>
+<tr><th id="273">273</th><td>			<b>break</b>;</td></tr>
+<tr><th id="274">274</th><td></td></tr>
+<tr><th id="275">275</th><td>		<b>case</b> <a class="macro" href="amlcode.h.html#72" title="(u16) 0x82" data-ref="_M/AML_FIND_SET_RIGHT_BIT_OP">AML_FIND_SET_RIGHT_BIT_OP</a>:	<i>/* find_set_right_bit (Operand, Result) */</i></td></tr>
+<tr><th id="276">276</th><td></td></tr>
+<tr><th id="277">277</th><td>			<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a> = <a class="local col4 ref" href="#14operand" title='operand' data-ref="14operand" data-ref-filename="14operand">operand</a>[<var>0</var>]-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a>;</td></tr>
+<tr><th id="278">278</th><td></td></tr>
+<tr><th id="279">279</th><td>			<i>/*</i></td></tr>
+<tr><th id="280">280</th><td><i>			 * The Acpi specification describes Integer type as a little</i></td></tr>
+<tr><th id="281">281</th><td><i>			 * endian unsigned value, so this boundary condition is valid.</i></td></tr>
+<tr><th id="282">282</th><td><i>			 */</i></td></tr>
+<tr><th id="283">283</th><td>			<b>for</b> (<a class="local col7 ref" href="#17temp32" title='temp32' data-ref="17temp32" data-ref-filename="17temp32">temp32</a> = <var>0</var>; <a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a> &amp;&amp;</td></tr>
+<tr><th id="284">284</th><td>			     <a class="local col7 ref" href="#17temp32" title='temp32' data-ref="17temp32" data-ref-filename="17temp32">temp32</a> &lt; <a class="macro" href="../../../include/acpi/actypes.h.html#448" title="64" data-ref="_M/ACPI_INTEGER_BIT_SIZE">ACPI_INTEGER_BIT_SIZE</a>; ++<a class="local col7 ref" href="#17temp32" title='temp32' data-ref="17temp32" data-ref-filename="17temp32">temp32</a>) {</td></tr>
+<tr><th id="285">285</th><td>				<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a> &lt;&lt;= <var>1</var>;</td></tr>
+<tr><th id="286">286</th><td>			}</td></tr>
+<tr><th id="287">287</th><td></td></tr>
+<tr><th id="288">288</th><td>			<i>/* Since the bit position is one-based, subtract from 33 (65) */</i></td></tr>
+<tr><th id="289">289</th><td></td></tr>
+<tr><th id="290">290</th><td>			<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a> =</td></tr>
+<tr><th id="291">291</th><td>			    <a class="local col7 ref" href="#17temp32" title='temp32' data-ref="17temp32" data-ref-filename="17temp32">temp32</a> ==</td></tr>
+<tr><th id="292">292</th><td>			    <var>0</var> ? <var>0</var> : (<a class="macro" href="../../../include/acpi/actypes.h.html#448" title="64" data-ref="_M/ACPI_INTEGER_BIT_SIZE">ACPI_INTEGER_BIT_SIZE</a> + <var>1</var>) - <a class="local col7 ref" href="#17temp32" title='temp32' data-ref="17temp32" data-ref-filename="17temp32">temp32</a>;</td></tr>
+<tr><th id="293">293</th><td>			<b>break</b>;</td></tr>
+<tr><th id="294">294</th><td></td></tr>
+<tr><th id="295">295</th><td>		<b>case</b> <a class="macro" href="amlcode.h.html#137" title="(u16) 0x5b28" data-ref="_M/AML_FROM_BCD_OP">AML_FROM_BCD_OP</a>:	<i>/* from_bcd (BCDValue, Result) */</i></td></tr>
+<tr><th id="296">296</th><td>			<i>/*</i></td></tr>
+<tr><th id="297">297</th><td><i>			 * The 64-bit ACPI integer can hold 16 4-bit BCD characters</i></td></tr>
+<tr><th id="298">298</th><td><i>			 * (if table is 32-bit, integer can hold 8 BCD characters)</i></td></tr>
+<tr><th id="299">299</th><td><i>			 * Convert each 4-bit BCD value</i></td></tr>
+<tr><th id="300">300</th><td><i>			 */</i></td></tr>
+<tr><th id="301">301</th><td>			<a class="local col9 ref" href="#19power_of_ten" title='power_of_ten' data-ref="19power_of_ten" data-ref-filename="19power_of_ten">power_of_ten</a> = <var>1</var>;</td></tr>
+<tr><th id="302">302</th><td>			<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a> = <var>0</var>;</td></tr>
+<tr><th id="303">303</th><td>			<a class="local col0 ref" href="#20digit" title='digit' data-ref="20digit" data-ref-filename="20digit">digit</a> = <a class="local col4 ref" href="#14operand" title='operand' data-ref="14operand" data-ref-filename="14operand">operand</a>[<var>0</var>]-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a>;</td></tr>
+<tr><th id="304">304</th><td></td></tr>
+<tr><th id="305">305</th><td>			<i>/* Convert each BCD digit (each is one nybble wide) */</i></td></tr>
+<tr><th id="306">306</th><td></td></tr>
+<tr><th id="307">307</th><td>			<b>for</b> (<a class="local col8 ref" href="#18i" title='i' data-ref="18i" data-ref-filename="18i">i</a> = <var>0</var>;</td></tr>
+<tr><th id="308">308</th><td>			     (<a class="local col8 ref" href="#18i" title='i' data-ref="18i" data-ref-filename="18i">i</a> &lt; <a class="ref" href="acglobal.h.html#52" title='acpi_gbl_integer_nybble_width' data-ref="acpi_gbl_integer_nybble_width" data-ref-filename="acpi_gbl_integer_nybble_width">acpi_gbl_integer_nybble_width</a>) &amp;&amp; (<a class="local col0 ref" href="#20digit" title='digit' data-ref="20digit" data-ref-filename="20digit">digit</a> &gt; <var>0</var>);</td></tr>
+<tr><th id="309">309</th><td>			     <a class="local col8 ref" href="#18i" title='i' data-ref="18i" data-ref-filename="18i">i</a>++) {</td></tr>
+<tr><th id="310">310</th><td></td></tr>
+<tr><th id="311">311</th><td>				<i>/* Get the least significant 4-bit BCD digit */</i></td></tr>
+<tr><th id="312">312</th><td></td></tr>
+<tr><th id="313">313</th><td>				<a class="local col7 ref" href="#17temp32" title='temp32' data-ref="17temp32" data-ref-filename="17temp32">temp32</a> = ((<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>) <a class="local col0 ref" href="#20digit" title='digit' data-ref="20digit" data-ref-filename="20digit">digit</a>) &amp; <var>0xF</var>;</td></tr>
+<tr><th id="314">314</th><td></td></tr>
+<tr><th id="315">315</th><td>				<i>/* Check the range of the digit */</i></td></tr>
+<tr><th id="316">316</th><td></td></tr>
+<tr><th id="317">317</th><td>				<b>if</b> (<a class="local col7 ref" href="#17temp32" title='temp32' data-ref="17temp32" data-ref-filename="17temp32">temp32</a> &gt; <var>9</var>) {</td></tr>
+<tr><th id="318">318</th><td>					<a class="macro" href="../../../include/acpi/acoutput.h.html#205" title="acpi_error (_acpi_module_name, 318, &quot;BCD digit too large (not decimal): 0x%X&quot;, temp32)" data-ref="_M/ACPI_ERROR">ACPI_ERROR</a>((<a class="macro" href="../../../include/acpi/acoutput.h.html#195" title="_acpi_module_name, 318" data-ref="_M/AE_INFO">AE_INFO</a>,</td></tr>
+<tr><th id="319">319</th><td>						    <q>"BCD digit too large (not decimal): 0x%X"</q>,</td></tr>
+<tr><th id="320">320</th><td>						    <a class="local col7 ref" href="#17temp32" title='temp32' data-ref="17temp32" data-ref-filename="17temp32">temp32</a>));</td></tr>
+<tr><th id="321">321</th><td></td></tr>
+<tr><th id="322">322</th><td>					<a class="local col3 ref" href="#13status" title='status' data-ref="13status" data-ref-filename="13status">status</a> = <a class="macro" href="../../../include/acpi/acexcep.h.html#146" title="((acpi_status) (0x0008 | 0x3000))" data-ref="_M/AE_AML_NUMERIC_OVERFLOW">AE_AML_NUMERIC_OVERFLOW</a>;</td></tr>
+<tr><th id="323">323</th><td>					<b>goto</b> <a class="lbl" href="#21cleanup" data-ref="21cleanup" data-ref-filename="21cleanup">cleanup</a>;</td></tr>
+<tr><th id="324">324</th><td>				}</td></tr>
+<tr><th id="325">325</th><td></td></tr>
+<tr><th id="326">326</th><td>				<i>/* Sum the digit into the result with the current power of 10 */</i></td></tr>
+<tr><th id="327">327</th><td></td></tr>
+<tr><th id="328">328</th><td>				<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a> +=</td></tr>
+<tr><th id="329">329</th><td>				    (((<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a>) <a class="local col7 ref" href="#17temp32" title='temp32' data-ref="17temp32" data-ref-filename="17temp32">temp32</a>) * <a class="local col9 ref" href="#19power_of_ten" title='power_of_ten' data-ref="19power_of_ten" data-ref-filename="19power_of_ten">power_of_ten</a>);</td></tr>
+<tr><th id="330">330</th><td></td></tr>
+<tr><th id="331">331</th><td>				<i>/* Shift to next BCD digit */</i></td></tr>
+<tr><th id="332">332</th><td></td></tr>
+<tr><th id="333">333</th><td>				<a class="local col0 ref" href="#20digit" title='digit' data-ref="20digit" data-ref-filename="20digit">digit</a> &gt;&gt;= <var>4</var>;</td></tr>
+<tr><th id="334">334</th><td></td></tr>
+<tr><th id="335">335</th><td>				<i>/* Next power of 10 */</i></td></tr>
+<tr><th id="336">336</th><td></td></tr>
+<tr><th id="337">337</th><td>				<a class="local col9 ref" href="#19power_of_ten" title='power_of_ten' data-ref="19power_of_ten" data-ref-filename="19power_of_ten">power_of_ten</a> *= <var>10</var>;</td></tr>
+<tr><th id="338">338</th><td>			}</td></tr>
+<tr><th id="339">339</th><td>			<b>break</b>;</td></tr>
+<tr><th id="340">340</th><td></td></tr>
+<tr><th id="341">341</th><td>		<b>case</b> <a class="macro" href="amlcode.h.html#138" title="(u16) 0x5b29" data-ref="_M/AML_TO_BCD_OP">AML_TO_BCD_OP</a>:	<i>/* to_bcd (Operand, Result) */</i></td></tr>
+<tr><th id="342">342</th><td></td></tr>
+<tr><th id="343">343</th><td>			<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a> = <var>0</var>;</td></tr>
+<tr><th id="344">344</th><td>			<a class="local col0 ref" href="#20digit" title='digit' data-ref="20digit" data-ref-filename="20digit">digit</a> = <a class="local col4 ref" href="#14operand" title='operand' data-ref="14operand" data-ref-filename="14operand">operand</a>[<var>0</var>]-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a>;</td></tr>
+<tr><th id="345">345</th><td></td></tr>
+<tr><th id="346">346</th><td>			<i>/* Each BCD digit is one nybble wide */</i></td></tr>
+<tr><th id="347">347</th><td></td></tr>
+<tr><th id="348">348</th><td>			<b>for</b> (<a class="local col8 ref" href="#18i" title='i' data-ref="18i" data-ref-filename="18i">i</a> = <var>0</var>;</td></tr>
+<tr><th id="349">349</th><td>			     (<a class="local col8 ref" href="#18i" title='i' data-ref="18i" data-ref-filename="18i">i</a> &lt; <a class="ref" href="acglobal.h.html#52" title='acpi_gbl_integer_nybble_width' data-ref="acpi_gbl_integer_nybble_width" data-ref-filename="acpi_gbl_integer_nybble_width">acpi_gbl_integer_nybble_width</a>) &amp;&amp; (<a class="local col0 ref" href="#20digit" title='digit' data-ref="20digit" data-ref-filename="20digit">digit</a> &gt; <var>0</var>);</td></tr>
+<tr><th id="350">350</th><td>			     <a class="local col8 ref" href="#18i" title='i' data-ref="18i" data-ref-filename="18i">i</a>++) {</td></tr>
+<tr><th id="351">351</th><td>				(<em>void</em>)<a class="ref fn" href="acutils.h.html#acpi_ut_short_divide" title='acpi_ut_short_divide' data-ref="acpi_ut_short_divide" data-ref-filename="acpi_ut_short_divide">acpi_ut_short_divide</a>(<a class="local col0 ref" href="#20digit" title='digit' data-ref="20digit" data-ref-filename="20digit">digit</a>, <var>10</var>, &amp;<a class="local col0 ref" href="#20digit" title='digit' data-ref="20digit" data-ref-filename="20digit">digit</a>,</td></tr>
+<tr><th id="352">352</th><td>							   &amp;<a class="local col7 ref" href="#17temp32" title='temp32' data-ref="17temp32" data-ref-filename="17temp32">temp32</a>);</td></tr>
+<tr><th id="353">353</th><td></td></tr>
+<tr><th id="354">354</th><td>				<i>/*</i></td></tr>
+<tr><th id="355">355</th><td><i>				 * Insert the BCD digit that resides in the</i></td></tr>
+<tr><th id="356">356</th><td><i>				 * remainder from above</i></td></tr>
+<tr><th id="357">357</th><td><i>				 */</i></td></tr>
+<tr><th id="358">358</th><td>				<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a> |=</td></tr>
+<tr><th id="359">359</th><td>				    (((<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a>) <a class="local col7 ref" href="#17temp32" title='temp32' data-ref="17temp32" data-ref-filename="17temp32">temp32</a>) &lt;&lt; <a class="macro" href="acmacros.h.html#174" title="((u32) ((i) &lt;&lt; (2)))" data-ref="_M/ACPI_MUL_4">ACPI_MUL_4</a>(<a class="local col8 ref" href="#18i" title='i' data-ref="18i" data-ref-filename="18i">i</a>));</td></tr>
+<tr><th id="360">360</th><td>			}</td></tr>
+<tr><th id="361">361</th><td></td></tr>
+<tr><th id="362">362</th><td>			<i>/* Overflow if there is any data left in Digit */</i></td></tr>
+<tr><th id="363">363</th><td></td></tr>
+<tr><th id="364">364</th><td>			<b>if</b> (<a class="local col0 ref" href="#20digit" title='digit' data-ref="20digit" data-ref-filename="20digit">digit</a> &gt; <var>0</var>) {</td></tr>
+<tr><th id="365">365</th><td>				<a class="macro" href="../../../include/acpi/acoutput.h.html#205" title="acpi_error (_acpi_module_name, 365, &quot;Integer too large to convert to BCD: 0x%8.8X%8.8X&quot;, ((u32)(((u64)(operand[0]-&gt; integer.value)) &gt;&gt; 32)), ((u32) (u64)(operand[0]-&gt; integer.value)))" data-ref="_M/ACPI_ERROR">ACPI_ERROR</a>((<a class="macro" href="../../../include/acpi/acoutput.h.html#195" title="_acpi_module_name, 365" data-ref="_M/AE_INFO">AE_INFO</a>,</td></tr>
+<tr><th id="366">366</th><td>					    <q>"Integer too large to convert to BCD: 0x%8.8X%8.8X"</q>,</td></tr>
+<tr><th id="367">367</th><td>					    <a class="macro" href="acmacros.h.html#36" title="((u32)(((u64)(operand[0]-&gt; integer.value)) &gt;&gt; 32)), ((u32) (u64)(operand[0]-&gt; integer.value))" data-ref="_M/ACPI_FORMAT_UINT64">ACPI_FORMAT_UINT64</a>(<a class="local col4 ref" href="#14operand" title='operand' data-ref="14operand" data-ref-filename="14operand">operand</a>[<var>0</var>]-&gt;</td></tr>
+<tr><th id="368">368</th><td>							       <a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a>)));</td></tr>
+<tr><th id="369">369</th><td>				<a class="local col3 ref" href="#13status" title='status' data-ref="13status" data-ref-filename="13status">status</a> = <a class="macro" href="../../../include/acpi/acexcep.h.html#146" title="((acpi_status) (0x0008 | 0x3000))" data-ref="_M/AE_AML_NUMERIC_OVERFLOW">AE_AML_NUMERIC_OVERFLOW</a>;</td></tr>
+<tr><th id="370">370</th><td>				<b>goto</b> <a class="lbl" href="#21cleanup" data-ref="21cleanup" data-ref-filename="21cleanup">cleanup</a>;</td></tr>
+<tr><th id="371">371</th><td>			}</td></tr>
+<tr><th id="372">372</th><td>			<b>break</b>;</td></tr>
+<tr><th id="373">373</th><td></td></tr>
+<tr><th id="374">374</th><td>		<b>case</b> <a class="macro" href="amlcode.h.html#126" title="(u16) 0x5b12" data-ref="_M/AML_CONDITIONAL_REF_OF_OP">AML_CONDITIONAL_REF_OF_OP</a>:	<i>/* cond_ref_of (source_object, Result) */</i></td></tr>
+<tr><th id="375">375</th><td>			<i>/*</i></td></tr>
+<tr><th id="376">376</th><td><i>			 * This op is a little strange because the internal return value is</i></td></tr>
+<tr><th id="377">377</th><td><i>			 * different than the return value stored in the result descriptor</i></td></tr>
+<tr><th id="378">378</th><td><i>			 * (There are really two return values)</i></td></tr>
+<tr><th id="379">379</th><td><i>			 */</i></td></tr>
+<tr><th id="380">380</th><td>			<b>if</b> ((<b>struct</b> <a class="type" href="aclocal.h.html#acpi_namespace_node" title='acpi_namespace_node' data-ref="acpi_namespace_node" data-ref-filename="acpi_namespace_node">acpi_namespace_node</a> *)<a class="local col4 ref" href="#14operand" title='operand' data-ref="14operand" data-ref-filename="14operand">operand</a>[<var>0</var>] ==</td></tr>
+<tr><th id="381">381</th><td>			    <a class="ref" href="acglobal.h.html#179" title='acpi_gbl_root_node' data-ref="acpi_gbl_root_node" data-ref-filename="acpi_gbl_root_node">acpi_gbl_root_node</a>) {</td></tr>
+<tr><th id="382">382</th><td>				<i>/*</i></td></tr>
+<tr><th id="383">383</th><td><i>				 * This means that the object does not exist in the namespace,</i></td></tr>
+<tr><th id="384">384</th><td><i>				 * return FALSE</i></td></tr>
+<tr><th id="385">385</th><td><i>				 */</i></td></tr>
+<tr><th id="386">386</th><td>				<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a> = <var>0</var>;</td></tr>
+<tr><th id="387">387</th><td>				<b>goto</b> <a class="lbl" href="#21cleanup" data-ref="21cleanup" data-ref-filename="21cleanup">cleanup</a>;</td></tr>
+<tr><th id="388">388</th><td>			}</td></tr>
+<tr><th id="389">389</th><td></td></tr>
+<tr><th id="390">390</th><td>			<i>/* Get the object reference, store it, and remove our reference */</i></td></tr>
+<tr><th id="391">391</th><td></td></tr>
+<tr><th id="392">392</th><td>			<a class="local col3 ref" href="#13status" title='status' data-ref="13status" data-ref-filename="13status">status</a> = <a class="ref fn" href="acinterp.h.html#acpi_ex_get_object_reference" title='acpi_ex_get_object_reference' data-ref="acpi_ex_get_object_reference" data-ref-filename="acpi_ex_get_object_reference">acpi_ex_get_object_reference</a>(<a class="local col4 ref" href="#14operand" title='operand' data-ref="14operand" data-ref-filename="14operand">operand</a>[<var>0</var>],</td></tr>
+<tr><th id="393">393</th><td>							      &amp;<a class="local col6 ref" href="#16return_desc2" title='return_desc2' data-ref="16return_desc2" data-ref-filename="16return_desc2">return_desc2</a>,</td></tr>
+<tr><th id="394">394</th><td>							      <a class="local col2 ref" href="#12walk_state" title='walk_state' data-ref="12walk_state" data-ref-filename="12walk_state">walk_state</a>);</td></tr>
+<tr><th id="395">395</th><td>			<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#58" title="(status)" data-ref="_M/ACPI_FAILURE">ACPI_FAILURE</a>(<a class="local col3 ref" href="#13status" title='status' data-ref="13status" data-ref-filename="13status">status</a>)) {</td></tr>
+<tr><th id="396">396</th><td>				<b>goto</b> <a class="lbl" href="#21cleanup" data-ref="21cleanup" data-ref-filename="21cleanup">cleanup</a>;</td></tr>
+<tr><th id="397">397</th><td>			}</td></tr>
+<tr><th id="398">398</th><td></td></tr>
+<tr><th id="399">399</th><td>			<a class="local col3 ref" href="#13status" title='status' data-ref="13status" data-ref-filename="13status">status</a> =</td></tr>
+<tr><th id="400">400</th><td>			    <a class="ref fn" href="acinterp.h.html#acpi_ex_store" title='acpi_ex_store' data-ref="acpi_ex_store" data-ref-filename="acpi_ex_store">acpi_ex_store</a>(<a class="local col6 ref" href="#16return_desc2" title='return_desc2' data-ref="16return_desc2" data-ref-filename="16return_desc2">return_desc2</a>, <a class="local col4 ref" href="#14operand" title='operand' data-ref="14operand" data-ref-filename="14operand">operand</a>[<var>1</var>], <a class="local col2 ref" href="#12walk_state" title='walk_state' data-ref="12walk_state" data-ref-filename="12walk_state">walk_state</a>);</td></tr>
+<tr><th id="401">401</th><td>			<a class="ref fn" href="acutils.h.html#acpi_ut_remove_reference" title='acpi_ut_remove_reference' data-ref="acpi_ut_remove_reference" data-ref-filename="acpi_ut_remove_reference">acpi_ut_remove_reference</a>(<a class="local col6 ref" href="#16return_desc2" title='return_desc2' data-ref="16return_desc2" data-ref-filename="16return_desc2">return_desc2</a>);</td></tr>
+<tr><th id="402">402</th><td></td></tr>
+<tr><th id="403">403</th><td>			<i>/* The object exists in the namespace, return TRUE */</i></td></tr>
+<tr><th id="404">404</th><td></td></tr>
+<tr><th id="405">405</th><td>			<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a> = <a class="macro" href="../../../include/acpi/actypes.h.html#33" title="(u64)(~((u64) 0))" data-ref="_M/ACPI_UINT64_MAX">ACPI_UINT64_MAX</a>;</td></tr>
+<tr><th id="406">406</th><td>			<b>goto</b> <a class="lbl" href="#21cleanup" data-ref="21cleanup" data-ref-filename="21cleanup">cleanup</a>;</td></tr>
+<tr><th id="407">407</th><td></td></tr>
+<tr><th id="408">408</th><td>		<b>default</b>:</td></tr>
+<tr><th id="409">409</th><td></td></tr>
+<tr><th id="410">410</th><td>			<i>/* No other opcodes get here */</i></td></tr>
+<tr><th id="411">411</th><td></td></tr>
+<tr><th id="412">412</th><td>			<b>break</b>;</td></tr>
+<tr><th id="413">413</th><td>		}</td></tr>
+<tr><th id="414">414</th><td>		<b>break</b>;</td></tr>
+<tr><th id="415">415</th><td></td></tr>
+<tr><th id="416">416</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#54" title="(u16) 0x70" data-ref="_M/AML_STORE_OP">AML_STORE_OP</a>:	<i>/* Store (Source, Target) */</i></td></tr>
+<tr><th id="417">417</th><td>		<i>/*</i></td></tr>
+<tr><th id="418">418</th><td><i>		 * A store operand is typically a number, string, buffer or lvalue</i></td></tr>
+<tr><th id="419">419</th><td><i>		 * Be careful about deleting the source object,</i></td></tr>
+<tr><th id="420">420</th><td><i>		 * since the object itself may have been stored.</i></td></tr>
+<tr><th id="421">421</th><td><i>		 */</i></td></tr>
+<tr><th id="422">422</th><td>		<a class="local col3 ref" href="#13status" title='status' data-ref="13status" data-ref-filename="13status">status</a> = <a class="ref fn" href="acinterp.h.html#acpi_ex_store" title='acpi_ex_store' data-ref="acpi_ex_store" data-ref-filename="acpi_ex_store">acpi_ex_store</a>(<a class="local col4 ref" href="#14operand" title='operand' data-ref="14operand" data-ref-filename="14operand">operand</a>[<var>0</var>], <a class="local col4 ref" href="#14operand" title='operand' data-ref="14operand" data-ref-filename="14operand">operand</a>[<var>1</var>], <a class="local col2 ref" href="#12walk_state" title='walk_state' data-ref="12walk_state" data-ref-filename="12walk_state">walk_state</a>);</td></tr>
+<tr><th id="423">423</th><td>		<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#58" title="(status)" data-ref="_M/ACPI_FAILURE">ACPI_FAILURE</a>(<a class="local col3 ref" href="#13status" title='status' data-ref="13status" data-ref-filename="13status">status</a>)) {</td></tr>
+<tr><th id="424">424</th><td>			<a class="macro" href="../../../include/acpi/acoutput.h.html#457" title="return(status)" data-ref="_M/return_ACPI_STATUS">return_ACPI_STATUS</a>(<a class="local col3 ref" href="#13status" title='status' data-ref="13status" data-ref-filename="13status">status</a>);</td></tr>
+<tr><th id="425">425</th><td>		}</td></tr>
+<tr><th id="426">426</th><td></td></tr>
+<tr><th id="427">427</th><td>		<i>/* It is possible that the Store already produced a return object */</i></td></tr>
+<tr><th id="428">428</th><td></td></tr>
+<tr><th id="429">429</th><td>		<b>if</b> (!<a class="local col2 ref" href="#12walk_state" title='walk_state' data-ref="12walk_state" data-ref-filename="12walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::result_obj" title='acpi_walk_state::result_obj' data-ref="acpi_walk_state::result_obj" data-ref-filename="acpi_walk_state..result_obj">result_obj</a>) {</td></tr>
+<tr><th id="430">430</th><td>			<i>/*</i></td></tr>
+<tr><th id="431">431</th><td><i>			 * Normally, we would remove a reference on the Operand[0]</i></td></tr>
+<tr><th id="432">432</th><td><i>			 * parameter; But since it is being used as the internal return</i></td></tr>
+<tr><th id="433">433</th><td><i>			 * object (meaning we would normally increment it), the two</i></td></tr>
+<tr><th id="434">434</th><td><i>			 * cancel out, and we simply don't do anything.</i></td></tr>
+<tr><th id="435">435</th><td><i>			 */</i></td></tr>
+<tr><th id="436">436</th><td>			<a class="local col2 ref" href="#12walk_state" title='walk_state' data-ref="12walk_state" data-ref-filename="12walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::result_obj" title='acpi_walk_state::result_obj' data-ref="acpi_walk_state::result_obj" data-ref-filename="acpi_walk_state..result_obj">result_obj</a> = <a class="local col4 ref" href="#14operand" title='operand' data-ref="14operand" data-ref-filename="14operand">operand</a>[<var>0</var>];</td></tr>
+<tr><th id="437">437</th><td>			<a class="local col2 ref" href="#12walk_state" title='walk_state' data-ref="12walk_state" data-ref-filename="12walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::operands" title='acpi_walk_state::operands' data-ref="acpi_walk_state::operands" data-ref-filename="acpi_walk_state..operands">operands</a>[<var>0</var>] = <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;	<i>/* Prevent deletion */</i></td></tr>
+<tr><th id="438">438</th><td>		}</td></tr>
+<tr><th id="439">439</th><td>		<a class="macro" href="../../../include/acpi/acoutput.h.html#457" title="return(status)" data-ref="_M/return_ACPI_STATUS">return_ACPI_STATUS</a>(<a class="local col3 ref" href="#13status" title='status' data-ref="13status" data-ref-filename="13status">status</a>);</td></tr>
+<tr><th id="440">440</th><td></td></tr>
+<tr><th id="441">441</th><td>		<i>/*</i></td></tr>
+<tr><th id="442">442</th><td><i>		 * ACPI 2.0 Opcodes</i></td></tr>
+<tr><th id="443">443</th><td><i>		 */</i></td></tr>
+<tr><th id="444">444</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#97" title="(u16) 0x9d" data-ref="_M/AML_COPY_OBJECT_OP">AML_COPY_OBJECT_OP</a>:	<i>/* copy_object (Source, Target) */</i></td></tr>
+<tr><th id="445">445</th><td></td></tr>
+<tr><th id="446">446</th><td>		<a class="local col3 ref" href="#13status" title='status' data-ref="13status" data-ref-filename="13status">status</a> =</td></tr>
+<tr><th id="447">447</th><td>		    <a class="ref fn" href="acutils.h.html#acpi_ut_copy_iobject_to_iobject" title='acpi_ut_copy_iobject_to_iobject' data-ref="acpi_ut_copy_iobject_to_iobject" data-ref-filename="acpi_ut_copy_iobject_to_iobject">acpi_ut_copy_iobject_to_iobject</a>(<a class="local col4 ref" href="#14operand" title='operand' data-ref="14operand" data-ref-filename="14operand">operand</a>[<var>0</var>], &amp;<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>,</td></tr>
+<tr><th id="448">448</th><td>						    <a class="local col2 ref" href="#12walk_state" title='walk_state' data-ref="12walk_state" data-ref-filename="12walk_state">walk_state</a>);</td></tr>
+<tr><th id="449">449</th><td>		<b>break</b>;</td></tr>
+<tr><th id="450">450</th><td></td></tr>
+<tr><th id="451">451</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#93" title="(u16) 0x97" data-ref="_M/AML_TO_DECIMAL_STRING_OP">AML_TO_DECIMAL_STRING_OP</a>:	<i>/* to_decimal_string (Data, Result) */</i></td></tr>
+<tr><th id="452">452</th><td></td></tr>
+<tr><th id="453">453</th><td>		<a class="local col3 ref" href="#13status" title='status' data-ref="13status" data-ref-filename="13status">status</a> =</td></tr>
+<tr><th id="454">454</th><td>		    <a class="ref fn" href="acinterp.h.html#acpi_ex_convert_to_string" title='acpi_ex_convert_to_string' data-ref="acpi_ex_convert_to_string" data-ref-filename="acpi_ex_convert_to_string">acpi_ex_convert_to_string</a>(<a class="local col4 ref" href="#14operand" title='operand' data-ref="14operand" data-ref-filename="14operand">operand</a>[<var>0</var>], &amp;<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>,</td></tr>
+<tr><th id="455">455</th><td>					      <a class="macro" href="acinterp.h.html#86" title="0x00000003" data-ref="_M/ACPI_EXPLICIT_CONVERT_DECIMAL">ACPI_EXPLICIT_CONVERT_DECIMAL</a>);</td></tr>
+<tr><th id="456">456</th><td>		<b>if</b> (<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a> == <a class="local col4 ref" href="#14operand" title='operand' data-ref="14operand" data-ref-filename="14operand">operand</a>[<var>0</var>]) {</td></tr>
+<tr><th id="457">457</th><td></td></tr>
+<tr><th id="458">458</th><td>			<i>/* No conversion performed, add ref to handle return value */</i></td></tr>
+<tr><th id="459">459</th><td></td></tr>
+<tr><th id="460">460</th><td>			<a class="ref fn" href="acutils.h.html#acpi_ut_add_reference" title='acpi_ut_add_reference' data-ref="acpi_ut_add_reference" data-ref-filename="acpi_ut_add_reference">acpi_ut_add_reference</a>(<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>);</td></tr>
+<tr><th id="461">461</th><td>		}</td></tr>
+<tr><th id="462">462</th><td>		<b>break</b>;</td></tr>
+<tr><th id="463">463</th><td></td></tr>
+<tr><th id="464">464</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#94" title="(u16) 0x98" data-ref="_M/AML_TO_HEX_STRING_OP">AML_TO_HEX_STRING_OP</a>:	<i>/* to_hex_string (Data, Result) */</i></td></tr>
+<tr><th id="465">465</th><td></td></tr>
+<tr><th id="466">466</th><td>		<a class="local col3 ref" href="#13status" title='status' data-ref="13status" data-ref-filename="13status">status</a> =</td></tr>
+<tr><th id="467">467</th><td>		    <a class="ref fn" href="acinterp.h.html#acpi_ex_convert_to_string" title='acpi_ex_convert_to_string' data-ref="acpi_ex_convert_to_string" data-ref-filename="acpi_ex_convert_to_string">acpi_ex_convert_to_string</a>(<a class="local col4 ref" href="#14operand" title='operand' data-ref="14operand" data-ref-filename="14operand">operand</a>[<var>0</var>], &amp;<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>,</td></tr>
+<tr><th id="468">468</th><td>					      <a class="macro" href="acinterp.h.html#84" title="0x00000001" data-ref="_M/ACPI_EXPLICIT_CONVERT_HEX">ACPI_EXPLICIT_CONVERT_HEX</a>);</td></tr>
+<tr><th id="469">469</th><td>		<b>if</b> (<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a> == <a class="local col4 ref" href="#14operand" title='operand' data-ref="14operand" data-ref-filename="14operand">operand</a>[<var>0</var>]) {</td></tr>
+<tr><th id="470">470</th><td></td></tr>
+<tr><th id="471">471</th><td>			<i>/* No conversion performed, add ref to handle return value */</i></td></tr>
+<tr><th id="472">472</th><td></td></tr>
+<tr><th id="473">473</th><td>			<a class="ref fn" href="acutils.h.html#acpi_ut_add_reference" title='acpi_ut_add_reference' data-ref="acpi_ut_add_reference" data-ref-filename="acpi_ut_add_reference">acpi_ut_add_reference</a>(<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>);</td></tr>
+<tr><th id="474">474</th><td>		}</td></tr>
+<tr><th id="475">475</th><td>		<b>break</b>;</td></tr>
+<tr><th id="476">476</th><td></td></tr>
+<tr><th id="477">477</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#92" title="(u16) 0x96" data-ref="_M/AML_TO_BUFFER_OP">AML_TO_BUFFER_OP</a>:	<i>/* to_buffer (Data, Result) */</i></td></tr>
+<tr><th id="478">478</th><td></td></tr>
+<tr><th id="479">479</th><td>		<a class="local col3 ref" href="#13status" title='status' data-ref="13status" data-ref-filename="13status">status</a> = <a class="ref fn" href="acinterp.h.html#acpi_ex_convert_to_buffer" title='acpi_ex_convert_to_buffer' data-ref="acpi_ex_convert_to_buffer" data-ref-filename="acpi_ex_convert_to_buffer">acpi_ex_convert_to_buffer</a>(<a class="local col4 ref" href="#14operand" title='operand' data-ref="14operand" data-ref-filename="14operand">operand</a>[<var>0</var>], &amp;<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>);</td></tr>
+<tr><th id="480">480</th><td>		<b>if</b> (<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a> == <a class="local col4 ref" href="#14operand" title='operand' data-ref="14operand" data-ref-filename="14operand">operand</a>[<var>0</var>]) {</td></tr>
+<tr><th id="481">481</th><td></td></tr>
+<tr><th id="482">482</th><td>			<i>/* No conversion performed, add ref to handle return value */</i></td></tr>
+<tr><th id="483">483</th><td></td></tr>
+<tr><th id="484">484</th><td>			<a class="ref fn" href="acutils.h.html#acpi_ut_add_reference" title='acpi_ut_add_reference' data-ref="acpi_ut_add_reference" data-ref-filename="acpi_ut_add_reference">acpi_ut_add_reference</a>(<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>);</td></tr>
+<tr><th id="485">485</th><td>		}</td></tr>
+<tr><th id="486">486</th><td>		<b>break</b>;</td></tr>
+<tr><th id="487">487</th><td></td></tr>
+<tr><th id="488">488</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#95" title="(u16) 0x99" data-ref="_M/AML_TO_INTEGER_OP">AML_TO_INTEGER_OP</a>:	<i>/* to_integer (Data, Result) */</i></td></tr>
+<tr><th id="489">489</th><td></td></tr>
+<tr><th id="490">490</th><td>		<i>/* Perform "explicit" conversion */</i></td></tr>
+<tr><th id="491">491</th><td></td></tr>
+<tr><th id="492">492</th><td>		<a class="local col3 ref" href="#13status" title='status' data-ref="13status" data-ref-filename="13status">status</a> =</td></tr>
+<tr><th id="493">493</th><td>		    <a class="ref fn" href="acinterp.h.html#acpi_ex_convert_to_integer" title='acpi_ex_convert_to_integer' data-ref="acpi_ex_convert_to_integer" data-ref-filename="acpi_ex_convert_to_integer">acpi_ex_convert_to_integer</a>(<a class="local col4 ref" href="#14operand" title='operand' data-ref="14operand" data-ref-filename="14operand">operand</a>[<var>0</var>], &amp;<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>, <var>0</var>);</td></tr>
+<tr><th id="494">494</th><td>		<b>if</b> (<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a> == <a class="local col4 ref" href="#14operand" title='operand' data-ref="14operand" data-ref-filename="14operand">operand</a>[<var>0</var>]) {</td></tr>
+<tr><th id="495">495</th><td></td></tr>
+<tr><th id="496">496</th><td>			<i>/* No conversion performed, add ref to handle return value */</i></td></tr>
+<tr><th id="497">497</th><td></td></tr>
+<tr><th id="498">498</th><td>			<a class="ref fn" href="acutils.h.html#acpi_ut_add_reference" title='acpi_ut_add_reference' data-ref="acpi_ut_add_reference" data-ref-filename="acpi_ut_add_reference">acpi_ut_add_reference</a>(<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>);</td></tr>
+<tr><th id="499">499</th><td>		}</td></tr>
+<tr><th id="500">500</th><td>		<b>break</b>;</td></tr>
+<tr><th id="501">501</th><td></td></tr>
+<tr><th id="502">502</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#125" title="(u16) 0x5b11" data-ref="_M/AML_SHIFT_LEFT_BIT_OP">AML_SHIFT_LEFT_BIT_OP</a>:	<i>/* shift_left_bit (Source, bit_num) */</i></td></tr>
+<tr><th id="503">503</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#124" title="(u16) 0x5b10" data-ref="_M/AML_SHIFT_RIGHT_BIT_OP">AML_SHIFT_RIGHT_BIT_OP</a>:	<i>/* shift_right_bit (Source, bit_num) */</i></td></tr>
+<tr><th id="504">504</th><td></td></tr>
+<tr><th id="505">505</th><td>		<i>/* These are two obsolete opcodes */</i></td></tr>
+<tr><th id="506">506</th><td></td></tr>
+<tr><th id="507">507</th><td>		<a class="macro" href="../../../include/acpi/acoutput.h.html#205" title="acpi_error (_acpi_module_name, 507, &quot;%s is obsolete and not implemented&quot;, acpi_ps_get_opcode_name(walk_state-&gt;opcode))" data-ref="_M/ACPI_ERROR">ACPI_ERROR</a>((<a class="macro" href="../../../include/acpi/acoutput.h.html#195" title="_acpi_module_name, 507" data-ref="_M/AE_INFO">AE_INFO</a>,</td></tr>
+<tr><th id="508">508</th><td>			    <q>"%s is obsolete and not implemented"</q>,</td></tr>
+<tr><th id="509">509</th><td>			    <a class="ref fn" href="acparser.h.html#acpi_ps_get_opcode_name" title='acpi_ps_get_opcode_name' data-ref="acpi_ps_get_opcode_name" data-ref-filename="acpi_ps_get_opcode_name">acpi_ps_get_opcode_name</a>(<a class="local col2 ref" href="#12walk_state" title='walk_state' data-ref="12walk_state" data-ref-filename="12walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::opcode" title='acpi_walk_state::opcode' data-ref="acpi_walk_state::opcode" data-ref-filename="acpi_walk_state..opcode">opcode</a>)));</td></tr>
+<tr><th id="510">510</th><td>		<a class="local col3 ref" href="#13status" title='status' data-ref="13status" data-ref-filename="13status">status</a> = <a class="macro" href="../../../include/acpi/acexcep.h.html#85" title="((acpi_status) (0x000F | 0x0000))" data-ref="_M/AE_SUPPORT">AE_SUPPORT</a>;</td></tr>
+<tr><th id="511">511</th><td>		<b>goto</b> <a class="lbl" href="#21cleanup" data-ref="21cleanup" data-ref-filename="21cleanup">cleanup</a>;</td></tr>
+<tr><th id="512">512</th><td></td></tr>
+<tr><th id="513">513</th><td>	<b>default</b>:		<i>/* Unknown opcode */</i></td></tr>
+<tr><th id="514">514</th><td></td></tr>
+<tr><th id="515">515</th><td>		<a class="macro" href="../../../include/acpi/acoutput.h.html#205" title="acpi_error (_acpi_module_name, 515, &quot;Unknown AML opcode 0x%X&quot;, walk_state-&gt;opcode)" data-ref="_M/ACPI_ERROR">ACPI_ERROR</a>((<a class="macro" href="../../../include/acpi/acoutput.h.html#195" title="_acpi_module_name, 515" data-ref="_M/AE_INFO">AE_INFO</a>, <q>"Unknown AML opcode 0x%X"</q>,</td></tr>
+<tr><th id="516">516</th><td>			    <a class="local col2 ref" href="#12walk_state" title='walk_state' data-ref="12walk_state" data-ref-filename="12walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::opcode" title='acpi_walk_state::opcode' data-ref="acpi_walk_state::opcode" data-ref-filename="acpi_walk_state..opcode">opcode</a>));</td></tr>
+<tr><th id="517">517</th><td>		<a class="local col3 ref" href="#13status" title='status' data-ref="13status" data-ref-filename="13status">status</a> = <a class="macro" href="../../../include/acpi/acexcep.h.html#139" title="((acpi_status) (0x0001 | 0x3000))" data-ref="_M/AE_AML_BAD_OPCODE">AE_AML_BAD_OPCODE</a>;</td></tr>
+<tr><th id="518">518</th><td>		<b>goto</b> <a class="lbl" href="#21cleanup" data-ref="21cleanup" data-ref-filename="21cleanup">cleanup</a>;</td></tr>
+<tr><th id="519">519</th><td>	}</td></tr>
+<tr><th id="520">520</th><td></td></tr>
+<tr><th id="521">521</th><td>	<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#57" title="(!(status))" data-ref="_M/ACPI_SUCCESS">ACPI_SUCCESS</a>(<a class="local col3 ref" href="#13status" title='status' data-ref="13status" data-ref-filename="13status">status</a>)) {</td></tr>
+<tr><th id="522">522</th><td></td></tr>
+<tr><th id="523">523</th><td>		<i>/* Store the return value computed above into the target object */</i></td></tr>
+<tr><th id="524">524</th><td></td></tr>
+<tr><th id="525">525</th><td>		<a class="local col3 ref" href="#13status" title='status' data-ref="13status" data-ref-filename="13status">status</a> = <a class="ref fn" href="acinterp.h.html#acpi_ex_store" title='acpi_ex_store' data-ref="acpi_ex_store" data-ref-filename="acpi_ex_store">acpi_ex_store</a>(<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>, <a class="local col4 ref" href="#14operand" title='operand' data-ref="14operand" data-ref-filename="14operand">operand</a>[<var>1</var>], <a class="local col2 ref" href="#12walk_state" title='walk_state' data-ref="12walk_state" data-ref-filename="12walk_state">walk_state</a>);</td></tr>
+<tr><th id="526">526</th><td>	}</td></tr>
+<tr><th id="527">527</th><td></td></tr>
+<tr><th id="528">528</th><td><dfn class="lbl" id="21cleanup" data-ref="21cleanup" data-ref-filename="21cleanup">cleanup</dfn>:</td></tr>
+<tr><th id="529">529</th><td></td></tr>
+<tr><th id="530">530</th><td>	<i>/* Delete return object on error */</i></td></tr>
+<tr><th id="531">531</th><td></td></tr>
+<tr><th id="532">532</th><td>	<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#58" title="(status)" data-ref="_M/ACPI_FAILURE">ACPI_FAILURE</a>(<a class="local col3 ref" href="#13status" title='status' data-ref="13status" data-ref-filename="13status">status</a>)) {</td></tr>
+<tr><th id="533">533</th><td>		<a class="ref fn" href="acutils.h.html#acpi_ut_remove_reference" title='acpi_ut_remove_reference' data-ref="acpi_ut_remove_reference" data-ref-filename="acpi_ut_remove_reference">acpi_ut_remove_reference</a>(<a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>);</td></tr>
+<tr><th id="534">534</th><td>	}</td></tr>
+<tr><th id="535">535</th><td></td></tr>
+<tr><th id="536">536</th><td>	<i>/* Save return object on success */</i></td></tr>
+<tr><th id="537">537</th><td></td></tr>
+<tr><th id="538">538</th><td>	<b>else</b> <b>if</b> (!<a class="local col2 ref" href="#12walk_state" title='walk_state' data-ref="12walk_state" data-ref-filename="12walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::result_obj" title='acpi_walk_state::result_obj' data-ref="acpi_walk_state::result_obj" data-ref-filename="acpi_walk_state..result_obj">result_obj</a>) {</td></tr>
+<tr><th id="539">539</th><td>		<a class="local col2 ref" href="#12walk_state" title='walk_state' data-ref="12walk_state" data-ref-filename="12walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::result_obj" title='acpi_walk_state::result_obj' data-ref="acpi_walk_state::result_obj" data-ref-filename="acpi_walk_state..result_obj">result_obj</a> = <a class="local col5 ref" href="#15return_desc" title='return_desc' data-ref="15return_desc" data-ref-filename="15return_desc">return_desc</a>;</td></tr>
+<tr><th id="540">540</th><td>	}</td></tr>
+<tr><th id="541">541</th><td></td></tr>
+<tr><th id="542">542</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#457" title="return(status)" data-ref="_M/return_ACPI_STATUS">return_ACPI_STATUS</a>(<a class="local col3 ref" href="#13status" title='status' data-ref="13status" data-ref-filename="13status">status</a>);</td></tr>
+<tr><th id="543">543</th><td>}</td></tr>
+<tr><th id="544">544</th><td></td></tr>
+<tr><th id="545">545</th><td><i>/*******************************************************************************</i></td></tr>
+<tr><th id="546">546</th><td><i> *</i></td></tr>
+<tr><th id="547">547</th><td><i> * FUNCTION:    acpi_ex_opcode_1A_0T_1R</i></td></tr>
+<tr><th id="548">548</th><td><i> *</i></td></tr>
+<tr><th id="549">549</th><td><i> * PARAMETERS:  walk_state          - Current state (contains AML opcode)</i></td></tr>
+<tr><th id="550">550</th><td><i> *</i></td></tr>
+<tr><th id="551">551</th><td><i> * RETURN:      Status</i></td></tr>
+<tr><th id="552">552</th><td><i> *</i></td></tr>
+<tr><th id="553">553</th><td><i> * DESCRIPTION: Execute opcode with one argument, no target, and a return value</i></td></tr>
+<tr><th id="554">554</th><td><i> *</i></td></tr>
+<tr><th id="555">555</th><td><i> ******************************************************************************/</i></td></tr>
+<tr><th id="556">556</th><td></td></tr>
+<tr><th id="557">557</th><td><a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_status" title='acpi_status' data-type='u32' data-ref="acpi_status" data-ref-filename="acpi_status">acpi_status</a> <dfn class="decl def fn" id="acpi_ex_opcode_1A_0T_1R" title='acpi_ex_opcode_1A_0T_1R' data-ref="acpi_ex_opcode_1A_0T_1R" data-ref-filename="acpi_ex_opcode_1A_0T_1R">acpi_ex_opcode_1A_0T_1R</dfn>(<b>struct</b> <a class="type" href="acstruct.h.html#acpi_walk_state" title='acpi_walk_state' data-ref="acpi_walk_state" data-ref-filename="acpi_walk_state">acpi_walk_state</a> *<dfn class="local col2 decl" id="22walk_state" title='walk_state' data-type='struct acpi_walk_state *' data-ref="22walk_state" data-ref-filename="22walk_state">walk_state</dfn>)</td></tr>
+<tr><th id="558">558</th><td>{</td></tr>
+<tr><th id="559">559</th><td>	<b>union</b> <a class="type" href="acobject.h.html#acpi_operand_object" title='acpi_operand_object' data-ref="acpi_operand_object" data-ref-filename="acpi_operand_object">acpi_operand_object</a> **<dfn class="local col3 decl" id="23operand" title='operand' data-type='union acpi_operand_object **' data-ref="23operand" data-ref-filename="23operand">operand</dfn> = &amp;<a class="local col2 ref" href="#22walk_state" title='walk_state' data-ref="22walk_state" data-ref-filename="22walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::operands" title='acpi_walk_state::operands' data-ref="acpi_walk_state::operands" data-ref-filename="acpi_walk_state..operands">operands</a>[<var>0</var>];</td></tr>
+<tr><th id="560">560</th><td>	<b>union</b> <a class="type" href="acobject.h.html#acpi_operand_object" title='acpi_operand_object' data-ref="acpi_operand_object" data-ref-filename="acpi_operand_object">acpi_operand_object</a> *<dfn class="local col4 decl" id="24temp_desc" title='temp_desc' data-type='union acpi_operand_object *' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</dfn>;</td></tr>
+<tr><th id="561">561</th><td>	<b>union</b> <a class="type" href="acobject.h.html#acpi_operand_object" title='acpi_operand_object' data-ref="acpi_operand_object" data-ref-filename="acpi_operand_object">acpi_operand_object</a> *<dfn class="local col5 decl" id="25return_desc" title='return_desc' data-type='union acpi_operand_object *' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</dfn> = <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="562">562</th><td>	<a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_status" title='acpi_status' data-type='u32' data-ref="acpi_status" data-ref-filename="acpi_status">acpi_status</a> <dfn class="local col6 decl" id="26status" title='status' data-type='acpi_status' data-ref="26status" data-ref-filename="26status">status</dfn> = <a class="macro" href="../../../include/acpi/acexcep.h.html#60" title="(acpi_status) 0x0000" data-ref="_M/AE_OK">AE_OK</a>;</td></tr>
+<tr><th id="563">563</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col7 decl" id="27type" title='type' data-type='u32' data-ref="27type" data-ref-filename="27type">type</dfn>;</td></tr>
+<tr><th id="564">564</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col8 decl" id="28value" title='value' data-type='u64' data-ref="28value" data-ref-filename="28value">value</dfn>;</td></tr>
+<tr><th id="565">565</th><td></td></tr>
+<tr><th id="566">566</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#444" title="" data-ref="_M/ACPI_FUNCTION_TRACE_STR">ACPI_FUNCTION_TRACE_STR</a>(ex_opcode_1A_0T_1R,</td></tr>
+<tr><th id="567">567</th><td>				acpi_ps_get_opcode_name(walk_state-&gt;opcode));</td></tr>
+<tr><th id="568">568</th><td></td></tr>
+<tr><th id="569">569</th><td>	<i>/* Examine the AML opcode */</i></td></tr>
+<tr><th id="570">570</th><td></td></tr>
+<tr><th id="571">571</th><td>	<b>switch</b> (<a class="local col2 ref" href="#22walk_state" title='walk_state' data-ref="22walk_state" data-ref-filename="22walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::opcode" title='acpi_walk_state::opcode' data-ref="acpi_walk_state::opcode" data-ref-filename="acpi_walk_state..opcode">opcode</a>) {</td></tr>
+<tr><th id="572">572</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#88" title="(u16) 0x92" data-ref="_M/AML_LOGICAL_NOT_OP">AML_LOGICAL_NOT_OP</a>:	<i>/* LNot (Operand) */</i></td></tr>
+<tr><th id="573">573</th><td></td></tr>
+<tr><th id="574">574</th><td>		<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a> = <a class="ref fn" href="acutils.h.html#acpi_ut_create_integer_object" title='acpi_ut_create_integer_object' data-ref="acpi_ut_create_integer_object" data-ref-filename="acpi_ut_create_integer_object">acpi_ut_create_integer_object</a>((<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a>) <var>0</var>);</td></tr>
+<tr><th id="575">575</th><td>		<b>if</b> (!<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a>) {</td></tr>
+<tr><th id="576">576</th><td>			<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a> = <a class="macro" href="../../../include/acpi/acexcep.h.html#74" title="((acpi_status) (0x0004 | 0x0000))" data-ref="_M/AE_NO_MEMORY">AE_NO_MEMORY</a>;</td></tr>
+<tr><th id="577">577</th><td>			<b>goto</b> <a class="lbl" href="#29cleanup" data-ref="29cleanup" data-ref-filename="29cleanup">cleanup</a>;</td></tr>
+<tr><th id="578">578</th><td>		}</td></tr>
+<tr><th id="579">579</th><td></td></tr>
+<tr><th id="580">580</th><td>		<i>/*</i></td></tr>
+<tr><th id="581">581</th><td><i>		 * Set result to ONES (TRUE) if Value == 0. Note:</i></td></tr>
+<tr><th id="582">582</th><td><i>		 * return_desc-&gt;Integer.Value is initially == 0 (FALSE) from above.</i></td></tr>
+<tr><th id="583">583</th><td><i>		 */</i></td></tr>
+<tr><th id="584">584</th><td>		<b>if</b> (!<a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>]-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a>) {</td></tr>
+<tr><th id="585">585</th><td>			<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a> = <a class="macro" href="../../../include/acpi/actypes.h.html#33" title="(u64)(~((u64) 0))" data-ref="_M/ACPI_UINT64_MAX">ACPI_UINT64_MAX</a>;</td></tr>
+<tr><th id="586">586</th><td>		}</td></tr>
+<tr><th id="587">587</th><td>		<b>break</b>;</td></tr>
+<tr><th id="588">588</th><td></td></tr>
+<tr><th id="589">589</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#60" title="(u16) 0x76" data-ref="_M/AML_DECREMENT_OP">AML_DECREMENT_OP</a>:	<i>/* Decrement (Operand)  */</i></td></tr>
+<tr><th id="590">590</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#59" title="(u16) 0x75" data-ref="_M/AML_INCREMENT_OP">AML_INCREMENT_OP</a>:	<i>/* Increment (Operand)  */</i></td></tr>
+<tr><th id="591">591</th><td>		<i>/*</i></td></tr>
+<tr><th id="592">592</th><td><i>		 * Create a new integer. Can't just get the base integer and</i></td></tr>
+<tr><th id="593">593</th><td><i>		 * increment it because it may be an Arg or Field.</i></td></tr>
+<tr><th id="594">594</th><td><i>		 */</i></td></tr>
+<tr><th id="595">595</th><td>		<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a> = <a class="macro" href="acutils.h.html#429" title="acpi_ut_create_internal_object_dbg (_acpi_module_name,595,0x00000080,0x01)" data-ref="_M/acpi_ut_create_internal_object">acpi_ut_create_internal_object</a>(<a class="macro" href="../../../include/acpi/actypes.h.html#637" title="0x01" data-ref="_M/ACPI_TYPE_INTEGER">ACPI_TYPE_INTEGER</a>);</td></tr>
+<tr><th id="596">596</th><td>		<b>if</b> (!<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a>) {</td></tr>
+<tr><th id="597">597</th><td>			<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a> = <a class="macro" href="../../../include/acpi/acexcep.h.html#74" title="((acpi_status) (0x0004 | 0x0000))" data-ref="_M/AE_NO_MEMORY">AE_NO_MEMORY</a>;</td></tr>
+<tr><th id="598">598</th><td>			<b>goto</b> <a class="lbl" href="#29cleanup" data-ref="29cleanup" data-ref-filename="29cleanup">cleanup</a>;</td></tr>
+<tr><th id="599">599</th><td>		}</td></tr>
+<tr><th id="600">600</th><td></td></tr>
+<tr><th id="601">601</th><td>		<i>/*</i></td></tr>
+<tr><th id="602">602</th><td><i>		 * Since we are expecting a Reference operand, it can be either a</i></td></tr>
+<tr><th id="603">603</th><td><i>		 * NS Node or an internal object.</i></td></tr>
+<tr><th id="604">604</th><td><i>		 */</i></td></tr>
+<tr><th id="605">605</th><td>		<a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a> = <a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>];</td></tr>
+<tr><th id="606">606</th><td>		<b>if</b> (<a class="macro" href="acmacros.h.html#376" title="(((union acpi_descriptor *)(void *)(temp_desc))-&gt;common.descriptor_type)" data-ref="_M/ACPI_GET_DESCRIPTOR_TYPE">ACPI_GET_DESCRIPTOR_TYPE</a>(<a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a>) ==</td></tr>
+<tr><th id="607">607</th><td>		    <a class="macro" href="acobject.h.html#422" title="0x0E" data-ref="_M/ACPI_DESC_TYPE_OPERAND">ACPI_DESC_TYPE_OPERAND</a>) {</td></tr>
+<tr><th id="608">608</th><td></td></tr>
+<tr><th id="609">609</th><td>			<i>/* Internal reference object - prevent deletion */</i></td></tr>
+<tr><th id="610">610</th><td></td></tr>
+<tr><th id="611">611</th><td>			<a class="ref fn" href="acutils.h.html#acpi_ut_add_reference" title='acpi_ut_add_reference' data-ref="acpi_ut_add_reference" data-ref-filename="acpi_ut_add_reference">acpi_ut_add_reference</a>(<a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a>);</td></tr>
+<tr><th id="612">612</th><td>		}</td></tr>
+<tr><th id="613">613</th><td></td></tr>
+<tr><th id="614">614</th><td>		<i>/*</i></td></tr>
+<tr><th id="615">615</th><td><i>		 * Convert the Reference operand to an Integer (This removes a</i></td></tr>
+<tr><th id="616">616</th><td><i>		 * reference on the Operand[0] object)</i></td></tr>
+<tr><th id="617">617</th><td><i>		 *</i></td></tr>
+<tr><th id="618">618</th><td><i>		 * NOTE:  We use LNOT_OP here in order to force resolution of the</i></td></tr>
+<tr><th id="619">619</th><td><i>		 * reference operand to an actual integer.</i></td></tr>
+<tr><th id="620">620</th><td><i>		 */</i></td></tr>
+<tr><th id="621">621</th><td>		<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a> = <a class="ref fn" href="acinterp.h.html#acpi_ex_resolve_operands" title='acpi_ex_resolve_operands' data-ref="acpi_ex_resolve_operands" data-ref-filename="acpi_ex_resolve_operands">acpi_ex_resolve_operands</a>(<a class="macro" href="amlcode.h.html#88" title="(u16) 0x92" data-ref="_M/AML_LOGICAL_NOT_OP">AML_LOGICAL_NOT_OP</a>,</td></tr>
+<tr><th id="622">622</th><td>						  &amp;<a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a>, <a class="local col2 ref" href="#22walk_state" title='walk_state' data-ref="22walk_state" data-ref-filename="22walk_state">walk_state</a>);</td></tr>
+<tr><th id="623">623</th><td>		<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#58" title="(status)" data-ref="_M/ACPI_FAILURE">ACPI_FAILURE</a>(<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a>)) {</td></tr>
+<tr><th id="624">624</th><td>			<a class="macro" href="../../../include/acpi/acoutput.h.html#204" title="acpi_exception (_acpi_module_name, 624, status, &quot;While resolving operands for [%s]&quot;, acpi_ps_get_opcode_name(walk_state-&gt; opcode))" data-ref="_M/ACPI_EXCEPTION">ACPI_EXCEPTION</a>((<a class="macro" href="../../../include/acpi/acoutput.h.html#195" title="_acpi_module_name, 624" data-ref="_M/AE_INFO">AE_INFO</a>, <a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a>,</td></tr>
+<tr><th id="625">625</th><td>					<q>"While resolving operands for [%s]"</q>,</td></tr>
+<tr><th id="626">626</th><td>					<a class="ref fn" href="acparser.h.html#acpi_ps_get_opcode_name" title='acpi_ps_get_opcode_name' data-ref="acpi_ps_get_opcode_name" data-ref-filename="acpi_ps_get_opcode_name">acpi_ps_get_opcode_name</a>(<a class="local col2 ref" href="#22walk_state" title='walk_state' data-ref="22walk_state" data-ref-filename="22walk_state">walk_state</a>-&gt;</td></tr>
+<tr><th id="627">627</th><td>								<a class="ref field" href="acstruct.h.html#acpi_walk_state::opcode" title='acpi_walk_state::opcode' data-ref="acpi_walk_state::opcode" data-ref-filename="acpi_walk_state..opcode">opcode</a>)));</td></tr>
+<tr><th id="628">628</th><td></td></tr>
+<tr><th id="629">629</th><td>			<b>goto</b> <a class="lbl" href="#29cleanup" data-ref="29cleanup" data-ref-filename="29cleanup">cleanup</a>;</td></tr>
+<tr><th id="630">630</th><td>		}</td></tr>
+<tr><th id="631">631</th><td></td></tr>
+<tr><th id="632">632</th><td>		<i>/*</i></td></tr>
+<tr><th id="633">633</th><td><i>		 * temp_desc is now guaranteed to be an Integer object --</i></td></tr>
+<tr><th id="634">634</th><td><i>		 * Perform the actual increment or decrement</i></td></tr>
+<tr><th id="635">635</th><td><i>		 */</i></td></tr>
+<tr><th id="636">636</th><td>		<b>if</b> (<a class="local col2 ref" href="#22walk_state" title='walk_state' data-ref="22walk_state" data-ref-filename="22walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::opcode" title='acpi_walk_state::opcode' data-ref="acpi_walk_state::opcode" data-ref-filename="acpi_walk_state..opcode">opcode</a> == <a class="macro" href="amlcode.h.html#59" title="(u16) 0x75" data-ref="_M/AML_INCREMENT_OP">AML_INCREMENT_OP</a>) {</td></tr>
+<tr><th id="637">637</th><td>			<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a> =</td></tr>
+<tr><th id="638">638</th><td>			    <a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a> + <var>1</var>;</td></tr>
+<tr><th id="639">639</th><td>		} <b>else</b> {</td></tr>
+<tr><th id="640">640</th><td>			<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a> =</td></tr>
+<tr><th id="641">641</th><td>			    <a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::integer" title='acpi_operand_object::integer' data-ref="acpi_operand_object::integer" data-ref-filename="acpi_operand_object..integer">integer</a>.<a class="ref field" href="acobject.h.html#acpi_object_integer::value" title='acpi_object_integer::value' data-ref="acpi_object_integer::value" data-ref-filename="acpi_object_integer..value">value</a> - <var>1</var>;</td></tr>
+<tr><th id="642">642</th><td>		}</td></tr>
+<tr><th id="643">643</th><td></td></tr>
+<tr><th id="644">644</th><td>		<i>/* Finished with this Integer object */</i></td></tr>
+<tr><th id="645">645</th><td></td></tr>
+<tr><th id="646">646</th><td>		<a class="ref fn" href="acutils.h.html#acpi_ut_remove_reference" title='acpi_ut_remove_reference' data-ref="acpi_ut_remove_reference" data-ref-filename="acpi_ut_remove_reference">acpi_ut_remove_reference</a>(<a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a>);</td></tr>
+<tr><th id="647">647</th><td></td></tr>
+<tr><th id="648">648</th><td>		<i>/*</i></td></tr>
+<tr><th id="649">649</th><td><i>		 * Store the result back (indirectly) through the original</i></td></tr>
+<tr><th id="650">650</th><td><i>		 * Reference object</i></td></tr>
+<tr><th id="651">651</th><td><i>		 */</i></td></tr>
+<tr><th id="652">652</th><td>		<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a> = <a class="ref fn" href="acinterp.h.html#acpi_ex_store" title='acpi_ex_store' data-ref="acpi_ex_store" data-ref-filename="acpi_ex_store">acpi_ex_store</a>(<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a>, <a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>], <a class="local col2 ref" href="#22walk_state" title='walk_state' data-ref="22walk_state" data-ref-filename="22walk_state">walk_state</a>);</td></tr>
+<tr><th id="653">653</th><td>		<b>break</b>;</td></tr>
+<tr><th id="654">654</th><td></td></tr>
+<tr><th id="655">655</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#84" title="(u16) 0x8e" data-ref="_M/AML_OBJECT_TYPE_OP">AML_OBJECT_TYPE_OP</a>:	<i>/* object_type (source_object) */</i></td></tr>
+<tr><th id="656">656</th><td>		<i>/*</i></td></tr>
+<tr><th id="657">657</th><td><i>		 * Note: The operand is not resolved at this point because we want to</i></td></tr>
+<tr><th id="658">658</th><td><i>		 * get the associated object, not its value. For example, we don't</i></td></tr>
+<tr><th id="659">659</th><td><i>		 * want to resolve a field_unit to its value, we want the actual</i></td></tr>
+<tr><th id="660">660</th><td><i>		 * field_unit object.</i></td></tr>
+<tr><th id="661">661</th><td><i>		 */</i></td></tr>
+<tr><th id="662">662</th><td></td></tr>
+<tr><th id="663">663</th><td>		<i>/* Get the type of the base object */</i></td></tr>
+<tr><th id="664">664</th><td></td></tr>
+<tr><th id="665">665</th><td>		<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a> =</td></tr>
+<tr><th id="666">666</th><td>		    <a class="ref fn" href="acinterp.h.html#acpi_ex_resolve_multiple" title='acpi_ex_resolve_multiple' data-ref="acpi_ex_resolve_multiple" data-ref-filename="acpi_ex_resolve_multiple">acpi_ex_resolve_multiple</a>(<a class="local col2 ref" href="#22walk_state" title='walk_state' data-ref="22walk_state" data-ref-filename="22walk_state">walk_state</a>, <a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>], &amp;<a class="local col7 ref" href="#27type" title='type' data-ref="27type" data-ref-filename="27type">type</a>,</td></tr>
+<tr><th id="667">667</th><td>					     <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>);</td></tr>
+<tr><th id="668">668</th><td>		<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#58" title="(status)" data-ref="_M/ACPI_FAILURE">ACPI_FAILURE</a>(<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a>)) {</td></tr>
+<tr><th id="669">669</th><td>			<b>goto</b> <a class="lbl" href="#29cleanup" data-ref="29cleanup" data-ref-filename="29cleanup">cleanup</a>;</td></tr>
+<tr><th id="670">670</th><td>		}</td></tr>
+<tr><th id="671">671</th><td></td></tr>
+<tr><th id="672">672</th><td>		<i>/* Allocate a descriptor to hold the type. */</i></td></tr>
+<tr><th id="673">673</th><td></td></tr>
+<tr><th id="674">674</th><td>		<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a> = <a class="ref fn" href="acutils.h.html#acpi_ut_create_integer_object" title='acpi_ut_create_integer_object' data-ref="acpi_ut_create_integer_object" data-ref-filename="acpi_ut_create_integer_object">acpi_ut_create_integer_object</a>((<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a>) <a class="local col7 ref" href="#27type" title='type' data-ref="27type" data-ref-filename="27type">type</a>);</td></tr>
+<tr><th id="675">675</th><td>		<b>if</b> (!<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a>) {</td></tr>
+<tr><th id="676">676</th><td>			<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a> = <a class="macro" href="../../../include/acpi/acexcep.h.html#74" title="((acpi_status) (0x0004 | 0x0000))" data-ref="_M/AE_NO_MEMORY">AE_NO_MEMORY</a>;</td></tr>
+<tr><th id="677">677</th><td>			<b>goto</b> <a class="lbl" href="#29cleanup" data-ref="29cleanup" data-ref-filename="29cleanup">cleanup</a>;</td></tr>
+<tr><th id="678">678</th><td>		}</td></tr>
+<tr><th id="679">679</th><td>		<b>break</b>;</td></tr>
+<tr><th id="680">680</th><td></td></tr>
+<tr><th id="681">681</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#77" title="(u16) 0x87" data-ref="_M/AML_SIZE_OF_OP">AML_SIZE_OF_OP</a>:	<i>/* size_of (source_object) */</i></td></tr>
+<tr><th id="682">682</th><td>		<i>/*</i></td></tr>
+<tr><th id="683">683</th><td><i>		 * Note: The operand is not resolved at this point because we want to</i></td></tr>
+<tr><th id="684">684</th><td><i>		 * get the associated object, not its value.</i></td></tr>
+<tr><th id="685">685</th><td><i>		 */</i></td></tr>
+<tr><th id="686">686</th><td></td></tr>
+<tr><th id="687">687</th><td>		<i>/* Get the base object */</i></td></tr>
+<tr><th id="688">688</th><td></td></tr>
+<tr><th id="689">689</th><td>		<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a> =</td></tr>
+<tr><th id="690">690</th><td>		    <a class="ref fn" href="acinterp.h.html#acpi_ex_resolve_multiple" title='acpi_ex_resolve_multiple' data-ref="acpi_ex_resolve_multiple" data-ref-filename="acpi_ex_resolve_multiple">acpi_ex_resolve_multiple</a>(<a class="local col2 ref" href="#22walk_state" title='walk_state' data-ref="22walk_state" data-ref-filename="22walk_state">walk_state</a>, <a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>], &amp;<a class="local col7 ref" href="#27type" title='type' data-ref="27type" data-ref-filename="27type">type</a>,</td></tr>
+<tr><th id="691">691</th><td>					     &amp;<a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a>);</td></tr>
+<tr><th id="692">692</th><td>		<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#58" title="(status)" data-ref="_M/ACPI_FAILURE">ACPI_FAILURE</a>(<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a>)) {</td></tr>
+<tr><th id="693">693</th><td>			<b>goto</b> <a class="lbl" href="#29cleanup" data-ref="29cleanup" data-ref-filename="29cleanup">cleanup</a>;</td></tr>
+<tr><th id="694">694</th><td>		}</td></tr>
+<tr><th id="695">695</th><td></td></tr>
+<tr><th id="696">696</th><td>		<i>/*</i></td></tr>
+<tr><th id="697">697</th><td><i>		 * The type of the base object must be integer, buffer, string, or</i></td></tr>
+<tr><th id="698">698</th><td><i>		 * package. All others are not supported.</i></td></tr>
+<tr><th id="699">699</th><td><i>		 *</i></td></tr>
+<tr><th id="700">700</th><td><i>		 * NOTE: Integer is not specifically supported by the ACPI spec,</i></td></tr>
+<tr><th id="701">701</th><td><i>		 * but is supported implicitly via implicit operand conversion.</i></td></tr>
+<tr><th id="702">702</th><td><i>		 * rather than bother with conversion, we just use the byte width</i></td></tr>
+<tr><th id="703">703</th><td><i>		 * global (4 or 8 bytes).</i></td></tr>
+<tr><th id="704">704</th><td><i>		 */</i></td></tr>
+<tr><th id="705">705</th><td>		<b>switch</b> (<a class="local col7 ref" href="#27type" title='type' data-ref="27type" data-ref-filename="27type">type</a>) {</td></tr>
+<tr><th id="706">706</th><td>		<b>case</b> <a class="macro" href="../../../include/acpi/actypes.h.html#637" title="0x01" data-ref="_M/ACPI_TYPE_INTEGER">ACPI_TYPE_INTEGER</a>:</td></tr>
+<tr><th id="707">707</th><td></td></tr>
+<tr><th id="708">708</th><td>			<a class="local col8 ref" href="#28value" title='value' data-ref="28value" data-ref-filename="28value">value</a> = <a class="ref" href="acglobal.h.html#51" title='acpi_gbl_integer_byte_width' data-ref="acpi_gbl_integer_byte_width" data-ref-filename="acpi_gbl_integer_byte_width">acpi_gbl_integer_byte_width</a>;</td></tr>
+<tr><th id="709">709</th><td>			<b>break</b>;</td></tr>
+<tr><th id="710">710</th><td></td></tr>
+<tr><th id="711">711</th><td>		<b>case</b> <a class="macro" href="../../../include/acpi/actypes.h.html#638" title="0x02" data-ref="_M/ACPI_TYPE_STRING">ACPI_TYPE_STRING</a>:</td></tr>
+<tr><th id="712">712</th><td></td></tr>
+<tr><th id="713">713</th><td>			<a class="local col8 ref" href="#28value" title='value' data-ref="28value" data-ref-filename="28value">value</a> = <a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::string" title='acpi_operand_object::string' data-ref="acpi_operand_object::string" data-ref-filename="acpi_operand_object..string">string</a>.<a class="ref field" href="acobject.h.html#94" title='acpi_object_string::length' data-ref="acpi_object_string::length" data-ref-filename="acpi_object_string..length">length</a>;</td></tr>
+<tr><th id="714">714</th><td>			<b>break</b>;</td></tr>
+<tr><th id="715">715</th><td></td></tr>
+<tr><th id="716">716</th><td>		<b>case</b> <a class="macro" href="../../../include/acpi/actypes.h.html#639" title="0x03" data-ref="_M/ACPI_TYPE_BUFFER">ACPI_TYPE_BUFFER</a>:</td></tr>
+<tr><th id="717">717</th><td></td></tr>
+<tr><th id="718">718</th><td>			<i>/* Buffer arguments may not be evaluated at this point */</i></td></tr>
+<tr><th id="719">719</th><td></td></tr>
+<tr><th id="720">720</th><td>			<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a> = <a class="ref fn" href="acdispat.h.html#acpi_ds_get_buffer_arguments" title='acpi_ds_get_buffer_arguments' data-ref="acpi_ds_get_buffer_arguments" data-ref-filename="acpi_ds_get_buffer_arguments">acpi_ds_get_buffer_arguments</a>(<a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a>);</td></tr>
+<tr><th id="721">721</th><td>			<a class="local col8 ref" href="#28value" title='value' data-ref="28value" data-ref-filename="28value">value</a> = <a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::buffer" title='acpi_operand_object::buffer' data-ref="acpi_operand_object::buffer" data-ref-filename="acpi_operand_object..buffer">buffer</a>.<a class="ref field" href="acobject.h.html#98" title='acpi_object_buffer::length' data-ref="acpi_object_buffer::length" data-ref-filename="acpi_object_buffer..length">length</a>;</td></tr>
+<tr><th id="722">722</th><td>			<b>break</b>;</td></tr>
+<tr><th id="723">723</th><td></td></tr>
+<tr><th id="724">724</th><td>		<b>case</b> <a class="macro" href="../../../include/acpi/actypes.h.html#640" title="0x04" data-ref="_M/ACPI_TYPE_PACKAGE">ACPI_TYPE_PACKAGE</a>:</td></tr>
+<tr><th id="725">725</th><td></td></tr>
+<tr><th id="726">726</th><td>			<i>/* Package arguments may not be evaluated at this point */</i></td></tr>
+<tr><th id="727">727</th><td></td></tr>
+<tr><th id="728">728</th><td>			<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a> = <a class="ref fn" href="acdispat.h.html#acpi_ds_get_package_arguments" title='acpi_ds_get_package_arguments' data-ref="acpi_ds_get_package_arguments" data-ref-filename="acpi_ds_get_package_arguments">acpi_ds_get_package_arguments</a>(<a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a>);</td></tr>
+<tr><th id="729">729</th><td>			<a class="local col8 ref" href="#28value" title='value' data-ref="28value" data-ref-filename="28value">value</a> = <a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::package" title='acpi_operand_object::package' data-ref="acpi_operand_object::package" data-ref-filename="acpi_operand_object..package">package</a>.<a class="ref field" href="acobject.h.html#acpi_object_package::count" title='acpi_object_package::count' data-ref="acpi_object_package::count" data-ref-filename="acpi_object_package..count">count</a>;</td></tr>
+<tr><th id="730">730</th><td>			<b>break</b>;</td></tr>
+<tr><th id="731">731</th><td></td></tr>
+<tr><th id="732">732</th><td>		<b>default</b>:</td></tr>
+<tr><th id="733">733</th><td></td></tr>
+<tr><th id="734">734</th><td>			<a class="macro" href="../../../include/acpi/acoutput.h.html#205" title="acpi_error (_acpi_module_name, 734, &quot;Operand must be Buffer/Integer/String/Package&quot; &quot; - found type %s&quot;, acpi_ut_get_type_name(type))" data-ref="_M/ACPI_ERROR">ACPI_ERROR</a>((<a class="macro" href="../../../include/acpi/acoutput.h.html#195" title="_acpi_module_name, 734" data-ref="_M/AE_INFO">AE_INFO</a>,</td></tr>
+<tr><th id="735">735</th><td>				    <q>"Operand must be Buffer/Integer/String/Package"</q></td></tr>
+<tr><th id="736">736</th><td>				    <q>" - found type %s"</q>,</td></tr>
+<tr><th id="737">737</th><td>				    <a class="ref fn" href="acutils.h.html#acpi_ut_get_type_name" title='acpi_ut_get_type_name' data-ref="acpi_ut_get_type_name" data-ref-filename="acpi_ut_get_type_name">acpi_ut_get_type_name</a>(<a class="local col7 ref" href="#27type" title='type' data-ref="27type" data-ref-filename="27type">type</a>)));</td></tr>
+<tr><th id="738">738</th><td></td></tr>
+<tr><th id="739">739</th><td>			<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a> = <a class="macro" href="../../../include/acpi/acexcep.h.html#141" title="((acpi_status) (0x0003 | 0x3000))" data-ref="_M/AE_AML_OPERAND_TYPE">AE_AML_OPERAND_TYPE</a>;</td></tr>
+<tr><th id="740">740</th><td>			<b>goto</b> <a class="lbl" href="#29cleanup" data-ref="29cleanup" data-ref-filename="29cleanup">cleanup</a>;</td></tr>
+<tr><th id="741">741</th><td>		}</td></tr>
+<tr><th id="742">742</th><td></td></tr>
+<tr><th id="743">743</th><td>		<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#58" title="(status)" data-ref="_M/ACPI_FAILURE">ACPI_FAILURE</a>(<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a>)) {</td></tr>
+<tr><th id="744">744</th><td>			<b>goto</b> <a class="lbl" href="#29cleanup" data-ref="29cleanup" data-ref-filename="29cleanup">cleanup</a>;</td></tr>
+<tr><th id="745">745</th><td>		}</td></tr>
+<tr><th id="746">746</th><td></td></tr>
+<tr><th id="747">747</th><td>		<i>/*</i></td></tr>
+<tr><th id="748">748</th><td><i>		 * Now that we have the size of the object, create a result</i></td></tr>
+<tr><th id="749">749</th><td><i>		 * object to hold the value</i></td></tr>
+<tr><th id="750">750</th><td><i>		 */</i></td></tr>
+<tr><th id="751">751</th><td>		<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a> = <a class="ref fn" href="acutils.h.html#acpi_ut_create_integer_object" title='acpi_ut_create_integer_object' data-ref="acpi_ut_create_integer_object" data-ref-filename="acpi_ut_create_integer_object">acpi_ut_create_integer_object</a>(<a class="local col8 ref" href="#28value" title='value' data-ref="28value" data-ref-filename="28value">value</a>);</td></tr>
+<tr><th id="752">752</th><td>		<b>if</b> (!<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a>) {</td></tr>
+<tr><th id="753">753</th><td>			<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a> = <a class="macro" href="../../../include/acpi/acexcep.h.html#74" title="((acpi_status) (0x0004 | 0x0000))" data-ref="_M/AE_NO_MEMORY">AE_NO_MEMORY</a>;</td></tr>
+<tr><th id="754">754</th><td>			<b>goto</b> <a class="lbl" href="#29cleanup" data-ref="29cleanup" data-ref-filename="29cleanup">cleanup</a>;</td></tr>
+<tr><th id="755">755</th><td>		}</td></tr>
+<tr><th id="756">756</th><td>		<b>break</b>;</td></tr>
+<tr><th id="757">757</th><td></td></tr>
+<tr><th id="758">758</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#55" title="(u16) 0x71" data-ref="_M/AML_REF_OF_OP">AML_REF_OF_OP</a>:	<i>/* ref_of (source_object) */</i></td></tr>
+<tr><th id="759">759</th><td></td></tr>
+<tr><th id="760">760</th><td>		<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a> =</td></tr>
+<tr><th id="761">761</th><td>		    <a class="ref fn" href="acinterp.h.html#acpi_ex_get_object_reference" title='acpi_ex_get_object_reference' data-ref="acpi_ex_get_object_reference" data-ref-filename="acpi_ex_get_object_reference">acpi_ex_get_object_reference</a>(<a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>], &amp;<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a>,</td></tr>
+<tr><th id="762">762</th><td>						 <a class="local col2 ref" href="#22walk_state" title='walk_state' data-ref="22walk_state" data-ref-filename="22walk_state">walk_state</a>);</td></tr>
+<tr><th id="763">763</th><td>		<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#58" title="(status)" data-ref="_M/ACPI_FAILURE">ACPI_FAILURE</a>(<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a>)) {</td></tr>
+<tr><th id="764">764</th><td>			<b>goto</b> <a class="lbl" href="#29cleanup" data-ref="29cleanup" data-ref-filename="29cleanup">cleanup</a>;</td></tr>
+<tr><th id="765">765</th><td>		}</td></tr>
+<tr><th id="766">766</th><td>		<b>break</b>;</td></tr>
+<tr><th id="767">767</th><td></td></tr>
+<tr><th id="768">768</th><td>	<b>case</b> <a class="macro" href="amlcode.h.html#73" title="(u16) 0x83" data-ref="_M/AML_DEREF_OF_OP">AML_DEREF_OF_OP</a>:	<i>/* deref_of (obj_reference | String) */</i></td></tr>
+<tr><th id="769">769</th><td></td></tr>
+<tr><th id="770">770</th><td>		<i>/* Check for a method local or argument, or standalone String */</i></td></tr>
+<tr><th id="771">771</th><td></td></tr>
+<tr><th id="772">772</th><td>		<b>if</b> (<a class="macro" href="acmacros.h.html#376" title="(((union acpi_descriptor *)(void *)(operand[0]))-&gt;common.descriptor_type)" data-ref="_M/ACPI_GET_DESCRIPTOR_TYPE">ACPI_GET_DESCRIPTOR_TYPE</a>(<a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>]) ==</td></tr>
+<tr><th id="773">773</th><td>		    <a class="macro" href="acobject.h.html#423" title="0x0F" data-ref="_M/ACPI_DESC_TYPE_NAMED">ACPI_DESC_TYPE_NAMED</a>) {</td></tr>
+<tr><th id="774">774</th><td>			<a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a> =</td></tr>
+<tr><th id="775">775</th><td>			    <a class="ref fn" href="acnamesp.h.html#acpi_ns_get_attached_object" title='acpi_ns_get_attached_object' data-ref="acpi_ns_get_attached_object" data-ref-filename="acpi_ns_get_attached_object">acpi_ns_get_attached_object</a>((<b>struct</b></td></tr>
+<tr><th id="776">776</th><td>							 <a class="type" href="aclocal.h.html#acpi_namespace_node" title='acpi_namespace_node' data-ref="acpi_namespace_node" data-ref-filename="acpi_namespace_node">acpi_namespace_node</a> *)</td></tr>
+<tr><th id="777">777</th><td>							<a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>]);</td></tr>
+<tr><th id="778">778</th><td>			<b>if</b> (<a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a></td></tr>
+<tr><th id="779">779</th><td>			    &amp;&amp; ((<a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::common" title='acpi_operand_object::common' data-ref="acpi_operand_object::common" data-ref-filename="acpi_operand_object..common">common</a>.<a class="ref field" href="acobject.h.html#74" title='acpi_object_common::type' data-ref="acpi_object_common::type" data-ref-filename="acpi_object_common..type">type</a> == <a class="macro" href="../../../include/acpi/actypes.h.html#638" title="0x02" data-ref="_M/ACPI_TYPE_STRING">ACPI_TYPE_STRING</a>)</td></tr>
+<tr><th id="780">780</th><td>				|| (<a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::common" title='acpi_operand_object::common' data-ref="acpi_operand_object::common" data-ref-filename="acpi_operand_object..common">common</a>.<a class="ref field" href="acobject.h.html#74" title='acpi_object_common::type' data-ref="acpi_object_common::type" data-ref-filename="acpi_object_common..type">type</a> ==</td></tr>
+<tr><th id="781">781</th><td>				    <a class="macro" href="../../../include/acpi/actypes.h.html#668" title="0x14" data-ref="_M/ACPI_TYPE_LOCAL_REFERENCE">ACPI_TYPE_LOCAL_REFERENCE</a>))) {</td></tr>
+<tr><th id="782">782</th><td>				<a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>] = <a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a>;</td></tr>
+<tr><th id="783">783</th><td>				<a class="ref fn" href="acutils.h.html#acpi_ut_add_reference" title='acpi_ut_add_reference' data-ref="acpi_ut_add_reference" data-ref-filename="acpi_ut_add_reference">acpi_ut_add_reference</a>(<a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a>);</td></tr>
+<tr><th id="784">784</th><td>			} <b>else</b> {</td></tr>
+<tr><th id="785">785</th><td>				<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a> = <a class="macro" href="../../../include/acpi/acexcep.h.html#141" title="((acpi_status) (0x0003 | 0x3000))" data-ref="_M/AE_AML_OPERAND_TYPE">AE_AML_OPERAND_TYPE</a>;</td></tr>
+<tr><th id="786">786</th><td>				<b>goto</b> <a class="lbl" href="#29cleanup" data-ref="29cleanup" data-ref-filename="29cleanup">cleanup</a>;</td></tr>
+<tr><th id="787">787</th><td>			}</td></tr>
+<tr><th id="788">788</th><td>		} <b>else</b> {</td></tr>
+<tr><th id="789">789</th><td>			<b>switch</b> ((<a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>])-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::common" title='acpi_operand_object::common' data-ref="acpi_operand_object::common" data-ref-filename="acpi_operand_object..common">common</a>.<a class="ref field" href="acobject.h.html#74" title='acpi_object_common::type' data-ref="acpi_object_common::type" data-ref-filename="acpi_object_common..type">type</a>) {</td></tr>
+<tr><th id="790">790</th><td>			<b>case</b> <a class="macro" href="../../../include/acpi/actypes.h.html#668" title="0x14" data-ref="_M/ACPI_TYPE_LOCAL_REFERENCE">ACPI_TYPE_LOCAL_REFERENCE</a>:</td></tr>
+<tr><th id="791">791</th><td>				<i>/*</i></td></tr>
+<tr><th id="792">792</th><td><i>				 * This is a deref_of (local_x | arg_x)</i></td></tr>
+<tr><th id="793">793</th><td><i>				 *</i></td></tr>
+<tr><th id="794">794</th><td><i>				 * Must resolve/dereference the local/arg reference first</i></td></tr>
+<tr><th id="795">795</th><td><i>				 */</i></td></tr>
+<tr><th id="796">796</th><td>				<b>switch</b> (<a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>]-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::reference" title='acpi_operand_object::reference' data-ref="acpi_operand_object::reference" data-ref-filename="acpi_operand_object..reference">reference</a>.<a class="ref field" href="acobject.h.html#acpi_object_reference::class" title='acpi_object_reference::class' data-ref="acpi_object_reference::class" data-ref-filename="acpi_object_reference..class">class</a>) {</td></tr>
+<tr><th id="797">797</th><td>				<b>case</b> <a class="enum" href="acobject.h.html#ACPI_REFCLASS_LOCAL" title='ACPI_REFCLASS_LOCAL' data-ref="ACPI_REFCLASS_LOCAL" data-ref-filename="ACPI_REFCLASS_LOCAL">ACPI_REFCLASS_LOCAL</a>:</td></tr>
+<tr><th id="798">798</th><td>				<b>case</b> <a class="enum" href="acobject.h.html#ACPI_REFCLASS_ARG" title='ACPI_REFCLASS_ARG' data-ref="ACPI_REFCLASS_ARG" data-ref-filename="ACPI_REFCLASS_ARG">ACPI_REFCLASS_ARG</a>:</td></tr>
+<tr><th id="799">799</th><td></td></tr>
+<tr><th id="800">800</th><td>					<i>/* Set Operand[0] to the value of the local/arg */</i></td></tr>
+<tr><th id="801">801</th><td></td></tr>
+<tr><th id="802">802</th><td>					<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a> =</td></tr>
+<tr><th id="803">803</th><td>					    <a class="ref fn" href="acdispat.h.html#acpi_ds_method_data_get_value" title='acpi_ds_method_data_get_value' data-ref="acpi_ds_method_data_get_value" data-ref-filename="acpi_ds_method_data_get_value">acpi_ds_method_data_get_value</a></td></tr>
+<tr><th id="804">804</th><td>					    (<a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>]-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::reference" title='acpi_operand_object::reference' data-ref="acpi_operand_object::reference" data-ref-filename="acpi_operand_object..reference">reference</a>.<a class="ref field" href="acobject.h.html#acpi_object_reference::class" title='acpi_object_reference::class' data-ref="acpi_object_reference::class" data-ref-filename="acpi_object_reference..class">class</a>,</td></tr>
+<tr><th id="805">805</th><td>					     <a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>]-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::reference" title='acpi_operand_object::reference' data-ref="acpi_operand_object::reference" data-ref-filename="acpi_operand_object..reference">reference</a>.<a class="ref field" href="acobject.h.html#acpi_object_reference::value" title='acpi_object_reference::value' data-ref="acpi_object_reference::value" data-ref-filename="acpi_object_reference..value">value</a>,</td></tr>
+<tr><th id="806">806</th><td>					     <a class="local col2 ref" href="#22walk_state" title='walk_state' data-ref="22walk_state" data-ref-filename="22walk_state">walk_state</a>, &amp;<a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a>);</td></tr>
+<tr><th id="807">807</th><td>					<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#58" title="(status)" data-ref="_M/ACPI_FAILURE">ACPI_FAILURE</a>(<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a>)) {</td></tr>
+<tr><th id="808">808</th><td>						<b>goto</b> <a class="lbl" href="#29cleanup" data-ref="29cleanup" data-ref-filename="29cleanup">cleanup</a>;</td></tr>
+<tr><th id="809">809</th><td>					}</td></tr>
+<tr><th id="810">810</th><td></td></tr>
+<tr><th id="811">811</th><td>					<i>/*</i></td></tr>
+<tr><th id="812">812</th><td><i>					 * Delete our reference to the input object and</i></td></tr>
+<tr><th id="813">813</th><td><i>					 * point to the object just retrieved</i></td></tr>
+<tr><th id="814">814</th><td><i>					 */</i></td></tr>
+<tr><th id="815">815</th><td>					<a class="ref fn" href="acutils.h.html#acpi_ut_remove_reference" title='acpi_ut_remove_reference' data-ref="acpi_ut_remove_reference" data-ref-filename="acpi_ut_remove_reference">acpi_ut_remove_reference</a>(<a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>]);</td></tr>
+<tr><th id="816">816</th><td>					<a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>] = <a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a>;</td></tr>
+<tr><th id="817">817</th><td>					<b>break</b>;</td></tr>
+<tr><th id="818">818</th><td></td></tr>
+<tr><th id="819">819</th><td>				<b>case</b> <a class="enum" href="acobject.h.html#ACPI_REFCLASS_REFOF" title='ACPI_REFCLASS_REFOF' data-ref="ACPI_REFCLASS_REFOF" data-ref-filename="ACPI_REFCLASS_REFOF">ACPI_REFCLASS_REFOF</a>:</td></tr>
+<tr><th id="820">820</th><td></td></tr>
+<tr><th id="821">821</th><td>					<i>/* Get the object to which the reference refers */</i></td></tr>
+<tr><th id="822">822</th><td></td></tr>
+<tr><th id="823">823</th><td>					<a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a> =</td></tr>
+<tr><th id="824">824</th><td>					    <a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>]-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::reference" title='acpi_operand_object::reference' data-ref="acpi_operand_object::reference" data-ref-filename="acpi_operand_object..reference">reference</a>.<a class="ref field" href="acobject.h.html#acpi_object_reference::object" title='acpi_object_reference::object' data-ref="acpi_object_reference::object" data-ref-filename="acpi_object_reference..object">object</a>;</td></tr>
+<tr><th id="825">825</th><td>					<a class="ref fn" href="acutils.h.html#acpi_ut_remove_reference" title='acpi_ut_remove_reference' data-ref="acpi_ut_remove_reference" data-ref-filename="acpi_ut_remove_reference">acpi_ut_remove_reference</a>(<a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>]);</td></tr>
+<tr><th id="826">826</th><td>					<a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>] = <a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a>;</td></tr>
+<tr><th id="827">827</th><td>					<b>break</b>;</td></tr>
+<tr><th id="828">828</th><td></td></tr>
+<tr><th id="829">829</th><td>				<b>default</b>:</td></tr>
+<tr><th id="830">830</th><td></td></tr>
+<tr><th id="831">831</th><td>					<i>/* Must be an Index op - handled below */</i></td></tr>
+<tr><th id="832">832</th><td>					<b>break</b>;</td></tr>
+<tr><th id="833">833</th><td>				}</td></tr>
+<tr><th id="834">834</th><td>				<b>break</b>;</td></tr>
+<tr><th id="835">835</th><td></td></tr>
+<tr><th id="836">836</th><td>			<b>case</b> <a class="macro" href="../../../include/acpi/actypes.h.html#638" title="0x02" data-ref="_M/ACPI_TYPE_STRING">ACPI_TYPE_STRING</a>:</td></tr>
+<tr><th id="837">837</th><td></td></tr>
+<tr><th id="838">838</th><td>				<b>break</b>;</td></tr>
+<tr><th id="839">839</th><td></td></tr>
+<tr><th id="840">840</th><td>			<b>default</b>:</td></tr>
+<tr><th id="841">841</th><td></td></tr>
+<tr><th id="842">842</th><td>				<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a> = <a class="macro" href="../../../include/acpi/acexcep.h.html#141" title="((acpi_status) (0x0003 | 0x3000))" data-ref="_M/AE_AML_OPERAND_TYPE">AE_AML_OPERAND_TYPE</a>;</td></tr>
+<tr><th id="843">843</th><td>				<b>goto</b> <a class="lbl" href="#29cleanup" data-ref="29cleanup" data-ref-filename="29cleanup">cleanup</a>;</td></tr>
+<tr><th id="844">844</th><td>			}</td></tr>
+<tr><th id="845">845</th><td>		}</td></tr>
+<tr><th id="846">846</th><td></td></tr>
+<tr><th id="847">847</th><td>		<b>if</b> (<a class="macro" href="acmacros.h.html#376" title="(((union acpi_descriptor *)(void *)(operand[0]))-&gt;common.descriptor_type)" data-ref="_M/ACPI_GET_DESCRIPTOR_TYPE">ACPI_GET_DESCRIPTOR_TYPE</a>(<a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>]) !=</td></tr>
+<tr><th id="848">848</th><td>		    <a class="macro" href="acobject.h.html#423" title="0x0F" data-ref="_M/ACPI_DESC_TYPE_NAMED">ACPI_DESC_TYPE_NAMED</a>) {</td></tr>
+<tr><th id="849">849</th><td>			<b>if</b> ((<a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>])-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::common" title='acpi_operand_object::common' data-ref="acpi_operand_object::common" data-ref-filename="acpi_operand_object..common">common</a>.<a class="ref field" href="acobject.h.html#74" title='acpi_object_common::type' data-ref="acpi_object_common::type" data-ref-filename="acpi_object_common..type">type</a> == <a class="macro" href="../../../include/acpi/actypes.h.html#638" title="0x02" data-ref="_M/ACPI_TYPE_STRING">ACPI_TYPE_STRING</a>) {</td></tr>
+<tr><th id="850">850</th><td>				<i>/*</i></td></tr>
+<tr><th id="851">851</th><td><i>				 * This is a deref_of (String). The string is a reference</i></td></tr>
+<tr><th id="852">852</th><td><i>				 * to a named ACPI object.</i></td></tr>
+<tr><th id="853">853</th><td><i>				 *</i></td></tr>
+<tr><th id="854">854</th><td><i>				 * 1) Find the owning Node</i></td></tr>
+<tr><th id="855">855</th><td><i>				 * 2) Dereference the node to an actual object. Could be a</i></td></tr>
+<tr><th id="856">856</th><td><i>				 *    Field, so we need to resolve the node to a value.</i></td></tr>
+<tr><th id="857">857</th><td><i>				 */</i></td></tr>
+<tr><th id="858">858</th><td>				<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a> =</td></tr>
+<tr><th id="859">859</th><td>				    <a class="ref fn" href="acnamesp.h.html#acpi_ns_get_node_unlocked" title='acpi_ns_get_node_unlocked' data-ref="acpi_ns_get_node_unlocked" data-ref-filename="acpi_ns_get_node_unlocked">acpi_ns_get_node_unlocked</a>(<a class="local col2 ref" href="#22walk_state" title='walk_state' data-ref="22walk_state" data-ref-filename="22walk_state">walk_state</a>-&gt;</td></tr>
+<tr><th id="860">860</th><td>							      <a class="ref field" href="acstruct.h.html#acpi_walk_state::scope_info" title='acpi_walk_state::scope_info' data-ref="acpi_walk_state::scope_info" data-ref-filename="acpi_walk_state..scope_info">scope_info</a>-&gt;<a class="ref field" href="aclocal.h.html#acpi_generic_state::scope" title='acpi_generic_state::scope' data-ref="acpi_generic_state::scope" data-ref-filename="acpi_generic_state..scope">scope</a>.</td></tr>
+<tr><th id="861">861</th><td>							      <a class="ref field" href="aclocal.h.html#acpi_scope_state::node" title='acpi_scope_state::node' data-ref="acpi_scope_state::node" data-ref-filename="acpi_scope_state..node">node</a>,</td></tr>
+<tr><th id="862">862</th><td>							      <a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>]-&gt;</td></tr>
+<tr><th id="863">863</th><td>							      <a class="ref field" href="acobject.h.html#acpi_operand_object::string" title='acpi_operand_object::string' data-ref="acpi_operand_object::string" data-ref-filename="acpi_operand_object..string">string</a>.<a class="ref field" href="acobject.h.html#94" title='acpi_object_string::pointer' data-ref="acpi_object_string::pointer" data-ref-filename="acpi_object_string..pointer">pointer</a>,</td></tr>
+<tr><th id="864">864</th><td>							      <a class="macro" href="acnamesp.h.html#28" title="0x0001" data-ref="_M/ACPI_NS_SEARCH_PARENT">ACPI_NS_SEARCH_PARENT</a>,</td></tr>
+<tr><th id="865">865</th><td>							      <a class="macro" href="../../../include/acpi/actypes.h.html#502" title="((struct acpi_namespace_node **) (void *) (&amp;return_desc))" data-ref="_M/ACPI_CAST_INDIRECT_PTR">ACPI_CAST_INDIRECT_PTR</a></td></tr>
+<tr><th id="866">866</th><td>							      (<b>struct</b></td></tr>
+<tr><th id="867">867</th><td>							       <a class="type" href="aclocal.h.html#acpi_namespace_node" title='acpi_namespace_node' data-ref="acpi_namespace_node" data-ref-filename="acpi_namespace_node">acpi_namespace_node</a>,</td></tr>
+<tr><th id="868">868</th><td>							       &amp;<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a>));</td></tr>
+<tr><th id="869">869</th><td>				<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#58" title="(status)" data-ref="_M/ACPI_FAILURE">ACPI_FAILURE</a>(<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a>)) {</td></tr>
+<tr><th id="870">870</th><td>					<b>goto</b> <a class="lbl" href="#29cleanup" data-ref="29cleanup" data-ref-filename="29cleanup">cleanup</a>;</td></tr>
+<tr><th id="871">871</th><td>				}</td></tr>
+<tr><th id="872">872</th><td></td></tr>
+<tr><th id="873">873</th><td>				<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a> =</td></tr>
+<tr><th id="874">874</th><td>				    <a class="ref fn" href="acinterp.h.html#acpi_ex_resolve_node_to_value" title='acpi_ex_resolve_node_to_value' data-ref="acpi_ex_resolve_node_to_value" data-ref-filename="acpi_ex_resolve_node_to_value">acpi_ex_resolve_node_to_value</a></td></tr>
+<tr><th id="875">875</th><td>				    (<a class="macro" href="../../../include/acpi/actypes.h.html#502" title="((struct acpi_namespace_node **) (void *) (&amp;return_desc))" data-ref="_M/ACPI_CAST_INDIRECT_PTR">ACPI_CAST_INDIRECT_PTR</a></td></tr>
+<tr><th id="876">876</th><td>				     (<b>struct</b> <a class="type" href="aclocal.h.html#acpi_namespace_node" title='acpi_namespace_node' data-ref="acpi_namespace_node" data-ref-filename="acpi_namespace_node">acpi_namespace_node</a>, &amp;<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a>),</td></tr>
+<tr><th id="877">877</th><td>				     <a class="local col2 ref" href="#22walk_state" title='walk_state' data-ref="22walk_state" data-ref-filename="22walk_state">walk_state</a>);</td></tr>
+<tr><th id="878">878</th><td>				<b>goto</b> <a class="lbl" href="#29cleanup" data-ref="29cleanup" data-ref-filename="29cleanup">cleanup</a>;</td></tr>
+<tr><th id="879">879</th><td>			}</td></tr>
+<tr><th id="880">880</th><td>		}</td></tr>
+<tr><th id="881">881</th><td></td></tr>
+<tr><th id="882">882</th><td>		<i>/* Operand[0] may have changed from the code above */</i></td></tr>
+<tr><th id="883">883</th><td></td></tr>
+<tr><th id="884">884</th><td>		<b>if</b> (<a class="macro" href="acmacros.h.html#376" title="(((union acpi_descriptor *)(void *)(operand[0]))-&gt;common.descriptor_type)" data-ref="_M/ACPI_GET_DESCRIPTOR_TYPE">ACPI_GET_DESCRIPTOR_TYPE</a>(<a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>]) ==</td></tr>
+<tr><th id="885">885</th><td>		    <a class="macro" href="acobject.h.html#423" title="0x0F" data-ref="_M/ACPI_DESC_TYPE_NAMED">ACPI_DESC_TYPE_NAMED</a>) {</td></tr>
+<tr><th id="886">886</th><td>			<i>/*</i></td></tr>
+<tr><th id="887">887</th><td><i>			 * This is a deref_of (object_reference)</i></td></tr>
+<tr><th id="888">888</th><td><i>			 * Get the actual object from the Node (This is the dereference).</i></td></tr>
+<tr><th id="889">889</th><td><i>			 * This case may only happen when a local_x or arg_x is</i></td></tr>
+<tr><th id="890">890</th><td><i>			 * dereferenced above, or for references to device and</i></td></tr>
+<tr><th id="891">891</th><td><i>			 * thermal objects.</i></td></tr>
+<tr><th id="892">892</th><td><i>			 */</i></td></tr>
+<tr><th id="893">893</th><td>			<b>switch</b> (((<b>struct</b> <a class="type" href="aclocal.h.html#acpi_namespace_node" title='acpi_namespace_node' data-ref="acpi_namespace_node" data-ref-filename="acpi_namespace_node">acpi_namespace_node</a> *)<a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>])-&gt;</td></tr>
+<tr><th id="894">894</th><td>				<a class="ref field" href="aclocal.h.html#acpi_namespace_node::type" title='acpi_namespace_node::type' data-ref="acpi_namespace_node::type" data-ref-filename="acpi_namespace_node..type">type</a>) {</td></tr>
+<tr><th id="895">895</th><td>			<b>case</b> <a class="macro" href="../../../include/acpi/actypes.h.html#642" title="0x06" data-ref="_M/ACPI_TYPE_DEVICE">ACPI_TYPE_DEVICE</a>:</td></tr>
+<tr><th id="896">896</th><td>			<b>case</b> <a class="macro" href="../../../include/acpi/actypes.h.html#649" title="0x0D" data-ref="_M/ACPI_TYPE_THERMAL">ACPI_TYPE_THERMAL</a>:</td></tr>
+<tr><th id="897">897</th><td></td></tr>
+<tr><th id="898">898</th><td>				<i>/* These types have no node subobject, return the NS node */</i></td></tr>
+<tr><th id="899">899</th><td></td></tr>
+<tr><th id="900">900</th><td>				<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a> = <a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>];</td></tr>
+<tr><th id="901">901</th><td>				<b>break</b>;</td></tr>
+<tr><th id="902">902</th><td></td></tr>
+<tr><th id="903">903</th><td>			<b>default</b>:</td></tr>
+<tr><th id="904">904</th><td>				<i>/* For most types, get the object attached to the node */</i></td></tr>
+<tr><th id="905">905</th><td></td></tr>
+<tr><th id="906">906</th><td>				<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a> = <a class="ref fn" href="acnamesp.h.html#acpi_ns_get_attached_object" title='acpi_ns_get_attached_object' data-ref="acpi_ns_get_attached_object" data-ref-filename="acpi_ns_get_attached_object">acpi_ns_get_attached_object</a>((<b>struct</b> <a class="type" href="aclocal.h.html#acpi_namespace_node" title='acpi_namespace_node' data-ref="acpi_namespace_node" data-ref-filename="acpi_namespace_node">acpi_namespace_node</a> *)<a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>]);</td></tr>
+<tr><th id="907">907</th><td>				<a class="ref fn" href="acutils.h.html#acpi_ut_add_reference" title='acpi_ut_add_reference' data-ref="acpi_ut_add_reference" data-ref-filename="acpi_ut_add_reference">acpi_ut_add_reference</a>(<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a>);</td></tr>
+<tr><th id="908">908</th><td>				<b>break</b>;</td></tr>
+<tr><th id="909">909</th><td>			}</td></tr>
+<tr><th id="910">910</th><td>		} <b>else</b> {</td></tr>
+<tr><th id="911">911</th><td>			<i>/*</i></td></tr>
+<tr><th id="912">912</th><td><i>			 * This must be a reference object produced by either the</i></td></tr>
+<tr><th id="913">913</th><td><i>			 * Index() or ref_of() operator</i></td></tr>
+<tr><th id="914">914</th><td><i>			 */</i></td></tr>
+<tr><th id="915">915</th><td>			<b>switch</b> (<a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>]-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::reference" title='acpi_operand_object::reference' data-ref="acpi_operand_object::reference" data-ref-filename="acpi_operand_object..reference">reference</a>.<a class="ref field" href="acobject.h.html#acpi_object_reference::class" title='acpi_object_reference::class' data-ref="acpi_object_reference::class" data-ref-filename="acpi_object_reference..class">class</a>) {</td></tr>
+<tr><th id="916">916</th><td>			<b>case</b> <a class="enum" href="acobject.h.html#ACPI_REFCLASS_INDEX" title='ACPI_REFCLASS_INDEX' data-ref="ACPI_REFCLASS_INDEX" data-ref-filename="ACPI_REFCLASS_INDEX">ACPI_REFCLASS_INDEX</a>:</td></tr>
+<tr><th id="917">917</th><td>				<i>/*</i></td></tr>
+<tr><th id="918">918</th><td><i>				 * The target type for the Index operator must be</i></td></tr>
+<tr><th id="919">919</th><td><i>				 * either a Buffer or a Package</i></td></tr>
+<tr><th id="920">920</th><td><i>				 */</i></td></tr>
+<tr><th id="921">921</th><td>				<b>switch</b> (<a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>]-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::reference" title='acpi_operand_object::reference' data-ref="acpi_operand_object::reference" data-ref-filename="acpi_operand_object..reference">reference</a>.<a class="ref field" href="acobject.h.html#acpi_object_reference::target_type" title='acpi_object_reference::target_type' data-ref="acpi_object_reference::target_type" data-ref-filename="acpi_object_reference..target_type">target_type</a>) {</td></tr>
+<tr><th id="922">922</th><td>				<b>case</b> <a class="macro" href="../../../include/acpi/actypes.h.html#650" title="0x0E" data-ref="_M/ACPI_TYPE_BUFFER_FIELD">ACPI_TYPE_BUFFER_FIELD</a>:</td></tr>
+<tr><th id="923">923</th><td></td></tr>
+<tr><th id="924">924</th><td>					<a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a> =</td></tr>
+<tr><th id="925">925</th><td>					    <a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>]-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::reference" title='acpi_operand_object::reference' data-ref="acpi_operand_object::reference" data-ref-filename="acpi_operand_object..reference">reference</a>.<a class="ref field" href="acobject.h.html#acpi_object_reference::object" title='acpi_object_reference::object' data-ref="acpi_object_reference::object" data-ref-filename="acpi_object_reference..object">object</a>;</td></tr>
+<tr><th id="926">926</th><td></td></tr>
+<tr><th id="927">927</th><td>					<i>/*</i></td></tr>
+<tr><th id="928">928</th><td><i>					 * Create a new object that contains one element of the</i></td></tr>
+<tr><th id="929">929</th><td><i>					 * buffer -- the element pointed to by the index.</i></td></tr>
+<tr><th id="930">930</th><td><i>					 *</i></td></tr>
+<tr><th id="931">931</th><td><i>					 * NOTE: index into a buffer is NOT a pointer to a</i></td></tr>
+<tr><th id="932">932</th><td><i>					 * sub-buffer of the main buffer, it is only a pointer to a</i></td></tr>
+<tr><th id="933">933</th><td><i>					 * single element (byte) of the buffer!</i></td></tr>
+<tr><th id="934">934</th><td><i>					 *</i></td></tr>
+<tr><th id="935">935</th><td><i>					 * Since we are returning the value of the buffer at the</i></td></tr>
+<tr><th id="936">936</th><td><i>					 * indexed location, we don't need to add an additional</i></td></tr>
+<tr><th id="937">937</th><td><i>					 * reference to the buffer itself.</i></td></tr>
+<tr><th id="938">938</th><td><i>					 */</i></td></tr>
+<tr><th id="939">939</th><td>					<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a> =</td></tr>
+<tr><th id="940">940</th><td>					    <a class="ref fn" href="acutils.h.html#acpi_ut_create_integer_object" title='acpi_ut_create_integer_object' data-ref="acpi_ut_create_integer_object" data-ref-filename="acpi_ut_create_integer_object">acpi_ut_create_integer_object</a>((<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a>)</td></tr>
+<tr><th id="941">941</th><td>									  <a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::buffer" title='acpi_operand_object::buffer' data-ref="acpi_operand_object::buffer" data-ref-filename="acpi_operand_object..buffer">buffer</a>.<a class="ref field" href="acobject.h.html#98" title='acpi_object_buffer::pointer' data-ref="acpi_object_buffer::pointer" data-ref-filename="acpi_object_buffer..pointer">pointer</a>[<a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>]-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::reference" title='acpi_operand_object::reference' data-ref="acpi_operand_object::reference" data-ref-filename="acpi_operand_object..reference">reference</a>.<a class="ref field" href="acobject.h.html#acpi_object_reference::value" title='acpi_object_reference::value' data-ref="acpi_object_reference::value" data-ref-filename="acpi_object_reference..value">value</a>]);</td></tr>
+<tr><th id="942">942</th><td>					<b>if</b> (!<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a>) {</td></tr>
+<tr><th id="943">943</th><td>						<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a> = <a class="macro" href="../../../include/acpi/acexcep.h.html#74" title="((acpi_status) (0x0004 | 0x0000))" data-ref="_M/AE_NO_MEMORY">AE_NO_MEMORY</a>;</td></tr>
+<tr><th id="944">944</th><td>						<b>goto</b> <a class="lbl" href="#29cleanup" data-ref="29cleanup" data-ref-filename="29cleanup">cleanup</a>;</td></tr>
+<tr><th id="945">945</th><td>					}</td></tr>
+<tr><th id="946">946</th><td>					<b>break</b>;</td></tr>
+<tr><th id="947">947</th><td></td></tr>
+<tr><th id="948">948</th><td>				<b>case</b> <a class="macro" href="../../../include/acpi/actypes.h.html#640" title="0x04" data-ref="_M/ACPI_TYPE_PACKAGE">ACPI_TYPE_PACKAGE</a>:</td></tr>
+<tr><th id="949">949</th><td>					<i>/*</i></td></tr>
+<tr><th id="950">950</th><td><i>					 * Return the referenced element of the package. We must</i></td></tr>
+<tr><th id="951">951</th><td><i>					 * add another reference to the referenced object, however.</i></td></tr>
+<tr><th id="952">952</th><td><i>					 */</i></td></tr>
+<tr><th id="953">953</th><td>					<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a> =</td></tr>
+<tr><th id="954">954</th><td>					    *(<a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>]-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::reference" title='acpi_operand_object::reference' data-ref="acpi_operand_object::reference" data-ref-filename="acpi_operand_object..reference">reference</a>.<a class="ref field" href="acobject.h.html#acpi_object_reference::where" title='acpi_object_reference::where' data-ref="acpi_object_reference::where" data-ref-filename="acpi_object_reference..where">where</a>);</td></tr>
+<tr><th id="955">955</th><td>					<b>if</b> (!<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a>) {</td></tr>
+<tr><th id="956">956</th><td>						<i>/*</i></td></tr>
+<tr><th id="957">957</th><td><i>						 * Element is NULL, do not allow the dereference.</i></td></tr>
+<tr><th id="958">958</th><td><i>						 * This provides compatibility with other ACPI</i></td></tr>
+<tr><th id="959">959</th><td><i>						 * implementations.</i></td></tr>
+<tr><th id="960">960</th><td><i>						 */</i></td></tr>
+<tr><th id="961">961</th><td>						<a class="macro" href="../../../include/acpi/acoutput.h.html#457" title="return(((acpi_status) (0x0007 | 0x3000)))" data-ref="_M/return_ACPI_STATUS">return_ACPI_STATUS</a></td></tr>
+<tr><th id="962">962</th><td>						    (<a class="macro" href="../../../include/acpi/acexcep.h.html#145" title="((acpi_status) (0x0007 | 0x3000))" data-ref="_M/AE_AML_UNINITIALIZED_ELEMENT">AE_AML_UNINITIALIZED_ELEMENT</a>);</td></tr>
+<tr><th id="963">963</th><td>					}</td></tr>
+<tr><th id="964">964</th><td></td></tr>
+<tr><th id="965">965</th><td>					<a class="ref fn" href="acutils.h.html#acpi_ut_add_reference" title='acpi_ut_add_reference' data-ref="acpi_ut_add_reference" data-ref-filename="acpi_ut_add_reference">acpi_ut_add_reference</a>(<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a>);</td></tr>
+<tr><th id="966">966</th><td>					<b>break</b>;</td></tr>
+<tr><th id="967">967</th><td></td></tr>
+<tr><th id="968">968</th><td>				<b>default</b>:</td></tr>
+<tr><th id="969">969</th><td></td></tr>
+<tr><th id="970">970</th><td>					<a class="macro" href="../../../include/acpi/acoutput.h.html#205" title="acpi_error (_acpi_module_name, 970, &quot;Unknown Index TargetType 0x%X in reference object %p&quot;, operand[0]-&gt;reference. target_type, operand[0])" data-ref="_M/ACPI_ERROR">ACPI_ERROR</a>((<a class="macro" href="../../../include/acpi/acoutput.h.html#195" title="_acpi_module_name, 970" data-ref="_M/AE_INFO">AE_INFO</a>,</td></tr>
+<tr><th id="971">971</th><td>						    <q>"Unknown Index TargetType 0x%X in reference object %p"</q>,</td></tr>
+<tr><th id="972">972</th><td>						    <a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>]-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::reference" title='acpi_operand_object::reference' data-ref="acpi_operand_object::reference" data-ref-filename="acpi_operand_object..reference">reference</a>.</td></tr>
+<tr><th id="973">973</th><td>						    <a class="ref field" href="acobject.h.html#acpi_object_reference::target_type" title='acpi_object_reference::target_type' data-ref="acpi_object_reference::target_type" data-ref-filename="acpi_object_reference..target_type">target_type</a>, <a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>]));</td></tr>
+<tr><th id="974">974</th><td></td></tr>
+<tr><th id="975">975</th><td>					<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a> = <a class="macro" href="../../../include/acpi/acexcep.h.html#141" title="((acpi_status) (0x0003 | 0x3000))" data-ref="_M/AE_AML_OPERAND_TYPE">AE_AML_OPERAND_TYPE</a>;</td></tr>
+<tr><th id="976">976</th><td>					<b>goto</b> <a class="lbl" href="#29cleanup" data-ref="29cleanup" data-ref-filename="29cleanup">cleanup</a>;</td></tr>
+<tr><th id="977">977</th><td>				}</td></tr>
+<tr><th id="978">978</th><td>				<b>break</b>;</td></tr>
+<tr><th id="979">979</th><td></td></tr>
+<tr><th id="980">980</th><td>			<b>case</b> <a class="enum" href="acobject.h.html#ACPI_REFCLASS_REFOF" title='ACPI_REFCLASS_REFOF' data-ref="ACPI_REFCLASS_REFOF" data-ref-filename="ACPI_REFCLASS_REFOF">ACPI_REFCLASS_REFOF</a>:</td></tr>
+<tr><th id="981">981</th><td></td></tr>
+<tr><th id="982">982</th><td>				<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a> = <a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>]-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::reference" title='acpi_operand_object::reference' data-ref="acpi_operand_object::reference" data-ref-filename="acpi_operand_object..reference">reference</a>.<a class="ref field" href="acobject.h.html#acpi_object_reference::object" title='acpi_object_reference::object' data-ref="acpi_object_reference::object" data-ref-filename="acpi_object_reference..object">object</a>;</td></tr>
+<tr><th id="983">983</th><td></td></tr>
+<tr><th id="984">984</th><td>				<b>if</b> (<a class="macro" href="acmacros.h.html#376" title="(((union acpi_descriptor *)(void *)(return_desc))-&gt;common.descriptor_type)" data-ref="_M/ACPI_GET_DESCRIPTOR_TYPE">ACPI_GET_DESCRIPTOR_TYPE</a>(<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a>) ==</td></tr>
+<tr><th id="985">985</th><td>				    <a class="macro" href="acobject.h.html#423" title="0x0F" data-ref="_M/ACPI_DESC_TYPE_NAMED">ACPI_DESC_TYPE_NAMED</a>) {</td></tr>
+<tr><th id="986">986</th><td>					<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a> =</td></tr>
+<tr><th id="987">987</th><td>					    <a class="ref fn" href="acnamesp.h.html#acpi_ns_get_attached_object" title='acpi_ns_get_attached_object' data-ref="acpi_ns_get_attached_object" data-ref-filename="acpi_ns_get_attached_object">acpi_ns_get_attached_object</a>((<b>struct</b></td></tr>
+<tr><th id="988">988</th><td>									 <a class="type" href="aclocal.h.html#acpi_namespace_node" title='acpi_namespace_node' data-ref="acpi_namespace_node" data-ref-filename="acpi_namespace_node">acpi_namespace_node</a></td></tr>
+<tr><th id="989">989</th><td>									 *)</td></tr>
+<tr><th id="990">990</th><td>									<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a>);</td></tr>
+<tr><th id="991">991</th><td>					<b>if</b> (!<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a>) {</td></tr>
+<tr><th id="992">992</th><td>						<b>break</b>;</td></tr>
+<tr><th id="993">993</th><td>					}</td></tr>
+<tr><th id="994">994</th><td></td></tr>
+<tr><th id="995">995</th><td>					<i>/*</i></td></tr>
+<tr><th id="996">996</th><td><i>					 * June 2013:</i></td></tr>
+<tr><th id="997">997</th><td><i>					 * buffer_fields/field_units require additional resolution</i></td></tr>
+<tr><th id="998">998</th><td><i>					 */</i></td></tr>
+<tr><th id="999">999</th><td>					<b>switch</b> (<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::common" title='acpi_operand_object::common' data-ref="acpi_operand_object::common" data-ref-filename="acpi_operand_object..common">common</a>.<a class="ref field" href="acobject.h.html#74" title='acpi_object_common::type' data-ref="acpi_object_common::type" data-ref-filename="acpi_object_common..type">type</a>) {</td></tr>
+<tr><th id="1000">1000</th><td>					<b>case</b> <a class="macro" href="../../../include/acpi/actypes.h.html#650" title="0x0E" data-ref="_M/ACPI_TYPE_BUFFER_FIELD">ACPI_TYPE_BUFFER_FIELD</a>:</td></tr>
+<tr><th id="1001">1001</th><td>					<b>case</b> <a class="macro" href="../../../include/acpi/actypes.h.html#665" title="0x11" data-ref="_M/ACPI_TYPE_LOCAL_REGION_FIELD">ACPI_TYPE_LOCAL_REGION_FIELD</a>:</td></tr>
+<tr><th id="1002">1002</th><td>					<b>case</b> <a class="macro" href="../../../include/acpi/actypes.h.html#666" title="0x12" data-ref="_M/ACPI_TYPE_LOCAL_BANK_FIELD">ACPI_TYPE_LOCAL_BANK_FIELD</a>:</td></tr>
+<tr><th id="1003">1003</th><td>					<b>case</b> <a class="macro" href="../../../include/acpi/actypes.h.html#667" title="0x13" data-ref="_M/ACPI_TYPE_LOCAL_INDEX_FIELD">ACPI_TYPE_LOCAL_INDEX_FIELD</a>:</td></tr>
+<tr><th id="1004">1004</th><td></td></tr>
+<tr><th id="1005">1005</th><td>						<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a> =</td></tr>
+<tr><th id="1006">1006</th><td>						    <a class="ref fn" href="acinterp.h.html#acpi_ex_read_data_from_field" title='acpi_ex_read_data_from_field' data-ref="acpi_ex_read_data_from_field" data-ref-filename="acpi_ex_read_data_from_field">acpi_ex_read_data_from_field</a></td></tr>
+<tr><th id="1007">1007</th><td>						    (<a class="local col2 ref" href="#22walk_state" title='walk_state' data-ref="22walk_state" data-ref-filename="22walk_state">walk_state</a>, <a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a>,</td></tr>
+<tr><th id="1008">1008</th><td>						     &amp;<a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a>);</td></tr>
+<tr><th id="1009">1009</th><td>						<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#58" title="(status)" data-ref="_M/ACPI_FAILURE">ACPI_FAILURE</a>(<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a>)) {</td></tr>
+<tr><th id="1010">1010</th><td>							<b>goto</b> <a class="lbl" href="#29cleanup" data-ref="29cleanup" data-ref-filename="29cleanup">cleanup</a>;</td></tr>
+<tr><th id="1011">1011</th><td>						}</td></tr>
+<tr><th id="1012">1012</th><td></td></tr>
+<tr><th id="1013">1013</th><td>						<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a> = <a class="local col4 ref" href="#24temp_desc" title='temp_desc' data-ref="24temp_desc" data-ref-filename="24temp_desc">temp_desc</a>;</td></tr>
+<tr><th id="1014">1014</th><td>						<b>break</b>;</td></tr>
+<tr><th id="1015">1015</th><td></td></tr>
+<tr><th id="1016">1016</th><td>					<b>default</b>:</td></tr>
+<tr><th id="1017">1017</th><td></td></tr>
+<tr><th id="1018">1018</th><td>						<i>/* Add another reference to the object */</i></td></tr>
+<tr><th id="1019">1019</th><td></td></tr>
+<tr><th id="1020">1020</th><td>						<a class="ref fn" href="acutils.h.html#acpi_ut_add_reference" title='acpi_ut_add_reference' data-ref="acpi_ut_add_reference" data-ref-filename="acpi_ut_add_reference">acpi_ut_add_reference</a></td></tr>
+<tr><th id="1021">1021</th><td>						    (<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a>);</td></tr>
+<tr><th id="1022">1022</th><td>						<b>break</b>;</td></tr>
+<tr><th id="1023">1023</th><td>					}</td></tr>
+<tr><th id="1024">1024</th><td>				}</td></tr>
+<tr><th id="1025">1025</th><td>				<b>break</b>;</td></tr>
+<tr><th id="1026">1026</th><td></td></tr>
+<tr><th id="1027">1027</th><td>			<b>default</b>:</td></tr>
+<tr><th id="1028">1028</th><td></td></tr>
+<tr><th id="1029">1029</th><td>				<a class="macro" href="../../../include/acpi/acoutput.h.html#205" title="acpi_error (_acpi_module_name, 1029, &quot;Unknown class in reference(%p) - 0x%2.2X&quot;, operand[0], operand[0]-&gt;reference.class)" data-ref="_M/ACPI_ERROR">ACPI_ERROR</a>((<a class="macro" href="../../../include/acpi/acoutput.h.html#195" title="_acpi_module_name, 1029" data-ref="_M/AE_INFO">AE_INFO</a>,</td></tr>
+<tr><th id="1030">1030</th><td>					    <q>"Unknown class in reference(%p) - 0x%2.2X"</q>,</td></tr>
+<tr><th id="1031">1031</th><td>					    <a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>],</td></tr>
+<tr><th id="1032">1032</th><td>					    <a class="local col3 ref" href="#23operand" title='operand' data-ref="23operand" data-ref-filename="23operand">operand</a>[<var>0</var>]-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::reference" title='acpi_operand_object::reference' data-ref="acpi_operand_object::reference" data-ref-filename="acpi_operand_object..reference">reference</a>.<a class="ref field" href="acobject.h.html#acpi_object_reference::class" title='acpi_object_reference::class' data-ref="acpi_object_reference::class" data-ref-filename="acpi_object_reference..class">class</a>));</td></tr>
+<tr><th id="1033">1033</th><td></td></tr>
+<tr><th id="1034">1034</th><td>				<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a> = <a class="macro" href="../../../include/acpi/acexcep.h.html#78" title="((acpi_status) (0x0008 | 0x0000))" data-ref="_M/AE_TYPE">AE_TYPE</a>;</td></tr>
+<tr><th id="1035">1035</th><td>				<b>goto</b> <a class="lbl" href="#29cleanup" data-ref="29cleanup" data-ref-filename="29cleanup">cleanup</a>;</td></tr>
+<tr><th id="1036">1036</th><td>			}</td></tr>
+<tr><th id="1037">1037</th><td>		}</td></tr>
+<tr><th id="1038">1038</th><td>		<b>break</b>;</td></tr>
+<tr><th id="1039">1039</th><td></td></tr>
+<tr><th id="1040">1040</th><td>	<b>default</b>:</td></tr>
+<tr><th id="1041">1041</th><td></td></tr>
+<tr><th id="1042">1042</th><td>		<a class="macro" href="../../../include/acpi/acoutput.h.html#205" title="acpi_error (_acpi_module_name, 1042, &quot;Unknown AML opcode 0x%X&quot;, walk_state-&gt;opcode)" data-ref="_M/ACPI_ERROR">ACPI_ERROR</a>((<a class="macro" href="../../../include/acpi/acoutput.h.html#195" title="_acpi_module_name, 1042" data-ref="_M/AE_INFO">AE_INFO</a>, <q>"Unknown AML opcode 0x%X"</q>,</td></tr>
+<tr><th id="1043">1043</th><td>			    <a class="local col2 ref" href="#22walk_state" title='walk_state' data-ref="22walk_state" data-ref-filename="22walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::opcode" title='acpi_walk_state::opcode' data-ref="acpi_walk_state::opcode" data-ref-filename="acpi_walk_state..opcode">opcode</a>));</td></tr>
+<tr><th id="1044">1044</th><td></td></tr>
+<tr><th id="1045">1045</th><td>		<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a> = <a class="macro" href="../../../include/acpi/acexcep.h.html#139" title="((acpi_status) (0x0001 | 0x3000))" data-ref="_M/AE_AML_BAD_OPCODE">AE_AML_BAD_OPCODE</a>;</td></tr>
+<tr><th id="1046">1046</th><td>		<b>goto</b> <a class="lbl" href="#29cleanup" data-ref="29cleanup" data-ref-filename="29cleanup">cleanup</a>;</td></tr>
+<tr><th id="1047">1047</th><td>	}</td></tr>
+<tr><th id="1048">1048</th><td></td></tr>
+<tr><th id="1049">1049</th><td><dfn class="lbl" id="29cleanup" data-ref="29cleanup" data-ref-filename="29cleanup">cleanup</dfn>:</td></tr>
+<tr><th id="1050">1050</th><td></td></tr>
+<tr><th id="1051">1051</th><td>	<i>/* Delete return object on error */</i></td></tr>
+<tr><th id="1052">1052</th><td></td></tr>
+<tr><th id="1053">1053</th><td>	<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#58" title="(status)" data-ref="_M/ACPI_FAILURE">ACPI_FAILURE</a>(<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a>)) {</td></tr>
+<tr><th id="1054">1054</th><td>		<a class="ref fn" href="acutils.h.html#acpi_ut_remove_reference" title='acpi_ut_remove_reference' data-ref="acpi_ut_remove_reference" data-ref-filename="acpi_ut_remove_reference">acpi_ut_remove_reference</a>(<a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a>);</td></tr>
+<tr><th id="1055">1055</th><td>	}</td></tr>
+<tr><th id="1056">1056</th><td></td></tr>
+<tr><th id="1057">1057</th><td>	<i>/* Save return object on success */</i></td></tr>
+<tr><th id="1058">1058</th><td></td></tr>
+<tr><th id="1059">1059</th><td>	<b>else</b> {</td></tr>
+<tr><th id="1060">1060</th><td>		<a class="local col2 ref" href="#22walk_state" title='walk_state' data-ref="22walk_state" data-ref-filename="22walk_state">walk_state</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_walk_state::result_obj" title='acpi_walk_state::result_obj' data-ref="acpi_walk_state::result_obj" data-ref-filename="acpi_walk_state..result_obj">result_obj</a> = <a class="local col5 ref" href="#25return_desc" title='return_desc' data-ref="25return_desc" data-ref-filename="25return_desc">return_desc</a>;</td></tr>
+<tr><th id="1061">1061</th><td>	}</td></tr>
+<tr><th id="1062">1062</th><td></td></tr>
+<tr><th id="1063">1063</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#457" title="return(status)" data-ref="_M/return_ACPI_STATUS">return_ACPI_STATUS</a>(<a class="local col6 ref" href="#26status" title='status' data-ref="26status" data-ref-filename="26status">status</a>);</td></tr>
+<tr><th id="1064">1064</th><td>}</td></tr>
+<tr><th id="1065">1065</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

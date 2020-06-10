@@ -1,0 +1,429 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>fixdep.c source code [linux-5.3.1/scripts/basic/fixdep.c] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="item,main "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/scripts/basic/fixdep.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>scripts</a>/<a href='./'>basic</a>/<a href='fixdep.c.html'>fixdep.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*</i></td></tr>
+<tr><th id="2">2</th><td><i> * "Optimize" a list of dependencies as spit out by gcc -MD</i></td></tr>
+<tr><th id="3">3</th><td><i> * for the kernel build</i></td></tr>
+<tr><th id="4">4</th><td><i> * ===========================================================================</i></td></tr>
+<tr><th id="5">5</th><td><i> *</i></td></tr>
+<tr><th id="6">6</th><td><i> * Author       Kai Germaschewski</i></td></tr>
+<tr><th id="7">7</th><td><i> * Copyright    2002 by Kai Germaschewski  &lt;kai.germaschewski@gmx.de&gt;</i></td></tr>
+<tr><th id="8">8</th><td><i> *</i></td></tr>
+<tr><th id="9">9</th><td><i> * This software may be used and distributed according to the terms</i></td></tr>
+<tr><th id="10">10</th><td><i> * of the GNU General Public License, incorporated herein by reference.</i></td></tr>
+<tr><th id="11">11</th><td><i> *</i></td></tr>
+<tr><th id="12">12</th><td><i> *</i></td></tr>
+<tr><th id="13">13</th><td><i> * Introduction:</i></td></tr>
+<tr><th id="14">14</th><td><i> *</i></td></tr>
+<tr><th id="15">15</th><td><i> * gcc produces a very nice and correct list of dependencies which</i></td></tr>
+<tr><th id="16">16</th><td><i> * tells make when to remake a file.</i></td></tr>
+<tr><th id="17">17</th><td><i> *</i></td></tr>
+<tr><th id="18">18</th><td><i> * To use this list as-is however has the drawback that virtually</i></td></tr>
+<tr><th id="19">19</th><td><i> * every file in the kernel includes autoconf.h.</i></td></tr>
+<tr><th id="20">20</th><td><i> *</i></td></tr>
+<tr><th id="21">21</th><td><i> * If the user re-runs make *config, autoconf.h will be</i></td></tr>
+<tr><th id="22">22</th><td><i> * regenerated.  make notices that and will rebuild every file which</i></td></tr>
+<tr><th id="23">23</th><td><i> * includes autoconf.h, i.e. basically all files. This is extremely</i></td></tr>
+<tr><th id="24">24</th><td><i> * annoying if the user just changed CONFIG_HIS_DRIVER from n to m.</i></td></tr>
+<tr><th id="25">25</th><td><i> *</i></td></tr>
+<tr><th id="26">26</th><td><i> * So we play the same trick that "mkdep" played before. We replace</i></td></tr>
+<tr><th id="27">27</th><td><i> * the dependency on autoconf.h by a dependency on every config</i></td></tr>
+<tr><th id="28">28</th><td><i> * option which is mentioned in any of the listed prerequisites.</i></td></tr>
+<tr><th id="29">29</th><td><i> *</i></td></tr>
+<tr><th id="30">30</th><td><i> * kconfig populates a tree in include/config/ with an empty file</i></td></tr>
+<tr><th id="31">31</th><td><i> * for each config symbol and when the configuration is updated</i></td></tr>
+<tr><th id="32">32</th><td><i> * the files representing changed config options are touched</i></td></tr>
+<tr><th id="33">33</th><td><i> * which then let make pick up the changes and the files that use</i></td></tr>
+<tr><th id="34">34</th><td><i> * the config symbols are rebuilt.</i></td></tr>
+<tr><th id="35">35</th><td><i> *</i></td></tr>
+<tr><th id="36">36</th><td><i> * So if the user changes his CONFIG_HIS_DRIVER option, only the objects</i></td></tr>
+<tr><th id="37">37</th><td><i> * which depend on "include/config/his/driver.h" will be rebuilt,</i></td></tr>
+<tr><th id="38">38</th><td><i> * so most likely only his driver ;-)</i></td></tr>
+<tr><th id="39">39</th><td><i> *</i></td></tr>
+<tr><th id="40">40</th><td><i> * The idea above dates, by the way, back to Michael E Chastain, AFAIK.</i></td></tr>
+<tr><th id="41">41</th><td><i> *</i></td></tr>
+<tr><th id="42">42</th><td><i> * So to get dependencies right, there are two issues:</i></td></tr>
+<tr><th id="43">43</th><td><i> * o if any of the files the compiler read changed, we need to rebuild</i></td></tr>
+<tr><th id="44">44</th><td><i> * o if the command line given to the compile the file changed, we</i></td></tr>
+<tr><th id="45">45</th><td><i> *   better rebuild as well.</i></td></tr>
+<tr><th id="46">46</th><td><i> *</i></td></tr>
+<tr><th id="47">47</th><td><i> * The former is handled by using the -MD output, the later by saving</i></td></tr>
+<tr><th id="48">48</th><td><i> * the command line used to compile the old object and comparing it</i></td></tr>
+<tr><th id="49">49</th><td><i> * to the one we would now use.</i></td></tr>
+<tr><th id="50">50</th><td><i> *</i></td></tr>
+<tr><th id="51">51</th><td><i> * Again, also this idea is pretty old and has been discussed on</i></td></tr>
+<tr><th id="52">52</th><td><i> * kbuild-devel a long time ago. I don't have a sensibly working</i></td></tr>
+<tr><th id="53">53</th><td><i> * internet connection right now, so I rather don't mention names</i></td></tr>
+<tr><th id="54">54</th><td><i> * without double checking.</i></td></tr>
+<tr><th id="55">55</th><td><i> *</i></td></tr>
+<tr><th id="56">56</th><td><i> * This code here has been based partially based on mkdep.c, which</i></td></tr>
+<tr><th id="57">57</th><td><i> * says the following about its history:</i></td></tr>
+<tr><th id="58">58</th><td><i> *</i></td></tr>
+<tr><th id="59">59</th><td><i> *   Copyright abandoned, Michael Chastain, &lt;mailto:mec@shout.net&gt;.</i></td></tr>
+<tr><th id="60">60</th><td><i> *   This is a C version of syncdep.pl by Werner Almesberger.</i></td></tr>
+<tr><th id="61">61</th><td><i> *</i></td></tr>
+<tr><th id="62">62</th><td><i> *</i></td></tr>
+<tr><th id="63">63</th><td><i> * It is invoked as</i></td></tr>
+<tr><th id="64">64</th><td><i> *</i></td></tr>
+<tr><th id="65">65</th><td><i> *   fixdep &lt;depfile&gt; &lt;target&gt; &lt;cmdline&gt;</i></td></tr>
+<tr><th id="66">66</th><td><i> *</i></td></tr>
+<tr><th id="67">67</th><td><i> * and will read the dependency file &lt;depfile&gt;</i></td></tr>
+<tr><th id="68">68</th><td><i> *</i></td></tr>
+<tr><th id="69">69</th><td><i> * The transformed dependency snipped is written to stdout.</i></td></tr>
+<tr><th id="70">70</th><td><i> *</i></td></tr>
+<tr><th id="71">71</th><td><i> * It first generates a line</i></td></tr>
+<tr><th id="72">72</th><td><i> *</i></td></tr>
+<tr><th id="73">73</th><td><i> *   cmd_&lt;target&gt; = &lt;cmdline&gt;</i></td></tr>
+<tr><th id="74">74</th><td><i> *</i></td></tr>
+<tr><th id="75">75</th><td><i> * and then basically copies the .&lt;target&gt;.d file to stdout, in the</i></td></tr>
+<tr><th id="76">76</th><td><i> * process filtering out the dependency on autoconf.h and adding</i></td></tr>
+<tr><th id="77">77</th><td><i> * dependencies on include/config/my/option.h for every</i></td></tr>
+<tr><th id="78">78</th><td><i> * CONFIG_MY_OPTION encountered in any of the prerequisites.</i></td></tr>
+<tr><th id="79">79</th><td><i> *</i></td></tr>
+<tr><th id="80">80</th><td><i> * It will also filter out all the dependencies on *.ver. We need</i></td></tr>
+<tr><th id="81">81</th><td><i> * to make sure that the generated version checksum are globally up</i></td></tr>
+<tr><th id="82">82</th><td><i> * to date before even starting the recursive build, so it's too late</i></td></tr>
+<tr><th id="83">83</th><td><i> * at this point anyway.</i></td></tr>
+<tr><th id="84">84</th><td><i> *</i></td></tr>
+<tr><th id="85">85</th><td><i> * We don't even try to really parse the header files, but</i></td></tr>
+<tr><th id="86">86</th><td><i> * merely grep, i.e. if CONFIG_FOO is mentioned in a comment, it will</i></td></tr>
+<tr><th id="87">87</th><td><i> * be picked up as well. It's not a problem with respect to</i></td></tr>
+<tr><th id="88">88</th><td><i> * correctness, since that can only give too many dependencies, thus</i></td></tr>
+<tr><th id="89">89</th><td><i> * we cannot miss a rebuild. Since people tend to not mention totally</i></td></tr>
+<tr><th id="90">90</th><td><i> * unrelated CONFIG_ options all over the place, it's not an</i></td></tr>
+<tr><th id="91">91</th><td><i> * efficiency problem either.</i></td></tr>
+<tr><th id="92">92</th><td><i> *</i></td></tr>
+<tr><th id="93">93</th><td><i> * (Note: it'd be easy to port over the complete mkdep state machine,</i></td></tr>
+<tr><th id="94">94</th><td><i> *  but I don't think the added complexity is worth it)</i></td></tr>
+<tr><th id="95">95</th><td><i> */</i></td></tr>
+<tr><th id="96">96</th><td></td></tr>
+<tr><th id="97">97</th><td><u>#include <a href="../../../include/x86_64-linux-gnu/sys/types.h.html">&lt;sys/types.h&gt;</a></u></td></tr>
+<tr><th id="98">98</th><td><u>#include <a href="../../../include/x86_64-linux-gnu/sys/stat.h.html">&lt;sys/stat.h&gt;</a></u></td></tr>
+<tr><th id="99">99</th><td><u>#include <a href="../../../include/unistd.h.html">&lt;unistd.h&gt;</a></u></td></tr>
+<tr><th id="100">100</th><td><u>#include <a href="../../../include/fcntl.h.html">&lt;fcntl.h&gt;</a></u></td></tr>
+<tr><th id="101">101</th><td><u>#include <a href="../../../include/string.h.html">&lt;string.h&gt;</a></u></td></tr>
+<tr><th id="102">102</th><td><u>#include &lt;stdarg.h&gt;</u></td></tr>
+<tr><th id="103">103</th><td><u>#include <a href="../../../include/stdlib.h.html">&lt;stdlib.h&gt;</a></u></td></tr>
+<tr><th id="104">104</th><td><u>#include <a href="../../../include/stdio.h.html">&lt;stdio.h&gt;</a></u></td></tr>
+<tr><th id="105">105</th><td><u>#include <a href="../../../include/ctype.h.html">&lt;ctype.h&gt;</a></u></td></tr>
+<tr><th id="106">106</th><td></td></tr>
+<tr><th id="107">107</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="usage" title='usage' data-type='void usage()' data-ref="usage" data-ref-filename="usage">usage</dfn>(<em>void</em>)</td></tr>
+<tr><th id="108">108</th><td>{</td></tr>
+<tr><th id="109">109</th><td>	<a class="ref fn" href="../../../include/stdio.h.html#fprintf" title='fprintf' data-ref="fprintf" data-ref-filename="fprintf">fprintf</a>(<a class="macro" href="../../../include/stdio.h.html#141" title="stderr" data-ref="_M/stderr">stderr</a>, <q>"Usage: fixdep &lt;depfile&gt; &lt;target&gt; &lt;cmdline&gt;\n"</q>);</td></tr>
+<tr><th id="110">110</th><td>	<a class="ref fn" href="../../../include/stdlib.h.html#exit" title='exit' data-ref="exit" data-ref-filename="exit">exit</a>(<var>1</var>);</td></tr>
+<tr><th id="111">111</th><td>}</td></tr>
+<tr><th id="112">112</th><td></td></tr>
+<tr><th id="113">113</th><td><i  data-doc="xprintf">/*</i></td></tr>
+<tr><th id="114">114</th><td><i  data-doc="xprintf"> * In the intended usage of this program, the stdout is redirected to .*.cmd</i></td></tr>
+<tr><th id="115">115</th><td><i  data-doc="xprintf"> * files. The return value of printf() and putchar() must be checked to catch</i></td></tr>
+<tr><th id="116">116</th><td><i  data-doc="xprintf"> * any error, e.g. "No space left on device".</i></td></tr>
+<tr><th id="117">117</th><td><i  data-doc="xprintf"> */</i></td></tr>
+<tr><th id="118">118</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="xprintf" title='xprintf' data-type='void xprintf(const char * format)' data-ref="xprintf" data-ref-filename="xprintf">xprintf</dfn>(<em>const</em> <em>char</em> *<dfn class="local col1 decl" id="1format" title='format' data-type='const char *' data-ref="1format" data-ref-filename="1format">format</dfn>, ...)</td></tr>
+<tr><th id="119">119</th><td>{</td></tr>
+<tr><th id="120">120</th><td>	<span class='typedef' title='va_list' data-type='__gnuc_va_list' data-ref="va_list" data-ref-filename="va_list">va_list</span> <dfn class="local col2 decl" id="2ap" title='ap' data-type='va_list' data-ref="2ap" data-ref-filename="2ap">ap</dfn>;</td></tr>
+<tr><th id="121">121</th><td>	<em>int</em> <dfn class="local col3 decl" id="3ret" title='ret' data-type='int' data-ref="3ret" data-ref-filename="3ret">ret</dfn>;</td></tr>
+<tr><th id="122">122</th><td></td></tr>
+<tr><th id="123">123</th><td>	<span class="macro" title="__builtin_va_start(ap, format)" data-ref="_M/va_start">va_start</span>(<a class="local col2 ref" href="#2ap" title='ap' data-ref="2ap" data-ref-filename="2ap">ap</a>, <a class="local col1 ref" href="#1format" title='format' data-ref="1format" data-ref-filename="1format">format</a>);</td></tr>
+<tr><th id="124">124</th><td>	<a class="local col3 ref" href="#3ret" title='ret' data-ref="3ret" data-ref-filename="3ret">ret</a> = <a class="ref fn" href="../../../include/stdio.h.html#vprintf" title='vprintf' data-ref="vprintf" data-ref-filename="vprintf">vprintf</a>(<a class="local col1 ref" href="#1format" title='format' data-ref="1format" data-ref-filename="1format">format</a>, <a class="local col2 ref" href="#2ap" title='ap' data-ref="2ap" data-ref-filename="2ap">ap</a>);</td></tr>
+<tr><th id="125">125</th><td>	<b>if</b> (<a class="local col3 ref" href="#3ret" title='ret' data-ref="3ret" data-ref-filename="3ret">ret</a> &lt; <var>0</var>) {</td></tr>
+<tr><th id="126">126</th><td>		<a class="ref fn" href="../../../include/stdio.h.html#perror" title='perror' data-ref="perror" data-ref-filename="perror">perror</a>(<q>"fixdep"</q>);</td></tr>
+<tr><th id="127">127</th><td>		<a class="ref fn" href="../../../include/stdlib.h.html#exit" title='exit' data-ref="exit" data-ref-filename="exit">exit</a>(<var>1</var>);</td></tr>
+<tr><th id="128">128</th><td>	}</td></tr>
+<tr><th id="129">129</th><td>	<span class="macro" title="__builtin_va_end(ap)" data-ref="_M/va_end">va_end</span>(<a class="local col2 ref" href="#2ap" title='ap' data-ref="2ap" data-ref-filename="2ap">ap</a>);</td></tr>
+<tr><th id="130">130</th><td>}</td></tr>
+<tr><th id="131">131</th><td></td></tr>
+<tr><th id="132">132</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="xputchar" title='xputchar' data-type='void xputchar(int c)' data-ref="xputchar" data-ref-filename="xputchar">xputchar</dfn>(<em>int</em> <dfn class="local col4 decl" id="4c" title='c' data-type='int' data-ref="4c" data-ref-filename="4c">c</dfn>)</td></tr>
+<tr><th id="133">133</th><td>{</td></tr>
+<tr><th id="134">134</th><td>	<em>int</em> <dfn class="local col5 decl" id="5ret" title='ret' data-type='int' data-ref="5ret" data-ref-filename="5ret">ret</dfn>;</td></tr>
+<tr><th id="135">135</th><td></td></tr>
+<tr><th id="136">136</th><td>	<a class="local col5 ref" href="#5ret" title='ret' data-ref="5ret" data-ref-filename="5ret">ret</a> = <a class="ref fn" href="../../../include/stdio.h.html#putchar" title='putchar' data-ref="putchar" data-ref-filename="putchar">putchar</a>(<a class="local col4 ref" href="#4c" title='c' data-ref="4c" data-ref-filename="4c">c</a>);</td></tr>
+<tr><th id="137">137</th><td>	<b>if</b> (<a class="local col5 ref" href="#5ret" title='ret' data-ref="5ret" data-ref-filename="5ret">ret</a> == <a class="macro" href="../../../include/x86_64-linux-gnu/bits/libio.h.html#66" title="(-1)" data-ref="_M/EOF">EOF</a>) {</td></tr>
+<tr><th id="138">138</th><td>		<a class="ref fn" href="../../../include/stdio.h.html#perror" title='perror' data-ref="perror" data-ref-filename="perror">perror</a>(<q>"fixdep"</q>);</td></tr>
+<tr><th id="139">139</th><td>		<a class="ref fn" href="../../../include/stdlib.h.html#exit" title='exit' data-ref="exit" data-ref-filename="exit">exit</a>(<var>1</var>);</td></tr>
+<tr><th id="140">140</th><td>	}</td></tr>
+<tr><th id="141">141</th><td>}</td></tr>
+<tr><th id="142">142</th><td></td></tr>
+<tr><th id="143">143</th><td><i  data-doc="print_dep">/*</i></td></tr>
+<tr><th id="144">144</th><td><i  data-doc="print_dep"> * Print out a dependency path from a symbol name</i></td></tr>
+<tr><th id="145">145</th><td><i  data-doc="print_dep"> */</i></td></tr>
+<tr><th id="146">146</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="print_dep" title='print_dep' data-type='void print_dep(const char * m, int slen, const char * dir)' data-ref="print_dep" data-ref-filename="print_dep">print_dep</dfn>(<em>const</em> <em>char</em> *<dfn class="local col6 decl" id="6m" title='m' data-type='const char *' data-ref="6m" data-ref-filename="6m">m</dfn>, <em>int</em> <dfn class="local col7 decl" id="7slen" title='slen' data-type='int' data-ref="7slen" data-ref-filename="7slen">slen</dfn>, <em>const</em> <em>char</em> *<dfn class="local col8 decl" id="8dir" title='dir' data-type='const char *' data-ref="8dir" data-ref-filename="8dir">dir</dfn>)</td></tr>
+<tr><th id="147">147</th><td>{</td></tr>
+<tr><th id="148">148</th><td>	<em>int</em> <dfn class="local col9 decl" id="9c" title='c' data-type='int' data-ref="9c" data-ref-filename="9c">c</dfn>, <dfn class="local col0 decl" id="10prev_c" title='prev_c' data-type='int' data-ref="10prev_c" data-ref-filename="10prev_c">prev_c</dfn> = <kbd>'/'</kbd>, <dfn class="local col1 decl" id="11i" title='i' data-type='int' data-ref="11i" data-ref-filename="11i">i</dfn>;</td></tr>
+<tr><th id="149">149</th><td></td></tr>
+<tr><th id="150">150</th><td>	<a class="tu ref fn" href="#xprintf" title='xprintf' data-use='c' data-ref="xprintf" data-ref-filename="xprintf">xprintf</a>(<q>"    $(wildcard %s/"</q>, <a class="local col8 ref" href="#8dir" title='dir' data-ref="8dir" data-ref-filename="8dir">dir</a>);</td></tr>
+<tr><th id="151">151</th><td>	<b>for</b> (<a class="local col1 ref" href="#11i" title='i' data-ref="11i" data-ref-filename="11i">i</a> = <var>0</var>; <a class="local col1 ref" href="#11i" title='i' data-ref="11i" data-ref-filename="11i">i</a> &lt; <a class="local col7 ref" href="#7slen" title='slen' data-ref="7slen" data-ref-filename="7slen">slen</a>; <a class="local col1 ref" href="#11i" title='i' data-ref="11i" data-ref-filename="11i">i</a>++) {</td></tr>
+<tr><th id="152">152</th><td>		<a class="local col9 ref" href="#9c" title='c' data-ref="9c" data-ref-filename="9c">c</a> = <a class="local col6 ref" href="#6m" title='m' data-ref="6m" data-ref-filename="6m">m</a>[<a class="local col1 ref" href="#11i" title='i' data-ref="11i" data-ref-filename="11i">i</a>];</td></tr>
+<tr><th id="153">153</th><td>		<b>if</b> (<a class="local col9 ref" href="#9c" title='c' data-ref="9c" data-ref-filename="9c">c</a> == <kbd>'_'</kbd>)</td></tr>
+<tr><th id="154">154</th><td>			<a class="local col9 ref" href="#9c" title='c' data-ref="9c" data-ref-filename="9c">c</a> = <kbd>'/'</kbd>;</td></tr>
+<tr><th id="155">155</th><td>		<b>else</b></td></tr>
+<tr><th id="156">156</th><td>			<a class="local col9 ref" href="#9c" title='c' data-ref="9c" data-ref-filename="9c">c</a> = <a class="macro" href="../../../include/ctype.h.html#220" title="(__extension__ ({ int __res; if (sizeof (c) &gt; 1) { if (__builtin_constant_p (c)) { int __c = (c); __res = __c &lt; -128 || __c &gt; 255 ? __c : (*__ctype_tolower_loc ())[__c]; } else __res = tolower (c); } else __res = (*__ctype_tolower_loc ())[(int) (c)]; __res; }))" data-ref="_M/tolower">tolower</a>(<a class="local col9 ref" href="#9c" title='c' data-ref="9c" data-ref-filename="9c">c</a>);</td></tr>
+<tr><th id="157">157</th><td>		<b>if</b> (<a class="local col9 ref" href="#9c" title='c' data-ref="9c" data-ref-filename="9c">c</a> != <kbd>'/'</kbd> || <a class="local col0 ref" href="#10prev_c" title='prev_c' data-ref="10prev_c" data-ref-filename="10prev_c">prev_c</a> != <kbd>'/'</kbd>)</td></tr>
+<tr><th id="158">158</th><td>			<a class="tu ref fn" href="#xputchar" title='xputchar' data-use='c' data-ref="xputchar" data-ref-filename="xputchar">xputchar</a>(<a class="local col9 ref" href="#9c" title='c' data-ref="9c" data-ref-filename="9c">c</a>);</td></tr>
+<tr><th id="159">159</th><td>		<a class="local col0 ref" href="#10prev_c" title='prev_c' data-ref="10prev_c" data-ref-filename="10prev_c">prev_c</a> = <a class="local col9 ref" href="#9c" title='c' data-ref="9c" data-ref-filename="9c">c</a>;</td></tr>
+<tr><th id="160">160</th><td>	}</td></tr>
+<tr><th id="161">161</th><td>	<a class="tu ref fn" href="#xprintf" title='xprintf' data-use='c' data-ref="xprintf" data-ref-filename="xprintf">xprintf</a>(<q>".h) \\\n"</q>);</td></tr>
+<tr><th id="162">162</th><td>}</td></tr>
+<tr><th id="163">163</th><td></td></tr>
+<tr><th id="164">164</th><td><b>struct</b> <dfn class="type def" id="item" title='item' data-ref="item" data-ref-filename="item">item</dfn> {</td></tr>
+<tr><th id="165">165</th><td>	<b>struct</b> <a class="type" href="#item" title='item' data-ref="item" data-ref-filename="item">item</a>	*<dfn class="tu decl field" id="item::next" title='item::next' data-type='struct item *' data-ref="item::next" data-ref-filename="item..next">next</dfn>;</td></tr>
+<tr><th id="166">166</th><td>	<em>unsigned</em> <em>int</em>	<dfn class="tu decl field" id="item::len" title='item::len' data-type='unsigned int' data-ref="item::len" data-ref-filename="item..len">len</dfn>;</td></tr>
+<tr><th id="167">167</th><td>	<em>unsigned</em> <em>int</em>	<dfn class="tu decl field" id="item::hash" title='item::hash' data-type='unsigned int' data-ref="item::hash" data-ref-filename="item..hash">hash</dfn>;</td></tr>
+<tr><th id="168">168</th><td>	<em>char</em>		<dfn class="tu decl field" id="item::name" title='item::name' data-type='char [0]' data-ref="item::name" data-ref-filename="item..name">name</dfn>[<var>0</var>];</td></tr>
+<tr><th id="169">169</th><td>};</td></tr>
+<tr><th id="170">170</th><td></td></tr>
+<tr><th id="171">171</th><td><u>#define <dfn class="macro" id="_M/HASHSZ" data-ref="_M/HASHSZ">HASHSZ</dfn> 256</u></td></tr>
+<tr><th id="172">172</th><td><em>static</em> <b>struct</b> <a class="type" href="#item" title='item' data-ref="item" data-ref-filename="item">item</a> *<dfn class="tu decl def" id="hashtab" title='hashtab' data-type='struct item *[256]' data-ref="hashtab" data-ref-filename="hashtab">hashtab</dfn>[<a class="macro" href="#171" title="256" data-ref="_M/HASHSZ">HASHSZ</a>];</td></tr>
+<tr><th id="173">173</th><td></td></tr>
+<tr><th id="174">174</th><td><em>static</em> <em>unsigned</em> <em>int</em> <dfn class="tu decl def fn" id="strhash" title='strhash' data-type='unsigned int strhash(const char * str, unsigned int sz)' data-ref="strhash" data-ref-filename="strhash">strhash</dfn>(<em>const</em> <em>char</em> *<dfn class="local col2 decl" id="12str" title='str' data-type='const char *' data-ref="12str" data-ref-filename="12str">str</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col3 decl" id="13sz" title='sz' data-type='unsigned int' data-ref="13sz" data-ref-filename="13sz">sz</dfn>)</td></tr>
+<tr><th id="175">175</th><td>{</td></tr>
+<tr><th id="176">176</th><td>	<i>/* fnv32 hash */</i></td></tr>
+<tr><th id="177">177</th><td>	<em>unsigned</em> <em>int</em> <dfn class="local col4 decl" id="14i" title='i' data-type='unsigned int' data-ref="14i" data-ref-filename="14i">i</dfn>, <dfn class="local col5 decl" id="15hash" title='hash' data-type='unsigned int' data-ref="15hash" data-ref-filename="15hash">hash</dfn> = <var>2166136261U</var>;</td></tr>
+<tr><th id="178">178</th><td></td></tr>
+<tr><th id="179">179</th><td>	<b>for</b> (<a class="local col4 ref" href="#14i" title='i' data-ref="14i" data-ref-filename="14i">i</a> = <var>0</var>; <a class="local col4 ref" href="#14i" title='i' data-ref="14i" data-ref-filename="14i">i</a> &lt; <a class="local col3 ref" href="#13sz" title='sz' data-ref="13sz" data-ref-filename="13sz">sz</a>; <a class="local col4 ref" href="#14i" title='i' data-ref="14i" data-ref-filename="14i">i</a>++)</td></tr>
+<tr><th id="180">180</th><td>		<a class="local col5 ref" href="#15hash" title='hash' data-ref="15hash" data-ref-filename="15hash">hash</a> = (<a class="local col5 ref" href="#15hash" title='hash' data-ref="15hash" data-ref-filename="15hash">hash</a> ^ <a class="local col2 ref" href="#12str" title='str' data-ref="12str" data-ref-filename="12str">str</a>[<a class="local col4 ref" href="#14i" title='i' data-ref="14i" data-ref-filename="14i">i</a>]) * <var>0x01000193</var>;</td></tr>
+<tr><th id="181">181</th><td>	<b>return</b> <a class="local col5 ref" href="#15hash" title='hash' data-ref="15hash" data-ref-filename="15hash">hash</a>;</td></tr>
+<tr><th id="182">182</th><td>}</td></tr>
+<tr><th id="183">183</th><td></td></tr>
+<tr><th id="184">184</th><td><i  data-doc="is_defined_config">/*</i></td></tr>
+<tr><th id="185">185</th><td><i  data-doc="is_defined_config"> * Lookup a value in the configuration string.</i></td></tr>
+<tr><th id="186">186</th><td><i  data-doc="is_defined_config"> */</i></td></tr>
+<tr><th id="187">187</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="is_defined_config" title='is_defined_config' data-type='int is_defined_config(const char * name, int len, unsigned int hash)' data-ref="is_defined_config" data-ref-filename="is_defined_config">is_defined_config</dfn>(<em>const</em> <em>char</em> *<dfn class="local col6 decl" id="16name" title='name' data-type='const char *' data-ref="16name" data-ref-filename="16name">name</dfn>, <em>int</em> <dfn class="local col7 decl" id="17len" title='len' data-type='int' data-ref="17len" data-ref-filename="17len">len</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col8 decl" id="18hash" title='hash' data-type='unsigned int' data-ref="18hash" data-ref-filename="18hash">hash</dfn>)</td></tr>
+<tr><th id="188">188</th><td>{</td></tr>
+<tr><th id="189">189</th><td>	<b>struct</b> <a class="type" href="#item" title='item' data-ref="item" data-ref-filename="item">item</a> *<dfn class="local col9 decl" id="19aux" title='aux' data-type='struct item *' data-ref="19aux" data-ref-filename="19aux">aux</dfn>;</td></tr>
+<tr><th id="190">190</th><td></td></tr>
+<tr><th id="191">191</th><td>	<b>for</b> (<a class="local col9 ref" href="#19aux" title='aux' data-ref="19aux" data-ref-filename="19aux">aux</a> = <a class="tu ref" href="#hashtab" title='hashtab' data-use='r' data-ref="hashtab" data-ref-filename="hashtab">hashtab</a>[<a class="local col8 ref" href="#18hash" title='hash' data-ref="18hash" data-ref-filename="18hash">hash</a> % <a class="macro" href="#171" title="256" data-ref="_M/HASHSZ">HASHSZ</a>]; <a class="local col9 ref" href="#19aux" title='aux' data-ref="19aux" data-ref-filename="19aux">aux</a>; <a class="local col9 ref" href="#19aux" title='aux' data-ref="19aux" data-ref-filename="19aux">aux</a> = <a class="local col9 ref" href="#19aux" title='aux' data-ref="19aux" data-ref-filename="19aux">aux</a>-&gt;<a class="tu ref field" href="#item::next" title='item::next' data-use='r' data-ref="item::next" data-ref-filename="item..next">next</a>) {</td></tr>
+<tr><th id="192">192</th><td>		<b>if</b> (<a class="local col9 ref" href="#19aux" title='aux' data-ref="19aux" data-ref-filename="19aux">aux</a>-&gt;<a class="tu ref field" href="#item::hash" title='item::hash' data-use='r' data-ref="item::hash" data-ref-filename="item..hash">hash</a> == <a class="local col8 ref" href="#18hash" title='hash' data-ref="18hash" data-ref-filename="18hash">hash</a> &amp;&amp; <a class="local col9 ref" href="#19aux" title='aux' data-ref="19aux" data-ref-filename="19aux">aux</a>-&gt;<a class="tu ref field" href="#item::len" title='item::len' data-use='r' data-ref="item::len" data-ref-filename="item..len">len</a> == <a class="local col7 ref" href="#17len" title='len' data-ref="17len" data-ref-filename="17len">len</a> &amp;&amp;</td></tr>
+<tr><th id="193">193</th><td>		    <a class="ref fn" href="../../../include/string.h.html#memcmp" title='memcmp' data-ref="memcmp" data-ref-filename="memcmp">memcmp</a>(<a class="local col9 ref" href="#19aux" title='aux' data-ref="19aux" data-ref-filename="19aux">aux</a>-&gt;<a class="tu ref field" href="#item::name" title='item::name' data-use='r' data-ref="item::name" data-ref-filename="item..name">name</a>, <a class="local col6 ref" href="#16name" title='name' data-ref="16name" data-ref-filename="16name">name</a>, <a class="local col7 ref" href="#17len" title='len' data-ref="17len" data-ref-filename="17len">len</a>) == <var>0</var>)</td></tr>
+<tr><th id="194">194</th><td>			<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="195">195</th><td>	}</td></tr>
+<tr><th id="196">196</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="197">197</th><td>}</td></tr>
+<tr><th id="198">198</th><td></td></tr>
+<tr><th id="199">199</th><td><i  data-doc="define_config">/*</i></td></tr>
+<tr><th id="200">200</th><td><i  data-doc="define_config"> * Add a new value to the configuration string.</i></td></tr>
+<tr><th id="201">201</th><td><i  data-doc="define_config"> */</i></td></tr>
+<tr><th id="202">202</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="define_config" title='define_config' data-type='void define_config(const char * name, int len, unsigned int hash)' data-ref="define_config" data-ref-filename="define_config">define_config</dfn>(<em>const</em> <em>char</em> *<dfn class="local col0 decl" id="20name" title='name' data-type='const char *' data-ref="20name" data-ref-filename="20name">name</dfn>, <em>int</em> <dfn class="local col1 decl" id="21len" title='len' data-type='int' data-ref="21len" data-ref-filename="21len">len</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col2 decl" id="22hash" title='hash' data-type='unsigned int' data-ref="22hash" data-ref-filename="22hash">hash</dfn>)</td></tr>
+<tr><th id="203">203</th><td>{</td></tr>
+<tr><th id="204">204</th><td>	<b>struct</b> <a class="type" href="#item" title='item' data-ref="item" data-ref-filename="item">item</a> *<dfn class="local col3 decl" id="23aux" title='aux' data-type='struct item *' data-ref="23aux" data-ref-filename="23aux">aux</dfn> = <a class="ref fn" href="../../../include/stdlib.h.html#malloc" title='malloc' data-ref="malloc" data-ref-filename="malloc">malloc</a>(<b>sizeof</b>(*<a class="local col3 ref" href="#23aux" title='aux' data-ref="23aux" data-ref-filename="23aux">aux</a>) + <a class="local col1 ref" href="#21len" title='len' data-ref="21len" data-ref-filename="21len">len</a>);</td></tr>
+<tr><th id="205">205</th><td></td></tr>
+<tr><th id="206">206</th><td>	<b>if</b> (!<a class="local col3 ref" href="#23aux" title='aux' data-ref="23aux" data-ref-filename="23aux">aux</a>) {</td></tr>
+<tr><th id="207">207</th><td>		<a class="ref fn" href="../../../include/stdio.h.html#perror" title='perror' data-ref="perror" data-ref-filename="perror">perror</a>(<q>"fixdep:malloc"</q>);</td></tr>
+<tr><th id="208">208</th><td>		<a class="ref fn" href="../../../include/stdlib.h.html#exit" title='exit' data-ref="exit" data-ref-filename="exit">exit</a>(<var>1</var>);</td></tr>
+<tr><th id="209">209</th><td>	}</td></tr>
+<tr><th id="210">210</th><td>	<a class="ref fn" href="../../../include/string.h.html#memcpy" title='memcpy' data-ref="memcpy" data-ref-filename="memcpy">memcpy</a>(<a class="local col3 ref" href="#23aux" title='aux' data-ref="23aux" data-ref-filename="23aux">aux</a>-&gt;<a class="tu ref field" href="#item::name" title='item::name' data-use='r' data-ref="item::name" data-ref-filename="item..name">name</a>, <a class="local col0 ref" href="#20name" title='name' data-ref="20name" data-ref-filename="20name">name</a>, <a class="local col1 ref" href="#21len" title='len' data-ref="21len" data-ref-filename="21len">len</a>);</td></tr>
+<tr><th id="211">211</th><td>	<a class="local col3 ref" href="#23aux" title='aux' data-ref="23aux" data-ref-filename="23aux">aux</a>-&gt;<a class="tu ref field" href="#item::len" title='item::len' data-use='w' data-ref="item::len" data-ref-filename="item..len">len</a> = <a class="local col1 ref" href="#21len" title='len' data-ref="21len" data-ref-filename="21len">len</a>;</td></tr>
+<tr><th id="212">212</th><td>	<a class="local col3 ref" href="#23aux" title='aux' data-ref="23aux" data-ref-filename="23aux">aux</a>-&gt;<a class="tu ref field" href="#item::hash" title='item::hash' data-use='w' data-ref="item::hash" data-ref-filename="item..hash">hash</a> = <a class="local col2 ref" href="#22hash" title='hash' data-ref="22hash" data-ref-filename="22hash">hash</a>;</td></tr>
+<tr><th id="213">213</th><td>	<a class="local col3 ref" href="#23aux" title='aux' data-ref="23aux" data-ref-filename="23aux">aux</a>-&gt;<a class="tu ref field" href="#item::next" title='item::next' data-use='w' data-ref="item::next" data-ref-filename="item..next">next</a> = <a class="tu ref" href="#hashtab" title='hashtab' data-use='r' data-ref="hashtab" data-ref-filename="hashtab">hashtab</a>[<a class="local col2 ref" href="#22hash" title='hash' data-ref="22hash" data-ref-filename="22hash">hash</a> % <a class="macro" href="#171" title="256" data-ref="_M/HASHSZ">HASHSZ</a>];</td></tr>
+<tr><th id="214">214</th><td>	<a class="tu ref" href="#hashtab" title='hashtab' data-use='w' data-ref="hashtab" data-ref-filename="hashtab">hashtab</a>[<a class="local col2 ref" href="#22hash" title='hash' data-ref="22hash" data-ref-filename="22hash">hash</a> % <a class="macro" href="#171" title="256" data-ref="_M/HASHSZ">HASHSZ</a>] = <a class="local col3 ref" href="#23aux" title='aux' data-ref="23aux" data-ref-filename="23aux">aux</a>;</td></tr>
+<tr><th id="215">215</th><td>}</td></tr>
+<tr><th id="216">216</th><td></td></tr>
+<tr><th id="217">217</th><td><i  data-doc="use_config">/*</i></td></tr>
+<tr><th id="218">218</th><td><i  data-doc="use_config"> * Record the use of a CONFIG_* word.</i></td></tr>
+<tr><th id="219">219</th><td><i  data-doc="use_config"> */</i></td></tr>
+<tr><th id="220">220</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="use_config" title='use_config' data-type='void use_config(const char * m, int slen)' data-ref="use_config" data-ref-filename="use_config">use_config</dfn>(<em>const</em> <em>char</em> *<dfn class="local col4 decl" id="24m" title='m' data-type='const char *' data-ref="24m" data-ref-filename="24m">m</dfn>, <em>int</em> <dfn class="local col5 decl" id="25slen" title='slen' data-type='int' data-ref="25slen" data-ref-filename="25slen">slen</dfn>)</td></tr>
+<tr><th id="221">221</th><td>{</td></tr>
+<tr><th id="222">222</th><td>	<em>unsigned</em> <em>int</em> <dfn class="local col6 decl" id="26hash" title='hash' data-type='unsigned int' data-ref="26hash" data-ref-filename="26hash">hash</dfn> = <a class="tu ref fn" href="#strhash" title='strhash' data-use='c' data-ref="strhash" data-ref-filename="strhash">strhash</a>(<a class="local col4 ref" href="#24m" title='m' data-ref="24m" data-ref-filename="24m">m</a>, <a class="local col5 ref" href="#25slen" title='slen' data-ref="25slen" data-ref-filename="25slen">slen</a>);</td></tr>
+<tr><th id="223">223</th><td></td></tr>
+<tr><th id="224">224</th><td>	<b>if</b> (<a class="tu ref fn" href="#is_defined_config" title='is_defined_config' data-use='c' data-ref="is_defined_config" data-ref-filename="is_defined_config">is_defined_config</a>(<a class="local col4 ref" href="#24m" title='m' data-ref="24m" data-ref-filename="24m">m</a>, <a class="local col5 ref" href="#25slen" title='slen' data-ref="25slen" data-ref-filename="25slen">slen</a>, <a class="local col6 ref" href="#26hash" title='hash' data-ref="26hash" data-ref-filename="26hash">hash</a>))</td></tr>
+<tr><th id="225">225</th><td>	    <b>return</b>;</td></tr>
+<tr><th id="226">226</th><td></td></tr>
+<tr><th id="227">227</th><td>	<a class="tu ref fn" href="#define_config" title='define_config' data-use='c' data-ref="define_config" data-ref-filename="define_config">define_config</a>(<a class="local col4 ref" href="#24m" title='m' data-ref="24m" data-ref-filename="24m">m</a>, <a class="local col5 ref" href="#25slen" title='slen' data-ref="25slen" data-ref-filename="25slen">slen</a>, <a class="local col6 ref" href="#26hash" title='hash' data-ref="26hash" data-ref-filename="26hash">hash</a>);</td></tr>
+<tr><th id="228">228</th><td>	<a class="tu ref fn" href="#print_dep" title='print_dep' data-use='c' data-ref="print_dep" data-ref-filename="print_dep">print_dep</a>(<a class="local col4 ref" href="#24m" title='m' data-ref="24m" data-ref-filename="24m">m</a>, <a class="local col5 ref" href="#25slen" title='slen' data-ref="25slen" data-ref-filename="25slen">slen</a>, <q>"include/config"</q>);</td></tr>
+<tr><th id="229">229</th><td>}</td></tr>
+<tr><th id="230">230</th><td></td></tr>
+<tr><th id="231">231</th><td><i  data-doc="str_ends_with">/* test if s ends in sub */</i></td></tr>
+<tr><th id="232">232</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="str_ends_with" title='str_ends_with' data-type='int str_ends_with(const char * s, int slen, const char * sub)' data-ref="str_ends_with" data-ref-filename="str_ends_with">str_ends_with</dfn>(<em>const</em> <em>char</em> *<dfn class="local col7 decl" id="27s" title='s' data-type='const char *' data-ref="27s" data-ref-filename="27s">s</dfn>, <em>int</em> <dfn class="local col8 decl" id="28slen" title='slen' data-type='int' data-ref="28slen" data-ref-filename="28slen">slen</dfn>, <em>const</em> <em>char</em> *<dfn class="local col9 decl" id="29sub" title='sub' data-type='const char *' data-ref="29sub" data-ref-filename="29sub">sub</dfn>)</td></tr>
+<tr><th id="233">233</th><td>{</td></tr>
+<tr><th id="234">234</th><td>	<em>int</em> <dfn class="local col0 decl" id="30sublen" title='sublen' data-type='int' data-ref="30sublen" data-ref-filename="30sublen">sublen</dfn> = <a class="ref fn" href="../../../include/string.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a>(<a class="local col9 ref" href="#29sub" title='sub' data-ref="29sub" data-ref-filename="29sub">sub</a>);</td></tr>
+<tr><th id="235">235</th><td></td></tr>
+<tr><th id="236">236</th><td>	<b>if</b> (<a class="local col0 ref" href="#30sublen" title='sublen' data-ref="30sublen" data-ref-filename="30sublen">sublen</a> &gt; <a class="local col8 ref" href="#28slen" title='slen' data-ref="28slen" data-ref-filename="28slen">slen</a>)</td></tr>
+<tr><th id="237">237</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="238">238</th><td></td></tr>
+<tr><th id="239">239</th><td>	<b>return</b> !<a class="ref fn" href="../../../include/string.h.html#memcmp" title='memcmp' data-ref="memcmp" data-ref-filename="memcmp">memcmp</a>(<a class="local col7 ref" href="#27s" title='s' data-ref="27s" data-ref-filename="27s">s</a> + <a class="local col8 ref" href="#28slen" title='slen' data-ref="28slen" data-ref-filename="28slen">slen</a> - <a class="local col0 ref" href="#30sublen" title='sublen' data-ref="30sublen" data-ref-filename="30sublen">sublen</a>, <a class="local col9 ref" href="#29sub" title='sub' data-ref="29sub" data-ref-filename="29sub">sub</a>, <a class="local col0 ref" href="#30sublen" title='sublen' data-ref="30sublen" data-ref-filename="30sublen">sublen</a>);</td></tr>
+<tr><th id="240">240</th><td>}</td></tr>
+<tr><th id="241">241</th><td></td></tr>
+<tr><th id="242">242</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="parse_config_file" title='parse_config_file' data-type='void parse_config_file(const char * p)' data-ref="parse_config_file" data-ref-filename="parse_config_file">parse_config_file</dfn>(<em>const</em> <em>char</em> *<dfn class="local col1 decl" id="31p" title='p' data-type='const char *' data-ref="31p" data-ref-filename="31p">p</dfn>)</td></tr>
+<tr><th id="243">243</th><td>{</td></tr>
+<tr><th id="244">244</th><td>	<em>const</em> <em>char</em> *<dfn class="local col2 decl" id="32q" title='q' data-type='const char *' data-ref="32q" data-ref-filename="32q">q</dfn>, *<dfn class="local col3 decl" id="33r" title='r' data-type='const char *' data-ref="33r" data-ref-filename="33r">r</dfn>;</td></tr>
+<tr><th id="245">245</th><td>	<em>const</em> <em>char</em> *<dfn class="local col4 decl" id="34start" title='start' data-type='const char *' data-ref="34start" data-ref-filename="34start">start</dfn> = <a class="local col1 ref" href="#31p" title='p' data-ref="31p" data-ref-filename="31p">p</a>;</td></tr>
+<tr><th id="246">246</th><td></td></tr>
+<tr><th id="247">247</th><td>	<b>while</b> ((<a class="local col1 ref" href="#31p" title='p' data-ref="31p" data-ref-filename="31p">p</a> = <a class="ref fn" href="../../../include/string.h.html#strstr" title='strstr' data-ref="strstr" data-ref-filename="strstr">strstr</a>(<a class="local col1 ref" href="#31p" title='p' data-ref="31p" data-ref-filename="31p">p</a>, <q>"CONFIG_"</q>))) {</td></tr>
+<tr><th id="248">248</th><td>		<b>if</b> (<a class="local col1 ref" href="#31p" title='p' data-ref="31p" data-ref-filename="31p">p</a> &gt; <a class="local col4 ref" href="#34start" title='start' data-ref="34start" data-ref-filename="34start">start</a> &amp;&amp; (<a class="macro" href="../../../include/ctype.h.html#189" title="((*__ctype_b_loc ())[(int) ((p[-1]))] &amp; (unsigned short int) _ISalnum)" data-ref="_M/isalnum">isalnum</a>(<a class="local col1 ref" href="#31p" title='p' data-ref="31p" data-ref-filename="31p">p</a>[-<var>1</var>]) || <a class="local col1 ref" href="#31p" title='p' data-ref="31p" data-ref-filename="31p">p</a>[-<var>1</var>] == <kbd>'_'</kbd>)) {</td></tr>
+<tr><th id="249">249</th><td>			<a class="local col1 ref" href="#31p" title='p' data-ref="31p" data-ref-filename="31p">p</a> += <var>7</var>;</td></tr>
+<tr><th id="250">250</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="251">251</th><td>		}</td></tr>
+<tr><th id="252">252</th><td>		<a class="local col1 ref" href="#31p" title='p' data-ref="31p" data-ref-filename="31p">p</a> += <var>7</var>;</td></tr>
+<tr><th id="253">253</th><td>		<a class="local col2 ref" href="#32q" title='q' data-ref="32q" data-ref-filename="32q">q</a> = <a class="local col1 ref" href="#31p" title='p' data-ref="31p" data-ref-filename="31p">p</a>;</td></tr>
+<tr><th id="254">254</th><td>		<b>while</b> (*<a class="local col2 ref" href="#32q" title='q' data-ref="32q" data-ref-filename="32q">q</a> &amp;&amp; (<a class="macro" href="../../../include/ctype.h.html#189" title="((*__ctype_b_loc ())[(int) ((*q))] &amp; (unsigned short int) _ISalnum)" data-ref="_M/isalnum">isalnum</a>(*<a class="local col2 ref" href="#32q" title='q' data-ref="32q" data-ref-filename="32q">q</a>) || *<a class="local col2 ref" href="#32q" title='q' data-ref="32q" data-ref-filename="32q">q</a> == <kbd>'_'</kbd>))</td></tr>
+<tr><th id="255">255</th><td>			<a class="local col2 ref" href="#32q" title='q' data-ref="32q" data-ref-filename="32q">q</a>++;</td></tr>
+<tr><th id="256">256</th><td>		<b>if</b> (<a class="tu ref fn" href="#str_ends_with" title='str_ends_with' data-use='c' data-ref="str_ends_with" data-ref-filename="str_ends_with">str_ends_with</a>(<a class="local col1 ref" href="#31p" title='p' data-ref="31p" data-ref-filename="31p">p</a>, <a class="local col2 ref" href="#32q" title='q' data-ref="32q" data-ref-filename="32q">q</a> - <a class="local col1 ref" href="#31p" title='p' data-ref="31p" data-ref-filename="31p">p</a>, <q>"_MODULE"</q>))</td></tr>
+<tr><th id="257">257</th><td>			<a class="local col3 ref" href="#33r" title='r' data-ref="33r" data-ref-filename="33r">r</a> = <a class="local col2 ref" href="#32q" title='q' data-ref="32q" data-ref-filename="32q">q</a> - <var>7</var>;</td></tr>
+<tr><th id="258">258</th><td>		<b>else</b></td></tr>
+<tr><th id="259">259</th><td>			<a class="local col3 ref" href="#33r" title='r' data-ref="33r" data-ref-filename="33r">r</a> = <a class="local col2 ref" href="#32q" title='q' data-ref="32q" data-ref-filename="32q">q</a>;</td></tr>
+<tr><th id="260">260</th><td>		<b>if</b> (<a class="local col3 ref" href="#33r" title='r' data-ref="33r" data-ref-filename="33r">r</a> &gt; <a class="local col1 ref" href="#31p" title='p' data-ref="31p" data-ref-filename="31p">p</a>)</td></tr>
+<tr><th id="261">261</th><td>			<a class="tu ref fn" href="#use_config" title='use_config' data-use='c' data-ref="use_config" data-ref-filename="use_config">use_config</a>(<a class="local col1 ref" href="#31p" title='p' data-ref="31p" data-ref-filename="31p">p</a>, <a class="local col3 ref" href="#33r" title='r' data-ref="33r" data-ref-filename="33r">r</a> - <a class="local col1 ref" href="#31p" title='p' data-ref="31p" data-ref-filename="31p">p</a>);</td></tr>
+<tr><th id="262">262</th><td>		<a class="local col1 ref" href="#31p" title='p' data-ref="31p" data-ref-filename="31p">p</a> = <a class="local col2 ref" href="#32q" title='q' data-ref="32q" data-ref-filename="32q">q</a>;</td></tr>
+<tr><th id="263">263</th><td>	}</td></tr>
+<tr><th id="264">264</th><td>}</td></tr>
+<tr><th id="265">265</th><td></td></tr>
+<tr><th id="266">266</th><td><em>static</em> <em>void</em> *<dfn class="tu decl def fn" id="read_file" title='read_file' data-type='void * read_file(const char * filename)' data-ref="read_file" data-ref-filename="read_file">read_file</dfn>(<em>const</em> <em>char</em> *<dfn class="local col5 decl" id="35filename" title='filename' data-type='const char *' data-ref="35filename" data-ref-filename="35filename">filename</dfn>)</td></tr>
+<tr><th id="267">267</th><td>{</td></tr>
+<tr><th id="268">268</th><td>	<b>struct</b> <a class="type" href="../../../include/x86_64-linux-gnu/bits/stat.h.html#stat" title='stat' data-ref="stat" data-ref-filename="stat">stat</a> <dfn class="local col6 decl" id="36st" title='st' data-type='struct stat' data-ref="36st" data-ref-filename="36st">st</dfn>;</td></tr>
+<tr><th id="269">269</th><td>	<em>int</em> <dfn class="local col7 decl" id="37fd" title='fd' data-type='int' data-ref="37fd" data-ref-filename="37fd">fd</dfn>;</td></tr>
+<tr><th id="270">270</th><td>	<em>char</em> *<dfn class="local col8 decl" id="38buf" title='buf' data-type='char *' data-ref="38buf" data-ref-filename="38buf">buf</dfn>;</td></tr>
+<tr><th id="271">271</th><td></td></tr>
+<tr><th id="272">272</th><td>	<a class="local col7 ref" href="#37fd" title='fd' data-ref="37fd" data-ref-filename="37fd">fd</a> = <a class="ref fn" href="../../../include/fcntl.h.html#open" title='open' data-ref="open" data-ref-filename="open">open</a>(<a class="local col5 ref" href="#35filename" title='filename' data-ref="35filename" data-ref-filename="35filename">filename</a>, <a class="macro" href="../../../include/x86_64-linux-gnu/bits/fcntl-linux.h.html#43" title="00" data-ref="_M/O_RDONLY">O_RDONLY</a>);</td></tr>
+<tr><th id="273">273</th><td>	<b>if</b> (<a class="local col7 ref" href="#37fd" title='fd' data-ref="37fd" data-ref-filename="37fd">fd</a> &lt; <var>0</var>) {</td></tr>
+<tr><th id="274">274</th><td>		<a class="ref fn" href="../../../include/stdio.h.html#fprintf" title='fprintf' data-ref="fprintf" data-ref-filename="fprintf">fprintf</a>(<a class="macro" href="../../../include/stdio.h.html#141" title="stderr" data-ref="_M/stderr">stderr</a>, <q>"fixdep: error opening file: "</q>);</td></tr>
+<tr><th id="275">275</th><td>		<a class="ref fn" href="../../../include/stdio.h.html#perror" title='perror' data-ref="perror" data-ref-filename="perror">perror</a>(<a class="local col5 ref" href="#35filename" title='filename' data-ref="35filename" data-ref-filename="35filename">filename</a>);</td></tr>
+<tr><th id="276">276</th><td>		<a class="ref fn" href="../../../include/stdlib.h.html#exit" title='exit' data-ref="exit" data-ref-filename="exit">exit</a>(<var>2</var>);</td></tr>
+<tr><th id="277">277</th><td>	}</td></tr>
+<tr><th id="278">278</th><td>	<b>if</b> (<a class="ref fn" href="../../../include/x86_64-linux-gnu/sys/stat.h.html#fstat" title='fstat' data-ref="fstat" data-ref-filename="fstat">fstat</a>(<a class="local col7 ref" href="#37fd" title='fd' data-ref="37fd" data-ref-filename="37fd">fd</a>, &amp;<a class="local col6 ref" href="#36st" title='st' data-ref="36st" data-ref-filename="36st">st</a>) &lt; <var>0</var>) {</td></tr>
+<tr><th id="279">279</th><td>		<a class="ref fn" href="../../../include/stdio.h.html#fprintf" title='fprintf' data-ref="fprintf" data-ref-filename="fprintf">fprintf</a>(<a class="macro" href="../../../include/stdio.h.html#141" title="stderr" data-ref="_M/stderr">stderr</a>, <q>"fixdep: error fstat'ing file: "</q>);</td></tr>
+<tr><th id="280">280</th><td>		<a class="ref fn" href="../../../include/stdio.h.html#perror" title='perror' data-ref="perror" data-ref-filename="perror">perror</a>(<a class="local col5 ref" href="#35filename" title='filename' data-ref="35filename" data-ref-filename="35filename">filename</a>);</td></tr>
+<tr><th id="281">281</th><td>		<a class="ref fn" href="../../../include/stdlib.h.html#exit" title='exit' data-ref="exit" data-ref-filename="exit">exit</a>(<var>2</var>);</td></tr>
+<tr><th id="282">282</th><td>	}</td></tr>
+<tr><th id="283">283</th><td>	<a class="local col8 ref" href="#38buf" title='buf' data-ref="38buf" data-ref-filename="38buf">buf</a> = <a class="ref fn" href="../../../include/stdlib.h.html#malloc" title='malloc' data-ref="malloc" data-ref-filename="malloc">malloc</a>(<a class="local col6 ref" href="#36st" title='st' data-ref="36st" data-ref-filename="36st">st</a>.<a class="ref field" href="../../../include/x86_64-linux-gnu/bits/stat.h.html#stat::st_size" title='stat::st_size' data-ref="stat::st_size" data-ref-filename="stat..st_size">st_size</a> + <var>1</var>);</td></tr>
+<tr><th id="284">284</th><td>	<b>if</b> (!<a class="local col8 ref" href="#38buf" title='buf' data-ref="38buf" data-ref-filename="38buf">buf</a>) {</td></tr>
+<tr><th id="285">285</th><td>		<a class="ref fn" href="../../../include/stdio.h.html#perror" title='perror' data-ref="perror" data-ref-filename="perror">perror</a>(<q>"fixdep: malloc"</q>);</td></tr>
+<tr><th id="286">286</th><td>		<a class="ref fn" href="../../../include/stdlib.h.html#exit" title='exit' data-ref="exit" data-ref-filename="exit">exit</a>(<var>2</var>);</td></tr>
+<tr><th id="287">287</th><td>	}</td></tr>
+<tr><th id="288">288</th><td>	<b>if</b> (<a class="ref fn" href="../../../include/unistd.h.html#read" title='read' data-ref="read" data-ref-filename="read">read</a>(<a class="local col7 ref" href="#37fd" title='fd' data-ref="37fd" data-ref-filename="37fd">fd</a>, <a class="local col8 ref" href="#38buf" title='buf' data-ref="38buf" data-ref-filename="38buf">buf</a>, <a class="local col6 ref" href="#36st" title='st' data-ref="36st" data-ref-filename="36st">st</a>.<a class="ref field" href="../../../include/x86_64-linux-gnu/bits/stat.h.html#stat::st_size" title='stat::st_size' data-ref="stat::st_size" data-ref-filename="stat..st_size">st_size</a>) != <a class="local col6 ref" href="#36st" title='st' data-ref="36st" data-ref-filename="36st">st</a>.<a class="ref field" href="../../../include/x86_64-linux-gnu/bits/stat.h.html#stat::st_size" title='stat::st_size' data-ref="stat::st_size" data-ref-filename="stat..st_size">st_size</a>) {</td></tr>
+<tr><th id="289">289</th><td>		<a class="ref fn" href="../../../include/stdio.h.html#perror" title='perror' data-ref="perror" data-ref-filename="perror">perror</a>(<q>"fixdep: read"</q>);</td></tr>
+<tr><th id="290">290</th><td>		<a class="ref fn" href="../../../include/stdlib.h.html#exit" title='exit' data-ref="exit" data-ref-filename="exit">exit</a>(<var>2</var>);</td></tr>
+<tr><th id="291">291</th><td>	}</td></tr>
+<tr><th id="292">292</th><td>	<a class="local col8 ref" href="#38buf" title='buf' data-ref="38buf" data-ref-filename="38buf">buf</a>[<a class="local col6 ref" href="#36st" title='st' data-ref="36st" data-ref-filename="36st">st</a>.<a class="ref field" href="../../../include/x86_64-linux-gnu/bits/stat.h.html#stat::st_size" title='stat::st_size' data-ref="stat::st_size" data-ref-filename="stat..st_size">st_size</a>] = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="293">293</th><td>	<a class="ref fn" href="../../../include/unistd.h.html#close" title='close' data-ref="close" data-ref-filename="close">close</a>(<a class="local col7 ref" href="#37fd" title='fd' data-ref="37fd" data-ref-filename="37fd">fd</a>);</td></tr>
+<tr><th id="294">294</th><td></td></tr>
+<tr><th id="295">295</th><td>	<b>return</b> <a class="local col8 ref" href="#38buf" title='buf' data-ref="38buf" data-ref-filename="38buf">buf</a>;</td></tr>
+<tr><th id="296">296</th><td>}</td></tr>
+<tr><th id="297">297</th><td></td></tr>
+<tr><th id="298">298</th><td><i  data-doc="is_ignored_file">/* Ignore certain dependencies */</i></td></tr>
+<tr><th id="299">299</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="is_ignored_file" title='is_ignored_file' data-type='int is_ignored_file(const char * s, int len)' data-ref="is_ignored_file" data-ref-filename="is_ignored_file">is_ignored_file</dfn>(<em>const</em> <em>char</em> *<dfn class="local col9 decl" id="39s" title='s' data-type='const char *' data-ref="39s" data-ref-filename="39s">s</dfn>, <em>int</em> <dfn class="local col0 decl" id="40len" title='len' data-type='int' data-ref="40len" data-ref-filename="40len">len</dfn>)</td></tr>
+<tr><th id="300">300</th><td>{</td></tr>
+<tr><th id="301">301</th><td>	<b>return</b> <a class="tu ref fn" href="#str_ends_with" title='str_ends_with' data-use='c' data-ref="str_ends_with" data-ref-filename="str_ends_with">str_ends_with</a>(<a class="local col9 ref" href="#39s" title='s' data-ref="39s" data-ref-filename="39s">s</a>, <a class="local col0 ref" href="#40len" title='len' data-ref="40len" data-ref-filename="40len">len</a>, <q>"include/generated/autoconf.h"</q>) ||</td></tr>
+<tr><th id="302">302</th><td>	       <a class="tu ref fn" href="#str_ends_with" title='str_ends_with' data-use='c' data-ref="str_ends_with" data-ref-filename="str_ends_with">str_ends_with</a>(<a class="local col9 ref" href="#39s" title='s' data-ref="39s" data-ref-filename="39s">s</a>, <a class="local col0 ref" href="#40len" title='len' data-ref="40len" data-ref-filename="40len">len</a>, <q>"include/generated/autoksyms.h"</q>) ||</td></tr>
+<tr><th id="303">303</th><td>	       <a class="tu ref fn" href="#str_ends_with" title='str_ends_with' data-use='c' data-ref="str_ends_with" data-ref-filename="str_ends_with">str_ends_with</a>(<a class="local col9 ref" href="#39s" title='s' data-ref="39s" data-ref-filename="39s">s</a>, <a class="local col0 ref" href="#40len" title='len' data-ref="40len" data-ref-filename="40len">len</a>, <q>".ver"</q>);</td></tr>
+<tr><th id="304">304</th><td>}</td></tr>
+<tr><th id="305">305</th><td></td></tr>
+<tr><th id="306">306</th><td><i  data-doc="parse_dep_file">/*</i></td></tr>
+<tr><th id="307">307</th><td><i  data-doc="parse_dep_file"> * Important: The below generated source_foo.o and deps_foo.o variable</i></td></tr>
+<tr><th id="308">308</th><td><i  data-doc="parse_dep_file"> * assignments are parsed not only by make, but also by the rather simple</i></td></tr>
+<tr><th id="309">309</th><td><i  data-doc="parse_dep_file"> * parser in scripts/mod/sumversion.c.</i></td></tr>
+<tr><th id="310">310</th><td><i  data-doc="parse_dep_file"> */</i></td></tr>
+<tr><th id="311">311</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="parse_dep_file" title='parse_dep_file' data-type='void parse_dep_file(char * m, const char * target)' data-ref="parse_dep_file" data-ref-filename="parse_dep_file">parse_dep_file</dfn>(<em>char</em> *<dfn class="local col1 decl" id="41m" title='m' data-type='char *' data-ref="41m" data-ref-filename="41m">m</dfn>, <em>const</em> <em>char</em> *<dfn class="local col2 decl" id="42target" title='target' data-type='const char *' data-ref="42target" data-ref-filename="42target">target</dfn>)</td></tr>
+<tr><th id="312">312</th><td>{</td></tr>
+<tr><th id="313">313</th><td>	<em>char</em> *<dfn class="local col3 decl" id="43p" title='p' data-type='char *' data-ref="43p" data-ref-filename="43p">p</dfn>;</td></tr>
+<tr><th id="314">314</th><td>	<em>int</em> <dfn class="local col4 decl" id="44is_last" title='is_last' data-type='int' data-ref="44is_last" data-ref-filename="44is_last">is_last</dfn>, <dfn class="local col5 decl" id="45is_target" title='is_target' data-type='int' data-ref="45is_target" data-ref-filename="45is_target">is_target</dfn>;</td></tr>
+<tr><th id="315">315</th><td>	<em>int</em> <dfn class="local col6 decl" id="46saw_any_target" title='saw_any_target' data-type='int' data-ref="46saw_any_target" data-ref-filename="46saw_any_target">saw_any_target</dfn> = <var>0</var>;</td></tr>
+<tr><th id="316">316</th><td>	<em>int</em> <dfn class="local col7 decl" id="47is_first_dep" title='is_first_dep' data-type='int' data-ref="47is_first_dep" data-ref-filename="47is_first_dep">is_first_dep</dfn> = <var>0</var>;</td></tr>
+<tr><th id="317">317</th><td>	<em>void</em> *<dfn class="local col8 decl" id="48buf" title='buf' data-type='void *' data-ref="48buf" data-ref-filename="48buf">buf</dfn>;</td></tr>
+<tr><th id="318">318</th><td></td></tr>
+<tr><th id="319">319</th><td>	<b>while</b> (<var>1</var>) {</td></tr>
+<tr><th id="320">320</th><td>		<i>/* Skip any "white space" */</i></td></tr>
+<tr><th id="321">321</th><td>		<b>while</b> (*<a class="local col1 ref" href="#41m" title='m' data-ref="41m" data-ref-filename="41m">m</a> == <kbd>' '</kbd> || *<a class="local col1 ref" href="#41m" title='m' data-ref="41m" data-ref-filename="41m">m</a> == <kbd>'\\'</kbd> || *<a class="local col1 ref" href="#41m" title='m' data-ref="41m" data-ref-filename="41m">m</a> == <kbd>'\n'</kbd>)</td></tr>
+<tr><th id="322">322</th><td>			<a class="local col1 ref" href="#41m" title='m' data-ref="41m" data-ref-filename="41m">m</a>++;</td></tr>
+<tr><th id="323">323</th><td></td></tr>
+<tr><th id="324">324</th><td>		<b>if</b> (!*<a class="local col1 ref" href="#41m" title='m' data-ref="41m" data-ref-filename="41m">m</a>)</td></tr>
+<tr><th id="325">325</th><td>			<b>break</b>;</td></tr>
+<tr><th id="326">326</th><td></td></tr>
+<tr><th id="327">327</th><td>		<i>/* Find next "white space" */</i></td></tr>
+<tr><th id="328">328</th><td>		<a class="local col3 ref" href="#43p" title='p' data-ref="43p" data-ref-filename="43p">p</a> = <a class="local col1 ref" href="#41m" title='m' data-ref="41m" data-ref-filename="41m">m</a>;</td></tr>
+<tr><th id="329">329</th><td>		<b>while</b> (*<a class="local col3 ref" href="#43p" title='p' data-ref="43p" data-ref-filename="43p">p</a> &amp;&amp; *<a class="local col3 ref" href="#43p" title='p' data-ref="43p" data-ref-filename="43p">p</a> != <kbd>' '</kbd> &amp;&amp; *<a class="local col3 ref" href="#43p" title='p' data-ref="43p" data-ref-filename="43p">p</a> != <kbd>'\\'</kbd> &amp;&amp; *<a class="local col3 ref" href="#43p" title='p' data-ref="43p" data-ref-filename="43p">p</a> != <kbd>'\n'</kbd>)</td></tr>
+<tr><th id="330">330</th><td>			<a class="local col3 ref" href="#43p" title='p' data-ref="43p" data-ref-filename="43p">p</a>++;</td></tr>
+<tr><th id="331">331</th><td>		<a class="local col4 ref" href="#44is_last" title='is_last' data-ref="44is_last" data-ref-filename="44is_last">is_last</a> = (*<a class="local col3 ref" href="#43p" title='p' data-ref="43p" data-ref-filename="43p">p</a> == <kbd>'\0'</kbd>);</td></tr>
+<tr><th id="332">332</th><td>		<i>/* Is the token we found a target name? */</i></td></tr>
+<tr><th id="333">333</th><td>		<a class="local col5 ref" href="#45is_target" title='is_target' data-ref="45is_target" data-ref-filename="45is_target">is_target</a> = (*(<a class="local col3 ref" href="#43p" title='p' data-ref="43p" data-ref-filename="43p">p</a>-<var>1</var>) == <kbd>':'</kbd>);</td></tr>
+<tr><th id="334">334</th><td>		<i>/* Don't write any target names into the dependency file */</i></td></tr>
+<tr><th id="335">335</th><td>		<b>if</b> (<a class="local col5 ref" href="#45is_target" title='is_target' data-ref="45is_target" data-ref-filename="45is_target">is_target</a>) {</td></tr>
+<tr><th id="336">336</th><td>			<i>/* The /next/ file is the first dependency */</i></td></tr>
+<tr><th id="337">337</th><td>			<a class="local col7 ref" href="#47is_first_dep" title='is_first_dep' data-ref="47is_first_dep" data-ref-filename="47is_first_dep">is_first_dep</a> = <var>1</var>;</td></tr>
+<tr><th id="338">338</th><td>		} <b>else</b> <b>if</b> (!<a class="tu ref fn" href="#is_ignored_file" title='is_ignored_file' data-use='c' data-ref="is_ignored_file" data-ref-filename="is_ignored_file">is_ignored_file</a>(<a class="local col1 ref" href="#41m" title='m' data-ref="41m" data-ref-filename="41m">m</a>, <a class="local col3 ref" href="#43p" title='p' data-ref="43p" data-ref-filename="43p">p</a> - <a class="local col1 ref" href="#41m" title='m' data-ref="41m" data-ref-filename="41m">m</a>)) {</td></tr>
+<tr><th id="339">339</th><td>			*<a class="local col3 ref" href="#43p" title='p' data-ref="43p" data-ref-filename="43p">p</a> = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="340">340</th><td></td></tr>
+<tr><th id="341">341</th><td>			<i>/*</i></td></tr>
+<tr><th id="342">342</th><td><i>			 * Do not list the source file as dependency, so that</i></td></tr>
+<tr><th id="343">343</th><td><i>			 * kbuild is not confused if a .c file is rewritten</i></td></tr>
+<tr><th id="344">344</th><td><i>			 * into .S or vice versa. Storing it in source_* is</i></td></tr>
+<tr><th id="345">345</th><td><i>			 * needed for modpost to compute srcversions.</i></td></tr>
+<tr><th id="346">346</th><td><i>			 */</i></td></tr>
+<tr><th id="347">347</th><td>			<b>if</b> (<a class="local col7 ref" href="#47is_first_dep" title='is_first_dep' data-ref="47is_first_dep" data-ref-filename="47is_first_dep">is_first_dep</a>) {</td></tr>
+<tr><th id="348">348</th><td>				<i>/*</i></td></tr>
+<tr><th id="349">349</th><td><i>				 * If processing the concatenation of multiple</i></td></tr>
+<tr><th id="350">350</th><td><i>				 * dependency files, only process the first</i></td></tr>
+<tr><th id="351">351</th><td><i>				 * target name, which will be the original</i></td></tr>
+<tr><th id="352">352</th><td><i>				 * source name, and ignore any other target</i></td></tr>
+<tr><th id="353">353</th><td><i>				 * names, which will be intermediate temporary</i></td></tr>
+<tr><th id="354">354</th><td><i>				 * files.</i></td></tr>
+<tr><th id="355">355</th><td><i>				 */</i></td></tr>
+<tr><th id="356">356</th><td>				<b>if</b> (!<a class="local col6 ref" href="#46saw_any_target" title='saw_any_target' data-ref="46saw_any_target" data-ref-filename="46saw_any_target">saw_any_target</a>) {</td></tr>
+<tr><th id="357">357</th><td>					<a class="local col6 ref" href="#46saw_any_target" title='saw_any_target' data-ref="46saw_any_target" data-ref-filename="46saw_any_target">saw_any_target</a> = <var>1</var>;</td></tr>
+<tr><th id="358">358</th><td>					<a class="tu ref fn" href="#xprintf" title='xprintf' data-use='c' data-ref="xprintf" data-ref-filename="xprintf">xprintf</a>(<q>"source_%s := %s\n\n"</q>,</td></tr>
+<tr><th id="359">359</th><td>						<a class="local col2 ref" href="#42target" title='target' data-ref="42target" data-ref-filename="42target">target</a>, <a class="local col1 ref" href="#41m" title='m' data-ref="41m" data-ref-filename="41m">m</a>);</td></tr>
+<tr><th id="360">360</th><td>					<a class="tu ref fn" href="#xprintf" title='xprintf' data-use='c' data-ref="xprintf" data-ref-filename="xprintf">xprintf</a>(<q>"deps_%s := \\\n"</q>, <a class="local col2 ref" href="#42target" title='target' data-ref="42target" data-ref-filename="42target">target</a>);</td></tr>
+<tr><th id="361">361</th><td>				}</td></tr>
+<tr><th id="362">362</th><td>				<a class="local col7 ref" href="#47is_first_dep" title='is_first_dep' data-ref="47is_first_dep" data-ref-filename="47is_first_dep">is_first_dep</a> = <var>0</var>;</td></tr>
+<tr><th id="363">363</th><td>			} <b>else</b> {</td></tr>
+<tr><th id="364">364</th><td>				<a class="tu ref fn" href="#xprintf" title='xprintf' data-use='c' data-ref="xprintf" data-ref-filename="xprintf">xprintf</a>(<q>"  %s \\\n"</q>, <a class="local col1 ref" href="#41m" title='m' data-ref="41m" data-ref-filename="41m">m</a>);</td></tr>
+<tr><th id="365">365</th><td>			}</td></tr>
+<tr><th id="366">366</th><td></td></tr>
+<tr><th id="367">367</th><td>			<a class="local col8 ref" href="#48buf" title='buf' data-ref="48buf" data-ref-filename="48buf">buf</a> = <a class="tu ref fn" href="#read_file" title='read_file' data-use='c' data-ref="read_file" data-ref-filename="read_file">read_file</a>(<a class="local col1 ref" href="#41m" title='m' data-ref="41m" data-ref-filename="41m">m</a>);</td></tr>
+<tr><th id="368">368</th><td>			<a class="tu ref fn" href="#parse_config_file" title='parse_config_file' data-use='c' data-ref="parse_config_file" data-ref-filename="parse_config_file">parse_config_file</a>(<a class="local col8 ref" href="#48buf" title='buf' data-ref="48buf" data-ref-filename="48buf">buf</a>);</td></tr>
+<tr><th id="369">369</th><td>			<a class="ref fn" href="../../../include/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a>(<a class="local col8 ref" href="#48buf" title='buf' data-ref="48buf" data-ref-filename="48buf">buf</a>);</td></tr>
+<tr><th id="370">370</th><td>		}</td></tr>
+<tr><th id="371">371</th><td></td></tr>
+<tr><th id="372">372</th><td>		<b>if</b> (<a class="local col4 ref" href="#44is_last" title='is_last' data-ref="44is_last" data-ref-filename="44is_last">is_last</a>)</td></tr>
+<tr><th id="373">373</th><td>			<b>break</b>;</td></tr>
+<tr><th id="374">374</th><td></td></tr>
+<tr><th id="375">375</th><td>		<i>/*</i></td></tr>
+<tr><th id="376">376</th><td><i>		 * Start searching for next token immediately after the first</i></td></tr>
+<tr><th id="377">377</th><td><i>		 * "whitespace" character that follows this token.</i></td></tr>
+<tr><th id="378">378</th><td><i>		 */</i></td></tr>
+<tr><th id="379">379</th><td>		<a class="local col1 ref" href="#41m" title='m' data-ref="41m" data-ref-filename="41m">m</a> = <a class="local col3 ref" href="#43p" title='p' data-ref="43p" data-ref-filename="43p">p</a> + <var>1</var>;</td></tr>
+<tr><th id="380">380</th><td>	}</td></tr>
+<tr><th id="381">381</th><td></td></tr>
+<tr><th id="382">382</th><td>	<b>if</b> (!<a class="local col6 ref" href="#46saw_any_target" title='saw_any_target' data-ref="46saw_any_target" data-ref-filename="46saw_any_target">saw_any_target</a>) {</td></tr>
+<tr><th id="383">383</th><td>		<a class="ref fn" href="../../../include/stdio.h.html#fprintf" title='fprintf' data-ref="fprintf" data-ref-filename="fprintf">fprintf</a>(<a class="macro" href="../../../include/stdio.h.html#141" title="stderr" data-ref="_M/stderr">stderr</a>, <q>"fixdep: parse error; no targets found\n"</q>);</td></tr>
+<tr><th id="384">384</th><td>		<a class="ref fn" href="../../../include/stdlib.h.html#exit" title='exit' data-ref="exit" data-ref-filename="exit">exit</a>(<var>1</var>);</td></tr>
+<tr><th id="385">385</th><td>	}</td></tr>
+<tr><th id="386">386</th><td></td></tr>
+<tr><th id="387">387</th><td>	<a class="tu ref fn" href="#xprintf" title='xprintf' data-use='c' data-ref="xprintf" data-ref-filename="xprintf">xprintf</a>(<q>"\n%s: $(deps_%s)\n\n"</q>, <a class="local col2 ref" href="#42target" title='target' data-ref="42target" data-ref-filename="42target">target</a>, <a class="local col2 ref" href="#42target" title='target' data-ref="42target" data-ref-filename="42target">target</a>);</td></tr>
+<tr><th id="388">388</th><td>	<a class="tu ref fn" href="#xprintf" title='xprintf' data-use='c' data-ref="xprintf" data-ref-filename="xprintf">xprintf</a>(<q>"$(deps_%s):\n"</q>, <a class="local col2 ref" href="#42target" title='target' data-ref="42target" data-ref-filename="42target">target</a>);</td></tr>
+<tr><th id="389">389</th><td>}</td></tr>
+<tr><th id="390">390</th><td></td></tr>
+<tr><th id="391">391</th><td><em>int</em> <dfn class="decl def fn" id="main" title='main' data-ref="main" data-ref-filename="main">main</dfn>(<em>int</em> <dfn class="local col9 decl" id="49argc" title='argc' data-type='int' data-ref="49argc" data-ref-filename="49argc">argc</dfn>, <em>char</em> *<dfn class="local col0 decl" id="50argv" title='argv' data-type='char **' data-ref="50argv" data-ref-filename="50argv">argv</dfn>[])</td></tr>
+<tr><th id="392">392</th><td>{</td></tr>
+<tr><th id="393">393</th><td>	<em>const</em> <em>char</em> *<dfn class="local col1 decl" id="51depfile" title='depfile' data-type='const char *' data-ref="51depfile" data-ref-filename="51depfile">depfile</dfn>, *<dfn class="local col2 decl" id="52target" title='target' data-type='const char *' data-ref="52target" data-ref-filename="52target">target</dfn>, *<dfn class="local col3 decl" id="53cmdline" title='cmdline' data-type='const char *' data-ref="53cmdline" data-ref-filename="53cmdline">cmdline</dfn>;</td></tr>
+<tr><th id="394">394</th><td>	<em>void</em> *<dfn class="local col4 decl" id="54buf" title='buf' data-type='void *' data-ref="54buf" data-ref-filename="54buf">buf</dfn>;</td></tr>
+<tr><th id="395">395</th><td></td></tr>
+<tr><th id="396">396</th><td>	<b>if</b> (<a class="local col9 ref" href="#49argc" title='argc' data-ref="49argc" data-ref-filename="49argc">argc</a> != <var>4</var>)</td></tr>
+<tr><th id="397">397</th><td>		<a class="tu ref fn" href="#usage" title='usage' data-use='c' data-ref="usage" data-ref-filename="usage">usage</a>();</td></tr>
+<tr><th id="398">398</th><td></td></tr>
+<tr><th id="399">399</th><td>	<a class="local col1 ref" href="#51depfile" title='depfile' data-ref="51depfile" data-ref-filename="51depfile">depfile</a> = <a class="local col0 ref" href="#50argv" title='argv' data-ref="50argv" data-ref-filename="50argv">argv</a>[<var>1</var>];</td></tr>
+<tr><th id="400">400</th><td>	<a class="local col2 ref" href="#52target" title='target' data-ref="52target" data-ref-filename="52target">target</a> = <a class="local col0 ref" href="#50argv" title='argv' data-ref="50argv" data-ref-filename="50argv">argv</a>[<var>2</var>];</td></tr>
+<tr><th id="401">401</th><td>	<a class="local col3 ref" href="#53cmdline" title='cmdline' data-ref="53cmdline" data-ref-filename="53cmdline">cmdline</a> = <a class="local col0 ref" href="#50argv" title='argv' data-ref="50argv" data-ref-filename="50argv">argv</a>[<var>3</var>];</td></tr>
+<tr><th id="402">402</th><td></td></tr>
+<tr><th id="403">403</th><td>	<a class="tu ref fn" href="#xprintf" title='xprintf' data-use='c' data-ref="xprintf" data-ref-filename="xprintf">xprintf</a>(<q>"cmd_%s := %s\n\n"</q>, <a class="local col2 ref" href="#52target" title='target' data-ref="52target" data-ref-filename="52target">target</a>, <a class="local col3 ref" href="#53cmdline" title='cmdline' data-ref="53cmdline" data-ref-filename="53cmdline">cmdline</a>);</td></tr>
+<tr><th id="404">404</th><td></td></tr>
+<tr><th id="405">405</th><td>	<a class="local col4 ref" href="#54buf" title='buf' data-ref="54buf" data-ref-filename="54buf">buf</a> = <a class="tu ref fn" href="#read_file" title='read_file' data-use='c' data-ref="read_file" data-ref-filename="read_file">read_file</a>(<a class="local col1 ref" href="#51depfile" title='depfile' data-ref="51depfile" data-ref-filename="51depfile">depfile</a>);</td></tr>
+<tr><th id="406">406</th><td>	<a class="tu ref fn" href="#parse_dep_file" title='parse_dep_file' data-use='c' data-ref="parse_dep_file" data-ref-filename="parse_dep_file">parse_dep_file</a>(<a class="local col4 ref" href="#54buf" title='buf' data-ref="54buf" data-ref-filename="54buf">buf</a>, <a class="local col2 ref" href="#52target" title='target' data-ref="52target" data-ref-filename="52target">target</a>);</td></tr>
+<tr><th id="407">407</th><td>	<a class="ref fn" href="../../../include/stdlib.h.html#free" title='free' data-ref="free" data-ref-filename="free">free</a>(<a class="local col4 ref" href="#54buf" title='buf' data-ref="54buf" data-ref-filename="54buf">buf</a>);</td></tr>
+<tr><th id="408">408</th><td></td></tr>
+<tr><th id="409">409</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="410">410</th><td>}</td></tr>
+<tr><th id="411">411</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

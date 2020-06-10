@@ -1,0 +1,24 @@
+<dec f='linux-5.3.1/include/crypto/internal/akcipher.h' l='20' type='struct akcipher_alg'/>
+<use f='linux-5.3.1/include/crypto/internal/akcipher.h' l='61' u='m' c='akcipher_crypto_instance'/>
+<use f='linux-5.3.1/include/crypto/internal/akcipher.h' l='61' u='m' c='akcipher_crypto_instance'/>
+<use f='linux-5.3.1/include/crypto/internal/akcipher.h' l='61' u='m' c='akcipher_crypto_instance'/>
+<use f='linux-5.3.1/include/crypto/internal/akcipher.h' l='67' u='m' c='akcipher_instance'/>
+<use f='linux-5.3.1/crypto/akcipher.c' l='149' u='a' c='akcipher_register_instance'/>
+<offset>0</offset>
+<use f='linux-5.3.1/crypto/rsa-pkcs1pad.c' l='650' u='m' c='pkcs1pad_create'/>
+<use f='linux-5.3.1/crypto/rsa-pkcs1pad.c' l='655' u='m' c='pkcs1pad_create'/>
+<use f='linux-5.3.1/crypto/rsa-pkcs1pad.c' l='661' u='m' c='pkcs1pad_create'/>
+<use f='linux-5.3.1/crypto/rsa-pkcs1pad.c' l='666' u='m' c='pkcs1pad_create'/>
+<use f='linux-5.3.1/crypto/rsa-pkcs1pad.c' l='673' u='m' c='pkcs1pad_create'/>
+<use f='linux-5.3.1/crypto/rsa-pkcs1pad.c' l='674' u='m' c='pkcs1pad_create'/>
+<use f='linux-5.3.1/crypto/rsa-pkcs1pad.c' l='675' u='m' c='pkcs1pad_create'/>
+<use f='linux-5.3.1/crypto/rsa-pkcs1pad.c' l='677' u='m' c='pkcs1pad_create'/>
+<use f='linux-5.3.1/crypto/rsa-pkcs1pad.c' l='678' u='m' c='pkcs1pad_create'/>
+<use f='linux-5.3.1/crypto/rsa-pkcs1pad.c' l='680' u='m' c='pkcs1pad_create'/>
+<use f='linux-5.3.1/crypto/rsa-pkcs1pad.c' l='681' u='m' c='pkcs1pad_create'/>
+<use f='linux-5.3.1/crypto/rsa-pkcs1pad.c' l='682' u='m' c='pkcs1pad_create'/>
+<use f='linux-5.3.1/crypto/rsa-pkcs1pad.c' l='683' u='m' c='pkcs1pad_create'/>
+<use f='linux-5.3.1/crypto/rsa-pkcs1pad.c' l='684' u='m' c='pkcs1pad_create'/>
+<use f='linux-5.3.1/crypto/rsa-pkcs1pad.c' l='685' u='m' c='pkcs1pad_create'/>
+<use f='linux-5.3.1/crypto/rsa-pkcs1pad.c' l='686' u='m' c='pkcs1pad_create'/>
+<use f='linux-5.3.1/crypto/rsa-pkcs1pad.c' l='687' u='m' c='pkcs1pad_create'/>

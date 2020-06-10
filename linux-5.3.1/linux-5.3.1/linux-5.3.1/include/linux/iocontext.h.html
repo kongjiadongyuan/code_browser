@@ -1,0 +1,177 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>iocontext.h source code [linux-5.3.1/include/linux/iocontext.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="io_context,io_cq "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/include/linux/iocontext.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>include</a>/<a href='./'>linux</a>/<a href='iocontext.h.html'>iocontext.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0 */</i></td></tr>
+<tr><th id="2">2</th><td><u>#<span data-ppcond="2">ifndef</span> <span class="macro" data-ref="_M/IOCONTEXT_H">IOCONTEXT_H</span></u></td></tr>
+<tr><th id="3">3</th><td><u>#define <dfn class="macro" id="_M/IOCONTEXT_H" data-ref="_M/IOCONTEXT_H">IOCONTEXT_H</dfn></u></td></tr>
+<tr><th id="4">4</th><td></td></tr>
+<tr><th id="5">5</th><td><u>#include <a href="radix-tree.h.html">&lt;linux/radix-tree.h&gt;</a></u></td></tr>
+<tr><th id="6">6</th><td><u>#include <a href="rcupdate.h.html">&lt;linux/rcupdate.h&gt;</a></u></td></tr>
+<tr><th id="7">7</th><td><u>#include <a href="workqueue.h.html">&lt;linux/workqueue.h&gt;</a></u></td></tr>
+<tr><th id="8">8</th><td></td></tr>
+<tr><th id="9">9</th><td><b>enum</b> {</td></tr>
+<tr><th id="10">10</th><td>	<dfn class="enum" id="ICQ_EXITED" title='ICQ_EXITED' data-ref="ICQ_EXITED" data-ref-filename="ICQ_EXITED">ICQ_EXITED</dfn>		= <var>1</var> &lt;&lt; <var>2</var>,</td></tr>
+<tr><th id="11">11</th><td>};</td></tr>
+<tr><th id="12">12</th><td></td></tr>
+<tr><th id="13">13</th><td><i>/*</i></td></tr>
+<tr><th id="14">14</th><td><i> * An io_cq (icq) is association between an io_context (ioc) and a</i></td></tr>
+<tr><th id="15">15</th><td><i> * request_queue (q).  This is used by elevators which need to track</i></td></tr>
+<tr><th id="16">16</th><td><i> * information per ioc - q pair.</i></td></tr>
+<tr><th id="17">17</th><td><i> *</i></td></tr>
+<tr><th id="18">18</th><td><i> * Elevator can request use of icq by setting elevator_type-&gt;icq_size and</i></td></tr>
+<tr><th id="19">19</th><td><i> * -&gt;icq_align.  Both size and align must be larger than that of struct</i></td></tr>
+<tr><th id="20">20</th><td><i> * io_cq and elevator can use the tail area for private information.  The</i></td></tr>
+<tr><th id="21">21</th><td><i> * recommended way to do this is defining a struct which contains io_cq as</i></td></tr>
+<tr><th id="22">22</th><td><i> * the first member followed by private members and using its size and</i></td></tr>
+<tr><th id="23">23</th><td><i> * align.  For example,</i></td></tr>
+<tr><th id="24">24</th><td><i> *</i></td></tr>
+<tr><th id="25">25</th><td><i> *	struct snail_io_cq {</i></td></tr>
+<tr><th id="26">26</th><td><i> *		struct io_cq	icq;</i></td></tr>
+<tr><th id="27">27</th><td><i> *		int		poke_snail;</i></td></tr>
+<tr><th id="28">28</th><td><i> *		int		feed_snail;</i></td></tr>
+<tr><th id="29">29</th><td><i> *	};</i></td></tr>
+<tr><th id="30">30</th><td><i> *</i></td></tr>
+<tr><th id="31">31</th><td><i> *	struct elevator_type snail_elv_type {</i></td></tr>
+<tr><th id="32">32</th><td><i> *		.ops =		{ ... },</i></td></tr>
+<tr><th id="33">33</th><td><i> *		.icq_size =	sizeof(struct snail_io_cq),</i></td></tr>
+<tr><th id="34">34</th><td><i> *		.icq_align =	__alignof__(struct snail_io_cq),</i></td></tr>
+<tr><th id="35">35</th><td><i> *		...</i></td></tr>
+<tr><th id="36">36</th><td><i> *	};</i></td></tr>
+<tr><th id="37">37</th><td><i> *</i></td></tr>
+<tr><th id="38">38</th><td><i> * If icq_size is set, block core will manage icq's.  All requests will</i></td></tr>
+<tr><th id="39">39</th><td><i> * have its -&gt;elv.icq field set before elevator_ops-&gt;elevator_set_req_fn()</i></td></tr>
+<tr><th id="40">40</th><td><i> * is called and be holding a reference to the associated io_context.</i></td></tr>
+<tr><th id="41">41</th><td><i> *</i></td></tr>
+<tr><th id="42">42</th><td><i> * Whenever a new icq is created, elevator_ops-&gt;elevator_init_icq_fn() is</i></td></tr>
+<tr><th id="43">43</th><td><i> * called and, on destruction, -&gt;elevator_exit_icq_fn().  Both functions</i></td></tr>
+<tr><th id="44">44</th><td><i> * are called with both the associated io_context and queue locks held.</i></td></tr>
+<tr><th id="45">45</th><td><i> *</i></td></tr>
+<tr><th id="46">46</th><td><i> * Elevator is allowed to lookup icq using ioc_lookup_icq() while holding</i></td></tr>
+<tr><th id="47">47</th><td><i> * queue lock but the returned icq is valid only until the queue lock is</i></td></tr>
+<tr><th id="48">48</th><td><i> * released.  Elevators can not and should not try to create or destroy</i></td></tr>
+<tr><th id="49">49</th><td><i> * icq's.</i></td></tr>
+<tr><th id="50">50</th><td><i> *</i></td></tr>
+<tr><th id="51">51</th><td><i> * As icq's are linked from both ioc and q, the locking rules are a bit</i></td></tr>
+<tr><th id="52">52</th><td><i> * complex.</i></td></tr>
+<tr><th id="53">53</th><td><i> *</i></td></tr>
+<tr><th id="54">54</th><td><i> * - ioc lock nests inside q lock.</i></td></tr>
+<tr><th id="55">55</th><td><i> *</i></td></tr>
+<tr><th id="56">56</th><td><i> * - ioc-&gt;icq_list and icq-&gt;ioc_node are protected by ioc lock.</i></td></tr>
+<tr><th id="57">57</th><td><i> *   q-&gt;icq_list and icq-&gt;q_node by q lock.</i></td></tr>
+<tr><th id="58">58</th><td><i> *</i></td></tr>
+<tr><th id="59">59</th><td><i> * - ioc-&gt;icq_tree and ioc-&gt;icq_hint are protected by ioc lock, while icq</i></td></tr>
+<tr><th id="60">60</th><td><i> *   itself is protected by q lock.  However, both the indexes and icq</i></td></tr>
+<tr><th id="61">61</th><td><i> *   itself are also RCU managed and lookup can be performed holding only</i></td></tr>
+<tr><th id="62">62</th><td><i> *   the q lock.</i></td></tr>
+<tr><th id="63">63</th><td><i> *</i></td></tr>
+<tr><th id="64">64</th><td><i> * - icq's are not reference counted.  They are destroyed when either the</i></td></tr>
+<tr><th id="65">65</th><td><i> *   ioc or q goes away.  Each request with icq set holds an extra</i></td></tr>
+<tr><th id="66">66</th><td><i> *   reference to ioc to ensure it stays until the request is completed.</i></td></tr>
+<tr><th id="67">67</th><td><i> *</i></td></tr>
+<tr><th id="68">68</th><td><i> * - Linking and unlinking icq's are performed while holding both ioc and q</i></td></tr>
+<tr><th id="69">69</th><td><i> *   locks.  Due to the lock ordering, q exit is simple but ioc exit</i></td></tr>
+<tr><th id="70">70</th><td><i> *   requires reverse-order double lock dance.</i></td></tr>
+<tr><th id="71">71</th><td><i> */</i></td></tr>
+<tr><th id="72">72</th><td><b>struct</b> <dfn class="type def" id="io_cq" title='io_cq' data-ref="io_cq" data-ref-filename="io_cq">io_cq</dfn> {</td></tr>
+<tr><th id="73">73</th><td>	<b>struct</b> <a class="type" href="blkdev.h.html#request_queue" title='request_queue' data-ref="request_queue" data-ref-filename="request_queue" id="request_queue"><a class="type" href="blkdev.h.html#request_queue" title='request_queue' data-ref="request_queue" data-ref-filename="request_queue">request_queue</a></a>	*<dfn class="decl field" id="io_cq::q" title='io_cq::q' data-ref="io_cq::q" data-ref-filename="io_cq..q">q</dfn>;</td></tr>
+<tr><th id="74">74</th><td>	<b>struct</b> <a class="type" href="#io_context" title='io_context' data-ref="io_context" data-ref-filename="io_context">io_context</a>	*<dfn class="decl field" id="io_cq::ioc" title='io_cq::ioc' data-ref="io_cq::ioc" data-ref-filename="io_cq..ioc">ioc</dfn>;</td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td>	<i>/*</i></td></tr>
+<tr><th id="77">77</th><td><i>	 * q_node and ioc_node link io_cq through icq_list of q and ioc</i></td></tr>
+<tr><th id="78">78</th><td><i>	 * respectively.  Both fields are unused once ioc_exit_icq() is</i></td></tr>
+<tr><th id="79">79</th><td><i>	 * called and shared with __rcu_icq_cache and __rcu_head which are</i></td></tr>
+<tr><th id="80">80</th><td><i>	 * used for RCU free of io_cq.</i></td></tr>
+<tr><th id="81">81</th><td><i>	 */</i></td></tr>
+<tr><th id="82">82</th><td>	<b>union</b> {</td></tr>
+<tr><th id="83">83</th><td>		<b>struct</b> <a class="type" href="types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a>	<dfn class="decl field" id="io_cq::(anonymous)::q_node" title='io_cq::(anonymous union)::q_node' data-ref="io_cq::(anonymous)::q_node" data-ref-filename="io_cq..(anonymous)..q_node">q_node</dfn>;</td></tr>
+<tr><th id="84">84</th><td>		<b>struct</b> <a class="type" href="mm_types.h.html#kmem_cache" title='kmem_cache' data-ref="kmem_cache" data-ref-filename="kmem_cache">kmem_cache</a>	*<dfn class="decl field" id="io_cq::(anonymous)::__rcu_icq_cache" title='io_cq::(anonymous union)::__rcu_icq_cache' data-ref="io_cq::(anonymous)::__rcu_icq_cache" data-ref-filename="io_cq..(anonymous)..__rcu_icq_cache">__rcu_icq_cache</dfn>;</td></tr>
+<tr><th id="85">85</th><td>	};</td></tr>
+<tr><th id="86">86</th><td>	<b>union</b> {</td></tr>
+<tr><th id="87">87</th><td>		<b>struct</b> <a class="type" href="types.h.html#hlist_node" title='hlist_node' data-ref="hlist_node" data-ref-filename="hlist_node">hlist_node</a>	<dfn class="decl field" id="io_cq::(anonymous)::ioc_node" title='io_cq::(anonymous union)::ioc_node' data-ref="io_cq::(anonymous)::ioc_node" data-ref-filename="io_cq..(anonymous)..ioc_node">ioc_node</dfn>;</td></tr>
+<tr><th id="88">88</th><td>		<b>struct</b> <a class="macro" href="types.h.html#223" title="callback_head" data-ref="_M/rcu_head">rcu_head</a>		<dfn class="decl field" id="io_cq::(anonymous)::__rcu_head" title='io_cq::(anonymous union)::__rcu_head' data-ref="io_cq::(anonymous)::__rcu_head" data-ref-filename="io_cq..(anonymous)..__rcu_head">__rcu_head</dfn>;</td></tr>
+<tr><th id="89">89</th><td>	};</td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td>	<em>unsigned</em> <em>int</em>		<dfn class="decl field" id="io_cq::flags" title='io_cq::flags' data-ref="io_cq::flags" data-ref-filename="io_cq..flags">flags</dfn>;</td></tr>
+<tr><th id="92">92</th><td>};</td></tr>
+<tr><th id="93">93</th><td></td></tr>
+<tr><th id="94">94</th><td><i>/*</i></td></tr>
+<tr><th id="95">95</th><td><i> * I/O subsystem state of the associated processes.  It is refcounted</i></td></tr>
+<tr><th id="96">96</th><td><i> * and kmalloc'ed. These could be shared between processes.</i></td></tr>
+<tr><th id="97">97</th><td><i> */</i></td></tr>
+<tr><th id="98">98</th><td><b>struct</b> <dfn class="type def" id="io_context" title='io_context' data-ref="io_context" data-ref-filename="io_context">io_context</dfn> {</td></tr>
+<tr><th id="99">99</th><td>	<a class="typedef" href="../asm-generic/atomic-long.h.html#atomic_long_t" title='atomic_long_t' data-type='atomic64_t' data-ref="atomic_long_t" data-ref-filename="atomic_long_t">atomic_long_t</a> <dfn class="decl field" id="io_context::refcount" title='io_context::refcount' data-ref="io_context::refcount" data-ref-filename="io_context..refcount">refcount</dfn>;</td></tr>
+<tr><th id="100">100</th><td>	<a class="typedef" href="types.h.html#atomic_t" title='atomic_t' data-type='struct atomic_t' data-ref="atomic_t" data-ref-filename="atomic_t">atomic_t</a> <dfn class="decl field" id="io_context::active_ref" title='io_context::active_ref' data-ref="io_context::active_ref" data-ref-filename="io_context..active_ref">active_ref</dfn>;</td></tr>
+<tr><th id="101">101</th><td>	<a class="typedef" href="types.h.html#atomic_t" title='atomic_t' data-type='struct atomic_t' data-ref="atomic_t" data-ref-filename="atomic_t">atomic_t</a> <dfn class="decl field" id="io_context::nr_tasks" title='io_context::nr_tasks' data-ref="io_context::nr_tasks" data-ref-filename="io_context..nr_tasks">nr_tasks</dfn>;</td></tr>
+<tr><th id="102">102</th><td></td></tr>
+<tr><th id="103">103</th><td>	<i>/* all the fields below are protected by this lock */</i></td></tr>
+<tr><th id="104">104</th><td>	<a class="typedef" href="spinlock_types.h.html#spinlock_t" title='spinlock_t' data-type='struct spinlock' data-ref="spinlock_t" data-ref-filename="spinlock_t">spinlock_t</a> <dfn class="decl field" id="io_context::lock" title='io_context::lock' data-ref="io_context::lock" data-ref-filename="io_context..lock">lock</dfn>;</td></tr>
+<tr><th id="105">105</th><td></td></tr>
+<tr><th id="106">106</th><td>	<em>unsigned</em> <em>short</em> <dfn class="decl field" id="io_context::ioprio" title='io_context::ioprio' data-ref="io_context::ioprio" data-ref-filename="io_context..ioprio">ioprio</dfn>;</td></tr>
+<tr><th id="107">107</th><td></td></tr>
+<tr><th id="108">108</th><td>	<i>/*</i></td></tr>
+<tr><th id="109">109</th><td><i>	 * For request batching</i></td></tr>
+<tr><th id="110">110</th><td><i>	 */</i></td></tr>
+<tr><th id="111">111</th><td>	<em>int</em> <dfn class="decl field" id="io_context::nr_batch_requests" title='io_context::nr_batch_requests' data-ref="io_context::nr_batch_requests" data-ref-filename="io_context..nr_batch_requests">nr_batch_requests</dfn>;     <i>/* Number of requests left in the batch */</i></td></tr>
+<tr><th id="112">112</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="io_context::last_waited" title='io_context::last_waited' data-ref="io_context::last_waited" data-ref-filename="io_context..last_waited">last_waited</dfn>; <i>/* Time last woken after wait for request */</i></td></tr>
+<tr><th id="113">113</th><td></td></tr>
+<tr><th id="114">114</th><td>	<b>struct</b> <a class="macro" href="radix-tree.h.html#21" title="xarray" data-ref="_M/radix_tree_root">radix_tree_root</a>	<dfn class="decl field" id="io_context::icq_tree" title='io_context::icq_tree' data-ref="io_context::icq_tree" data-ref-filename="io_context..icq_tree">icq_tree</dfn>;</td></tr>
+<tr><th id="115">115</th><td>	<b>struct</b> <a class="type" href="#io_cq" title='io_cq' data-ref="io_cq" data-ref-filename="io_cq">io_cq</a> <a class="macro" href="compiler_types.h.html#47" title="" data-ref="_M/__rcu">__rcu</a>	*<dfn class="decl field" id="io_context::icq_hint" title='io_context::icq_hint' data-ref="io_context::icq_hint" data-ref-filename="io_context..icq_hint">icq_hint</dfn>;</td></tr>
+<tr><th id="116">116</th><td>	<b>struct</b> <a class="type" href="types.h.html#hlist_head" title='hlist_head' data-ref="hlist_head" data-ref-filename="hlist_head">hlist_head</a>	<dfn class="decl field" id="io_context::icq_list" title='io_context::icq_list' data-ref="io_context::icq_list" data-ref-filename="io_context..icq_list">icq_list</dfn>;</td></tr>
+<tr><th id="117">117</th><td></td></tr>
+<tr><th id="118">118</th><td>	<b>struct</b> <a class="type" href="workqueue.h.html#work_struct" title='work_struct' data-ref="work_struct" data-ref-filename="work_struct">work_struct</a> <dfn class="decl field" id="io_context::release_work" title='io_context::release_work' data-ref="io_context::release_work" data-ref-filename="io_context..release_work">release_work</dfn>;</td></tr>
+<tr><th id="119">119</th><td>};</td></tr>
+<tr><th id="120">120</th><td></td></tr>
+<tr><th id="121">121</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="122">122</th><td><i class="doc"> * get_io_context_active - get active reference on ioc</i></td></tr>
+<tr><th id="123">123</th><td><i class="doc"> *<span class="command"> @ioc</span>: ioc of interest</i></td></tr>
+<tr><th id="124">124</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="125">125</th><td><i class="doc"> * Only iocs with active reference can issue new IOs.  This function</i></td></tr>
+<tr><th id="126">126</th><td><i class="doc"> * acquires an active reference on<span class="command"> @ioc</span>.  The caller must already have an</i></td></tr>
+<tr><th id="127">127</th><td><i class="doc"> * active reference on<span class="command"> @ioc</span>.</i></td></tr>
+<tr><th id="128">128</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="129">129</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="get_io_context_active" title='get_io_context_active' data-ref="get_io_context_active" data-ref-filename="get_io_context_active">get_io_context_active</dfn>(<b>struct</b> <a class="type" href="#io_context" title='io_context' data-ref="io_context" data-ref-filename="io_context">io_context</a> *<dfn class="local col1 decl" id="8031ioc" title='ioc' data-type='struct io_context *' data-ref="8031ioc" data-ref-filename="8031ioc">ioc</dfn>)</td></tr>
+<tr><th id="130">130</th><td>{</td></tr>
+<tr><th id="131">131</th><td>	<a class="macro" href="../asm-generic/bug.h.html#68" title="({ int __ret_warn_on = !!(atomic_long_read(&amp;ioc-&gt;refcount) &lt;= 0); if (__builtin_expect(!!(__ret_warn_on), 0)) do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/./include/linux/iocontext.h&quot;), &quot;i&quot; (131), &quot;i&quot; ((1 &lt;&lt; 0)|((1 &lt;&lt; 1)|((9) &lt;&lt; 8))), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.reachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (42)); }); } while (0); __builtin_expect(!!(__ret_warn_on), 0); })" data-ref="_M/WARN_ON_ONCE">WARN_ON_ONCE</a>(<a class="ref fn" href="../asm-generic/atomic-long.h.html#atomic_long_read" title='atomic_long_read' data-ref="atomic_long_read" data-ref-filename="atomic_long_read">atomic_long_read</a>(&amp;<a class="local col1 ref" href="#8031ioc" title='ioc' data-ref="8031ioc" data-ref-filename="8031ioc">ioc</a>-&gt;<a class="ref field" href="#io_context::refcount" title='io_context::refcount' data-ref="io_context::refcount" data-ref-filename="io_context..refcount">refcount</a>) &lt;= <var>0</var>);</td></tr>
+<tr><th id="132">132</th><td>	<a class="macro" href="../asm-generic/bug.h.html#68" title="({ int __ret_warn_on = !!(atomic_read(&amp;ioc-&gt;active_ref) &lt;= 0); if (__builtin_expect(!!(__ret_warn_on), 0)) do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/./include/linux/iocontext.h&quot;), &quot;i&quot; (132), &quot;i&quot; ((1 &lt;&lt; 0)|((1 &lt;&lt; 1)|((9) &lt;&lt; 8))), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.reachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (44)); }); } while (0); __builtin_expect(!!(__ret_warn_on), 0); })" data-ref="_M/WARN_ON_ONCE">WARN_ON_ONCE</a>(<a class="macro" href="../asm-generic/atomic-instrumented.h.html#29" title="atomic_read" data-ref="_M/atomic_read">atomic_read</a>(&amp;<a class="local col1 ref" href="#8031ioc" title='ioc' data-ref="8031ioc" data-ref-filename="8031ioc">ioc</a>-&gt;<a class="ref field" href="#io_context::active_ref" title='io_context::active_ref' data-ref="io_context::active_ref" data-ref-filename="io_context..active_ref">active_ref</a>) &lt;= <var>0</var>);</td></tr>
+<tr><th id="133">133</th><td>	<a class="ref fn" href="../asm-generic/atomic-long.h.html#atomic_long_inc" title='atomic_long_inc' data-ref="atomic_long_inc" data-ref-filename="atomic_long_inc">atomic_long_inc</a>(&amp;<a class="local col1 ref" href="#8031ioc" title='ioc' data-ref="8031ioc" data-ref-filename="8031ioc">ioc</a>-&gt;<a class="ref field" href="#io_context::refcount" title='io_context::refcount' data-ref="io_context::refcount" data-ref-filename="io_context..refcount">refcount</a>);</td></tr>
+<tr><th id="134">134</th><td>	<a class="macro" href="../asm-generic/atomic-instrumented.h.html#242" title="atomic_inc" data-ref="_M/atomic_inc">atomic_inc</a>(&amp;<a class="local col1 ref" href="#8031ioc" title='ioc' data-ref="8031ioc" data-ref-filename="8031ioc">ioc</a>-&gt;<a class="ref field" href="#io_context::active_ref" title='io_context::active_ref' data-ref="io_context::active_ref" data-ref-filename="io_context..active_ref">active_ref</a>);</td></tr>
+<tr><th id="135">135</th><td>}</td></tr>
+<tr><th id="136">136</th><td></td></tr>
+<tr><th id="137">137</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="ioc_task_link" title='ioc_task_link' data-ref="ioc_task_link" data-ref-filename="ioc_task_link">ioc_task_link</dfn>(<b>struct</b> <a class="type" href="#io_context" title='io_context' data-ref="io_context" data-ref-filename="io_context">io_context</a> *<dfn class="local col2 decl" id="8032ioc" title='ioc' data-type='struct io_context *' data-ref="8032ioc" data-ref-filename="8032ioc">ioc</dfn>)</td></tr>
+<tr><th id="138">138</th><td>{</td></tr>
+<tr><th id="139">139</th><td>	<a class="ref fn" href="#get_io_context_active" title='get_io_context_active' data-ref="get_io_context_active" data-ref-filename="get_io_context_active">get_io_context_active</a>(<a class="local col2 ref" href="#8032ioc" title='ioc' data-ref="8032ioc" data-ref-filename="8032ioc">ioc</a>);</td></tr>
+<tr><th id="140">140</th><td></td></tr>
+<tr><th id="141">141</th><td>	<a class="macro" href="../asm-generic/bug.h.html#68" title="({ int __ret_warn_on = !!(atomic_read(&amp;ioc-&gt;nr_tasks) &lt;= 0); if (__builtin_expect(!!(__ret_warn_on), 0)) do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/./include/linux/iocontext.h&quot;), &quot;i&quot; (141), &quot;i&quot; ((1 &lt;&lt; 0)|((1 &lt;&lt; 1)|((9) &lt;&lt; 8))), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.reachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (46)); }); } while (0); __builtin_expect(!!(__ret_warn_on), 0); })" data-ref="_M/WARN_ON_ONCE">WARN_ON_ONCE</a>(<a class="macro" href="../asm-generic/atomic-instrumented.h.html#29" title="atomic_read" data-ref="_M/atomic_read">atomic_read</a>(&amp;<a class="local col2 ref" href="#8032ioc" title='ioc' data-ref="8032ioc" data-ref-filename="8032ioc">ioc</a>-&gt;<a class="ref field" href="#io_context::nr_tasks" title='io_context::nr_tasks' data-ref="io_context::nr_tasks" data-ref-filename="io_context..nr_tasks">nr_tasks</a>) &lt;= <var>0</var>);</td></tr>
+<tr><th id="142">142</th><td>	<a class="macro" href="../asm-generic/atomic-instrumented.h.html#242" title="atomic_inc" data-ref="_M/atomic_inc">atomic_inc</a>(&amp;<a class="local col2 ref" href="#8032ioc" title='ioc' data-ref="8032ioc" data-ref-filename="8032ioc">ioc</a>-&gt;<a class="ref field" href="#io_context::nr_tasks" title='io_context::nr_tasks' data-ref="io_context::nr_tasks" data-ref-filename="io_context..nr_tasks">nr_tasks</a>);</td></tr>
+<tr><th id="143">143</th><td>}</td></tr>
+<tr><th id="144">144</th><td></td></tr>
+<tr><th id="145">145</th><td><b>struct</b> <a class="type" href="sched.h.html#task_struct" title='task_struct' data-ref="task_struct" data-ref-filename="task_struct" id="task_struct">task_struct</a>;</td></tr>
+<tr><th id="146">146</th><td><u>#<span data-ppcond="146">ifdef</span> <a class="macro" href="../generated/autoconf.h.html#259" data-ref="_M/CONFIG_BLOCK">CONFIG_BLOCK</a></u></td></tr>
+<tr><th id="147">147</th><td><em>void</em> <dfn class="decl fn" id="put_io_context" title='put_io_context' data-ref="put_io_context" data-ref-filename="put_io_context">put_io_context</dfn>(<b>struct</b> <a class="type" href="#io_context" title='io_context' data-ref="io_context" data-ref-filename="io_context">io_context</a> *<dfn class="local col3 decl" id="8033ioc" title='ioc' data-type='struct io_context *' data-ref="8033ioc" data-ref-filename="8033ioc">ioc</dfn>);</td></tr>
+<tr><th id="148">148</th><td><em>void</em> <dfn class="decl fn" id="put_io_context_active" title='put_io_context_active' data-ref="put_io_context_active" data-ref-filename="put_io_context_active">put_io_context_active</dfn>(<b>struct</b> <a class="type" href="#io_context" title='io_context' data-ref="io_context" data-ref-filename="io_context">io_context</a> *<dfn class="local col4 decl" id="8034ioc" title='ioc' data-type='struct io_context *' data-ref="8034ioc" data-ref-filename="8034ioc">ioc</dfn>);</td></tr>
+<tr><th id="149">149</th><td><em>void</em> <dfn class="decl fn" id="exit_io_context" title='exit_io_context' data-ref="exit_io_context" data-ref-filename="exit_io_context">exit_io_context</dfn>(<b>struct</b> <a class="type" href="sched.h.html#task_struct" title='task_struct' data-ref="task_struct" data-ref-filename="task_struct">task_struct</a> *<dfn class="local col5 decl" id="8035task" title='task' data-type='struct task_struct *' data-ref="8035task" data-ref-filename="8035task">task</dfn>);</td></tr>
+<tr><th id="150">150</th><td><b>struct</b> <a class="type" href="#io_context" title='io_context' data-ref="io_context" data-ref-filename="io_context">io_context</a> *<dfn class="decl fn" id="get_task_io_context" title='get_task_io_context' data-ref="get_task_io_context" data-ref-filename="get_task_io_context">get_task_io_context</dfn>(<b>struct</b> <a class="type" href="sched.h.html#task_struct" title='task_struct' data-ref="task_struct" data-ref-filename="task_struct">task_struct</a> *<dfn class="local col6 decl" id="8036task" title='task' data-type='struct task_struct *' data-ref="8036task" data-ref-filename="8036task">task</dfn>,</td></tr>
+<tr><th id="151">151</th><td>				       <a class="typedef" href="types.h.html#gfp_t" title='gfp_t' data-type='unsigned int' data-ref="gfp_t" data-ref-filename="gfp_t">gfp_t</a> <dfn class="local col7 decl" id="8037gfp_flags" title='gfp_flags' data-type='gfp_t' data-ref="8037gfp_flags" data-ref-filename="8037gfp_flags">gfp_flags</dfn>, <em>int</em> <dfn class="local col8 decl" id="8038node" title='node' data-type='int' data-ref="8038node" data-ref-filename="8038node">node</dfn>);</td></tr>
+<tr><th id="152">152</th><td><u>#<span data-ppcond="146">else</span></u></td></tr>
+<tr><th id="153">153</th><td><b>struct</b> io_context;</td></tr>
+<tr><th id="154">154</th><td><em>static</em> <b>inline</b> <em>void</em> put_io_context(<b>struct</b> io_context *ioc) { }</td></tr>
+<tr><th id="155">155</th><td><em>static</em> <b>inline</b> <em>void</em> exit_io_context(<b>struct</b> task_struct *task) { }</td></tr>
+<tr><th id="156">156</th><td><u>#<span data-ppcond="146">endif</span></u></td></tr>
+<tr><th id="157">157</th><td></td></tr>
+<tr><th id="158">158</th><td><u>#<span data-ppcond="2">endif</span></u></td></tr>
+<tr><th id="159">159</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../arch/x86/boot/compressed/acpi.c.html'>linux-5.3.1/arch/x86/boot/compressed/acpi.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

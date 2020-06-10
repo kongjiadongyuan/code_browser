@@ -1,0 +1,49 @@
+<dec f='linux-5.3.1/include/linux/mm.h' l='2301' type='struct vm_area_struct * vma_merge(struct mm_struct * , struct vm_area_struct * prev, unsigned long addr, unsigned long end, unsigned long vm_flags, struct anon_vma * , struct file * , unsigned long , struct mempolicy * , struct vm_userfaultfd_ctx )'/>
+<use f='linux-5.3.1/mm/madvise.c' l='139' u='c' c='madvise_behavior'/>
+<use f='linux-5.3.1/mm/mempolicy.c' l='759' u='c' c='mbind_range'/>
+<use f='linux-5.3.1/mm/mlock.c' l='536' u='c' c='mlock_fixup'/>
+<def f='linux-5.3.1/mm/mmap.c' l='1134' ll='1225' type='struct vm_area_struct * vma_merge(struct mm_struct * mm, struct vm_area_struct * prev, unsigned long addr, unsigned long end, unsigned long vm_flags, struct anon_vma * anon_vma, struct file * file, unsigned long pgoff, struct mempolicy * policy, struct vm_userfaultfd_ctx vm_userfaultfd_ctx)'/>
+<use f='linux-5.3.1/mm/mmap.c' l='1748' u='c' c='mmap_region'/>
+<use f='linux-5.3.1/mm/mmap.c' l='3027' u='c' c='do_brk_flags'/>
+<use f='linux-5.3.1/mm/mmap.c' l='3224' u='c' c='copy_vma'/>
+<doc f='linux-5.3.1/mm/mmap.c' l='1094'>/*
+ * Given a mapping request (addr,end,vm_flags,file,pgoff), figure out
+ * whether that can be merged with its predecessor or its successor.
+ * Or both (it neatly fills a hole).
+ *
+ * In most cases - when called for mmap, brk or mremap - [addr,end) is
+ * certain not to be mapped by the time vma_merge is called; but when
+ * called for mprotect, it is certain to be already mapped (either at
+ * an offset within prev, or at the start of next), and the flags of
+ * this area are about to be changed to vm_flags - and the no-change
+ * case has already been eliminated.
+ *
+ * The following mprotect cases have to be considered, where AAAA is
+ * the area passed down from mprotect_fixup, never extending beyond one
+ * vma, PPPPPP is the prev vma specified, and NNNNNN the next vma after:
+ *
+ *     AAAA             AAAA                AAAA          AAAA
+ *    PPPPPPNNNNNN    PPPPPPNNNNNN    PPPPPPNNNNNN    PPPPNNNNXXXX
+ *    cannot merge    might become    might become    might become
+ *                    PPNNNNNNNNNN    PPPPPPPPPPNN    PPPPPPPPPPPP 6 or
+ *    mmap, brk or    case 4 below    case 5 below    PPPPPPPPXXXX 7 or
+ *    mremap move:                                    PPPPXXXXXXXX 8
+ *        AAAA
+ *    PPPP    NNNN    PPPPPPPPPPPP    PPPPPPPPNNNN    PPPPNNNNNNNN
+ *    might become    case 1 below    case 2 below    case 3 below
+ *
+ * It is important for case 8 that the vma NNNN overlapping the
+ * region AAAA is never going to extended over XXXX. Instead XXXX must
+ * be extended in region AAAA and NNNN must be removed. This way in
+ * all cases where vma_merge succeeds, the moment vma_adjust drops the
+ * rmap_locks, the properties of the merged vma will be already
+ * correct for the whole merged range. Some of those properties like
+ * vm_page_prot/vm_flags may be accessed by rmap_walks and they must
+ * be correct for the whole merged range immediately after the
+ * rmap_locks are released. Otherwise if XXXX would be removed and
+ * NNNN would be extended over the XXXX range, remove_migration_ptes
+ * or other rmap walkers (if working on addresses beyond the &quot;end&quot;
+ * parameter) may establish ptes with the wrong permissions of NNNN
+ * instead of the right permissions of XXXX.
+ */</doc>
+<use f='linux-5.3.1/mm/mprotect.c' l='401' u='c' c='mprotect_fixup'/>

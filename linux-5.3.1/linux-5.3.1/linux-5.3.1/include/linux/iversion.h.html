@@ -1,0 +1,379 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>iversion.h source code [linux-5.3.1/include/linux/iversion.h] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/include/linux/iversion.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>include</a>/<a href='./'>linux</a>/<a href='iversion.h.html'>iversion.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0 */</i></td></tr>
+<tr><th id="2">2</th><td><u>#<span data-ppcond="2">ifndef</span> <span class="macro" data-ref="_M/_LINUX_IVERSION_H">_LINUX_IVERSION_H</span></u></td></tr>
+<tr><th id="3">3</th><td><u>#define <dfn class="macro" id="_M/_LINUX_IVERSION_H" data-ref="_M/_LINUX_IVERSION_H">_LINUX_IVERSION_H</dfn></u></td></tr>
+<tr><th id="4">4</th><td></td></tr>
+<tr><th id="5">5</th><td><u>#include <a href="fs.h.html">&lt;linux/fs.h&gt;</a></u></td></tr>
+<tr><th id="6">6</th><td></td></tr>
+<tr><th id="7">7</th><td><i>/*</i></td></tr>
+<tr><th id="8">8</th><td><i> * The inode-&gt;i_version field:</i></td></tr>
+<tr><th id="9">9</th><td><i> * ---------------------------</i></td></tr>
+<tr><th id="10">10</th><td><i> * The change attribute (i_version) is mandated by NFSv4 and is mostly for</i></td></tr>
+<tr><th id="11">11</th><td><i> * knfsd, but is also used for other purposes (e.g. IMA). The i_version must</i></td></tr>
+<tr><th id="12">12</th><td><i> * appear different to observers if there was a change to the inode's data or</i></td></tr>
+<tr><th id="13">13</th><td><i> * metadata since it was last queried.</i></td></tr>
+<tr><th id="14">14</th><td><i> *</i></td></tr>
+<tr><th id="15">15</th><td><i> * Observers see the i_version as a 64-bit number that never decreases. If it</i></td></tr>
+<tr><th id="16">16</th><td><i> * remains the same since it was last checked, then nothing has changed in the</i></td></tr>
+<tr><th id="17">17</th><td><i> * inode. If it's different then something has changed. Observers cannot infer</i></td></tr>
+<tr><th id="18">18</th><td><i> * anything about the nature or magnitude of the changes from the value, only</i></td></tr>
+<tr><th id="19">19</th><td><i> * that the inode has changed in some fashion.</i></td></tr>
+<tr><th id="20">20</th><td><i> *</i></td></tr>
+<tr><th id="21">21</th><td><i> * Not all filesystems properly implement the i_version counter. Subsystems that</i></td></tr>
+<tr><th id="22">22</th><td><i> * want to use i_version field on an inode should first check whether the</i></td></tr>
+<tr><th id="23">23</th><td><i> * filesystem sets the SB_I_VERSION flag (usually via the IS_I_VERSION macro).</i></td></tr>
+<tr><th id="24">24</th><td><i> *</i></td></tr>
+<tr><th id="25">25</th><td><i> * Those that set SB_I_VERSION will automatically have their i_version counter</i></td></tr>
+<tr><th id="26">26</th><td><i> * incremented on writes to normal files. If the SB_I_VERSION is not set, then</i></td></tr>
+<tr><th id="27">27</th><td><i> * the VFS will not touch it on writes, and the filesystem can use it how it</i></td></tr>
+<tr><th id="28">28</th><td><i> * wishes. Note that the filesystem is always responsible for updating the</i></td></tr>
+<tr><th id="29">29</th><td><i> * i_version on namespace changes in directories (mkdir, rmdir, unlink, etc.).</i></td></tr>
+<tr><th id="30">30</th><td><i> * We consider these sorts of filesystems to have a kernel-managed i_version.</i></td></tr>
+<tr><th id="31">31</th><td><i> *</i></td></tr>
+<tr><th id="32">32</th><td><i> * It may be impractical for filesystems to keep i_version updates atomic with</i></td></tr>
+<tr><th id="33">33</th><td><i> * respect to the changes that cause them.  They should, however, guarantee</i></td></tr>
+<tr><th id="34">34</th><td><i> * that i_version updates are never visible before the changes that caused</i></td></tr>
+<tr><th id="35">35</th><td><i> * them.  Also, i_version updates should never be delayed longer than it takes</i></td></tr>
+<tr><th id="36">36</th><td><i> * the original change to reach disk.</i></td></tr>
+<tr><th id="37">37</th><td><i> *</i></td></tr>
+<tr><th id="38">38</th><td><i> * This implementation uses the low bit in the i_version field as a flag to</i></td></tr>
+<tr><th id="39">39</th><td><i> * track when the value has been queried. If it has not been queried since it</i></td></tr>
+<tr><th id="40">40</th><td><i> * was last incremented, we can skip the increment in most cases.</i></td></tr>
+<tr><th id="41">41</th><td><i> *</i></td></tr>
+<tr><th id="42">42</th><td><i> * In the event that we're updating the ctime, we will usually go ahead and</i></td></tr>
+<tr><th id="43">43</th><td><i> * bump the i_version anyway. Since that has to go to stable storage in some</i></td></tr>
+<tr><th id="44">44</th><td><i> * fashion, we might as well increment it as well.</i></td></tr>
+<tr><th id="45">45</th><td><i> *</i></td></tr>
+<tr><th id="46">46</th><td><i> * With this implementation, the value should always appear to observers to</i></td></tr>
+<tr><th id="47">47</th><td><i> * increase over time if the file has changed. It's recommended to use</i></td></tr>
+<tr><th id="48">48</th><td><i> * inode_eq_iversion() helper to compare values.</i></td></tr>
+<tr><th id="49">49</th><td><i> *</i></td></tr>
+<tr><th id="50">50</th><td><i> * Note that some filesystems (e.g. NFS and AFS) just use the field to store</i></td></tr>
+<tr><th id="51">51</th><td><i> * a server-provided value (for the most part). For that reason, those</i></td></tr>
+<tr><th id="52">52</th><td><i> * filesystems do not set SB_I_VERSION. These filesystems are considered to</i></td></tr>
+<tr><th id="53">53</th><td><i> * have a self-managed i_version.</i></td></tr>
+<tr><th id="54">54</th><td><i> *</i></td></tr>
+<tr><th id="55">55</th><td><i> * Persistently storing the i_version</i></td></tr>
+<tr><th id="56">56</th><td><i> * ----------------------------------</i></td></tr>
+<tr><th id="57">57</th><td><i> * Queries of the i_version field are not gated on them hitting the backing</i></td></tr>
+<tr><th id="58">58</th><td><i> * store. It's always possible that the host could crash after allowing</i></td></tr>
+<tr><th id="59">59</th><td><i> * a query of the value but before it has made it to disk.</i></td></tr>
+<tr><th id="60">60</th><td><i> *</i></td></tr>
+<tr><th id="61">61</th><td><i> * To mitigate this problem, filesystems should always use</i></td></tr>
+<tr><th id="62">62</th><td><i> * inode_set_iversion_queried when loading an existing inode from disk. This</i></td></tr>
+<tr><th id="63">63</th><td><i> * ensures that the next attempted inode increment will result in the value</i></td></tr>
+<tr><th id="64">64</th><td><i> * changing.</i></td></tr>
+<tr><th id="65">65</th><td><i> *</i></td></tr>
+<tr><th id="66">66</th><td><i> * Storing the value to disk therefore does not count as a query, so those</i></td></tr>
+<tr><th id="67">67</th><td><i> * filesystems should use inode_peek_iversion to grab the value to be stored.</i></td></tr>
+<tr><th id="68">68</th><td><i> * There is no need to flag the value as having been queried in that case.</i></td></tr>
+<tr><th id="69">69</th><td><i> */</i></td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td><i>/*</i></td></tr>
+<tr><th id="72">72</th><td><i> * We borrow the lowest bit in the i_version to use as a flag to tell whether</i></td></tr>
+<tr><th id="73">73</th><td><i> * it has been queried since we last incremented it. If it has, then we must</i></td></tr>
+<tr><th id="74">74</th><td><i> * increment it on the next change. After that, we can clear the flag and</i></td></tr>
+<tr><th id="75">75</th><td><i> * avoid incrementing it again until it has again been queried.</i></td></tr>
+<tr><th id="76">76</th><td><i> */</i></td></tr>
+<tr><th id="77">77</th><td><u>#define <dfn class="macro" id="_M/I_VERSION_QUERIED_SHIFT" data-ref="_M/I_VERSION_QUERIED_SHIFT">I_VERSION_QUERIED_SHIFT</dfn>	(1)</u></td></tr>
+<tr><th id="78">78</th><td><u>#define <dfn class="macro" id="_M/I_VERSION_QUERIED" data-ref="_M/I_VERSION_QUERIED">I_VERSION_QUERIED</dfn>	(1ULL &lt;&lt; (I_VERSION_QUERIED_SHIFT - 1))</u></td></tr>
+<tr><th id="79">79</th><td><u>#define <dfn class="macro" id="_M/I_VERSION_INCREMENT" data-ref="_M/I_VERSION_INCREMENT">I_VERSION_INCREMENT</dfn>	(1ULL &lt;&lt; I_VERSION_QUERIED_SHIFT)</u></td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="82">82</th><td><i class="doc"> * inode_set_iversion_raw - set i_version to the specified raw value</i></td></tr>
+<tr><th id="83">83</th><td><i class="doc"> *<span class="command"> @inode</span>: inode to set</i></td></tr>
+<tr><th id="84">84</th><td><i class="doc"> * <span class="command">@val</span>:<span class="verb"> new i_version value to set</span></i></td></tr>
+<tr><th id="85">85</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="86">86</th><td><i class="doc"> * Set<span class="command"> @inode</span>'s i_version field to <span class="command">@val</span>.<span class="verb"> This function is for use by</span></i></td></tr>
+<tr><th id="87">87</th><td><i class="doc"> * filesystems that self-manage the i_version.</i></td></tr>
+<tr><th id="88">88</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="89">89</th><td><i class="doc"> * For example, the NFS client stores its NFSv4 change attribute in this way,</i></td></tr>
+<tr><th id="90">90</th><td><i class="doc"> * and the AFS client stores the data_version from the server here.</i></td></tr>
+<tr><th id="91">91</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="92">92</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em></td></tr>
+<tr><th id="93">93</th><td><dfn class="decl def fn" id="inode_set_iversion_raw" title='inode_set_iversion_raw' data-ref="inode_set_iversion_raw" data-ref-filename="inode_set_iversion_raw">inode_set_iversion_raw</dfn>(<b>struct</b> <a class="type" href="fs.h.html#inode" title='inode' data-ref="inode" data-ref-filename="inode">inode</a> *<dfn class="local col1 decl" id="1inode" title='inode' data-type='struct inode *' data-ref="1inode" data-ref-filename="1inode">inode</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col2 decl" id="2val" title='val' data-type='u64' data-ref="2val" data-ref-filename="2val">val</dfn>)</td></tr>
+<tr><th id="94">94</th><td>{</td></tr>
+<tr><th id="95">95</th><td>	<a class="macro" href="../asm-generic/atomic-instrumented.h.html#857" title="atomic64_set" data-ref="_M/atomic64_set">atomic64_set</a>(&amp;<a class="local col1 ref" href="#1inode" title='inode' data-ref="1inode" data-ref-filename="1inode">inode</a>-&gt;<a class="ref field" href="fs.h.html#inode::i_version" title='inode::i_version' data-ref="inode::i_version" data-ref-filename="inode..i_version">i_version</a>, <a class="local col2 ref" href="#2val" title='val' data-ref="2val" data-ref-filename="2val">val</a>);</td></tr>
+<tr><th id="96">96</th><td>}</td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="99">99</th><td><i class="doc"> * inode_peek_iversion_raw - grab a "raw" iversion value</i></td></tr>
+<tr><th id="100">100</th><td><i class="doc"> *<span class="command"> @inode</span>: inode from which i_version should be read</i></td></tr>
+<tr><th id="101">101</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="102">102</th><td><i class="doc"> * Grab a "raw" inode-&gt;i_version value and return it. The i_version is not</i></td></tr>
+<tr><th id="103">103</th><td><i class="doc"> * flagged or converted in any way. This is mostly used to access a self-managed</i></td></tr>
+<tr><th id="104">104</th><td><i class="doc"> * i_version.</i></td></tr>
+<tr><th id="105">105</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="106">106</th><td><i class="doc"> * With those filesystems, we want to treat the i_version as an entirely</i></td></tr>
+<tr><th id="107">107</th><td><i class="doc"> * opaque value.</i></td></tr>
+<tr><th id="108">108</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="109">109</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a></td></tr>
+<tr><th id="110">110</th><td><dfn class="decl def fn" id="inode_peek_iversion_raw" title='inode_peek_iversion_raw' data-ref="inode_peek_iversion_raw" data-ref-filename="inode_peek_iversion_raw">inode_peek_iversion_raw</dfn>(<em>const</em> <b>struct</b> <a class="type" href="fs.h.html#inode" title='inode' data-ref="inode" data-ref-filename="inode">inode</a> *<dfn class="local col3 decl" id="3inode" title='inode' data-type='const struct inode *' data-ref="3inode" data-ref-filename="3inode">inode</dfn>)</td></tr>
+<tr><th id="111">111</th><td>{</td></tr>
+<tr><th id="112">112</th><td>	<b>return</b> <a class="macro" href="../asm-generic/atomic-instrumented.h.html#839" title="atomic64_read" data-ref="_M/atomic64_read">atomic64_read</a>(&amp;<a class="local col3 ref" href="#3inode" title='inode' data-ref="3inode" data-ref-filename="3inode">inode</a>-&gt;<a class="ref field" href="fs.h.html#inode::i_version" title='inode::i_version' data-ref="inode::i_version" data-ref-filename="inode..i_version">i_version</a>);</td></tr>
+<tr><th id="113">113</th><td>}</td></tr>
+<tr><th id="114">114</th><td></td></tr>
+<tr><th id="115">115</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="116">116</th><td><i class="doc"> * inode_set_max_iversion_raw - update i_version new value is larger</i></td></tr>
+<tr><th id="117">117</th><td><i class="doc"> *<span class="command"> @inode</span>: inode to set</i></td></tr>
+<tr><th id="118">118</th><td><i class="doc"> * <span class="command">@val</span>:<span class="verb"> new i_version to set</span></i></td></tr>
+<tr><th id="119">119</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="120">120</th><td><i class="doc"> * Some self-managed filesystems (e.g Ceph) will only update the i_version</i></td></tr>
+<tr><th id="121">121</th><td><i class="doc"> * value if the new value is larger than the one we already have.</i></td></tr>
+<tr><th id="122">122</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="123">123</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em></td></tr>
+<tr><th id="124">124</th><td><dfn class="decl def fn" id="inode_set_max_iversion_raw" title='inode_set_max_iversion_raw' data-ref="inode_set_max_iversion_raw" data-ref-filename="inode_set_max_iversion_raw">inode_set_max_iversion_raw</dfn>(<b>struct</b> <a class="type" href="fs.h.html#inode" title='inode' data-ref="inode" data-ref-filename="inode">inode</a> *<dfn class="local col4 decl" id="4inode" title='inode' data-type='struct inode *' data-ref="4inode" data-ref-filename="4inode">inode</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col5 decl" id="5val" title='val' data-type='u64' data-ref="5val" data-ref-filename="5val">val</dfn>)</td></tr>
+<tr><th id="125">125</th><td>{</td></tr>
+<tr><th id="126">126</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col6 decl" id="6cur" title='cur' data-type='u64' data-ref="6cur" data-ref-filename="6cur">cur</dfn>, <dfn class="local col7 decl" id="7old" title='old' data-type='u64' data-ref="7old" data-ref-filename="7old">old</dfn>;</td></tr>
+<tr><th id="127">127</th><td></td></tr>
+<tr><th id="128">128</th><td>	<a class="local col6 ref" href="#6cur" title='cur' data-ref="6cur" data-ref-filename="6cur">cur</a> = <a class="ref fn" href="#inode_peek_iversion_raw" title='inode_peek_iversion_raw' data-ref="inode_peek_iversion_raw" data-ref-filename="inode_peek_iversion_raw">inode_peek_iversion_raw</a>(<a class="local col4 ref" href="#4inode" title='inode' data-ref="4inode" data-ref-filename="4inode">inode</a>);</td></tr>
+<tr><th id="129">129</th><td>	<b>for</b> (;;) {</td></tr>
+<tr><th id="130">130</th><td>		<b>if</b> (<a class="local col6 ref" href="#6cur" title='cur' data-ref="6cur" data-ref-filename="6cur">cur</a> &gt; <a class="local col5 ref" href="#5val" title='val' data-ref="5val" data-ref-filename="5val">val</a>)</td></tr>
+<tr><th id="131">131</th><td>			<b>break</b>;</td></tr>
+<tr><th id="132">132</th><td>		<a class="local col7 ref" href="#7old" title='old' data-ref="7old" data-ref-filename="7old">old</a> = <a class="macro" href="../asm-generic/atomic-instrumented.h.html#1466" title="atomic64_cmpxchg" data-ref="_M/atomic64_cmpxchg">atomic64_cmpxchg</a>(&amp;<a class="local col4 ref" href="#4inode" title='inode' data-ref="4inode" data-ref-filename="4inode">inode</a>-&gt;<a class="ref field" href="fs.h.html#inode::i_version" title='inode::i_version' data-ref="inode::i_version" data-ref-filename="inode..i_version">i_version</a>, <a class="local col6 ref" href="#6cur" title='cur' data-ref="6cur" data-ref-filename="6cur">cur</a>, <a class="local col5 ref" href="#5val" title='val' data-ref="5val" data-ref-filename="5val">val</a>);</td></tr>
+<tr><th id="133">133</th><td>		<b>if</b> (<a class="macro" href="compiler.h.html#77" title="__builtin_expect(!!(old == cur), 1)" data-ref="_M/likely">likely</a>(<a class="local col7 ref" href="#7old" title='old' data-ref="7old" data-ref-filename="7old">old</a> == <a class="local col6 ref" href="#6cur" title='cur' data-ref="6cur" data-ref-filename="6cur">cur</a>))</td></tr>
+<tr><th id="134">134</th><td>			<b>break</b>;</td></tr>
+<tr><th id="135">135</th><td>		<a class="local col6 ref" href="#6cur" title='cur' data-ref="6cur" data-ref-filename="6cur">cur</a> = <a class="local col7 ref" href="#7old" title='old' data-ref="7old" data-ref-filename="7old">old</a>;</td></tr>
+<tr><th id="136">136</th><td>	}</td></tr>
+<tr><th id="137">137</th><td>}</td></tr>
+<tr><th id="138">138</th><td></td></tr>
+<tr><th id="139">139</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="140">140</th><td><i class="doc"> * inode_set_iversion - set i_version to a particular value</i></td></tr>
+<tr><th id="141">141</th><td><i class="doc"> *<span class="command"> @inode</span>: inode to set</i></td></tr>
+<tr><th id="142">142</th><td><i class="doc"> * <span class="command">@val</span>:<span class="verb"> new i_version value to set</span></i></td></tr>
+<tr><th id="143">143</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="144">144</th><td><i class="doc"> * Set<span class="command"> @inode</span>'s i_version field to <span class="command">@val</span>.<span class="verb"> This function is for filesystems with</span></i></td></tr>
+<tr><th id="145">145</th><td><i class="doc"> * a kernel-managed i_version, for initializing a newly-created inode from</i></td></tr>
+<tr><th id="146">146</th><td><i class="doc"> * scratch.</i></td></tr>
+<tr><th id="147">147</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="148">148</th><td><i class="doc"> * In this case, we do not set the QUERIED flag since we know that this value</i></td></tr>
+<tr><th id="149">149</th><td><i class="doc"> * has never been queried.</i></td></tr>
+<tr><th id="150">150</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="151">151</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em></td></tr>
+<tr><th id="152">152</th><td><dfn class="decl def fn" id="inode_set_iversion" title='inode_set_iversion' data-ref="inode_set_iversion" data-ref-filename="inode_set_iversion">inode_set_iversion</dfn>(<b>struct</b> <a class="type" href="fs.h.html#inode" title='inode' data-ref="inode" data-ref-filename="inode">inode</a> *<dfn class="local col8 decl" id="8inode" title='inode' data-type='struct inode *' data-ref="8inode" data-ref-filename="8inode">inode</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col9 decl" id="9val" title='val' data-type='u64' data-ref="9val" data-ref-filename="9val">val</dfn>)</td></tr>
+<tr><th id="153">153</th><td>{</td></tr>
+<tr><th id="154">154</th><td>	<a class="ref fn" href="#inode_set_iversion_raw" title='inode_set_iversion_raw' data-ref="inode_set_iversion_raw" data-ref-filename="inode_set_iversion_raw">inode_set_iversion_raw</a>(<a class="local col8 ref" href="#8inode" title='inode' data-ref="8inode" data-ref-filename="8inode">inode</a>, <a class="local col9 ref" href="#9val" title='val' data-ref="9val" data-ref-filename="9val">val</a> &lt;&lt; <a class="macro" href="#77" title="(1)" data-ref="_M/I_VERSION_QUERIED_SHIFT">I_VERSION_QUERIED_SHIFT</a>);</td></tr>
+<tr><th id="155">155</th><td>}</td></tr>
+<tr><th id="156">156</th><td></td></tr>
+<tr><th id="157">157</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="158">158</th><td><i class="doc"> * inode_set_iversion_queried - set i_version to a particular value as quereied</i></td></tr>
+<tr><th id="159">159</th><td><i class="doc"> *<span class="command"> @inode</span>: inode to set</i></td></tr>
+<tr><th id="160">160</th><td><i class="doc"> * <span class="command">@val</span>:<span class="verb"> new i_version value to set</span></i></td></tr>
+<tr><th id="161">161</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="162">162</th><td><i class="doc"> * Set<span class="command"> @inode</span>'s i_version field to <span class="command">@val</span>,<span class="verb"> and flag it for increment on the next</span></i></td></tr>
+<tr><th id="163">163</th><td><i class="doc"> * change.</i></td></tr>
+<tr><th id="164">164</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="165">165</th><td><i class="doc"> * Filesystems that persistently store the i_version on disk should use this</i></td></tr>
+<tr><th id="166">166</th><td><i class="doc"> * when loading an existing inode from disk.</i></td></tr>
+<tr><th id="167">167</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="168">168</th><td><i class="doc"> * When loading in an i_version value from a backing store, we can't be certain</i></td></tr>
+<tr><th id="169">169</th><td><i class="doc"> * that it wasn't previously viewed before being stored. Thus, we must assume</i></td></tr>
+<tr><th id="170">170</th><td><i class="doc"> * that it was, to ensure that we don't end up handing out the same value for</i></td></tr>
+<tr><th id="171">171</th><td><i class="doc"> * different versions of the same inode.</i></td></tr>
+<tr><th id="172">172</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="173">173</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em></td></tr>
+<tr><th id="174">174</th><td><dfn class="decl def fn" id="inode_set_iversion_queried" title='inode_set_iversion_queried' data-ref="inode_set_iversion_queried" data-ref-filename="inode_set_iversion_queried">inode_set_iversion_queried</dfn>(<b>struct</b> <a class="type" href="fs.h.html#inode" title='inode' data-ref="inode" data-ref-filename="inode">inode</a> *<dfn class="local col0 decl" id="10inode" title='inode' data-type='struct inode *' data-ref="10inode" data-ref-filename="10inode">inode</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col1 decl" id="11val" title='val' data-type='u64' data-ref="11val" data-ref-filename="11val">val</dfn>)</td></tr>
+<tr><th id="175">175</th><td>{</td></tr>
+<tr><th id="176">176</th><td>	<a class="ref fn" href="#inode_set_iversion_raw" title='inode_set_iversion_raw' data-ref="inode_set_iversion_raw" data-ref-filename="inode_set_iversion_raw">inode_set_iversion_raw</a>(<a class="local col0 ref" href="#10inode" title='inode' data-ref="10inode" data-ref-filename="10inode">inode</a>, (<a class="local col1 ref" href="#11val" title='val' data-ref="11val" data-ref-filename="11val">val</a> &lt;&lt; <a class="macro" href="#77" title="(1)" data-ref="_M/I_VERSION_QUERIED_SHIFT">I_VERSION_QUERIED_SHIFT</a>) |</td></tr>
+<tr><th id="177">177</th><td>				<a class="macro" href="#78" title="(1ULL &lt;&lt; ((1) - 1))" data-ref="_M/I_VERSION_QUERIED">I_VERSION_QUERIED</a>);</td></tr>
+<tr><th id="178">178</th><td>}</td></tr>
+<tr><th id="179">179</th><td></td></tr>
+<tr><th id="180">180</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="181">181</th><td><i class="doc"> * inode_maybe_inc_iversion - increments i_version</i></td></tr>
+<tr><th id="182">182</th><td><i class="doc"> *<span class="command"> @inode</span>: inode with the i_version that should be updated</i></td></tr>
+<tr><th id="183">183</th><td><i class="doc"> *<span class="command"> @force</span>: increment the counter even if it's not necessary?</i></td></tr>
+<tr><th id="184">184</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="185">185</th><td><i class="doc"> * Every time the inode is modified, the i_version field must be seen to have</i></td></tr>
+<tr><th id="186">186</th><td><i class="doc"> * changed by any observer.</i></td></tr>
+<tr><th id="187">187</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="188">188</th><td><i class="doc"> * If "force" is set or the QUERIED flag is set, then ensure that we increment</i></td></tr>
+<tr><th id="189">189</th><td><i class="doc"> * the value, and clear the queried flag.</i></td></tr>
+<tr><th id="190">190</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="191">191</th><td><i class="doc"> * In the common case where neither is set, then we can return "false" without</i></td></tr>
+<tr><th id="192">192</th><td><i class="doc"> * updating i_version.</i></td></tr>
+<tr><th id="193">193</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="194">194</th><td><i class="doc"> * If this function returns false, and no other metadata has changed, then we</i></td></tr>
+<tr><th id="195">195</th><td><i class="doc"> * can avoid logging the metadata.</i></td></tr>
+<tr><th id="196">196</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="197">197</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a></td></tr>
+<tr><th id="198">198</th><td><dfn class="decl def fn" id="inode_maybe_inc_iversion" title='inode_maybe_inc_iversion' data-ref="inode_maybe_inc_iversion" data-ref-filename="inode_maybe_inc_iversion">inode_maybe_inc_iversion</dfn>(<b>struct</b> <a class="type" href="fs.h.html#inode" title='inode' data-ref="inode" data-ref-filename="inode">inode</a> *<dfn class="local col2 decl" id="12inode" title='inode' data-type='struct inode *' data-ref="12inode" data-ref-filename="12inode">inode</dfn>, <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col3 decl" id="13force" title='force' data-type='bool' data-ref="13force" data-ref-filename="13force">force</dfn>)</td></tr>
+<tr><th id="199">199</th><td>{</td></tr>
+<tr><th id="200">200</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col4 decl" id="14cur" title='cur' data-type='u64' data-ref="14cur" data-ref-filename="14cur">cur</dfn>, <dfn class="local col5 decl" id="15old" title='old' data-type='u64' data-ref="15old" data-ref-filename="15old">old</dfn>, <dfn class="local col6 decl" id="16new" title='new' data-type='u64' data-ref="16new" data-ref-filename="16new">new</dfn>;</td></tr>
+<tr><th id="201">201</th><td></td></tr>
+<tr><th id="202">202</th><td>	<i>/*</i></td></tr>
+<tr><th id="203">203</th><td><i>	 * The i_version field is not strictly ordered with any other inode</i></td></tr>
+<tr><th id="204">204</th><td><i>	 * information, but the legacy inode_inc_iversion code used a spinlock</i></td></tr>
+<tr><th id="205">205</th><td><i>	 * to serialize increments.</i></td></tr>
+<tr><th id="206">206</th><td><i>	 *</i></td></tr>
+<tr><th id="207">207</th><td><i>	 * Here, we add full memory barriers to ensure that any de-facto</i></td></tr>
+<tr><th id="208">208</th><td><i>	 * ordering with other info is preserved.</i></td></tr>
+<tr><th id="209">209</th><td><i>	 *</i></td></tr>
+<tr><th id="210">210</th><td><i>	 * This barrier pairs with the barrier in inode_query_iversion()</i></td></tr>
+<tr><th id="211">211</th><td><i>	 */</i></td></tr>
+<tr><th id="212">212</th><td>	<a class="macro" href="../asm-generic/barrier.h.html#72" title="asm volatile(&quot;lock; addl $0,-4(%%rsp)&quot; ::: &quot;memory&quot;, &quot;cc&quot;)" data-ref="_M/smp_mb">smp_mb</a>();</td></tr>
+<tr><th id="213">213</th><td>	<a class="local col4 ref" href="#14cur" title='cur' data-ref="14cur" data-ref-filename="14cur">cur</a> = <a class="ref fn" href="#inode_peek_iversion_raw" title='inode_peek_iversion_raw' data-ref="inode_peek_iversion_raw" data-ref-filename="inode_peek_iversion_raw">inode_peek_iversion_raw</a>(<a class="local col2 ref" href="#12inode" title='inode' data-ref="12inode" data-ref-filename="12inode">inode</a>);</td></tr>
+<tr><th id="214">214</th><td>	<b>for</b> (;;) {</td></tr>
+<tr><th id="215">215</th><td>		<i>/* If flag is clear then we needn't do anything */</i></td></tr>
+<tr><th id="216">216</th><td>		<b>if</b> (!<a class="local col3 ref" href="#13force" title='force' data-ref="13force" data-ref-filename="13force">force</a> &amp;&amp; !(<a class="local col4 ref" href="#14cur" title='cur' data-ref="14cur" data-ref-filename="14cur">cur</a> &amp; <a class="macro" href="#78" title="(1ULL &lt;&lt; ((1) - 1))" data-ref="_M/I_VERSION_QUERIED">I_VERSION_QUERIED</a>))</td></tr>
+<tr><th id="217">217</th><td>			<b>return</b> <a class="enum" href="stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="218">218</th><td></td></tr>
+<tr><th id="219">219</th><td>		<i>/* Since lowest bit is flag, add 2 to avoid it */</i></td></tr>
+<tr><th id="220">220</th><td>		<a class="local col6 ref" href="#16new" title='new' data-ref="16new" data-ref-filename="16new">new</a> = (<a class="local col4 ref" href="#14cur" title='cur' data-ref="14cur" data-ref-filename="14cur">cur</a> &amp; ~<a class="macro" href="#78" title="(1ULL &lt;&lt; ((1) - 1))" data-ref="_M/I_VERSION_QUERIED">I_VERSION_QUERIED</a>) + <a class="macro" href="#79" title="(1ULL &lt;&lt; (1))" data-ref="_M/I_VERSION_INCREMENT">I_VERSION_INCREMENT</a>;</td></tr>
+<tr><th id="221">221</th><td></td></tr>
+<tr><th id="222">222</th><td>		<a class="local col5 ref" href="#15old" title='old' data-ref="15old" data-ref-filename="15old">old</a> = <a class="macro" href="../asm-generic/atomic-instrumented.h.html#1466" title="atomic64_cmpxchg" data-ref="_M/atomic64_cmpxchg">atomic64_cmpxchg</a>(&amp;<a class="local col2 ref" href="#12inode" title='inode' data-ref="12inode" data-ref-filename="12inode">inode</a>-&gt;<a class="ref field" href="fs.h.html#inode::i_version" title='inode::i_version' data-ref="inode::i_version" data-ref-filename="inode..i_version">i_version</a>, <a class="local col4 ref" href="#14cur" title='cur' data-ref="14cur" data-ref-filename="14cur">cur</a>, <a class="local col6 ref" href="#16new" title='new' data-ref="16new" data-ref-filename="16new">new</a>);</td></tr>
+<tr><th id="223">223</th><td>		<b>if</b> (<a class="macro" href="compiler.h.html#77" title="__builtin_expect(!!(old == cur), 1)" data-ref="_M/likely">likely</a>(<a class="local col5 ref" href="#15old" title='old' data-ref="15old" data-ref-filename="15old">old</a> == <a class="local col4 ref" href="#14cur" title='cur' data-ref="14cur" data-ref-filename="14cur">cur</a>))</td></tr>
+<tr><th id="224">224</th><td>			<b>break</b>;</td></tr>
+<tr><th id="225">225</th><td>		<a class="local col4 ref" href="#14cur" title='cur' data-ref="14cur" data-ref-filename="14cur">cur</a> = <a class="local col5 ref" href="#15old" title='old' data-ref="15old" data-ref-filename="15old">old</a>;</td></tr>
+<tr><th id="226">226</th><td>	}</td></tr>
+<tr><th id="227">227</th><td>	<b>return</b> <a class="enum" href="stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>;</td></tr>
+<tr><th id="228">228</th><td>}</td></tr>
+<tr><th id="229">229</th><td></td></tr>
+<tr><th id="230">230</th><td></td></tr>
+<tr><th id="231">231</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="232">232</th><td><i class="doc"> * inode_inc_iversion - forcibly increment i_version</i></td></tr>
+<tr><th id="233">233</th><td><i class="doc"> *<span class="command"> @inode</span>: inode that needs to be updated</i></td></tr>
+<tr><th id="234">234</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="235">235</th><td><i class="doc"> * Forcbily increment the i_version field. This always results in a change to</i></td></tr>
+<tr><th id="236">236</th><td><i class="doc"> * the observable value.</i></td></tr>
+<tr><th id="237">237</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="238">238</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em></td></tr>
+<tr><th id="239">239</th><td><dfn class="decl def fn" id="inode_inc_iversion" title='inode_inc_iversion' data-ref="inode_inc_iversion" data-ref-filename="inode_inc_iversion">inode_inc_iversion</dfn>(<b>struct</b> <a class="type" href="fs.h.html#inode" title='inode' data-ref="inode" data-ref-filename="inode">inode</a> *<dfn class="local col7 decl" id="17inode" title='inode' data-type='struct inode *' data-ref="17inode" data-ref-filename="17inode">inode</dfn>)</td></tr>
+<tr><th id="240">240</th><td>{</td></tr>
+<tr><th id="241">241</th><td>	<a class="ref fn" href="#inode_maybe_inc_iversion" title='inode_maybe_inc_iversion' data-ref="inode_maybe_inc_iversion" data-ref-filename="inode_maybe_inc_iversion">inode_maybe_inc_iversion</a>(<a class="local col7 ref" href="#17inode" title='inode' data-ref="17inode" data-ref-filename="17inode">inode</a>, <a class="enum" href="stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>);</td></tr>
+<tr><th id="242">242</th><td>}</td></tr>
+<tr><th id="243">243</th><td></td></tr>
+<tr><th id="244">244</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="245">245</th><td><i class="doc"> * inode_iversion_need_inc - is the i_version in need of being incremented?</i></td></tr>
+<tr><th id="246">246</th><td><i class="doc"> *<span class="command"> @inode</span>: inode to check</i></td></tr>
+<tr><th id="247">247</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="248">248</th><td><i class="doc"> * Returns whether the inode-&gt;i_version counter needs incrementing on the next</i></td></tr>
+<tr><th id="249">249</th><td><i class="doc"> * change. Just fetch the value and check the QUERIED flag.</i></td></tr>
+<tr><th id="250">250</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="251">251</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a></td></tr>
+<tr><th id="252">252</th><td><dfn class="decl def fn" id="inode_iversion_need_inc" title='inode_iversion_need_inc' data-ref="inode_iversion_need_inc" data-ref-filename="inode_iversion_need_inc">inode_iversion_need_inc</dfn>(<b>struct</b> <a class="type" href="fs.h.html#inode" title='inode' data-ref="inode" data-ref-filename="inode">inode</a> *<dfn class="local col8 decl" id="18inode" title='inode' data-type='struct inode *' data-ref="18inode" data-ref-filename="18inode">inode</dfn>)</td></tr>
+<tr><th id="253">253</th><td>{</td></tr>
+<tr><th id="254">254</th><td>	<b>return</b> <a class="ref fn" href="#inode_peek_iversion_raw" title='inode_peek_iversion_raw' data-ref="inode_peek_iversion_raw" data-ref-filename="inode_peek_iversion_raw">inode_peek_iversion_raw</a>(<a class="local col8 ref" href="#18inode" title='inode' data-ref="18inode" data-ref-filename="18inode">inode</a>) &amp; <a class="macro" href="#78" title="(1ULL &lt;&lt; ((1) - 1))" data-ref="_M/I_VERSION_QUERIED">I_VERSION_QUERIED</a>;</td></tr>
+<tr><th id="255">255</th><td>}</td></tr>
+<tr><th id="256">256</th><td></td></tr>
+<tr><th id="257">257</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="258">258</th><td><i class="doc"> * inode_inc_iversion_raw - forcibly increment raw i_version</i></td></tr>
+<tr><th id="259">259</th><td><i class="doc"> *<span class="command"> @inode</span>: inode that needs to be updated</i></td></tr>
+<tr><th id="260">260</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="261">261</th><td><i class="doc"> * Forcbily increment the raw i_version field. This always results in a change</i></td></tr>
+<tr><th id="262">262</th><td><i class="doc"> * to the raw value.</i></td></tr>
+<tr><th id="263">263</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="264">264</th><td><i class="doc"> * NFS will use the i_version field to store the value from the server. It</i></td></tr>
+<tr><th id="265">265</th><td><i class="doc"> * mostly treats it as opaque, but in the case where it holds a write</i></td></tr>
+<tr><th id="266">266</th><td><i class="doc"> * delegation, it must increment the value itself. This function does that.</i></td></tr>
+<tr><th id="267">267</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="268">268</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em></td></tr>
+<tr><th id="269">269</th><td><dfn class="decl def fn" id="inode_inc_iversion_raw" title='inode_inc_iversion_raw' data-ref="inode_inc_iversion_raw" data-ref-filename="inode_inc_iversion_raw">inode_inc_iversion_raw</dfn>(<b>struct</b> <a class="type" href="fs.h.html#inode" title='inode' data-ref="inode" data-ref-filename="inode">inode</a> *<dfn class="local col9 decl" id="19inode" title='inode' data-type='struct inode *' data-ref="19inode" data-ref-filename="19inode">inode</dfn>)</td></tr>
+<tr><th id="270">270</th><td>{</td></tr>
+<tr><th id="271">271</th><td>	<a class="macro" href="../asm-generic/atomic-instrumented.h.html#1052" title="atomic64_inc" data-ref="_M/atomic64_inc">atomic64_inc</a>(&amp;<a class="local col9 ref" href="#19inode" title='inode' data-ref="19inode" data-ref-filename="19inode">inode</a>-&gt;<a class="ref field" href="fs.h.html#inode::i_version" title='inode::i_version' data-ref="inode::i_version" data-ref-filename="inode..i_version">i_version</a>);</td></tr>
+<tr><th id="272">272</th><td>}</td></tr>
+<tr><th id="273">273</th><td></td></tr>
+<tr><th id="274">274</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="275">275</th><td><i class="doc"> * inode_peek_iversion - read i_version without flagging it to be incremented</i></td></tr>
+<tr><th id="276">276</th><td><i class="doc"> *<span class="command"> @inode</span>: inode from which i_version should be read</i></td></tr>
+<tr><th id="277">277</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="278">278</th><td><i class="doc"> * Read the inode i_version counter for an inode without registering it as a</i></td></tr>
+<tr><th id="279">279</th><td><i class="doc"> * query.</i></td></tr>
+<tr><th id="280">280</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="281">281</th><td><i class="doc"> * This is typically used by local filesystems that need to store an i_version</i></td></tr>
+<tr><th id="282">282</th><td><i class="doc"> * on disk. In that situation, it's not necessary to flag it as having been</i></td></tr>
+<tr><th id="283">283</th><td><i class="doc"> * viewed, as the result won't be used to gauge changes from that point.</i></td></tr>
+<tr><th id="284">284</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="285">285</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a></td></tr>
+<tr><th id="286">286</th><td><dfn class="decl def fn" id="inode_peek_iversion" title='inode_peek_iversion' data-ref="inode_peek_iversion" data-ref-filename="inode_peek_iversion">inode_peek_iversion</dfn>(<em>const</em> <b>struct</b> <a class="type" href="fs.h.html#inode" title='inode' data-ref="inode" data-ref-filename="inode">inode</a> *<dfn class="local col0 decl" id="20inode" title='inode' data-type='const struct inode *' data-ref="20inode" data-ref-filename="20inode">inode</dfn>)</td></tr>
+<tr><th id="287">287</th><td>{</td></tr>
+<tr><th id="288">288</th><td>	<b>return</b> <a class="ref fn" href="#inode_peek_iversion_raw" title='inode_peek_iversion_raw' data-ref="inode_peek_iversion_raw" data-ref-filename="inode_peek_iversion_raw">inode_peek_iversion_raw</a>(<a class="local col0 ref" href="#20inode" title='inode' data-ref="20inode" data-ref-filename="20inode">inode</a>) &gt;&gt; <a class="macro" href="#77" title="(1)" data-ref="_M/I_VERSION_QUERIED_SHIFT">I_VERSION_QUERIED_SHIFT</a>;</td></tr>
+<tr><th id="289">289</th><td>}</td></tr>
+<tr><th id="290">290</th><td></td></tr>
+<tr><th id="291">291</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="292">292</th><td><i class="doc"> * inode_query_iversion - read i_version for later use</i></td></tr>
+<tr><th id="293">293</th><td><i class="doc"> *<span class="command"> @inode</span>: inode from which i_version should be read</i></td></tr>
+<tr><th id="294">294</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="295">295</th><td><i class="doc"> * Read the inode i_version counter. This should be used by callers that wish</i></td></tr>
+<tr><th id="296">296</th><td><i class="doc"> * to store the returned i_version for later comparison. This will guarantee</i></td></tr>
+<tr><th id="297">297</th><td><i class="doc"> * that a later query of the i_version will result in a different value if</i></td></tr>
+<tr><th id="298">298</th><td><i class="doc"> * anything has changed.</i></td></tr>
+<tr><th id="299">299</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="300">300</th><td><i class="doc"> * In this implementation, we fetch the current value, set the QUERIED flag and</i></td></tr>
+<tr><th id="301">301</th><td><i class="doc"> * then try to swap it into place with a cmpxchg, if it wasn't already set. If</i></td></tr>
+<tr><th id="302">302</th><td><i class="doc"> * that fails, we try again with the newly fetched value from the cmpxchg.</i></td></tr>
+<tr><th id="303">303</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="304">304</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a></td></tr>
+<tr><th id="305">305</th><td><dfn class="decl def fn" id="inode_query_iversion" title='inode_query_iversion' data-ref="inode_query_iversion" data-ref-filename="inode_query_iversion">inode_query_iversion</dfn>(<b>struct</b> <a class="type" href="fs.h.html#inode" title='inode' data-ref="inode" data-ref-filename="inode">inode</a> *<dfn class="local col1 decl" id="21inode" title='inode' data-type='struct inode *' data-ref="21inode" data-ref-filename="21inode">inode</dfn>)</td></tr>
+<tr><th id="306">306</th><td>{</td></tr>
+<tr><th id="307">307</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col2 decl" id="22cur" title='cur' data-type='u64' data-ref="22cur" data-ref-filename="22cur">cur</dfn>, <dfn class="local col3 decl" id="23old" title='old' data-type='u64' data-ref="23old" data-ref-filename="23old">old</dfn>, <dfn class="local col4 decl" id="24new" title='new' data-type='u64' data-ref="24new" data-ref-filename="24new">new</dfn>;</td></tr>
+<tr><th id="308">308</th><td></td></tr>
+<tr><th id="309">309</th><td>	<a class="local col2 ref" href="#22cur" title='cur' data-ref="22cur" data-ref-filename="22cur">cur</a> = <a class="ref fn" href="#inode_peek_iversion_raw" title='inode_peek_iversion_raw' data-ref="inode_peek_iversion_raw" data-ref-filename="inode_peek_iversion_raw">inode_peek_iversion_raw</a>(<a class="local col1 ref" href="#21inode" title='inode' data-ref="21inode" data-ref-filename="21inode">inode</a>);</td></tr>
+<tr><th id="310">310</th><td>	<b>for</b> (;;) {</td></tr>
+<tr><th id="311">311</th><td>		<i>/* If flag is already set, then no need to swap */</i></td></tr>
+<tr><th id="312">312</th><td>		<b>if</b> (<a class="local col2 ref" href="#22cur" title='cur' data-ref="22cur" data-ref-filename="22cur">cur</a> &amp; <a class="macro" href="#78" title="(1ULL &lt;&lt; ((1) - 1))" data-ref="_M/I_VERSION_QUERIED">I_VERSION_QUERIED</a>) {</td></tr>
+<tr><th id="313">313</th><td>			<i>/*</i></td></tr>
+<tr><th id="314">314</th><td><i>			 * This barrier (and the implicit barrier in the</i></td></tr>
+<tr><th id="315">315</th><td><i>			 * cmpxchg below) pairs with the barrier in</i></td></tr>
+<tr><th id="316">316</th><td><i>			 * inode_maybe_inc_iversion().</i></td></tr>
+<tr><th id="317">317</th><td><i>			 */</i></td></tr>
+<tr><th id="318">318</th><td>			<a class="macro" href="../asm-generic/barrier.h.html#72" title="asm volatile(&quot;lock; addl $0,-4(%%rsp)&quot; ::: &quot;memory&quot;, &quot;cc&quot;)" data-ref="_M/smp_mb">smp_mb</a>();</td></tr>
+<tr><th id="319">319</th><td>			<b>break</b>;</td></tr>
+<tr><th id="320">320</th><td>		}</td></tr>
+<tr><th id="321">321</th><td></td></tr>
+<tr><th id="322">322</th><td>		<a class="local col4 ref" href="#24new" title='new' data-ref="24new" data-ref-filename="24new">new</a> = <a class="local col2 ref" href="#22cur" title='cur' data-ref="22cur" data-ref-filename="22cur">cur</a> | <a class="macro" href="#78" title="(1ULL &lt;&lt; ((1) - 1))" data-ref="_M/I_VERSION_QUERIED">I_VERSION_QUERIED</a>;</td></tr>
+<tr><th id="323">323</th><td>		<a class="local col3 ref" href="#23old" title='old' data-ref="23old" data-ref-filename="23old">old</a> = <a class="macro" href="../asm-generic/atomic-instrumented.h.html#1466" title="atomic64_cmpxchg" data-ref="_M/atomic64_cmpxchg">atomic64_cmpxchg</a>(&amp;<a class="local col1 ref" href="#21inode" title='inode' data-ref="21inode" data-ref-filename="21inode">inode</a>-&gt;<a class="ref field" href="fs.h.html#inode::i_version" title='inode::i_version' data-ref="inode::i_version" data-ref-filename="inode..i_version">i_version</a>, <a class="local col2 ref" href="#22cur" title='cur' data-ref="22cur" data-ref-filename="22cur">cur</a>, <a class="local col4 ref" href="#24new" title='new' data-ref="24new" data-ref-filename="24new">new</a>);</td></tr>
+<tr><th id="324">324</th><td>		<b>if</b> (<a class="macro" href="compiler.h.html#77" title="__builtin_expect(!!(old == cur), 1)" data-ref="_M/likely">likely</a>(<a class="local col3 ref" href="#23old" title='old' data-ref="23old" data-ref-filename="23old">old</a> == <a class="local col2 ref" href="#22cur" title='cur' data-ref="22cur" data-ref-filename="22cur">cur</a>))</td></tr>
+<tr><th id="325">325</th><td>			<b>break</b>;</td></tr>
+<tr><th id="326">326</th><td>		<a class="local col2 ref" href="#22cur" title='cur' data-ref="22cur" data-ref-filename="22cur">cur</a> = <a class="local col3 ref" href="#23old" title='old' data-ref="23old" data-ref-filename="23old">old</a>;</td></tr>
+<tr><th id="327">327</th><td>	}</td></tr>
+<tr><th id="328">328</th><td>	<b>return</b> <a class="local col2 ref" href="#22cur" title='cur' data-ref="22cur" data-ref-filename="22cur">cur</a> &gt;&gt; <a class="macro" href="#77" title="(1)" data-ref="_M/I_VERSION_QUERIED_SHIFT">I_VERSION_QUERIED_SHIFT</a>;</td></tr>
+<tr><th id="329">329</th><td>}</td></tr>
+<tr><th id="330">330</th><td></td></tr>
+<tr><th id="331">331</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="332">332</th><td><i class="doc"> * inode_eq_iversion_raw - check whether the raw i_version counter has changed</i></td></tr>
+<tr><th id="333">333</th><td><i class="doc"> *<span class="command"> @inode</span>: inode to check</i></td></tr>
+<tr><th id="334">334</th><td><i class="doc"> *<span class="command"> @old</span>: old value to check against its i_version</i></td></tr>
+<tr><th id="335">335</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="336">336</th><td><i class="doc"> * Compare the current raw i_version counter with a previous one. Returns true</i></td></tr>
+<tr><th id="337">337</th><td><i class="doc"> * if they are the same or false if they are different.</i></td></tr>
+<tr><th id="338">338</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="339">339</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a></td></tr>
+<tr><th id="340">340</th><td><dfn class="decl def fn" id="inode_eq_iversion_raw" title='inode_eq_iversion_raw' data-ref="inode_eq_iversion_raw" data-ref-filename="inode_eq_iversion_raw">inode_eq_iversion_raw</dfn>(<em>const</em> <b>struct</b> <a class="type" href="fs.h.html#inode" title='inode' data-ref="inode" data-ref-filename="inode">inode</a> *<dfn class="local col5 decl" id="25inode" title='inode' data-type='const struct inode *' data-ref="25inode" data-ref-filename="25inode">inode</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col6 decl" id="26old" title='old' data-type='u64' data-ref="26old" data-ref-filename="26old">old</dfn>)</td></tr>
+<tr><th id="341">341</th><td>{</td></tr>
+<tr><th id="342">342</th><td>	<b>return</b> <a class="ref fn" href="#inode_peek_iversion_raw" title='inode_peek_iversion_raw' data-ref="inode_peek_iversion_raw" data-ref-filename="inode_peek_iversion_raw">inode_peek_iversion_raw</a>(<a class="local col5 ref" href="#25inode" title='inode' data-ref="25inode" data-ref-filename="25inode">inode</a>) == <a class="local col6 ref" href="#26old" title='old' data-ref="26old" data-ref-filename="26old">old</a>;</td></tr>
+<tr><th id="343">343</th><td>}</td></tr>
+<tr><th id="344">344</th><td></td></tr>
+<tr><th id="345">345</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="346">346</th><td><i class="doc"> * inode_eq_iversion - check whether the i_version counter has changed</i></td></tr>
+<tr><th id="347">347</th><td><i class="doc"> *<span class="command"> @inode</span>: inode to check</i></td></tr>
+<tr><th id="348">348</th><td><i class="doc"> *<span class="command"> @old</span>: old value to check against its i_version</i></td></tr>
+<tr><th id="349">349</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="350">350</th><td><i class="doc"> * Compare an i_version counter with a previous one. Returns true if they are</i></td></tr>
+<tr><th id="351">351</th><td><i class="doc"> * the same, and false if they are different.</i></td></tr>
+<tr><th id="352">352</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="353">353</th><td><i class="doc"> * Note that we don't need to set the QUERIED flag in this case, as the value</i></td></tr>
+<tr><th id="354">354</th><td><i class="doc"> * in the inode is not being recorded for later use.</i></td></tr>
+<tr><th id="355">355</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="356">356</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a></td></tr>
+<tr><th id="357">357</th><td><dfn class="decl def fn" id="inode_eq_iversion" title='inode_eq_iversion' data-ref="inode_eq_iversion" data-ref-filename="inode_eq_iversion">inode_eq_iversion</dfn>(<em>const</em> <b>struct</b> <a class="type" href="fs.h.html#inode" title='inode' data-ref="inode" data-ref-filename="inode">inode</a> *<dfn class="local col7 decl" id="27inode" title='inode' data-type='const struct inode *' data-ref="27inode" data-ref-filename="27inode">inode</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col8 decl" id="28old" title='old' data-type='u64' data-ref="28old" data-ref-filename="28old">old</dfn>)</td></tr>
+<tr><th id="358">358</th><td>{</td></tr>
+<tr><th id="359">359</th><td>	<b>return</b> <a class="ref fn" href="#inode_peek_iversion" title='inode_peek_iversion' data-ref="inode_peek_iversion" data-ref-filename="inode_peek_iversion">inode_peek_iversion</a>(<a class="local col7 ref" href="#27inode" title='inode' data-ref="27inode" data-ref-filename="27inode">inode</a>) == <a class="local col8 ref" href="#28old" title='old' data-ref="28old" data-ref-filename="28old">old</a>;</td></tr>
+<tr><th id="360">360</th><td>}</td></tr>
+<tr><th id="361">361</th><td><u>#<span data-ppcond="2">endif</span></u></td></tr>
+<tr><th id="362">362</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../fs/ext4/dir.c.html'>linux-5.3.1/fs/ext4/dir.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

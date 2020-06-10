@@ -1,0 +1,423 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>pelt.c source code [linux-5.3.1/kernel/sched/pelt.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/kernel/sched/pelt.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>kernel</a>/<a href='./'>sched</a>/<a href='pelt.c.html'>pelt.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * Per Entity Load Tracking</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> *  Copyright (C) 2007 Red Hat, Inc., Ingo Molnar &lt;mingo@redhat.com&gt;</i></td></tr>
+<tr><th id="6">6</th><td><i> *</i></td></tr>
+<tr><th id="7">7</th><td><i> *  Interactivity improvements by Mike Galbraith</i></td></tr>
+<tr><th id="8">8</th><td><i> *  (C) 2007 Mike Galbraith &lt;efault@gmx.de&gt;</i></td></tr>
+<tr><th id="9">9</th><td><i> *</i></td></tr>
+<tr><th id="10">10</th><td><i> *  Various enhancements by Dmitry Adamushko.</i></td></tr>
+<tr><th id="11">11</th><td><i> *  (C) 2007 Dmitry Adamushko &lt;dmitry.adamushko@gmail.com&gt;</i></td></tr>
+<tr><th id="12">12</th><td><i> *</i></td></tr>
+<tr><th id="13">13</th><td><i> *  Group scheduling enhancements by Srivatsa Vaddagiri</i></td></tr>
+<tr><th id="14">14</th><td><i> *  Copyright IBM Corporation, 2007</i></td></tr>
+<tr><th id="15">15</th><td><i> *  Author: Srivatsa Vaddagiri &lt;vatsa@linux.vnet.ibm.com&gt;</i></td></tr>
+<tr><th id="16">16</th><td><i> *</i></td></tr>
+<tr><th id="17">17</th><td><i> *  Scaled math optimizations by Thomas Gleixner</i></td></tr>
+<tr><th id="18">18</th><td><i> *  Copyright (C) 2007, Thomas Gleixner &lt;tglx@linutronix.de&gt;</i></td></tr>
+<tr><th id="19">19</th><td><i> *</i></td></tr>
+<tr><th id="20">20</th><td><i> *  Adaptive scheduling granularity, math enhancements by Peter Zijlstra</i></td></tr>
+<tr><th id="21">21</th><td><i> *  Copyright (C) 2007 Red Hat, Inc., Peter Zijlstra</i></td></tr>
+<tr><th id="22">22</th><td><i> *</i></td></tr>
+<tr><th id="23">23</th><td><i> *  Move PELT related code from fair.c into this pelt.c file</i></td></tr>
+<tr><th id="24">24</th><td><i> *  Author: Vincent Guittot &lt;vincent.guittot@linaro.org&gt;</i></td></tr>
+<tr><th id="25">25</th><td><i> */</i></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../../include/linux/sched.h.html">&lt;linux/sched.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="sched.h.html">"sched.h"</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="pelt.h.html">"pelt.h"</a></u></td></tr>
+<tr><th id="30">30</th><td></td></tr>
+<tr><th id="31">31</th><td><u>#include <a href="../../include/trace/events/sched.h.html">&lt;trace/events/sched.h&gt;</a></u></td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td><i  data-doc="decay_load">/*</i></td></tr>
+<tr><th id="34">34</th><td><i  data-doc="decay_load"> * Approximate:</i></td></tr>
+<tr><th id="35">35</th><td><i  data-doc="decay_load"> *   val * y^n,    where y^32 ~= 0.5 (~1 scheduling period)</i></td></tr>
+<tr><th id="36">36</th><td><i  data-doc="decay_load"> */</i></td></tr>
+<tr><th id="37">37</th><td><em>static</em> <a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="tu decl def fn" id="decay_load" title='decay_load' data-type='u64 decay_load(u64 val, u64 n)' data-ref="decay_load" data-ref-filename="decay_load">decay_load</dfn>(<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col1 decl" id="1val" title='val' data-type='u64' data-ref="1val" data-ref-filename="1val">val</dfn>, <a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col2 decl" id="2n" title='n' data-type='u64' data-ref="2n" data-ref-filename="2n">n</dfn>)</td></tr>
+<tr><th id="38">38</th><td>{</td></tr>
+<tr><th id="39">39</th><td>	<em>unsigned</em> <em>int</em> <dfn class="local col3 decl" id="3local_n" title='local_n' data-type='unsigned int' data-ref="3local_n" data-ref-filename="3local_n">local_n</dfn>;</td></tr>
+<tr><th id="40">40</th><td></td></tr>
+<tr><th id="41">41</th><td>	<b>if</b> (<a class="macro" href="../../include/linux/compiler.h.html#78" title="__builtin_expect(!!(n &gt; 32 * 63), 0)" data-ref="_M/unlikely">unlikely</a>(<a class="local col2 ref" href="#2n" title='n' data-ref="2n" data-ref-filename="2n">n</a> &gt; <a class="macro" href="sched-pelt.h.html#13" title="32" data-ref="_M/LOAD_AVG_PERIOD">LOAD_AVG_PERIOD</a> * <var>63</var>))</td></tr>
+<tr><th id="42">42</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="43">43</th><td></td></tr>
+<tr><th id="44">44</th><td>	<i>/* after bounds checking we can collapse to 32-bit */</i></td></tr>
+<tr><th id="45">45</th><td>	<a class="local col3 ref" href="#3local_n" title='local_n' data-ref="3local_n" data-ref-filename="3local_n">local_n</a> = <a class="local col2 ref" href="#2n" title='n' data-ref="2n" data-ref-filename="2n">n</a>;</td></tr>
+<tr><th id="46">46</th><td></td></tr>
+<tr><th id="47">47</th><td>	<i>/*</i></td></tr>
+<tr><th id="48">48</th><td><i>	 * As y^PERIOD = 1/2, we can combine</i></td></tr>
+<tr><th id="49">49</th><td><i>	 *    y^n = 1/2^(n/PERIOD) * y^(n%PERIOD)</i></td></tr>
+<tr><th id="50">50</th><td><i>	 * With a look-up table which covers y^n (n&lt;PERIOD)</i></td></tr>
+<tr><th id="51">51</th><td><i>	 *</i></td></tr>
+<tr><th id="52">52</th><td><i>	 * To achieve constant time decay_load.</i></td></tr>
+<tr><th id="53">53</th><td><i>	 */</i></td></tr>
+<tr><th id="54">54</th><td>	<b>if</b> (<a class="macro" href="../../include/linux/compiler.h.html#78" title="__builtin_expect(!!(local_n &gt;= 32), 0)" data-ref="_M/unlikely">unlikely</a>(<a class="local col3 ref" href="#3local_n" title='local_n' data-ref="3local_n" data-ref-filename="3local_n">local_n</a> &gt;= <a class="macro" href="sched-pelt.h.html#13" title="32" data-ref="_M/LOAD_AVG_PERIOD">LOAD_AVG_PERIOD</a>)) {</td></tr>
+<tr><th id="55">55</th><td>		<a class="local col1 ref" href="#1val" title='val' data-ref="1val" data-ref-filename="1val">val</a> &gt;&gt;= <a class="local col3 ref" href="#3local_n" title='local_n' data-ref="3local_n" data-ref-filename="3local_n">local_n</a> / <a class="macro" href="sched-pelt.h.html#13" title="32" data-ref="_M/LOAD_AVG_PERIOD">LOAD_AVG_PERIOD</a>;</td></tr>
+<tr><th id="56">56</th><td>		<a class="local col3 ref" href="#3local_n" title='local_n' data-ref="3local_n" data-ref-filename="3local_n">local_n</a> %= <a class="macro" href="sched-pelt.h.html#13" title="32" data-ref="_M/LOAD_AVG_PERIOD">LOAD_AVG_PERIOD</a>;</td></tr>
+<tr><th id="57">57</th><td>	}</td></tr>
+<tr><th id="58">58</th><td></td></tr>
+<tr><th id="59">59</th><td>	<a class="local col1 ref" href="#1val" title='val' data-ref="1val" data-ref-filename="1val">val</a> = <a class="ref fn" href="../../include/linux/math64.h.html#mul_u64_u32_shr" title='mul_u64_u32_shr' data-ref="mul_u64_u32_shr" data-ref-filename="mul_u64_u32_shr">mul_u64_u32_shr</a>(<a class="local col1 ref" href="#1val" title='val' data-ref="1val" data-ref-filename="1val">val</a>, <a class="ref" href="sched-pelt.h.html#runnable_avg_yN_inv" title='runnable_avg_yN_inv' data-ref="runnable_avg_yN_inv" data-ref-filename="runnable_avg_yN_inv">runnable_avg_yN_inv</a>[<a class="local col3 ref" href="#3local_n" title='local_n' data-ref="3local_n" data-ref-filename="3local_n">local_n</a>], <var>32</var>);</td></tr>
+<tr><th id="60">60</th><td>	<b>return</b> <a class="local col1 ref" href="#1val" title='val' data-ref="1val" data-ref-filename="1val">val</a>;</td></tr>
+<tr><th id="61">61</th><td>}</td></tr>
+<tr><th id="62">62</th><td></td></tr>
+<tr><th id="63">63</th><td><em>static</em> <a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="tu decl def fn" id="__accumulate_pelt_segments" title='__accumulate_pelt_segments' data-type='u32 __accumulate_pelt_segments(u64 periods, u32 d1, u32 d3)' data-ref="__accumulate_pelt_segments" data-ref-filename="__accumulate_pelt_segments">__accumulate_pelt_segments</dfn>(<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col4 decl" id="4periods" title='periods' data-type='u64' data-ref="4periods" data-ref-filename="4periods">periods</dfn>, <a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col5 decl" id="5d1" title='d1' data-type='u32' data-ref="5d1" data-ref-filename="5d1">d1</dfn>, <a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col6 decl" id="6d3" title='d3' data-type='u32' data-ref="6d3" data-ref-filename="6d3">d3</dfn>)</td></tr>
+<tr><th id="64">64</th><td>{</td></tr>
+<tr><th id="65">65</th><td>	<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col7 decl" id="7c1" title='c1' data-type='u32' data-ref="7c1" data-ref-filename="7c1">c1</dfn>, <dfn class="local col8 decl" id="8c2" title='c2' data-type='u32' data-ref="8c2" data-ref-filename="8c2">c2</dfn>, <dfn class="local col9 decl" id="9c3" title='c3' data-type='u32' data-ref="9c3" data-ref-filename="9c3">c3</dfn> = <a class="local col6 ref" href="#6d3" title='d3' data-ref="6d3" data-ref-filename="6d3">d3</a>; <i>/* y^0 == 1 */</i></td></tr>
+<tr><th id="66">66</th><td></td></tr>
+<tr><th id="67">67</th><td>	<i>/*</i></td></tr>
+<tr><th id="68">68</th><td><i>	 * c1 = d1 y^p</i></td></tr>
+<tr><th id="69">69</th><td><i>	 */</i></td></tr>
+<tr><th id="70">70</th><td>	<a class="local col7 ref" href="#7c1" title='c1' data-ref="7c1" data-ref-filename="7c1">c1</a> = <a class="tu ref fn" href="#decay_load" title='decay_load' data-use='c' data-ref="decay_load" data-ref-filename="decay_load">decay_load</a>((<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a>)<a class="local col5 ref" href="#5d1" title='d1' data-ref="5d1" data-ref-filename="5d1">d1</a>, <a class="local col4 ref" href="#4periods" title='periods' data-ref="4periods" data-ref-filename="4periods">periods</a>);</td></tr>
+<tr><th id="71">71</th><td></td></tr>
+<tr><th id="72">72</th><td>	<i>/*</i></td></tr>
+<tr><th id="73">73</th><td><i>	 *            p-1</i></td></tr>
+<tr><th id="74">74</th><td><i>	 * c2 = 1024 \Sum y^n</i></td></tr>
+<tr><th id="75">75</th><td><i>	 *            n=1</i></td></tr>
+<tr><th id="76">76</th><td><i>	 *</i></td></tr>
+<tr><th id="77">77</th><td><i>	 *              inf        inf</i></td></tr>
+<tr><th id="78">78</th><td><i>	 *    = 1024 ( \Sum y^n - \Sum y^n - y^0 )</i></td></tr>
+<tr><th id="79">79</th><td><i>	 *              n=0        n=p</i></td></tr>
+<tr><th id="80">80</th><td><i>	 */</i></td></tr>
+<tr><th id="81">81</th><td>	<a class="local col8 ref" href="#8c2" title='c2' data-ref="8c2" data-ref-filename="8c2">c2</a> = <a class="macro" href="sched-pelt.h.html#14" title="47742" data-ref="_M/LOAD_AVG_MAX">LOAD_AVG_MAX</a> - <a class="tu ref fn" href="#decay_load" title='decay_load' data-use='c' data-ref="decay_load" data-ref-filename="decay_load">decay_load</a>(<a class="macro" href="sched-pelt.h.html#14" title="47742" data-ref="_M/LOAD_AVG_MAX">LOAD_AVG_MAX</a>, <a class="local col4 ref" href="#4periods" title='periods' data-ref="4periods" data-ref-filename="4periods">periods</a>) - <var>1024</var>;</td></tr>
+<tr><th id="82">82</th><td></td></tr>
+<tr><th id="83">83</th><td>	<b>return</b> <a class="local col7 ref" href="#7c1" title='c1' data-ref="7c1" data-ref-filename="7c1">c1</a> + <a class="local col8 ref" href="#8c2" title='c2' data-ref="8c2" data-ref-filename="8c2">c2</a> + <a class="local col9 ref" href="#9c3" title='c3' data-ref="9c3" data-ref-filename="9c3">c3</a>;</td></tr>
+<tr><th id="84">84</th><td>}</td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td><u>#define <dfn class="macro" id="_M/cap_scale" data-ref="_M/cap_scale">cap_scale</dfn>(v, s) ((v)*(s) &gt;&gt; SCHED_CAPACITY_SHIFT)</u></td></tr>
+<tr><th id="87">87</th><td></td></tr>
+<tr><th id="88">88</th><td><i  data-doc="accumulate_sum">/*</i></td></tr>
+<tr><th id="89">89</th><td><i  data-doc="accumulate_sum"> * Accumulate the three separate parts of the sum; d1 the remainder</i></td></tr>
+<tr><th id="90">90</th><td><i  data-doc="accumulate_sum"> * of the last (incomplete) period, d2 the span of full periods and d3</i></td></tr>
+<tr><th id="91">91</th><td><i  data-doc="accumulate_sum"> * the remainder of the (incomplete) current period.</i></td></tr>
+<tr><th id="92">92</th><td><i  data-doc="accumulate_sum"> *</i></td></tr>
+<tr><th id="93">93</th><td><i  data-doc="accumulate_sum"> *           d1          d2           d3</i></td></tr>
+<tr><th id="94">94</th><td><i  data-doc="accumulate_sum"> *           ^           ^            ^</i></td></tr>
+<tr><th id="95">95</th><td><i  data-doc="accumulate_sum"> *           |           |            |</i></td></tr>
+<tr><th id="96">96</th><td><i  data-doc="accumulate_sum"> *         |&lt;-&gt;|&lt;-----------------&gt;|&lt;---&gt;|</i></td></tr>
+<tr><th id="97">97</th><td><i  data-doc="accumulate_sum"> * ... |---x---|------| ... |------|-----x (now)</i></td></tr>
+<tr><th id="98">98</th><td><i  data-doc="accumulate_sum"> *</i></td></tr>
+<tr><th id="99">99</th><td><i  data-doc="accumulate_sum"> *                           p-1</i></td></tr>
+<tr><th id="100">100</th><td><i  data-doc="accumulate_sum"> * u' = (u + d1) y^p + 1024 \Sum y^n + d3 y^0</i></td></tr>
+<tr><th id="101">101</th><td><i  data-doc="accumulate_sum"> *                           n=1</i></td></tr>
+<tr><th id="102">102</th><td><i  data-doc="accumulate_sum"> *</i></td></tr>
+<tr><th id="103">103</th><td><i  data-doc="accumulate_sum"> *    = u y^p +					(Step 1)</i></td></tr>
+<tr><th id="104">104</th><td><i  data-doc="accumulate_sum"> *</i></td></tr>
+<tr><th id="105">105</th><td><i  data-doc="accumulate_sum"> *                     p-1</i></td></tr>
+<tr><th id="106">106</th><td><i  data-doc="accumulate_sum"> *      d1 y^p + 1024 \Sum y^n + d3 y^0		(Step 2)</i></td></tr>
+<tr><th id="107">107</th><td><i  data-doc="accumulate_sum"> *                     n=1</i></td></tr>
+<tr><th id="108">108</th><td><i  data-doc="accumulate_sum"> */</i></td></tr>
+<tr><th id="109">109</th><td><em>static</em> <a class="macro" href="../../include/linux/compiler_attributes.h.html#67" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function)) __attribute__((__always_inline__))" data-ref="_M/__always_inline">__always_inline</a> <a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a></td></tr>
+<tr><th id="110">110</th><td><dfn class="tu decl def fn" id="accumulate_sum" title='accumulate_sum' data-type='u32 accumulate_sum(u64 delta, struct sched_avg * sa, unsigned long load, unsigned long runnable, int running)' data-ref="accumulate_sum" data-ref-filename="accumulate_sum">accumulate_sum</dfn>(<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col0 decl" id="10delta" title='delta' data-type='u64' data-ref="10delta" data-ref-filename="10delta">delta</dfn>, <b>struct</b> <a class="type" href="../../include/linux/sched.h.html#sched_avg" title='sched_avg' data-ref="sched_avg" data-ref-filename="sched_avg">sched_avg</a> *<dfn class="local col1 decl" id="11sa" title='sa' data-type='struct sched_avg *' data-ref="11sa" data-ref-filename="11sa">sa</dfn>,</td></tr>
+<tr><th id="111">111</th><td>	       <em>unsigned</em> <em>long</em> <dfn class="local col2 decl" id="12load" title='load' data-type='unsigned long' data-ref="12load" data-ref-filename="12load">load</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col3 decl" id="13runnable" title='runnable' data-type='unsigned long' data-ref="13runnable" data-ref-filename="13runnable">runnable</dfn>, <em>int</em> <dfn class="local col4 decl" id="14running" title='running' data-type='int' data-ref="14running" data-ref-filename="14running">running</dfn>)</td></tr>
+<tr><th id="112">112</th><td>{</td></tr>
+<tr><th id="113">113</th><td>	<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col5 decl" id="15contrib" title='contrib' data-type='u32' data-ref="15contrib" data-ref-filename="15contrib">contrib</dfn> = (<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>)<a class="local col0 ref" href="#10delta" title='delta' data-ref="10delta" data-ref-filename="10delta">delta</a>; <i>/* p == 0 -&gt; delta &lt; 1024 */</i></td></tr>
+<tr><th id="114">114</th><td>	<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col6 decl" id="16periods" title='periods' data-type='u64' data-ref="16periods" data-ref-filename="16periods">periods</dfn>;</td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td>	<a class="local col0 ref" href="#10delta" title='delta' data-ref="10delta" data-ref-filename="10delta">delta</a> += <a class="local col1 ref" href="#11sa" title='sa' data-ref="11sa" data-ref-filename="11sa">sa</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_avg::period_contrib" title='sched_avg::period_contrib' data-ref="sched_avg::period_contrib" data-ref-filename="sched_avg..period_contrib">period_contrib</a>;</td></tr>
+<tr><th id="117">117</th><td>	<a class="local col6 ref" href="#16periods" title='periods' data-ref="16periods" data-ref-filename="16periods">periods</a> = <a class="local col0 ref" href="#10delta" title='delta' data-ref="10delta" data-ref-filename="10delta">delta</a> / <var>1024</var>; <i>/* A period is 1024us (~1ms) */</i></td></tr>
+<tr><th id="118">118</th><td></td></tr>
+<tr><th id="119">119</th><td>	<i>/*</i></td></tr>
+<tr><th id="120">120</th><td><i>	 * Step 1: decay old *_sum if we crossed period boundaries.</i></td></tr>
+<tr><th id="121">121</th><td><i>	 */</i></td></tr>
+<tr><th id="122">122</th><td>	<b>if</b> (<a class="local col6 ref" href="#16periods" title='periods' data-ref="16periods" data-ref-filename="16periods">periods</a>) {</td></tr>
+<tr><th id="123">123</th><td>		<a class="local col1 ref" href="#11sa" title='sa' data-ref="11sa" data-ref-filename="11sa">sa</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_avg::load_sum" title='sched_avg::load_sum' data-ref="sched_avg::load_sum" data-ref-filename="sched_avg..load_sum">load_sum</a> = <a class="tu ref fn" href="#decay_load" title='decay_load' data-use='c' data-ref="decay_load" data-ref-filename="decay_load">decay_load</a>(<a class="local col1 ref" href="#11sa" title='sa' data-ref="11sa" data-ref-filename="11sa">sa</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_avg::load_sum" title='sched_avg::load_sum' data-ref="sched_avg::load_sum" data-ref-filename="sched_avg..load_sum">load_sum</a>, <a class="local col6 ref" href="#16periods" title='periods' data-ref="16periods" data-ref-filename="16periods">periods</a>);</td></tr>
+<tr><th id="124">124</th><td>		<a class="local col1 ref" href="#11sa" title='sa' data-ref="11sa" data-ref-filename="11sa">sa</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_avg::runnable_load_sum" title='sched_avg::runnable_load_sum' data-ref="sched_avg::runnable_load_sum" data-ref-filename="sched_avg..runnable_load_sum">runnable_load_sum</a> =</td></tr>
+<tr><th id="125">125</th><td>			<a class="tu ref fn" href="#decay_load" title='decay_load' data-use='c' data-ref="decay_load" data-ref-filename="decay_load">decay_load</a>(<a class="local col1 ref" href="#11sa" title='sa' data-ref="11sa" data-ref-filename="11sa">sa</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_avg::runnable_load_sum" title='sched_avg::runnable_load_sum' data-ref="sched_avg::runnable_load_sum" data-ref-filename="sched_avg..runnable_load_sum">runnable_load_sum</a>, <a class="local col6 ref" href="#16periods" title='periods' data-ref="16periods" data-ref-filename="16periods">periods</a>);</td></tr>
+<tr><th id="126">126</th><td>		<a class="local col1 ref" href="#11sa" title='sa' data-ref="11sa" data-ref-filename="11sa">sa</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_avg::util_sum" title='sched_avg::util_sum' data-ref="sched_avg::util_sum" data-ref-filename="sched_avg..util_sum">util_sum</a> = <a class="tu ref fn" href="#decay_load" title='decay_load' data-use='c' data-ref="decay_load" data-ref-filename="decay_load">decay_load</a>((<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a>)(<a class="local col1 ref" href="#11sa" title='sa' data-ref="11sa" data-ref-filename="11sa">sa</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_avg::util_sum" title='sched_avg::util_sum' data-ref="sched_avg::util_sum" data-ref-filename="sched_avg..util_sum">util_sum</a>), <a class="local col6 ref" href="#16periods" title='periods' data-ref="16periods" data-ref-filename="16periods">periods</a>);</td></tr>
+<tr><th id="127">127</th><td></td></tr>
+<tr><th id="128">128</th><td>		<i>/*</i></td></tr>
+<tr><th id="129">129</th><td><i>		 * Step 2</i></td></tr>
+<tr><th id="130">130</th><td><i>		 */</i></td></tr>
+<tr><th id="131">131</th><td>		<a class="local col0 ref" href="#10delta" title='delta' data-ref="10delta" data-ref-filename="10delta">delta</a> %= <var>1024</var>;</td></tr>
+<tr><th id="132">132</th><td>		<a class="local col5 ref" href="#15contrib" title='contrib' data-ref="15contrib" data-ref-filename="15contrib">contrib</a> = <a class="tu ref fn" href="#__accumulate_pelt_segments" title='__accumulate_pelt_segments' data-use='c' data-ref="__accumulate_pelt_segments" data-ref-filename="__accumulate_pelt_segments">__accumulate_pelt_segments</a>(<a class="local col6 ref" href="#16periods" title='periods' data-ref="16periods" data-ref-filename="16periods">periods</a>,</td></tr>
+<tr><th id="133">133</th><td>				<var>1024</var> - <a class="local col1 ref" href="#11sa" title='sa' data-ref="11sa" data-ref-filename="11sa">sa</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_avg::period_contrib" title='sched_avg::period_contrib' data-ref="sched_avg::period_contrib" data-ref-filename="sched_avg..period_contrib">period_contrib</a>, <a class="local col0 ref" href="#10delta" title='delta' data-ref="10delta" data-ref-filename="10delta">delta</a>);</td></tr>
+<tr><th id="134">134</th><td>	}</td></tr>
+<tr><th id="135">135</th><td>	<a class="local col1 ref" href="#11sa" title='sa' data-ref="11sa" data-ref-filename="11sa">sa</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_avg::period_contrib" title='sched_avg::period_contrib' data-ref="sched_avg::period_contrib" data-ref-filename="sched_avg..period_contrib">period_contrib</a> = <a class="local col0 ref" href="#10delta" title='delta' data-ref="10delta" data-ref-filename="10delta">delta</a>;</td></tr>
+<tr><th id="136">136</th><td></td></tr>
+<tr><th id="137">137</th><td>	<b>if</b> (<a class="local col2 ref" href="#12load" title='load' data-ref="12load" data-ref-filename="12load">load</a>)</td></tr>
+<tr><th id="138">138</th><td>		<a class="local col1 ref" href="#11sa" title='sa' data-ref="11sa" data-ref-filename="11sa">sa</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_avg::load_sum" title='sched_avg::load_sum' data-ref="sched_avg::load_sum" data-ref-filename="sched_avg..load_sum">load_sum</a> += <a class="local col2 ref" href="#12load" title='load' data-ref="12load" data-ref-filename="12load">load</a> * <a class="local col5 ref" href="#15contrib" title='contrib' data-ref="15contrib" data-ref-filename="15contrib">contrib</a>;</td></tr>
+<tr><th id="139">139</th><td>	<b>if</b> (<a class="local col3 ref" href="#13runnable" title='runnable' data-ref="13runnable" data-ref-filename="13runnable">runnable</a>)</td></tr>
+<tr><th id="140">140</th><td>		<a class="local col1 ref" href="#11sa" title='sa' data-ref="11sa" data-ref-filename="11sa">sa</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_avg::runnable_load_sum" title='sched_avg::runnable_load_sum' data-ref="sched_avg::runnable_load_sum" data-ref-filename="sched_avg..runnable_load_sum">runnable_load_sum</a> += <a class="local col3 ref" href="#13runnable" title='runnable' data-ref="13runnable" data-ref-filename="13runnable">runnable</a> * <a class="local col5 ref" href="#15contrib" title='contrib' data-ref="15contrib" data-ref-filename="15contrib">contrib</a>;</td></tr>
+<tr><th id="141">141</th><td>	<b>if</b> (<a class="local col4 ref" href="#14running" title='running' data-ref="14running" data-ref-filename="14running">running</a>)</td></tr>
+<tr><th id="142">142</th><td>		<a class="local col1 ref" href="#11sa" title='sa' data-ref="11sa" data-ref-filename="11sa">sa</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_avg::util_sum" title='sched_avg::util_sum' data-ref="sched_avg::util_sum" data-ref-filename="sched_avg..util_sum">util_sum</a> += <a class="local col5 ref" href="#15contrib" title='contrib' data-ref="15contrib" data-ref-filename="15contrib">contrib</a> &lt;&lt; <a class="macro" href="../../include/linux/sched.h.html#330" title="10" data-ref="_M/SCHED_CAPACITY_SHIFT">SCHED_CAPACITY_SHIFT</a>;</td></tr>
+<tr><th id="143">143</th><td></td></tr>
+<tr><th id="144">144</th><td>	<b>return</b> <a class="local col6 ref" href="#16periods" title='periods' data-ref="16periods" data-ref-filename="16periods">periods</a>;</td></tr>
+<tr><th id="145">145</th><td>}</td></tr>
+<tr><th id="146">146</th><td></td></tr>
+<tr><th id="147">147</th><td><i  data-doc="___update_load_sum">/*</i></td></tr>
+<tr><th id="148">148</th><td><i  data-doc="___update_load_sum"> * We can represent the historical contribution to runnable average as the</i></td></tr>
+<tr><th id="149">149</th><td><i  data-doc="___update_load_sum"> * coefficients of a geometric series.  To do this we sub-divide our runnable</i></td></tr>
+<tr><th id="150">150</th><td><i  data-doc="___update_load_sum"> * history into segments of approximately 1ms (1024us); label the segment that</i></td></tr>
+<tr><th id="151">151</th><td><i  data-doc="___update_load_sum"> * occurred N-ms ago p_N, with p_0 corresponding to the current period, e.g.</i></td></tr>
+<tr><th id="152">152</th><td><i  data-doc="___update_load_sum"> *</i></td></tr>
+<tr><th id="153">153</th><td><i  data-doc="___update_load_sum"> * [&lt;- 1024us -&gt;|&lt;- 1024us -&gt;|&lt;- 1024us -&gt;| ...</i></td></tr>
+<tr><th id="154">154</th><td><i  data-doc="___update_load_sum"> *      p0            p1           p2</i></td></tr>
+<tr><th id="155">155</th><td><i  data-doc="___update_load_sum"> *     (now)       (~1ms ago)  (~2ms ago)</i></td></tr>
+<tr><th id="156">156</th><td><i  data-doc="___update_load_sum"> *</i></td></tr>
+<tr><th id="157">157</th><td><i  data-doc="___update_load_sum"> * Let u_i denote the fraction of p_i that the entity was runnable.</i></td></tr>
+<tr><th id="158">158</th><td><i  data-doc="___update_load_sum"> *</i></td></tr>
+<tr><th id="159">159</th><td><i  data-doc="___update_load_sum"> * We then designate the fractions u_i as our co-efficients, yielding the</i></td></tr>
+<tr><th id="160">160</th><td><i  data-doc="___update_load_sum"> * following representation of historical load:</i></td></tr>
+<tr><th id="161">161</th><td><i  data-doc="___update_load_sum"> *   u_0 + u_1*y + u_2*y^2 + u_3*y^3 + ...</i></td></tr>
+<tr><th id="162">162</th><td><i  data-doc="___update_load_sum"> *</i></td></tr>
+<tr><th id="163">163</th><td><i  data-doc="___update_load_sum"> * We choose y based on the with of a reasonably scheduling period, fixing:</i></td></tr>
+<tr><th id="164">164</th><td><i  data-doc="___update_load_sum"> *   y^32 = 0.5</i></td></tr>
+<tr><th id="165">165</th><td><i  data-doc="___update_load_sum"> *</i></td></tr>
+<tr><th id="166">166</th><td><i  data-doc="___update_load_sum"> * This means that the contribution to load ~32ms ago (u_32) will be weighted</i></td></tr>
+<tr><th id="167">167</th><td><i  data-doc="___update_load_sum"> * approximately half as much as the contribution to load within the last ms</i></td></tr>
+<tr><th id="168">168</th><td><i  data-doc="___update_load_sum"> * (u_0).</i></td></tr>
+<tr><th id="169">169</th><td><i  data-doc="___update_load_sum"> *</i></td></tr>
+<tr><th id="170">170</th><td><i  data-doc="___update_load_sum"> * When a period "rolls over" and we have new u_0`, multiplying the previous</i></td></tr>
+<tr><th id="171">171</th><td><i  data-doc="___update_load_sum"> * sum again by y is sufficient to update:</i></td></tr>
+<tr><th id="172">172</th><td><i  data-doc="___update_load_sum"> *   load_avg = u_0` + y*(u_0 + u_1*y + u_2*y^2 + ... )</i></td></tr>
+<tr><th id="173">173</th><td><i  data-doc="___update_load_sum"> *            = u_0 + u_1*y + u_2*y^2 + ... [re-labeling u_i --&gt; u_{i+1}]</i></td></tr>
+<tr><th id="174">174</th><td><i  data-doc="___update_load_sum"> */</i></td></tr>
+<tr><th id="175">175</th><td><em>static</em> <a class="macro" href="../../include/linux/compiler_attributes.h.html#67" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function)) __attribute__((__always_inline__))" data-ref="_M/__always_inline">__always_inline</a> <em>int</em></td></tr>
+<tr><th id="176">176</th><td><dfn class="tu decl def fn" id="___update_load_sum" title='___update_load_sum' data-type='int ___update_load_sum(u64 now, struct sched_avg * sa, unsigned long load, unsigned long runnable, int running)' data-ref="___update_load_sum" data-ref-filename="___update_load_sum">___update_load_sum</dfn>(<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col7 decl" id="17now" title='now' data-type='u64' data-ref="17now" data-ref-filename="17now">now</dfn>, <b>struct</b> <a class="type" href="../../include/linux/sched.h.html#sched_avg" title='sched_avg' data-ref="sched_avg" data-ref-filename="sched_avg">sched_avg</a> *<dfn class="local col8 decl" id="18sa" title='sa' data-type='struct sched_avg *' data-ref="18sa" data-ref-filename="18sa">sa</dfn>,</td></tr>
+<tr><th id="177">177</th><td>		  <em>unsigned</em> <em>long</em> <dfn class="local col9 decl" id="19load" title='load' data-type='unsigned long' data-ref="19load" data-ref-filename="19load">load</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col0 decl" id="20runnable" title='runnable' data-type='unsigned long' data-ref="20runnable" data-ref-filename="20runnable">runnable</dfn>, <em>int</em> <dfn class="local col1 decl" id="21running" title='running' data-type='int' data-ref="21running" data-ref-filename="21running">running</dfn>)</td></tr>
+<tr><th id="178">178</th><td>{</td></tr>
+<tr><th id="179">179</th><td>	<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col2 decl" id="22delta" title='delta' data-type='u64' data-ref="22delta" data-ref-filename="22delta">delta</dfn>;</td></tr>
+<tr><th id="180">180</th><td></td></tr>
+<tr><th id="181">181</th><td>	<a class="local col2 ref" href="#22delta" title='delta' data-ref="22delta" data-ref-filename="22delta">delta</a> = <a class="local col7 ref" href="#17now" title='now' data-ref="17now" data-ref-filename="17now">now</a> - <a class="local col8 ref" href="#18sa" title='sa' data-ref="18sa" data-ref-filename="18sa">sa</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_avg::last_update_time" title='sched_avg::last_update_time' data-ref="sched_avg::last_update_time" data-ref-filename="sched_avg..last_update_time">last_update_time</a>;</td></tr>
+<tr><th id="182">182</th><td>	<i>/*</i></td></tr>
+<tr><th id="183">183</th><td><i>	 * This should only happen when time goes backwards, which it</i></td></tr>
+<tr><th id="184">184</th><td><i>	 * unfortunately does during sched clock init when we swap over to TSC.</i></td></tr>
+<tr><th id="185">185</th><td><i>	 */</i></td></tr>
+<tr><th id="186">186</th><td>	<b>if</b> ((<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#s64" title='s64' data-type='__s64' data-ref="s64" data-ref-filename="s64">s64</a>)<a class="local col2 ref" href="#22delta" title='delta' data-ref="22delta" data-ref-filename="22delta">delta</a> &lt; <var>0</var>) {</td></tr>
+<tr><th id="187">187</th><td>		<a class="local col8 ref" href="#18sa" title='sa' data-ref="18sa" data-ref-filename="18sa">sa</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_avg::last_update_time" title='sched_avg::last_update_time' data-ref="sched_avg::last_update_time" data-ref-filename="sched_avg..last_update_time">last_update_time</a> = <a class="local col7 ref" href="#17now" title='now' data-ref="17now" data-ref-filename="17now">now</a>;</td></tr>
+<tr><th id="188">188</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="189">189</th><td>	}</td></tr>
+<tr><th id="190">190</th><td></td></tr>
+<tr><th id="191">191</th><td>	<i>/*</i></td></tr>
+<tr><th id="192">192</th><td><i>	 * Use 1024ns as the unit of measurement since it's a reasonable</i></td></tr>
+<tr><th id="193">193</th><td><i>	 * approximation of 1us and fast to compute.</i></td></tr>
+<tr><th id="194">194</th><td><i>	 */</i></td></tr>
+<tr><th id="195">195</th><td>	<a class="local col2 ref" href="#22delta" title='delta' data-ref="22delta" data-ref-filename="22delta">delta</a> &gt;&gt;= <var>10</var>;</td></tr>
+<tr><th id="196">196</th><td>	<b>if</b> (!<a class="local col2 ref" href="#22delta" title='delta' data-ref="22delta" data-ref-filename="22delta">delta</a>)</td></tr>
+<tr><th id="197">197</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="198">198</th><td></td></tr>
+<tr><th id="199">199</th><td>	<a class="local col8 ref" href="#18sa" title='sa' data-ref="18sa" data-ref-filename="18sa">sa</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_avg::last_update_time" title='sched_avg::last_update_time' data-ref="sched_avg::last_update_time" data-ref-filename="sched_avg..last_update_time">last_update_time</a> += <a class="local col2 ref" href="#22delta" title='delta' data-ref="22delta" data-ref-filename="22delta">delta</a> &lt;&lt; <var>10</var>;</td></tr>
+<tr><th id="200">200</th><td></td></tr>
+<tr><th id="201">201</th><td>	<i>/*</i></td></tr>
+<tr><th id="202">202</th><td><i>	 * running is a subset of runnable (weight) so running can't be set if</i></td></tr>
+<tr><th id="203">203</th><td><i>	 * runnable is clear. But there are some corner cases where the current</i></td></tr>
+<tr><th id="204">204</th><td><i>	 * se has been already dequeued but cfs_rq-&gt;curr still points to it.</i></td></tr>
+<tr><th id="205">205</th><td><i>	 * This means that weight will be 0 but not running for a sched_entity</i></td></tr>
+<tr><th id="206">206</th><td><i>	 * but also for a cfs_rq if the latter becomes idle. As an example,</i></td></tr>
+<tr><th id="207">207</th><td><i>	 * this happens during idle_balance() which calls</i></td></tr>
+<tr><th id="208">208</th><td><i>	 * update_blocked_averages()</i></td></tr>
+<tr><th id="209">209</th><td><i>	 */</i></td></tr>
+<tr><th id="210">210</th><td>	<b>if</b> (!<a class="local col9 ref" href="#19load" title='load' data-ref="19load" data-ref-filename="19load">load</a>)</td></tr>
+<tr><th id="211">211</th><td>		<a class="local col0 ref" href="#20runnable" title='runnable' data-ref="20runnable" data-ref-filename="20runnable">runnable</a> = <a class="local col1 ref" href="#21running" title='running' data-ref="21running" data-ref-filename="21running">running</a> = <var>0</var>;</td></tr>
+<tr><th id="212">212</th><td></td></tr>
+<tr><th id="213">213</th><td>	<i>/*</i></td></tr>
+<tr><th id="214">214</th><td><i>	 * Now we know we crossed measurement unit boundaries. The *_avg</i></td></tr>
+<tr><th id="215">215</th><td><i>	 * accrues by two steps:</i></td></tr>
+<tr><th id="216">216</th><td><i>	 *</i></td></tr>
+<tr><th id="217">217</th><td><i>	 * Step 1: accumulate *_sum since last_update_time. If we haven't</i></td></tr>
+<tr><th id="218">218</th><td><i>	 * crossed period boundaries, finish.</i></td></tr>
+<tr><th id="219">219</th><td><i>	 */</i></td></tr>
+<tr><th id="220">220</th><td>	<b>if</b> (!<a class="tu ref fn" href="#accumulate_sum" title='accumulate_sum' data-use='c' data-ref="accumulate_sum" data-ref-filename="accumulate_sum">accumulate_sum</a>(<a class="local col2 ref" href="#22delta" title='delta' data-ref="22delta" data-ref-filename="22delta">delta</a>, <a class="local col8 ref" href="#18sa" title='sa' data-ref="18sa" data-ref-filename="18sa">sa</a>, <a class="local col9 ref" href="#19load" title='load' data-ref="19load" data-ref-filename="19load">load</a>, <a class="local col0 ref" href="#20runnable" title='runnable' data-ref="20runnable" data-ref-filename="20runnable">runnable</a>, <a class="local col1 ref" href="#21running" title='running' data-ref="21running" data-ref-filename="21running">running</a>))</td></tr>
+<tr><th id="221">221</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="222">222</th><td></td></tr>
+<tr><th id="223">223</th><td>	<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="224">224</th><td>}</td></tr>
+<tr><th id="225">225</th><td></td></tr>
+<tr><th id="226">226</th><td><em>static</em> <a class="macro" href="../../include/linux/compiler_attributes.h.html#67" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function)) __attribute__((__always_inline__))" data-ref="_M/__always_inline">__always_inline</a> <em>void</em></td></tr>
+<tr><th id="227">227</th><td><dfn class="tu decl def fn" id="___update_load_avg" title='___update_load_avg' data-type='void ___update_load_avg(struct sched_avg * sa, unsigned long load, unsigned long runnable)' data-ref="___update_load_avg" data-ref-filename="___update_load_avg">___update_load_avg</dfn>(<b>struct</b> <a class="type" href="../../include/linux/sched.h.html#sched_avg" title='sched_avg' data-ref="sched_avg" data-ref-filename="sched_avg">sched_avg</a> *<dfn class="local col3 decl" id="23sa" title='sa' data-type='struct sched_avg *' data-ref="23sa" data-ref-filename="23sa">sa</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col4 decl" id="24load" title='load' data-type='unsigned long' data-ref="24load" data-ref-filename="24load">load</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col5 decl" id="25runnable" title='runnable' data-type='unsigned long' data-ref="25runnable" data-ref-filename="25runnable">runnable</dfn>)</td></tr>
+<tr><th id="228">228</th><td>{</td></tr>
+<tr><th id="229">229</th><td>	<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col6 decl" id="26divider" title='divider' data-type='u32' data-ref="26divider" data-ref-filename="26divider">divider</dfn> = <a class="macro" href="sched-pelt.h.html#14" title="47742" data-ref="_M/LOAD_AVG_MAX">LOAD_AVG_MAX</a> - <var>1024</var> + <a class="local col3 ref" href="#23sa" title='sa' data-ref="23sa" data-ref-filename="23sa">sa</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_avg::period_contrib" title='sched_avg::period_contrib' data-ref="sched_avg::period_contrib" data-ref-filename="sched_avg..period_contrib">period_contrib</a>;</td></tr>
+<tr><th id="230">230</th><td></td></tr>
+<tr><th id="231">231</th><td>	<i>/*</i></td></tr>
+<tr><th id="232">232</th><td><i>	 * Step 2: update *_avg.</i></td></tr>
+<tr><th id="233">233</th><td><i>	 */</i></td></tr>
+<tr><th id="234">234</th><td>	<a class="local col3 ref" href="#23sa" title='sa' data-ref="23sa" data-ref-filename="23sa">sa</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_avg::load_avg" title='sched_avg::load_avg' data-ref="sched_avg::load_avg" data-ref-filename="sched_avg..load_avg">load_avg</a> = <a class="ref fn" href="../../include/linux/math64.h.html#div_u64" title='div_u64' data-ref="div_u64" data-ref-filename="div_u64">div_u64</a>(<a class="local col4 ref" href="#24load" title='load' data-ref="24load" data-ref-filename="24load">load</a> * <a class="local col3 ref" href="#23sa" title='sa' data-ref="23sa" data-ref-filename="23sa">sa</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_avg::load_sum" title='sched_avg::load_sum' data-ref="sched_avg::load_sum" data-ref-filename="sched_avg..load_sum">load_sum</a>, <a class="local col6 ref" href="#26divider" title='divider' data-ref="26divider" data-ref-filename="26divider">divider</a>);</td></tr>
+<tr><th id="235">235</th><td>	<a class="local col3 ref" href="#23sa" title='sa' data-ref="23sa" data-ref-filename="23sa">sa</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_avg::runnable_load_avg" title='sched_avg::runnable_load_avg' data-ref="sched_avg::runnable_load_avg" data-ref-filename="sched_avg..runnable_load_avg">runnable_load_avg</a> =	<a class="ref fn" href="../../include/linux/math64.h.html#div_u64" title='div_u64' data-ref="div_u64" data-ref-filename="div_u64">div_u64</a>(<a class="local col5 ref" href="#25runnable" title='runnable' data-ref="25runnable" data-ref-filename="25runnable">runnable</a> * <a class="local col3 ref" href="#23sa" title='sa' data-ref="23sa" data-ref-filename="23sa">sa</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_avg::runnable_load_sum" title='sched_avg::runnable_load_sum' data-ref="sched_avg::runnable_load_sum" data-ref-filename="sched_avg..runnable_load_sum">runnable_load_sum</a>, <a class="local col6 ref" href="#26divider" title='divider' data-ref="26divider" data-ref-filename="26divider">divider</a>);</td></tr>
+<tr><th id="236">236</th><td>	<a class="macro" href="../../include/linux/compiler.h.html#284" title="({ union { typeof(sa-&gt;util_avg) __val; char __c[1]; } __u = { .__val = ( typeof(sa-&gt;util_avg)) (sa-&gt;util_sum / divider) }; __write_once_size(&amp;(sa-&gt;util_avg), __u.__c, sizeof(sa-&gt;util_avg)); __u.__val; })" data-ref="_M/WRITE_ONCE">WRITE_ONCE</a>(<a class="local col3 ref" href="#23sa" title='sa' data-ref="23sa" data-ref-filename="23sa">sa</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_avg::util_avg" title='sched_avg::util_avg' data-ref="sched_avg::util_avg" data-ref-filename="sched_avg..util_avg">util_avg</a>, <a class="local col3 ref" href="#23sa" title='sa' data-ref="23sa" data-ref-filename="23sa">sa</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_avg::util_sum" title='sched_avg::util_sum' data-ref="sched_avg::util_sum" data-ref-filename="sched_avg..util_sum">util_sum</a> / <a class="local col6 ref" href="#26divider" title='divider' data-ref="26divider" data-ref-filename="26divider">divider</a>);</td></tr>
+<tr><th id="237">237</th><td>}</td></tr>
+<tr><th id="238">238</th><td></td></tr>
+<tr><th id="239">239</th><td><i>/*</i></td></tr>
+<tr><th id="240">240</th><td><i> * sched_entity:</i></td></tr>
+<tr><th id="241">241</th><td><i> *</i></td></tr>
+<tr><th id="242">242</th><td><i> *   task:</i></td></tr>
+<tr><th id="243">243</th><td><i> *     se_runnable() == se_weight()</i></td></tr>
+<tr><th id="244">244</th><td><i> *</i></td></tr>
+<tr><th id="245">245</th><td><i> *   group: [ see update_cfs_group() ]</i></td></tr>
+<tr><th id="246">246</th><td><i> *     se_weight()   = tg-&gt;weight * grq-&gt;load_avg / tg-&gt;load_avg</i></td></tr>
+<tr><th id="247">247</th><td><i> *     se_runnable() = se_weight(se) * grq-&gt;runnable_load_avg / grq-&gt;load_avg</i></td></tr>
+<tr><th id="248">248</th><td><i> *</i></td></tr>
+<tr><th id="249">249</th><td><i> *   load_sum := runnable_sum</i></td></tr>
+<tr><th id="250">250</th><td><i> *   load_avg = se_weight(se) * runnable_avg</i></td></tr>
+<tr><th id="251">251</th><td><i> *</i></td></tr>
+<tr><th id="252">252</th><td><i> *   runnable_load_sum := runnable_sum</i></td></tr>
+<tr><th id="253">253</th><td><i> *   runnable_load_avg = se_runnable(se) * runnable_avg</i></td></tr>
+<tr><th id="254">254</th><td><i> *</i></td></tr>
+<tr><th id="255">255</th><td><i> * XXX collapse load_sum and runnable_load_sum</i></td></tr>
+<tr><th id="256">256</th><td><i> *</i></td></tr>
+<tr><th id="257">257</th><td><i> * cfq_rq:</i></td></tr>
+<tr><th id="258">258</th><td><i> *</i></td></tr>
+<tr><th id="259">259</th><td><i> *   load_sum = \Sum se_weight(se) * se-&gt;avg.load_sum</i></td></tr>
+<tr><th id="260">260</th><td><i> *   load_avg = \Sum se-&gt;avg.load_avg</i></td></tr>
+<tr><th id="261">261</th><td><i> *</i></td></tr>
+<tr><th id="262">262</th><td><i> *   runnable_load_sum = \Sum se_runnable(se) * se-&gt;avg.runnable_load_sum</i></td></tr>
+<tr><th id="263">263</th><td><i> *   runnable_load_avg = \Sum se-&gt;avg.runable_load_avg</i></td></tr>
+<tr><th id="264">264</th><td><i> */</i></td></tr>
+<tr><th id="265">265</th><td></td></tr>
+<tr><th id="266">266</th><td><em>int</em> <dfn class="decl def fn" id="__update_load_avg_blocked_se" title='__update_load_avg_blocked_se' data-ref="__update_load_avg_blocked_se" data-ref-filename="__update_load_avg_blocked_se">__update_load_avg_blocked_se</dfn>(<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col7 decl" id="27now" title='now' data-type='u64' data-ref="27now" data-ref-filename="27now">now</dfn>, <b>struct</b> <a class="type" href="../../include/linux/sched.h.html#sched_entity" title='sched_entity' data-ref="sched_entity" data-ref-filename="sched_entity">sched_entity</a> *<dfn class="local col8 decl" id="28se" title='se' data-type='struct sched_entity *' data-ref="28se" data-ref-filename="28se">se</dfn>)</td></tr>
+<tr><th id="267">267</th><td>{</td></tr>
+<tr><th id="268">268</th><td>	<b>if</b> (<a class="tu ref fn" href="#___update_load_sum" title='___update_load_sum' data-use='c' data-ref="___update_load_sum" data-ref-filename="___update_load_sum">___update_load_sum</a>(<a class="local col7 ref" href="#27now" title='now' data-ref="27now" data-ref-filename="27now">now</a>, &amp;<a class="local col8 ref" href="#28se" title='se' data-ref="28se" data-ref-filename="28se">se</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_entity::avg" title='sched_entity::avg' data-ref="sched_entity::avg" data-ref-filename="sched_entity..avg">avg</a>, <var>0</var>, <var>0</var>, <var>0</var>)) {</td></tr>
+<tr><th id="269">269</th><td>		<a class="tu ref fn" href="#___update_load_avg" title='___update_load_avg' data-use='c' data-ref="___update_load_avg" data-ref-filename="___update_load_avg">___update_load_avg</a>(&amp;<a class="local col8 ref" href="#28se" title='se' data-ref="28se" data-ref-filename="28se">se</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_entity::avg" title='sched_entity::avg' data-ref="sched_entity::avg" data-ref-filename="sched_entity..avg">avg</a>, <a class="ref fn" href="sched.h.html#se_weight" title='se_weight' data-ref="se_weight" data-ref-filename="se_weight">se_weight</a>(<a class="local col8 ref" href="#28se" title='se' data-ref="28se" data-ref-filename="28se">se</a>), <a class="ref fn" href="sched.h.html#se_runnable" title='se_runnable' data-ref="se_runnable" data-ref-filename="se_runnable">se_runnable</a>(<a class="local col8 ref" href="#28se" title='se' data-ref="28se" data-ref-filename="28se">se</a>));</td></tr>
+<tr><th id="270">270</th><td>		<a class="ref fn" href="../../include/trace/events/sched.h.html#620" title='trace_pelt_se_tp' data-ref="trace_pelt_se_tp" data-ref-filename="trace_pelt_se_tp">trace_pelt_se_tp</a>(<a class="local col8 ref" href="#28se" title='se' data-ref="28se" data-ref-filename="28se">se</a>);</td></tr>
+<tr><th id="271">271</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="272">272</th><td>	}</td></tr>
+<tr><th id="273">273</th><td></td></tr>
+<tr><th id="274">274</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="275">275</th><td>}</td></tr>
+<tr><th id="276">276</th><td></td></tr>
+<tr><th id="277">277</th><td><em>int</em> <dfn class="decl def fn" id="__update_load_avg_se" title='__update_load_avg_se' data-ref="__update_load_avg_se" data-ref-filename="__update_load_avg_se">__update_load_avg_se</dfn>(<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col9 decl" id="29now" title='now' data-type='u64' data-ref="29now" data-ref-filename="29now">now</dfn>, <b>struct</b> <a class="type" href="sched.h.html#cfs_rq" title='cfs_rq' data-ref="cfs_rq" data-ref-filename="cfs_rq">cfs_rq</a> *<dfn class="local col0 decl" id="30cfs_rq" title='cfs_rq' data-type='struct cfs_rq *' data-ref="30cfs_rq" data-ref-filename="30cfs_rq">cfs_rq</dfn>, <b>struct</b> <a class="type" href="../../include/linux/sched.h.html#sched_entity" title='sched_entity' data-ref="sched_entity" data-ref-filename="sched_entity">sched_entity</a> *<dfn class="local col1 decl" id="31se" title='se' data-type='struct sched_entity *' data-ref="31se" data-ref-filename="31se">se</dfn>)</td></tr>
+<tr><th id="278">278</th><td>{</td></tr>
+<tr><th id="279">279</th><td>	<b>if</b> (<a class="tu ref fn" href="#___update_load_sum" title='___update_load_sum' data-use='c' data-ref="___update_load_sum" data-ref-filename="___update_load_sum">___update_load_sum</a>(<a class="local col9 ref" href="#29now" title='now' data-ref="29now" data-ref-filename="29now">now</a>, &amp;<a class="local col1 ref" href="#31se" title='se' data-ref="31se" data-ref-filename="31se">se</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_entity::avg" title='sched_entity::avg' data-ref="sched_entity::avg" data-ref-filename="sched_entity..avg">avg</a>, !!<a class="local col1 ref" href="#31se" title='se' data-ref="31se" data-ref-filename="31se">se</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_entity::on_rq" title='sched_entity::on_rq' data-ref="sched_entity::on_rq" data-ref-filename="sched_entity..on_rq">on_rq</a>, !!<a class="local col1 ref" href="#31se" title='se' data-ref="31se" data-ref-filename="31se">se</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_entity::on_rq" title='sched_entity::on_rq' data-ref="sched_entity::on_rq" data-ref-filename="sched_entity..on_rq">on_rq</a>,</td></tr>
+<tr><th id="280">280</th><td>				<a class="local col0 ref" href="#30cfs_rq" title='cfs_rq' data-ref="30cfs_rq" data-ref-filename="30cfs_rq">cfs_rq</a>-&gt;<a class="ref field" href="sched.h.html#cfs_rq::curr" title='cfs_rq::curr' data-ref="cfs_rq::curr" data-ref-filename="cfs_rq..curr">curr</a> == <a class="local col1 ref" href="#31se" title='se' data-ref="31se" data-ref-filename="31se">se</a>)) {</td></tr>
+<tr><th id="281">281</th><td></td></tr>
+<tr><th id="282">282</th><td>		<a class="tu ref fn" href="#___update_load_avg" title='___update_load_avg' data-use='c' data-ref="___update_load_avg" data-ref-filename="___update_load_avg">___update_load_avg</a>(&amp;<a class="local col1 ref" href="#31se" title='se' data-ref="31se" data-ref-filename="31se">se</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_entity::avg" title='sched_entity::avg' data-ref="sched_entity::avg" data-ref-filename="sched_entity..avg">avg</a>, <a class="ref fn" href="sched.h.html#se_weight" title='se_weight' data-ref="se_weight" data-ref-filename="se_weight">se_weight</a>(<a class="local col1 ref" href="#31se" title='se' data-ref="31se" data-ref-filename="31se">se</a>), <a class="ref fn" href="sched.h.html#se_runnable" title='se_runnable' data-ref="se_runnable" data-ref-filename="se_runnable">se_runnable</a>(<a class="local col1 ref" href="#31se" title='se' data-ref="31se" data-ref-filename="31se">se</a>));</td></tr>
+<tr><th id="283">283</th><td>		<a class="ref fn" href="pelt.h.html#cfs_se_util_change" title='cfs_se_util_change' data-ref="cfs_se_util_change" data-ref-filename="cfs_se_util_change">cfs_se_util_change</a>(&amp;<a class="local col1 ref" href="#31se" title='se' data-ref="31se" data-ref-filename="31se">se</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#sched_entity::avg" title='sched_entity::avg' data-ref="sched_entity::avg" data-ref-filename="sched_entity..avg">avg</a>);</td></tr>
+<tr><th id="284">284</th><td>		<a class="ref fn" href="../../include/trace/events/sched.h.html#620" title='trace_pelt_se_tp' data-ref="trace_pelt_se_tp" data-ref-filename="trace_pelt_se_tp">trace_pelt_se_tp</a>(<a class="local col1 ref" href="#31se" title='se' data-ref="31se" data-ref-filename="31se">se</a>);</td></tr>
+<tr><th id="285">285</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="286">286</th><td>	}</td></tr>
+<tr><th id="287">287</th><td></td></tr>
+<tr><th id="288">288</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="289">289</th><td>}</td></tr>
+<tr><th id="290">290</th><td></td></tr>
+<tr><th id="291">291</th><td><em>int</em> <dfn class="decl def fn" id="__update_load_avg_cfs_rq" title='__update_load_avg_cfs_rq' data-ref="__update_load_avg_cfs_rq" data-ref-filename="__update_load_avg_cfs_rq">__update_load_avg_cfs_rq</dfn>(<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col2 decl" id="32now" title='now' data-type='u64' data-ref="32now" data-ref-filename="32now">now</dfn>, <b>struct</b> <a class="type" href="sched.h.html#cfs_rq" title='cfs_rq' data-ref="cfs_rq" data-ref-filename="cfs_rq">cfs_rq</a> *<dfn class="local col3 decl" id="33cfs_rq" title='cfs_rq' data-type='struct cfs_rq *' data-ref="33cfs_rq" data-ref-filename="33cfs_rq">cfs_rq</dfn>)</td></tr>
+<tr><th id="292">292</th><td>{</td></tr>
+<tr><th id="293">293</th><td>	<b>if</b> (<a class="tu ref fn" href="#___update_load_sum" title='___update_load_sum' data-use='c' data-ref="___update_load_sum" data-ref-filename="___update_load_sum">___update_load_sum</a>(<a class="local col2 ref" href="#32now" title='now' data-ref="32now" data-ref-filename="32now">now</a>, &amp;<a class="local col3 ref" href="#33cfs_rq" title='cfs_rq' data-ref="33cfs_rq" data-ref-filename="33cfs_rq">cfs_rq</a>-&gt;<a class="ref field" href="sched.h.html#cfs_rq::avg" title='cfs_rq::avg' data-ref="cfs_rq::avg" data-ref-filename="cfs_rq..avg">avg</a>,</td></tr>
+<tr><th id="294">294</th><td>				<a class="macro" href="sched.h.html#121" title="((cfs_rq-&gt;load.weight) &gt;&gt; 10)" data-ref="_M/scale_load_down">scale_load_down</a>(<a class="local col3 ref" href="#33cfs_rq" title='cfs_rq' data-ref="33cfs_rq" data-ref-filename="33cfs_rq">cfs_rq</a>-&gt;<a class="ref field" href="sched.h.html#cfs_rq::load" title='cfs_rq::load' data-ref="cfs_rq::load" data-ref-filename="cfs_rq..load">load</a>.<a class="ref field" href="../../include/linux/sched.h.html#load_weight::weight" title='load_weight::weight' data-ref="load_weight::weight" data-ref-filename="load_weight..weight">weight</a>),</td></tr>
+<tr><th id="295">295</th><td>				<a class="macro" href="sched.h.html#121" title="((cfs_rq-&gt;runnable_weight) &gt;&gt; 10)" data-ref="_M/scale_load_down">scale_load_down</a>(<a class="local col3 ref" href="#33cfs_rq" title='cfs_rq' data-ref="33cfs_rq" data-ref-filename="33cfs_rq">cfs_rq</a>-&gt;<a class="ref field" href="sched.h.html#cfs_rq::runnable_weight" title='cfs_rq::runnable_weight' data-ref="cfs_rq::runnable_weight" data-ref-filename="cfs_rq..runnable_weight">runnable_weight</a>),</td></tr>
+<tr><th id="296">296</th><td>				<a class="local col3 ref" href="#33cfs_rq" title='cfs_rq' data-ref="33cfs_rq" data-ref-filename="33cfs_rq">cfs_rq</a>-&gt;<a class="ref field" href="sched.h.html#cfs_rq::curr" title='cfs_rq::curr' data-ref="cfs_rq::curr" data-ref-filename="cfs_rq..curr">curr</a> != <a class="macro" href="../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>)) {</td></tr>
+<tr><th id="297">297</th><td></td></tr>
+<tr><th id="298">298</th><td>		<a class="tu ref fn" href="#___update_load_avg" title='___update_load_avg' data-use='c' data-ref="___update_load_avg" data-ref-filename="___update_load_avg">___update_load_avg</a>(&amp;<a class="local col3 ref" href="#33cfs_rq" title='cfs_rq' data-ref="33cfs_rq" data-ref-filename="33cfs_rq">cfs_rq</a>-&gt;<a class="ref field" href="sched.h.html#cfs_rq::avg" title='cfs_rq::avg' data-ref="cfs_rq::avg" data-ref-filename="cfs_rq..avg">avg</a>, <var>1</var>, <var>1</var>);</td></tr>
+<tr><th id="299">299</th><td>		<a class="ref fn" href="../../include/trace/events/sched.h.html#604" title='trace_pelt_cfs_tp' data-ref="trace_pelt_cfs_tp" data-ref-filename="trace_pelt_cfs_tp">trace_pelt_cfs_tp</a>(<a class="local col3 ref" href="#33cfs_rq" title='cfs_rq' data-ref="33cfs_rq" data-ref-filename="33cfs_rq">cfs_rq</a>);</td></tr>
+<tr><th id="300">300</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="301">301</th><td>	}</td></tr>
+<tr><th id="302">302</th><td></td></tr>
+<tr><th id="303">303</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="304">304</th><td>}</td></tr>
+<tr><th id="305">305</th><td></td></tr>
+<tr><th id="306">306</th><td><i>/*</i></td></tr>
+<tr><th id="307">307</th><td><i> * rt_rq:</i></td></tr>
+<tr><th id="308">308</th><td><i> *</i></td></tr>
+<tr><th id="309">309</th><td><i> *   util_sum = \Sum se-&gt;avg.util_sum but se-&gt;avg.util_sum is not tracked</i></td></tr>
+<tr><th id="310">310</th><td><i> *   util_sum = cpu_scale * load_sum</i></td></tr>
+<tr><th id="311">311</th><td><i> *   runnable_load_sum = load_sum</i></td></tr>
+<tr><th id="312">312</th><td><i> *</i></td></tr>
+<tr><th id="313">313</th><td><i> *   load_avg and runnable_load_avg are not supported and meaningless.</i></td></tr>
+<tr><th id="314">314</th><td><i> *</i></td></tr>
+<tr><th id="315">315</th><td><i> */</i></td></tr>
+<tr><th id="316">316</th><td></td></tr>
+<tr><th id="317">317</th><td><em>int</em> <dfn class="decl def fn" id="update_rt_rq_load_avg" title='update_rt_rq_load_avg' data-ref="update_rt_rq_load_avg" data-ref-filename="update_rt_rq_load_avg">update_rt_rq_load_avg</dfn>(<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col4 decl" id="34now" title='now' data-type='u64' data-ref="34now" data-ref-filename="34now">now</dfn>, <b>struct</b> <a class="type" href="sched.h.html#rq" title='rq' data-ref="rq" data-ref-filename="rq">rq</a> *<dfn class="local col5 decl" id="35rq" title='rq' data-type='struct rq *' data-ref="35rq" data-ref-filename="35rq">rq</dfn>, <em>int</em> <dfn class="local col6 decl" id="36running" title='running' data-type='int' data-ref="36running" data-ref-filename="36running">running</dfn>)</td></tr>
+<tr><th id="318">318</th><td>{</td></tr>
+<tr><th id="319">319</th><td>	<b>if</b> (<a class="tu ref fn" href="#___update_load_sum" title='___update_load_sum' data-use='c' data-ref="___update_load_sum" data-ref-filename="___update_load_sum">___update_load_sum</a>(<a class="local col4 ref" href="#34now" title='now' data-ref="34now" data-ref-filename="34now">now</a>, &amp;<a class="local col5 ref" href="#35rq" title='rq' data-ref="35rq" data-ref-filename="35rq">rq</a>-&gt;<a class="ref field" href="sched.h.html#rq::avg_rt" title='rq::avg_rt' data-ref="rq::avg_rt" data-ref-filename="rq..avg_rt">avg_rt</a>,</td></tr>
+<tr><th id="320">320</th><td>				<a class="local col6 ref" href="#36running" title='running' data-ref="36running" data-ref-filename="36running">running</a>,</td></tr>
+<tr><th id="321">321</th><td>				<a class="local col6 ref" href="#36running" title='running' data-ref="36running" data-ref-filename="36running">running</a>,</td></tr>
+<tr><th id="322">322</th><td>				<a class="local col6 ref" href="#36running" title='running' data-ref="36running" data-ref-filename="36running">running</a>)) {</td></tr>
+<tr><th id="323">323</th><td></td></tr>
+<tr><th id="324">324</th><td>		<a class="tu ref fn" href="#___update_load_avg" title='___update_load_avg' data-use='c' data-ref="___update_load_avg" data-ref-filename="___update_load_avg">___update_load_avg</a>(&amp;<a class="local col5 ref" href="#35rq" title='rq' data-ref="35rq" data-ref-filename="35rq">rq</a>-&gt;<a class="ref field" href="sched.h.html#rq::avg_rt" title='rq::avg_rt' data-ref="rq::avg_rt" data-ref-filename="rq..avg_rt">avg_rt</a>, <var>1</var>, <var>1</var>);</td></tr>
+<tr><th id="325">325</th><td>		<a class="ref fn" href="../../include/trace/events/sched.h.html#608" title='trace_pelt_rt_tp' data-ref="trace_pelt_rt_tp" data-ref-filename="trace_pelt_rt_tp">trace_pelt_rt_tp</a>(<a class="local col5 ref" href="#35rq" title='rq' data-ref="35rq" data-ref-filename="35rq">rq</a>);</td></tr>
+<tr><th id="326">326</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="327">327</th><td>	}</td></tr>
+<tr><th id="328">328</th><td></td></tr>
+<tr><th id="329">329</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="330">330</th><td>}</td></tr>
+<tr><th id="331">331</th><td></td></tr>
+<tr><th id="332">332</th><td><i>/*</i></td></tr>
+<tr><th id="333">333</th><td><i> * dl_rq:</i></td></tr>
+<tr><th id="334">334</th><td><i> *</i></td></tr>
+<tr><th id="335">335</th><td><i> *   util_sum = \Sum se-&gt;avg.util_sum but se-&gt;avg.util_sum is not tracked</i></td></tr>
+<tr><th id="336">336</th><td><i> *   util_sum = cpu_scale * load_sum</i></td></tr>
+<tr><th id="337">337</th><td><i> *   runnable_load_sum = load_sum</i></td></tr>
+<tr><th id="338">338</th><td><i> *</i></td></tr>
+<tr><th id="339">339</th><td><i> */</i></td></tr>
+<tr><th id="340">340</th><td></td></tr>
+<tr><th id="341">341</th><td><em>int</em> <dfn class="decl def fn" id="update_dl_rq_load_avg" title='update_dl_rq_load_avg' data-ref="update_dl_rq_load_avg" data-ref-filename="update_dl_rq_load_avg">update_dl_rq_load_avg</dfn>(<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col7 decl" id="37now" title='now' data-type='u64' data-ref="37now" data-ref-filename="37now">now</dfn>, <b>struct</b> <a class="type" href="sched.h.html#rq" title='rq' data-ref="rq" data-ref-filename="rq">rq</a> *<dfn class="local col8 decl" id="38rq" title='rq' data-type='struct rq *' data-ref="38rq" data-ref-filename="38rq">rq</dfn>, <em>int</em> <dfn class="local col9 decl" id="39running" title='running' data-type='int' data-ref="39running" data-ref-filename="39running">running</dfn>)</td></tr>
+<tr><th id="342">342</th><td>{</td></tr>
+<tr><th id="343">343</th><td>	<b>if</b> (<a class="tu ref fn" href="#___update_load_sum" title='___update_load_sum' data-use='c' data-ref="___update_load_sum" data-ref-filename="___update_load_sum">___update_load_sum</a>(<a class="local col7 ref" href="#37now" title='now' data-ref="37now" data-ref-filename="37now">now</a>, &amp;<a class="local col8 ref" href="#38rq" title='rq' data-ref="38rq" data-ref-filename="38rq">rq</a>-&gt;<a class="ref field" href="sched.h.html#rq::avg_dl" title='rq::avg_dl' data-ref="rq::avg_dl" data-ref-filename="rq..avg_dl">avg_dl</a>,</td></tr>
+<tr><th id="344">344</th><td>				<a class="local col9 ref" href="#39running" title='running' data-ref="39running" data-ref-filename="39running">running</a>,</td></tr>
+<tr><th id="345">345</th><td>				<a class="local col9 ref" href="#39running" title='running' data-ref="39running" data-ref-filename="39running">running</a>,</td></tr>
+<tr><th id="346">346</th><td>				<a class="local col9 ref" href="#39running" title='running' data-ref="39running" data-ref-filename="39running">running</a>)) {</td></tr>
+<tr><th id="347">347</th><td></td></tr>
+<tr><th id="348">348</th><td>		<a class="tu ref fn" href="#___update_load_avg" title='___update_load_avg' data-use='c' data-ref="___update_load_avg" data-ref-filename="___update_load_avg">___update_load_avg</a>(&amp;<a class="local col8 ref" href="#38rq" title='rq' data-ref="38rq" data-ref-filename="38rq">rq</a>-&gt;<a class="ref field" href="sched.h.html#rq::avg_dl" title='rq::avg_dl' data-ref="rq::avg_dl" data-ref-filename="rq..avg_dl">avg_dl</a>, <var>1</var>, <var>1</var>);</td></tr>
+<tr><th id="349">349</th><td>		<a class="ref fn" href="../../include/trace/events/sched.h.html#612" title='trace_pelt_dl_tp' data-ref="trace_pelt_dl_tp" data-ref-filename="trace_pelt_dl_tp">trace_pelt_dl_tp</a>(<a class="local col8 ref" href="#38rq" title='rq' data-ref="38rq" data-ref-filename="38rq">rq</a>);</td></tr>
+<tr><th id="350">350</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="351">351</th><td>	}</td></tr>
+<tr><th id="352">352</th><td></td></tr>
+<tr><th id="353">353</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="354">354</th><td>}</td></tr>
+<tr><th id="355">355</th><td></td></tr>
+<tr><th id="356">356</th><td><u>#<span data-ppcond="356">ifdef</span> <span class="macro" data-ref="_M/CONFIG_HAVE_SCHED_AVG_IRQ">CONFIG_HAVE_SCHED_AVG_IRQ</span></u></td></tr>
+<tr><th id="357">357</th><td><i>/*</i></td></tr>
+<tr><th id="358">358</th><td><i> * irq:</i></td></tr>
+<tr><th id="359">359</th><td><i> *</i></td></tr>
+<tr><th id="360">360</th><td><i> *   util_sum = \Sum se-&gt;avg.util_sum but se-&gt;avg.util_sum is not tracked</i></td></tr>
+<tr><th id="361">361</th><td><i> *   util_sum = cpu_scale * load_sum</i></td></tr>
+<tr><th id="362">362</th><td><i> *   runnable_load_sum = load_sum</i></td></tr>
+<tr><th id="363">363</th><td><i> *</i></td></tr>
+<tr><th id="364">364</th><td><i> */</i></td></tr>
+<tr><th id="365">365</th><td></td></tr>
+<tr><th id="366">366</th><td><em>int</em> update_irq_load_avg(<b>struct</b> rq *rq, u64 running)</td></tr>
+<tr><th id="367">367</th><td>{</td></tr>
+<tr><th id="368">368</th><td>	<em>int</em> ret = <var>0</var>;</td></tr>
+<tr><th id="369">369</th><td></td></tr>
+<tr><th id="370">370</th><td>	<i>/*</i></td></tr>
+<tr><th id="371">371</th><td><i>	 * We can't use clock_pelt because irq time is not accounted in</i></td></tr>
+<tr><th id="372">372</th><td><i>	 * clock_task. Instead we directly scale the running time to</i></td></tr>
+<tr><th id="373">373</th><td><i>	 * reflect the real amount of computation</i></td></tr>
+<tr><th id="374">374</th><td><i>	 */</i></td></tr>
+<tr><th id="375">375</th><td>	running = cap_scale(running, arch_scale_freq_capacity(cpu_of(rq)));</td></tr>
+<tr><th id="376">376</th><td>	running = cap_scale(running, arch_scale_cpu_capacity(cpu_of(rq)));</td></tr>
+<tr><th id="377">377</th><td></td></tr>
+<tr><th id="378">378</th><td>	<i>/*</i></td></tr>
+<tr><th id="379">379</th><td><i>	 * We know the time that has been used by interrupt since last update</i></td></tr>
+<tr><th id="380">380</th><td><i>	 * but we don't when. Let be pessimistic and assume that interrupt has</i></td></tr>
+<tr><th id="381">381</th><td><i>	 * happened just before the update. This is not so far from reality</i></td></tr>
+<tr><th id="382">382</th><td><i>	 * because interrupt will most probably wake up task and trig an update</i></td></tr>
+<tr><th id="383">383</th><td><i>	 * of rq clock during which the metric is updated.</i></td></tr>
+<tr><th id="384">384</th><td><i>	 * We start to decay with normal context time and then we add the</i></td></tr>
+<tr><th id="385">385</th><td><i>	 * interrupt context time.</i></td></tr>
+<tr><th id="386">386</th><td><i>	 * We can safely remove running from rq-&gt;clock because</i></td></tr>
+<tr><th id="387">387</th><td><i>	 * rq-&gt;clock += delta with delta &gt;= running</i></td></tr>
+<tr><th id="388">388</th><td><i>	 */</i></td></tr>
+<tr><th id="389">389</th><td>	ret = ___update_load_sum(rq-&gt;clock - running, &amp;rq-&gt;avg_irq,</td></tr>
+<tr><th id="390">390</th><td>				<var>0</var>,</td></tr>
+<tr><th id="391">391</th><td>				<var>0</var>,</td></tr>
+<tr><th id="392">392</th><td>				<var>0</var>);</td></tr>
+<tr><th id="393">393</th><td>	ret += ___update_load_sum(rq-&gt;clock, &amp;rq-&gt;avg_irq,</td></tr>
+<tr><th id="394">394</th><td>				<var>1</var>,</td></tr>
+<tr><th id="395">395</th><td>				<var>1</var>,</td></tr>
+<tr><th id="396">396</th><td>				<var>1</var>);</td></tr>
+<tr><th id="397">397</th><td></td></tr>
+<tr><th id="398">398</th><td>	<b>if</b> (ret) {</td></tr>
+<tr><th id="399">399</th><td>		___update_load_avg(&amp;rq-&gt;avg_irq, <var>1</var>, <var>1</var>);</td></tr>
+<tr><th id="400">400</th><td>		trace_pelt_irq_tp(rq);</td></tr>
+<tr><th id="401">401</th><td>	}</td></tr>
+<tr><th id="402">402</th><td></td></tr>
+<tr><th id="403">403</th><td>	<b>return</b> ret;</td></tr>
+<tr><th id="404">404</th><td>}</td></tr>
+<tr><th id="405">405</th><td><u>#<span data-ppcond="356">endif</span></u></td></tr>
+<tr><th id="406">406</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

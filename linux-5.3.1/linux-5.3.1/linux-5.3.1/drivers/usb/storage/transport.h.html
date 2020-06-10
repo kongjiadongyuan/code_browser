@@ -1,0 +1,106 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>transport.h source code [linux-5.3.1/drivers/usb/storage/transport.h] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/drivers/usb/storage/transport.h'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>linux-5.3.1</a>/<a href='../..'>drivers</a>/<a href='..'>usb</a>/<a href='./'>storage</a>/<a href='transport.h.html'>transport.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0+</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * Driver for USB Mass Storage compliant devices</i></td></tr>
+<tr><th id="4">4</th><td><i> * Transport Functions Header File</i></td></tr>
+<tr><th id="5">5</th><td><i> *</i></td></tr>
+<tr><th id="6">6</th><td><i> * Current development and maintenance by:</i></td></tr>
+<tr><th id="7">7</th><td><i> *   (c) 1999, 2000 Matthew Dharm (mdharm-usb@one-eyed-alien.net)</i></td></tr>
+<tr><th id="8">8</th><td><i> *</i></td></tr>
+<tr><th id="9">9</th><td><i> * This driver is based on the 'USB Mass Storage Class' document. This</i></td></tr>
+<tr><th id="10">10</th><td><i> * describes in detail the protocol used to communicate with such</i></td></tr>
+<tr><th id="11">11</th><td><i> * devices.  Clearly, the designers had SCSI and ATAPI commands in</i></td></tr>
+<tr><th id="12">12</th><td><i> * mind when they created this document.  The commands are all very</i></td></tr>
+<tr><th id="13">13</th><td><i> * similar to commands in the SCSI-II and ATAPI specifications.</i></td></tr>
+<tr><th id="14">14</th><td><i> *</i></td></tr>
+<tr><th id="15">15</th><td><i> * It is important to note that in a number of cases this class</i></td></tr>
+<tr><th id="16">16</th><td><i> * exhibits class-specific exemptions from the USB specification.</i></td></tr>
+<tr><th id="17">17</th><td><i> * Notably the usage of NAK, STALL and ACK differs from the norm, in</i></td></tr>
+<tr><th id="18">18</th><td><i> * that they are used to communicate wait, failed and OK on commands.</i></td></tr>
+<tr><th id="19">19</th><td><i> *</i></td></tr>
+<tr><th id="20">20</th><td><i> * Also, for certain devices, the interrupt endpoint is used to convey</i></td></tr>
+<tr><th id="21">21</th><td><i> * status of a command.</i></td></tr>
+<tr><th id="22">22</th><td><i> */</i></td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td><u>#<span data-ppcond="24">ifndef</span> <span class="macro" data-ref="_M/_TRANSPORT_H_">_TRANSPORT_H_</span></u></td></tr>
+<tr><th id="25">25</th><td><u>#define <dfn class="macro" id="_M/_TRANSPORT_H_" data-ref="_M/_TRANSPORT_H_">_TRANSPORT_H_</dfn></u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../../../include/linux/blkdev.h.html">&lt;linux/blkdev.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td></td></tr>
+<tr><th id="29">29</th><td><i>/*</i></td></tr>
+<tr><th id="30">30</th><td><i> * usb_stor_bulk_transfer_xxx() return codes, in order of severity</i></td></tr>
+<tr><th id="31">31</th><td><i> */</i></td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td><u>#define <dfn class="macro" id="_M/USB_STOR_XFER_GOOD" data-ref="_M/USB_STOR_XFER_GOOD">USB_STOR_XFER_GOOD</dfn>	0	/* good transfer                 */</u></td></tr>
+<tr><th id="34">34</th><td><u>#define <dfn class="macro" id="_M/USB_STOR_XFER_SHORT" data-ref="_M/USB_STOR_XFER_SHORT">USB_STOR_XFER_SHORT</dfn>	1	/* transferred less than expected */</u></td></tr>
+<tr><th id="35">35</th><td><u>#define <dfn class="macro" id="_M/USB_STOR_XFER_STALLED" data-ref="_M/USB_STOR_XFER_STALLED">USB_STOR_XFER_STALLED</dfn>	2	/* endpoint stalled              */</u></td></tr>
+<tr><th id="36">36</th><td><u>#define <dfn class="macro" id="_M/USB_STOR_XFER_LONG" data-ref="_M/USB_STOR_XFER_LONG">USB_STOR_XFER_LONG</dfn>	3	/* device tried to send too much */</u></td></tr>
+<tr><th id="37">37</th><td><u>#define <dfn class="macro" id="_M/USB_STOR_XFER_ERROR" data-ref="_M/USB_STOR_XFER_ERROR">USB_STOR_XFER_ERROR</dfn>	4	/* transfer died in the middle   */</u></td></tr>
+<tr><th id="38">38</th><td></td></tr>
+<tr><th id="39">39</th><td><i>/*</i></td></tr>
+<tr><th id="40">40</th><td><i> * Transport return codes</i></td></tr>
+<tr><th id="41">41</th><td><i> */</i></td></tr>
+<tr><th id="42">42</th><td></td></tr>
+<tr><th id="43">43</th><td><u>#define <dfn class="macro" id="_M/USB_STOR_TRANSPORT_GOOD" data-ref="_M/USB_STOR_TRANSPORT_GOOD">USB_STOR_TRANSPORT_GOOD</dfn>	   0   /* Transport good, command good	   */</u></td></tr>
+<tr><th id="44">44</th><td><u>#define <dfn class="macro" id="_M/USB_STOR_TRANSPORT_FAILED" data-ref="_M/USB_STOR_TRANSPORT_FAILED">USB_STOR_TRANSPORT_FAILED</dfn>  1   /* Transport good, command failed   */</u></td></tr>
+<tr><th id="45">45</th><td><u>#define <dfn class="macro" id="_M/USB_STOR_TRANSPORT_NO_SENSE" data-ref="_M/USB_STOR_TRANSPORT_NO_SENSE">USB_STOR_TRANSPORT_NO_SENSE</dfn> 2  /* Command failed, no auto-sense    */</u></td></tr>
+<tr><th id="46">46</th><td><u>#define <dfn class="macro" id="_M/USB_STOR_TRANSPORT_ERROR" data-ref="_M/USB_STOR_TRANSPORT_ERROR">USB_STOR_TRANSPORT_ERROR</dfn>   3   /* Transport bad (i.e. device dead) */</u></td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td><i>/*</i></td></tr>
+<tr><th id="49">49</th><td><i> * We used to have USB_STOR_XFER_ABORTED and USB_STOR_TRANSPORT_ABORTED</i></td></tr>
+<tr><th id="50">50</th><td><i> * return codes.  But now the transport and low-level transfer routines</i></td></tr>
+<tr><th id="51">51</th><td><i> * treat an abort as just another error (-ENOENT for a cancelled URB).</i></td></tr>
+<tr><th id="52">52</th><td><i> * It is up to the invoke_transport() function to test for aborts and</i></td></tr>
+<tr><th id="53">53</th><td><i> * distinguish them from genuine communication errors.</i></td></tr>
+<tr><th id="54">54</th><td><i> */</i></td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td><i>/*</i></td></tr>
+<tr><th id="57">57</th><td><i> * CBI accept device specific command</i></td></tr>
+<tr><th id="58">58</th><td><i> */</i></td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td><u>#define <dfn class="macro" id="_M/US_CBI_ADSC" data-ref="_M/US_CBI_ADSC">US_CBI_ADSC</dfn>		0</u></td></tr>
+<tr><th id="61">61</th><td></td></tr>
+<tr><th id="62">62</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="usb_stor_CB_transport" title='usb_stor_CB_transport' data-ref="usb_stor_CB_transport" data-ref-filename="usb_stor_CB_transport">usb_stor_CB_transport</dfn>(<b>struct</b> <a class="type" href="../../../include/scsi/scsi.h.html#scsi_cmnd" title='scsi_cmnd' data-ref="scsi_cmnd" data-ref-filename="scsi_cmnd">scsi_cmnd</a> *, <b>struct</b> <a class="type" href="usb.h.html#us_data" title='us_data' data-ref="us_data" data-ref-filename="us_data">us_data</a>*);</td></tr>
+<tr><th id="63">63</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="usb_stor_CB_reset" title='usb_stor_CB_reset' data-ref="usb_stor_CB_reset" data-ref-filename="usb_stor_CB_reset">usb_stor_CB_reset</dfn>(<b>struct</b> <a class="type" href="usb.h.html#us_data" title='us_data' data-ref="us_data" data-ref-filename="us_data">us_data</a>*);</td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="usb_stor_Bulk_transport" title='usb_stor_Bulk_transport' data-ref="usb_stor_Bulk_transport" data-ref-filename="usb_stor_Bulk_transport">usb_stor_Bulk_transport</dfn>(<b>struct</b> <a class="type" href="../../../include/scsi/scsi.h.html#scsi_cmnd" title='scsi_cmnd' data-ref="scsi_cmnd" data-ref-filename="scsi_cmnd">scsi_cmnd</a> *, <b>struct</b> <a class="type" href="usb.h.html#us_data" title='us_data' data-ref="us_data" data-ref-filename="us_data">us_data</a>*);</td></tr>
+<tr><th id="66">66</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="usb_stor_Bulk_max_lun" title='usb_stor_Bulk_max_lun' data-ref="usb_stor_Bulk_max_lun" data-ref-filename="usb_stor_Bulk_max_lun">usb_stor_Bulk_max_lun</dfn>(<b>struct</b> <a class="type" href="usb.h.html#us_data" title='us_data' data-ref="us_data" data-ref-filename="us_data">us_data</a>*);</td></tr>
+<tr><th id="67">67</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="usb_stor_Bulk_reset" title='usb_stor_Bulk_reset' data-ref="usb_stor_Bulk_reset" data-ref-filename="usb_stor_Bulk_reset">usb_stor_Bulk_reset</dfn>(<b>struct</b> <a class="type" href="usb.h.html#us_data" title='us_data' data-ref="us_data" data-ref-filename="us_data">us_data</a>*);</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="usb_stor_invoke_transport" title='usb_stor_invoke_transport' data-ref="usb_stor_invoke_transport" data-ref-filename="usb_stor_invoke_transport">usb_stor_invoke_transport</dfn>(<b>struct</b> <a class="type" href="../../../include/scsi/scsi.h.html#scsi_cmnd" title='scsi_cmnd' data-ref="scsi_cmnd" data-ref-filename="scsi_cmnd">scsi_cmnd</a> *, <b>struct</b> <a class="type" href="usb.h.html#us_data" title='us_data' data-ref="us_data" data-ref-filename="us_data">us_data</a>*);</td></tr>
+<tr><th id="70">70</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="usb_stor_stop_transport" title='usb_stor_stop_transport' data-ref="usb_stor_stop_transport" data-ref-filename="usb_stor_stop_transport">usb_stor_stop_transport</dfn>(<b>struct</b> <a class="type" href="usb.h.html#us_data" title='us_data' data-ref="us_data" data-ref-filename="us_data">us_data</a>*);</td></tr>
+<tr><th id="71">71</th><td></td></tr>
+<tr><th id="72">72</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="usb_stor_control_msg" title='usb_stor_control_msg' data-ref="usb_stor_control_msg" data-ref-filename="usb_stor_control_msg">usb_stor_control_msg</dfn>(<b>struct</b> <a class="type" href="usb.h.html#us_data" title='us_data' data-ref="us_data" data-ref-filename="us_data">us_data</a> *<dfn class="local col2 decl" id="22us" title='us' data-type='struct us_data *' data-ref="22us" data-ref-filename="22us">us</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col3 decl" id="23pipe" title='pipe' data-type='unsigned int' data-ref="23pipe" data-ref-filename="23pipe">pipe</dfn>,</td></tr>
+<tr><th id="73">73</th><td>		<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="local col4 decl" id="24request" title='request' data-type='u8' data-ref="24request" data-ref-filename="24request">request</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="local col5 decl" id="25requesttype" title='requesttype' data-type='u8' data-ref="25requesttype" data-ref-filename="25requesttype">requesttype</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col6 decl" id="26value" title='value' data-type='u16' data-ref="26value" data-ref-filename="26value">value</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col7 decl" id="27index" title='index' data-type='u16' data-ref="27index" data-ref-filename="27index">index</dfn>,</td></tr>
+<tr><th id="74">74</th><td>		<em>void</em> *<dfn class="local col8 decl" id="28data" title='data' data-type='void *' data-ref="28data" data-ref-filename="28data">data</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col9 decl" id="29size" title='size' data-type='u16' data-ref="29size" data-ref-filename="29size">size</dfn>, <em>int</em> <dfn class="local col0 decl" id="30timeout" title='timeout' data-type='int' data-ref="30timeout" data-ref-filename="30timeout">timeout</dfn>);</td></tr>
+<tr><th id="75">75</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="usb_stor_clear_halt" title='usb_stor_clear_halt' data-ref="usb_stor_clear_halt" data-ref-filename="usb_stor_clear_halt">usb_stor_clear_halt</dfn>(<b>struct</b> <a class="type" href="usb.h.html#us_data" title='us_data' data-ref="us_data" data-ref-filename="us_data">us_data</a> *<dfn class="local col1 decl" id="31us" title='us' data-type='struct us_data *' data-ref="31us" data-ref-filename="31us">us</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col2 decl" id="32pipe" title='pipe' data-type='unsigned int' data-ref="32pipe" data-ref-filename="32pipe">pipe</dfn>);</td></tr>
+<tr><th id="76">76</th><td></td></tr>
+<tr><th id="77">77</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="usb_stor_ctrl_transfer" title='usb_stor_ctrl_transfer' data-ref="usb_stor_ctrl_transfer" data-ref-filename="usb_stor_ctrl_transfer">usb_stor_ctrl_transfer</dfn>(<b>struct</b> <a class="type" href="usb.h.html#us_data" title='us_data' data-ref="us_data" data-ref-filename="us_data">us_data</a> *<dfn class="local col3 decl" id="33us" title='us' data-type='struct us_data *' data-ref="33us" data-ref-filename="33us">us</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col4 decl" id="34pipe" title='pipe' data-type='unsigned int' data-ref="34pipe" data-ref-filename="34pipe">pipe</dfn>,</td></tr>
+<tr><th id="78">78</th><td>		<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="local col5 decl" id="35request" title='request' data-type='u8' data-ref="35request" data-ref-filename="35request">request</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="local col6 decl" id="36requesttype" title='requesttype' data-type='u8' data-ref="36requesttype" data-ref-filename="36requesttype">requesttype</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col7 decl" id="37value" title='value' data-type='u16' data-ref="37value" data-ref-filename="37value">value</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col8 decl" id="38index" title='index' data-type='u16' data-ref="38index" data-ref-filename="38index">index</dfn>,</td></tr>
+<tr><th id="79">79</th><td>		<em>void</em> *<dfn class="local col9 decl" id="39data" title='data' data-type='void *' data-ref="39data" data-ref-filename="39data">data</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col0 decl" id="40size" title='size' data-type='u16' data-ref="40size" data-ref-filename="40size">size</dfn>);</td></tr>
+<tr><th id="80">80</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="usb_stor_bulk_transfer_buf" title='usb_stor_bulk_transfer_buf' data-ref="usb_stor_bulk_transfer_buf" data-ref-filename="usb_stor_bulk_transfer_buf">usb_stor_bulk_transfer_buf</dfn>(<b>struct</b> <a class="type" href="usb.h.html#us_data" title='us_data' data-ref="us_data" data-ref-filename="us_data">us_data</a> *<dfn class="local col1 decl" id="41us" title='us' data-type='struct us_data *' data-ref="41us" data-ref-filename="41us">us</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col2 decl" id="42pipe" title='pipe' data-type='unsigned int' data-ref="42pipe" data-ref-filename="42pipe">pipe</dfn>,</td></tr>
+<tr><th id="81">81</th><td>		<em>void</em> *<dfn class="local col3 decl" id="43buf" title='buf' data-type='void *' data-ref="43buf" data-ref-filename="43buf">buf</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col4 decl" id="44length" title='length' data-type='unsigned int' data-ref="44length" data-ref-filename="44length">length</dfn>, <em>unsigned</em> <em>int</em> *<dfn class="local col5 decl" id="45act_len" title='act_len' data-type='unsigned int *' data-ref="45act_len" data-ref-filename="45act_len">act_len</dfn>);</td></tr>
+<tr><th id="82">82</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="usb_stor_bulk_transfer_sg" title='usb_stor_bulk_transfer_sg' data-ref="usb_stor_bulk_transfer_sg" data-ref-filename="usb_stor_bulk_transfer_sg">usb_stor_bulk_transfer_sg</dfn>(<b>struct</b> <a class="type" href="usb.h.html#us_data" title='us_data' data-ref="us_data" data-ref-filename="us_data">us_data</a> *<dfn class="local col6 decl" id="46us" title='us' data-type='struct us_data *' data-ref="46us" data-ref-filename="46us">us</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col7 decl" id="47pipe" title='pipe' data-type='unsigned int' data-ref="47pipe" data-ref-filename="47pipe">pipe</dfn>,</td></tr>
+<tr><th id="83">83</th><td>		<em>void</em> *<dfn class="local col8 decl" id="48buf" title='buf' data-type='void *' data-ref="48buf" data-ref-filename="48buf">buf</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col9 decl" id="49length" title='length' data-type='unsigned int' data-ref="49length" data-ref-filename="49length">length</dfn>, <em>int</em> <dfn class="local col0 decl" id="50use_sg" title='use_sg' data-type='int' data-ref="50use_sg" data-ref-filename="50use_sg">use_sg</dfn>, <em>int</em> *<dfn class="local col1 decl" id="51residual" title='residual' data-type='int *' data-ref="51residual" data-ref-filename="51residual">residual</dfn>);</td></tr>
+<tr><th id="84">84</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="usb_stor_bulk_srb" title='usb_stor_bulk_srb' data-ref="usb_stor_bulk_srb" data-ref-filename="usb_stor_bulk_srb">usb_stor_bulk_srb</dfn>(<b>struct</b> <a class="type" href="usb.h.html#us_data" title='us_data' data-ref="us_data" data-ref-filename="us_data">us_data</a>* <dfn class="local col2 decl" id="52us" title='us' data-type='struct us_data *' data-ref="52us" data-ref-filename="52us">us</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col3 decl" id="53pipe" title='pipe' data-type='unsigned int' data-ref="53pipe" data-ref-filename="53pipe">pipe</dfn>,</td></tr>
+<tr><th id="85">85</th><td>		<b>struct</b> <a class="type" href="../../../include/scsi/scsi.h.html#scsi_cmnd" title='scsi_cmnd' data-ref="scsi_cmnd" data-ref-filename="scsi_cmnd">scsi_cmnd</a>* <dfn class="local col4 decl" id="54srb" title='srb' data-type='struct scsi_cmnd *' data-ref="54srb" data-ref-filename="54srb">srb</dfn>);</td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="usb_stor_port_reset" title='usb_stor_port_reset' data-ref="usb_stor_port_reset" data-ref-filename="usb_stor_port_reset">usb_stor_port_reset</dfn>(<b>struct</b> <a class="type" href="usb.h.html#us_data" title='us_data' data-ref="us_data" data-ref-filename="us_data">us_data</a> *<dfn class="local col5 decl" id="55us" title='us' data-type='struct us_data *' data-ref="55us" data-ref-filename="55us">us</dfn>);</td></tr>
+<tr><th id="88">88</th><td><u>#<span data-ppcond="24">endif</span></u></td></tr>
+<tr><th id="89">89</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='initializers.c.html'>linux-5.3.1/drivers/usb/storage/initializers.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

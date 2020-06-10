@@ -1,0 +1,121 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>mc146818rtc.h source code [linux-5.3.1/arch/x86/include/asm/mc146818rtc.h] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/arch/x86/include/asm/mc146818rtc.h'; var root_path = '../../../../..'; var data_path = '../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../..'>linux-5.3.1</a>/<a href='../../..'>arch</a>/<a href='../..'>x86</a>/<a href='..'>include</a>/<a href='./'>asm</a>/<a href='mc146818rtc.h.html'>mc146818rtc.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0 */</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * Machine dependent access functions for RTC registers.</i></td></tr>
+<tr><th id="4">4</th><td><i> */</i></td></tr>
+<tr><th id="5">5</th><td><u>#<span data-ppcond="5">ifndef</span> <span class="macro" data-ref="_M/_ASM_X86_MC146818RTC_H">_ASM_X86_MC146818RTC_H</span></u></td></tr>
+<tr><th id="6">6</th><td><u>#define <dfn class="macro" id="_M/_ASM_X86_MC146818RTC_H" data-ref="_M/_ASM_X86_MC146818RTC_H">_ASM_X86_MC146818RTC_H</dfn></u></td></tr>
+<tr><th id="7">7</th><td></td></tr>
+<tr><th id="8">8</th><td><u>#include <a href="io.h.html">&lt;asm/io.h&gt;</a></u></td></tr>
+<tr><th id="9">9</th><td><u>#include <a href="processor.h.html">&lt;asm/processor.h&gt;</a></u></td></tr>
+<tr><th id="10">10</th><td></td></tr>
+<tr><th id="11">11</th><td><u>#<span data-ppcond="11">ifndef</span> <span class="macro" data-ref="_M/RTC_PORT">RTC_PORT</span></u></td></tr>
+<tr><th id="12">12</th><td><u>#define <dfn class="macro" id="_M/RTC_PORT" data-ref="_M/RTC_PORT">RTC_PORT</dfn>(x)	(0x70 + (x))</u></td></tr>
+<tr><th id="13">13</th><td><u>#define <dfn class="macro" id="_M/RTC_ALWAYS_BCD" data-ref="_M/RTC_ALWAYS_BCD">RTC_ALWAYS_BCD</dfn>	1	/* RTC operates in binary mode */</u></td></tr>
+<tr><th id="14">14</th><td><u>#<span data-ppcond="11">endif</span></u></td></tr>
+<tr><th id="15">15</th><td></td></tr>
+<tr><th id="16">16</th><td><u>#<span data-ppcond="16">if</span> defined(<span class="macro" data-ref="_M/CONFIG_X86_32">CONFIG_X86_32</span>)</u></td></tr>
+<tr><th id="17">17</th><td><i>/*</i></td></tr>
+<tr><th id="18">18</th><td><i> * This lock provides nmi access to the CMOS/RTC registers.  It has some</i></td></tr>
+<tr><th id="19">19</th><td><i> * special properties.  It is owned by a CPU and stores the index register</i></td></tr>
+<tr><th id="20">20</th><td><i> * currently being accessed (if owned).  The idea here is that it works</i></td></tr>
+<tr><th id="21">21</th><td><i> * like a normal lock (normally).  However, in an NMI, the NMI code will</i></td></tr>
+<tr><th id="22">22</th><td><i> * first check to see if its CPU owns the lock, meaning that the NMI</i></td></tr>
+<tr><th id="23">23</th><td><i> * interrupted during the read/write of the device.  If it does, it goes ahead</i></td></tr>
+<tr><th id="24">24</th><td><i> * and performs the access and then restores the index register.  If it does</i></td></tr>
+<tr><th id="25">25</th><td><i> * not, it locks normally.</i></td></tr>
+<tr><th id="26">26</th><td><i> *</i></td></tr>
+<tr><th id="27">27</th><td><i> * Note that since we are working with NMIs, we need this lock even in</i></td></tr>
+<tr><th id="28">28</th><td><i> * a non-SMP machine just to mark that the lock is owned.</i></td></tr>
+<tr><th id="29">29</th><td><i> *</i></td></tr>
+<tr><th id="30">30</th><td><i> * This only works with compare-and-swap.  There is no other way to</i></td></tr>
+<tr><th id="31">31</th><td><i> * atomically claim the lock and set the owner.</i></td></tr>
+<tr><th id="32">32</th><td><i> */</i></td></tr>
+<tr><th id="33">33</th><td><u>#include &lt;linux/smp.h&gt;</u></td></tr>
+<tr><th id="34">34</th><td><b>extern</b> <em>volatile</em> <em>unsigned</em> <em>long</em> cmos_lock;</td></tr>
+<tr><th id="35">35</th><td></td></tr>
+<tr><th id="36">36</th><td><i>/*</i></td></tr>
+<tr><th id="37">37</th><td><i> * All of these below must be called with interrupts off, preempt</i></td></tr>
+<tr><th id="38">38</th><td><i> * disabled, etc.</i></td></tr>
+<tr><th id="39">39</th><td><i> */</i></td></tr>
+<tr><th id="40">40</th><td></td></tr>
+<tr><th id="41">41</th><td><em>static</em> <b>inline</b> <em>void</em> lock_cmos(<em>unsigned</em> <em>char</em> reg)</td></tr>
+<tr><th id="42">42</th><td>{</td></tr>
+<tr><th id="43">43</th><td>	<em>unsigned</em> <em>long</em> new;</td></tr>
+<tr><th id="44">44</th><td>	new = ((smp_processor_id() + <var>1</var>) &lt;&lt; <var>8</var>) | reg;</td></tr>
+<tr><th id="45">45</th><td>	<b>for</b> (;;) {</td></tr>
+<tr><th id="46">46</th><td>		<b>if</b> (cmos_lock) {</td></tr>
+<tr><th id="47">47</th><td>			cpu_relax();</td></tr>
+<tr><th id="48">48</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="49">49</th><td>		}</td></tr>
+<tr><th id="50">50</th><td>		<b>if</b> (__cmpxchg(&amp;cmos_lock, <var>0</var>, new, <b>sizeof</b>(cmos_lock)) == <var>0</var>)</td></tr>
+<tr><th id="51">51</th><td>			<b>return</b>;</td></tr>
+<tr><th id="52">52</th><td>	}</td></tr>
+<tr><th id="53">53</th><td>}</td></tr>
+<tr><th id="54">54</th><td></td></tr>
+<tr><th id="55">55</th><td><em>static</em> <b>inline</b> <em>void</em> unlock_cmos(<em>void</em>)</td></tr>
+<tr><th id="56">56</th><td>{</td></tr>
+<tr><th id="57">57</th><td>	cmos_lock = <var>0</var>;</td></tr>
+<tr><th id="58">58</th><td>}</td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td><em>static</em> <b>inline</b> <em>int</em> do_i_have_lock_cmos(<em>void</em>)</td></tr>
+<tr><th id="61">61</th><td>{</td></tr>
+<tr><th id="62">62</th><td>	<b>return</b> (cmos_lock &gt;&gt; <var>8</var>) == (smp_processor_id() + <var>1</var>);</td></tr>
+<tr><th id="63">63</th><td>}</td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td><em>static</em> <b>inline</b> <em>unsigned</em> <em>char</em> current_lock_cmos_reg(<em>void</em>)</td></tr>
+<tr><th id="66">66</th><td>{</td></tr>
+<tr><th id="67">67</th><td>	<b>return</b> cmos_lock &amp; <var>0xff</var>;</td></tr>
+<tr><th id="68">68</th><td>}</td></tr>
+<tr><th id="69">69</th><td></td></tr>
+<tr><th id="70">70</th><td><u>#define lock_cmos_prefix(reg)			\</u></td></tr>
+<tr><th id="71">71</th><td><u>	do {					\</u></td></tr>
+<tr><th id="72">72</th><td><u>		unsigned long cmos_flags;	\</u></td></tr>
+<tr><th id="73">73</th><td><u>		local_irq_save(cmos_flags);	\</u></td></tr>
+<tr><th id="74">74</th><td><u>		lock_cmos(reg)</u></td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td><u>#define lock_cmos_suffix(reg)			\</u></td></tr>
+<tr><th id="77">77</th><td><u>	unlock_cmos();				\</u></td></tr>
+<tr><th id="78">78</th><td><u>	local_irq_restore(cmos_flags);		\</u></td></tr>
+<tr><th id="79">79</th><td><u>	} while (0)</u></td></tr>
+<tr><th id="80">80</th><td><u>#<span data-ppcond="16">else</span></u></td></tr>
+<tr><th id="81">81</th><td><u>#define <dfn class="macro" id="_M/lock_cmos_prefix" data-ref="_M/lock_cmos_prefix">lock_cmos_prefix</dfn>(reg) do {} while (0)</u></td></tr>
+<tr><th id="82">82</th><td><u>#define <dfn class="macro" id="_M/lock_cmos_suffix" data-ref="_M/lock_cmos_suffix">lock_cmos_suffix</dfn>(reg) do {} while (0)</u></td></tr>
+<tr><th id="83">83</th><td><u>#define <dfn class="macro" id="_M/lock_cmos" data-ref="_M/lock_cmos">lock_cmos</dfn>(reg) do { } while (0)</u></td></tr>
+<tr><th id="84">84</th><td><u>#define <dfn class="macro" id="_M/unlock_cmos" data-ref="_M/unlock_cmos">unlock_cmos</dfn>() do { } while (0)</u></td></tr>
+<tr><th id="85">85</th><td><u>#define <dfn class="macro" id="_M/do_i_have_lock_cmos" data-ref="_M/do_i_have_lock_cmos">do_i_have_lock_cmos</dfn>() 0</u></td></tr>
+<tr><th id="86">86</th><td><u>#define <dfn class="macro" id="_M/current_lock_cmos_reg" data-ref="_M/current_lock_cmos_reg">current_lock_cmos_reg</dfn>() 0</u></td></tr>
+<tr><th id="87">87</th><td><u>#<span data-ppcond="16">endif</span></u></td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td><i>/*</i></td></tr>
+<tr><th id="90">90</th><td><i> * The yet supported machines all access the RTC index register via</i></td></tr>
+<tr><th id="91">91</th><td><i> * an ISA port access but the way to access the date register differs ...</i></td></tr>
+<tr><th id="92">92</th><td><i> */</i></td></tr>
+<tr><th id="93">93</th><td><u>#define <dfn class="macro" id="_M/CMOS_READ" data-ref="_M/CMOS_READ">CMOS_READ</dfn>(addr) rtc_cmos_read(addr)</u></td></tr>
+<tr><th id="94">94</th><td><u>#define <dfn class="macro" id="_M/CMOS_WRITE" data-ref="_M/CMOS_WRITE">CMOS_WRITE</dfn>(val, addr) rtc_cmos_write(val, addr)</u></td></tr>
+<tr><th id="95">95</th><td><em>unsigned</em> <em>char</em> <dfn class="decl fn" id="rtc_cmos_read" title='rtc_cmos_read' data-ref="rtc_cmos_read" data-ref-filename="rtc_cmos_read">rtc_cmos_read</dfn>(<em>unsigned</em> <em>char</em> <dfn class="local col1 decl" id="1addr" title='addr' data-type='unsigned char' data-ref="1addr" data-ref-filename="1addr">addr</dfn>);</td></tr>
+<tr><th id="96">96</th><td><em>void</em> <dfn class="decl fn" id="rtc_cmos_write" title='rtc_cmos_write' data-ref="rtc_cmos_write" data-ref-filename="rtc_cmos_write">rtc_cmos_write</dfn>(<em>unsigned</em> <em>char</em> <dfn class="local col2 decl" id="2val" title='val' data-type='unsigned char' data-ref="2val" data-ref-filename="2val">val</dfn>, <em>unsigned</em> <em>char</em> <dfn class="local col3 decl" id="3addr" title='addr' data-type='unsigned char' data-ref="3addr" data-ref-filename="3addr">addr</dfn>);</td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="mach_set_rtc_mmss" title='mach_set_rtc_mmss' data-ref="mach_set_rtc_mmss" data-ref-filename="mach_set_rtc_mmss">mach_set_rtc_mmss</dfn>(<em>const</em> <b>struct</b> <a class="type" href="../../../../include/linux/time64.h.html#timespec64" title='timespec64' data-ref="timespec64" data-ref-filename="timespec64">timespec64</a> *<dfn class="local col4 decl" id="4now" title='now' data-type='const struct timespec64 *' data-ref="4now" data-ref-filename="4now">now</dfn>);</td></tr>
+<tr><th id="99">99</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="mach_get_cmos_time" title='mach_get_cmos_time' data-ref="mach_get_cmos_time" data-ref-filename="mach_get_cmos_time">mach_get_cmos_time</dfn>(<b>struct</b> <a class="type" href="../../../../include/linux/time64.h.html#timespec64" title='timespec64' data-ref="timespec64" data-ref-filename="timespec64">timespec64</a> *<dfn class="local col5 decl" id="5now" title='now' data-type='struct timespec64 *' data-ref="5now" data-ref-filename="5now">now</dfn>);</td></tr>
+<tr><th id="100">100</th><td></td></tr>
+<tr><th id="101">101</th><td><u>#define <dfn class="macro" id="_M/RTC_IRQ" data-ref="_M/RTC_IRQ">RTC_IRQ</dfn> 8</u></td></tr>
+<tr><th id="102">102</th><td></td></tr>
+<tr><th id="103">103</th><td><u>#<span data-ppcond="5">endif</span> /* _ASM_X86_MC146818RTC_H */</u></td></tr>
+<tr><th id="104">104</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../kernel/apic/apic.c.html'>linux-5.3.1/arch/x86/kernel/apic/apic.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

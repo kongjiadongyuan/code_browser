@@ -1,0 +1,7 @@
+<dec f='libc2.31/sysdeps/x86_64/nptl/tls.h' l='47' type='void *'/>
+<offset>128</offset>
+<doc f='libc2.31/sysdeps/x86_64/nptl/tls.h' l='47'>/* Pointer to the thread descriptor.  */</doc>
+<use f='libc2.31/csu/libc-tls.c' l='183' macro='1' u='w' c='__libc_setup_tls'/>
+<use f='libc2.31/elf/rtld.c' l='758' macro='1' u='w' c='init_tls'/>
+<use f='libc2.31/elf/rtld.c' l='2295' macro='1' u='w' c='dl_main'/>
+<use f='libc2.31/nptl/pthread_create.c' l='679' u='w' c='__pthread_create_2_1'/>

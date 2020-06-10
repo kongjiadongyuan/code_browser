@@ -1,0 +1,329 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>nf_conntrack_proto_udp.c source code [linux-5.3.1/net/netfilter/nf_conntrack_proto_udp.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/net/netfilter/nf_conntrack_proto_udp.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>net</a>/<a href='./'>netfilter</a>/<a href='nf_conntrack_proto_udp.c.html'>nf_conntrack_proto_udp.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0-only</i></td></tr>
+<tr><th id="2">2</th><td><i>/* (C) 1999-2001 Paul `Rusty' Russell</i></td></tr>
+<tr><th id="3">3</th><td><i> * (C) 2002-2004 Netfilter Core Team &lt;coreteam@netfilter.org&gt;</i></td></tr>
+<tr><th id="4">4</th><td><i> * (C) 2006-2012 Patrick McHardy &lt;kaber@trash.net&gt;</i></td></tr>
+<tr><th id="5">5</th><td><i> */</i></td></tr>
+<tr><th id="6">6</th><td></td></tr>
+<tr><th id="7">7</th><td><u>#include <a href="../../include/linux/types.h.html">&lt;linux/types.h&gt;</a></u></td></tr>
+<tr><th id="8">8</th><td><u>#include <a href="../../include/linux/timer.h.html">&lt;linux/timer.h&gt;</a></u></td></tr>
+<tr><th id="9">9</th><td><u>#include <a href="../../include/linux/module.h.html">&lt;linux/module.h&gt;</a></u></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="../../include/linux/udp.h.html">&lt;linux/udp.h&gt;</a></u></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../../include/linux/seq_file.h.html">&lt;linux/seq_file.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="../../include/linux/skbuff.h.html">&lt;linux/skbuff.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="../../include/linux/ipv6.h.html">&lt;linux/ipv6.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="../../include/net/ip6_checksum.h.html">&lt;net/ip6_checksum.h&gt;</a></u></td></tr>
+<tr><th id="15">15</th><td><u>#include <a href="../../include/net/checksum.h.html">&lt;net/checksum.h&gt;</a></u></td></tr>
+<tr><th id="16">16</th><td></td></tr>
+<tr><th id="17">17</th><td><u>#include <a href="../../include/linux/netfilter.h.html">&lt;linux/netfilter.h&gt;</a></u></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../../include/linux/netfilter_ipv4.h.html">&lt;linux/netfilter_ipv4.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../include/linux/netfilter_ipv6.h.html">&lt;linux/netfilter_ipv6.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../include/net/netfilter/nf_conntrack_l4proto.h.html">&lt;net/netfilter/nf_conntrack_l4proto.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../include/net/netfilter/nf_conntrack_ecache.h.html">&lt;net/netfilter/nf_conntrack_ecache.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../../include/net/netfilter/nf_conntrack_timeout.h.html">&lt;net/netfilter/nf_conntrack_timeout.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../../include/net/netfilter/nf_log.h.html">&lt;net/netfilter/nf_log.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../../include/net/netfilter/ipv4/nf_conntrack_ipv4.h.html">&lt;net/netfilter/ipv4/nf_conntrack_ipv4.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../../include/net/netfilter/ipv6/nf_conntrack_ipv6.h.html">&lt;net/netfilter/ipv6/nf_conntrack_ipv6.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><em>static</em> <em>const</em> <em>unsigned</em> <em>int</em> <dfn class="tu decl def" id="udp_timeouts" title='udp_timeouts' data-type='const unsigned int [2]' data-ref="udp_timeouts" data-ref-filename="udp_timeouts">udp_timeouts</dfn>[<a class="enum" href="../../include/net/netns/conntrack.h.html#UDP_CT_MAX" title='UDP_CT_MAX' data-ref="UDP_CT_MAX" data-ref-filename="UDP_CT_MAX">UDP_CT_MAX</a>] = {</td></tr>
+<tr><th id="28">28</th><td>	[<a class="enum" href="../../include/net/netns/conntrack.h.html#UDP_CT_UNREPLIED" title='UDP_CT_UNREPLIED' data-ref="UDP_CT_UNREPLIED" data-ref-filename="UDP_CT_UNREPLIED">UDP_CT_UNREPLIED</a>]	= <var>30</var>*<a class="macro" href="../../include/asm-generic/param.h.html#8" title="1000" data-ref="_M/HZ">HZ</a>,</td></tr>
+<tr><th id="29">29</th><td>	[<a class="enum" href="../../include/net/netns/conntrack.h.html#UDP_CT_REPLIED" title='UDP_CT_REPLIED' data-ref="UDP_CT_REPLIED" data-ref-filename="UDP_CT_REPLIED">UDP_CT_REPLIED</a>]	= <var>120</var>*<a class="macro" href="../../include/asm-generic/param.h.html#8" title="1000" data-ref="_M/HZ">HZ</a>,</td></tr>
+<tr><th id="30">30</th><td>};</td></tr>
+<tr><th id="31">31</th><td></td></tr>
+<tr><th id="32">32</th><td><em>static</em> <em>unsigned</em> <em>int</em> *<dfn class="tu decl def fn" id="udp_get_timeouts" title='udp_get_timeouts' data-type='unsigned int * udp_get_timeouts(struct net * net)' data-ref="udp_get_timeouts" data-ref-filename="udp_get_timeouts">udp_get_timeouts</dfn>(<b>struct</b> <a class="type" href="../../include/net/net_namespace.h.html#net" title='net' data-ref="net" data-ref-filename="net">net</a> *<dfn class="local col1 decl" id="1net" title='net' data-type='struct net *' data-ref="1net" data-ref-filename="1net">net</dfn>)</td></tr>
+<tr><th id="33">33</th><td>{</td></tr>
+<tr><th id="34">34</th><td>	<b>return</b> <a class="ref fn" href="../../include/net/netfilter/nf_conntrack_l4proto.h.html#nf_udp_pernet" title='nf_udp_pernet' data-ref="nf_udp_pernet" data-ref-filename="nf_udp_pernet">nf_udp_pernet</a>(<a class="local col1 ref" href="#1net" title='net' data-ref="1net" data-ref-filename="1net">net</a>)-&gt;<a class="ref field" href="../../include/net/netns/conntrack.h.html#nf_udp_net::timeouts" title='nf_udp_net::timeouts' data-ref="nf_udp_net::timeouts" data-ref-filename="nf_udp_net..timeouts">timeouts</a>;</td></tr>
+<tr><th id="35">35</th><td>}</td></tr>
+<tr><th id="36">36</th><td></td></tr>
+<tr><th id="37">37</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="udp_error_log" title='udp_error_log' data-type='void udp_error_log(const struct sk_buff * skb, const struct nf_hook_state * state, const char * msg)' data-ref="udp_error_log" data-ref-filename="udp_error_log">udp_error_log</dfn>(<em>const</em> <b>struct</b> <a class="type" href="../../include/linux/skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col2 decl" id="2skb" title='skb' data-type='const struct sk_buff *' data-ref="2skb" data-ref-filename="2skb">skb</dfn>,</td></tr>
+<tr><th id="38">38</th><td>			  <em>const</em> <b>struct</b> <a class="type" href="../../include/linux/netfilter.h.html#nf_hook_state" title='nf_hook_state' data-ref="nf_hook_state" data-ref-filename="nf_hook_state">nf_hook_state</a> *<dfn class="local col3 decl" id="3state" title='state' data-type='const struct nf_hook_state *' data-ref="3state" data-ref-filename="3state">state</dfn>,</td></tr>
+<tr><th id="39">39</th><td>			  <em>const</em> <em>char</em> *<dfn class="local col4 decl" id="4msg" title='msg' data-type='const char *' data-ref="4msg" data-ref-filename="4msg">msg</dfn>)</td></tr>
+<tr><th id="40">40</th><td>{</td></tr>
+<tr><th id="41">41</th><td>	<a class="ref fn" href="../../include/net/netfilter/nf_conntrack_l4proto.h.html#nf_l4proto_log_invalid" title='nf_l4proto_log_invalid' data-ref="nf_l4proto_log_invalid" data-ref-filename="nf_l4proto_log_invalid">nf_l4proto_log_invalid</a>(<a class="local col2 ref" href="#2skb" title='skb' data-ref="2skb" data-ref-filename="2skb">skb</a>, <a class="local col3 ref" href="#3state" title='state' data-ref="3state" data-ref-filename="3state">state</a>-&gt;<a class="ref field" href="../../include/linux/netfilter.h.html#nf_hook_state::net" title='nf_hook_state::net' data-ref="nf_hook_state::net" data-ref-filename="nf_hook_state..net">net</a>, <a class="local col3 ref" href="#3state" title='state' data-ref="3state" data-ref-filename="3state">state</a>-&gt;<a class="ref field" href="../../include/linux/netfilter.h.html#nf_hook_state::pf" title='nf_hook_state::pf' data-ref="nf_hook_state::pf" data-ref-filename="nf_hook_state..pf">pf</a>,</td></tr>
+<tr><th id="42">42</th><td>			       <a class="macro" href="../../include/uapi/linux/in.h.html#44" title="IPPROTO_UDP" data-ref="_M/IPPROTO_UDP">IPPROTO_UDP</a>, <q>"%s"</q>, <a class="local col4 ref" href="#4msg" title='msg' data-ref="4msg" data-ref-filename="4msg">msg</a>);</td></tr>
+<tr><th id="43">43</th><td>}</td></tr>
+<tr><th id="44">44</th><td></td></tr>
+<tr><th id="45">45</th><td><em>static</em> <a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="tu decl def fn" id="udp_error" title='udp_error' data-type='bool udp_error(struct sk_buff * skb, unsigned int dataoff, const struct nf_hook_state * state)' data-ref="udp_error" data-ref-filename="udp_error">udp_error</dfn>(<b>struct</b> <a class="type" href="../../include/linux/skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col5 decl" id="5skb" title='skb' data-type='struct sk_buff *' data-ref="5skb" data-ref-filename="5skb">skb</dfn>,</td></tr>
+<tr><th id="46">46</th><td>		      <em>unsigned</em> <em>int</em> <dfn class="local col6 decl" id="6dataoff" title='dataoff' data-type='unsigned int' data-ref="6dataoff" data-ref-filename="6dataoff">dataoff</dfn>,</td></tr>
+<tr><th id="47">47</th><td>		      <em>const</em> <b>struct</b> <a class="type" href="../../include/linux/netfilter.h.html#nf_hook_state" title='nf_hook_state' data-ref="nf_hook_state" data-ref-filename="nf_hook_state">nf_hook_state</a> *<dfn class="local col7 decl" id="7state" title='state' data-type='const struct nf_hook_state *' data-ref="7state" data-ref-filename="7state">state</dfn>)</td></tr>
+<tr><th id="48">48</th><td>{</td></tr>
+<tr><th id="49">49</th><td>	<em>unsigned</em> <em>int</em> <dfn class="local col8 decl" id="8udplen" title='udplen' data-type='unsigned int' data-ref="8udplen" data-ref-filename="8udplen">udplen</dfn> = <a class="local col5 ref" href="#5skb" title='skb' data-ref="5skb" data-ref-filename="5skb">skb</a>-&gt;<a class="ref field" href="../../include/linux/skbuff.h.html#sk_buff::len" title='sk_buff::len' data-ref="sk_buff::len" data-ref-filename="sk_buff..len">len</a> - <a class="local col6 ref" href="#6dataoff" title='dataoff' data-ref="6dataoff" data-ref-filename="6dataoff">dataoff</a>;</td></tr>
+<tr><th id="50">50</th><td>	<em>const</em> <b>struct</b> <a class="type" href="../../include/uapi/linux/udp.h.html#udphdr" title='udphdr' data-ref="udphdr" data-ref-filename="udphdr">udphdr</a> *<dfn class="local col9 decl" id="9hdr" title='hdr' data-type='const struct udphdr *' data-ref="9hdr" data-ref-filename="9hdr">hdr</dfn>;</td></tr>
+<tr><th id="51">51</th><td>	<b>struct</b> <a class="type" href="../../include/uapi/linux/udp.h.html#udphdr" title='udphdr' data-ref="udphdr" data-ref-filename="udphdr">udphdr</a> <dfn class="local col0 decl" id="10_hdr" title='_hdr' data-type='struct udphdr' data-ref="10_hdr" data-ref-filename="10_hdr">_hdr</dfn>;</td></tr>
+<tr><th id="52">52</th><td></td></tr>
+<tr><th id="53">53</th><td>	<i>/* Header is too small? */</i></td></tr>
+<tr><th id="54">54</th><td>	<a class="local col9 ref" href="#9hdr" title='hdr' data-ref="9hdr" data-ref-filename="9hdr">hdr</a> = <a class="ref fn" href="../../include/linux/skbuff.h.html#skb_header_pointer" title='skb_header_pointer' data-ref="skb_header_pointer" data-ref-filename="skb_header_pointer">skb_header_pointer</a>(<a class="local col5 ref" href="#5skb" title='skb' data-ref="5skb" data-ref-filename="5skb">skb</a>, <a class="local col6 ref" href="#6dataoff" title='dataoff' data-ref="6dataoff" data-ref-filename="6dataoff">dataoff</a>, <b>sizeof</b>(<a class="local col0 ref" href="#10_hdr" title='_hdr' data-ref="10_hdr" data-ref-filename="10_hdr">_hdr</a>), &amp;<a class="local col0 ref" href="#10_hdr" title='_hdr' data-ref="10_hdr" data-ref-filename="10_hdr">_hdr</a>);</td></tr>
+<tr><th id="55">55</th><td>	<b>if</b> (!<a class="local col9 ref" href="#9hdr" title='hdr' data-ref="9hdr" data-ref-filename="9hdr">hdr</a>) {</td></tr>
+<tr><th id="56">56</th><td>		<a class="tu ref fn" href="#udp_error_log" title='udp_error_log' data-use='c' data-ref="udp_error_log" data-ref-filename="udp_error_log">udp_error_log</a>(<a class="local col5 ref" href="#5skb" title='skb' data-ref="5skb" data-ref-filename="5skb">skb</a>, <a class="local col7 ref" href="#7state" title='state' data-ref="7state" data-ref-filename="7state">state</a>, <q>"short packet"</q>);</td></tr>
+<tr><th id="57">57</th><td>		<b>return</b> <a class="enum" href="../../include/linux/stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>;</td></tr>
+<tr><th id="58">58</th><td>	}</td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td>	<i>/* Truncated/malformed packets */</i></td></tr>
+<tr><th id="61">61</th><td>	<b>if</b> (<a class="macro" href="../../include/linux/byteorder/generic.h.html#142" title="(__builtin_constant_p((__u16)(( __u16)(__be16)(hdr-&gt;len))) ? ((__u16)( (((__u16)(( __u16)(__be16)(hdr-&gt;len)) &amp; (__u16)0x00ffU) &lt;&lt; 8) | (((__u16)(( __u16)(__be16)(hdr-&gt;len)) &amp; (__u16)0xff00U) &gt;&gt; 8))) : __fswab16(( __u16)(__be16)(hdr-&gt;len)))" data-ref="_M/ntohs">ntohs</a>(<a class="local col9 ref" href="#9hdr" title='hdr' data-ref="9hdr" data-ref-filename="9hdr">hdr</a>-&gt;<a class="ref field" href="../../include/uapi/linux/udp.h.html#udphdr::len" title='udphdr::len' data-ref="udphdr::len" data-ref-filename="udphdr..len">len</a>) &gt; <a class="local col8 ref" href="#8udplen" title='udplen' data-ref="8udplen" data-ref-filename="8udplen">udplen</a> || <a class="macro" href="../../include/linux/byteorder/generic.h.html#142" title="(__builtin_constant_p((__u16)(( __u16)(__be16)(hdr-&gt;len))) ? ((__u16)( (((__u16)(( __u16)(__be16)(hdr-&gt;len)) &amp; (__u16)0x00ffU) &lt;&lt; 8) | (((__u16)(( __u16)(__be16)(hdr-&gt;len)) &amp; (__u16)0xff00U) &gt;&gt; 8))) : __fswab16(( __u16)(__be16)(hdr-&gt;len)))" data-ref="_M/ntohs">ntohs</a>(<a class="local col9 ref" href="#9hdr" title='hdr' data-ref="9hdr" data-ref-filename="9hdr">hdr</a>-&gt;<a class="ref field" href="../../include/uapi/linux/udp.h.html#udphdr::len" title='udphdr::len' data-ref="udphdr::len" data-ref-filename="udphdr..len">len</a>) &lt; <b>sizeof</b>(*<a class="local col9 ref" href="#9hdr" title='hdr' data-ref="9hdr" data-ref-filename="9hdr">hdr</a>)) {</td></tr>
+<tr><th id="62">62</th><td>		<a class="tu ref fn" href="#udp_error_log" title='udp_error_log' data-use='c' data-ref="udp_error_log" data-ref-filename="udp_error_log">udp_error_log</a>(<a class="local col5 ref" href="#5skb" title='skb' data-ref="5skb" data-ref-filename="5skb">skb</a>, <a class="local col7 ref" href="#7state" title='state' data-ref="7state" data-ref-filename="7state">state</a>, <q>"truncated/malformed packet"</q>);</td></tr>
+<tr><th id="63">63</th><td>		<b>return</b> <a class="enum" href="../../include/linux/stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>;</td></tr>
+<tr><th id="64">64</th><td>	}</td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td>	<i>/* Packet with no checksum */</i></td></tr>
+<tr><th id="67">67</th><td>	<b>if</b> (!<a class="local col9 ref" href="#9hdr" title='hdr' data-ref="9hdr" data-ref-filename="9hdr">hdr</a>-&gt;<a class="ref field" href="../../include/uapi/linux/udp.h.html#udphdr::check" title='udphdr::check' data-ref="udphdr::check" data-ref-filename="udphdr..check">check</a>)</td></tr>
+<tr><th id="68">68</th><td>		<b>return</b> <a class="enum" href="../../include/linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="69">69</th><td></td></tr>
+<tr><th id="70">70</th><td>	<i>/* Checksum invalid? Ignore.</i></td></tr>
+<tr><th id="71">71</th><td><i>	 * We skip checking packets on the outgoing path</i></td></tr>
+<tr><th id="72">72</th><td><i>	 * because the checksum is assumed to be correct.</i></td></tr>
+<tr><th id="73">73</th><td><i>	 * FIXME: Source route IP option packets --RR */</i></td></tr>
+<tr><th id="74">74</th><td>	<b>if</b> (<a class="local col7 ref" href="#7state" title='state' data-ref="7state" data-ref-filename="7state">state</a>-&gt;<a class="ref field" href="../../include/linux/netfilter.h.html#nf_hook_state::hook" title='nf_hook_state::hook' data-ref="nf_hook_state::hook" data-ref-filename="nf_hook_state..hook">hook</a> == <a class="enum" href="../../include/uapi/linux/netfilter.h.html#NF_INET_PRE_ROUTING" title='NF_INET_PRE_ROUTING' data-ref="NF_INET_PRE_ROUTING" data-ref-filename="NF_INET_PRE_ROUTING">NF_INET_PRE_ROUTING</a> &amp;&amp;</td></tr>
+<tr><th id="75">75</th><td>	    <a class="local col7 ref" href="#7state" title='state' data-ref="7state" data-ref-filename="7state">state</a>-&gt;<a class="ref field" href="../../include/linux/netfilter.h.html#nf_hook_state::net" title='nf_hook_state::net' data-ref="nf_hook_state::net" data-ref-filename="nf_hook_state..net">net</a>-&gt;<a class="ref field" href="../../include/net/net_namespace.h.html#net::ct" title='net::ct' data-ref="net::ct" data-ref-filename="net..ct">ct</a>.<a class="ref field" href="../../include/net/netns/conntrack.h.html#netns_ct::sysctl_checksum" title='netns_ct::sysctl_checksum' data-ref="netns_ct::sysctl_checksum" data-ref-filename="netns_ct..sysctl_checksum">sysctl_checksum</a> &amp;&amp;</td></tr>
+<tr><th id="76">76</th><td>	    <a class="ref fn" href="../../include/linux/netfilter.h.html#nf_checksum" title='nf_checksum' data-ref="nf_checksum" data-ref-filename="nf_checksum">nf_checksum</a>(<a class="local col5 ref" href="#5skb" title='skb' data-ref="5skb" data-ref-filename="5skb">skb</a>, <a class="local col7 ref" href="#7state" title='state' data-ref="7state" data-ref-filename="7state">state</a>-&gt;<a class="ref field" href="../../include/linux/netfilter.h.html#nf_hook_state::hook" title='nf_hook_state::hook' data-ref="nf_hook_state::hook" data-ref-filename="nf_hook_state..hook">hook</a>, <a class="local col6 ref" href="#6dataoff" title='dataoff' data-ref="6dataoff" data-ref-filename="6dataoff">dataoff</a>, <a class="macro" href="../../include/uapi/linux/in.h.html#44" title="IPPROTO_UDP" data-ref="_M/IPPROTO_UDP">IPPROTO_UDP</a>, <a class="local col7 ref" href="#7state" title='state' data-ref="7state" data-ref-filename="7state">state</a>-&gt;<a class="ref field" href="../../include/linux/netfilter.h.html#nf_hook_state::pf" title='nf_hook_state::pf' data-ref="nf_hook_state::pf" data-ref-filename="nf_hook_state..pf">pf</a>)) {</td></tr>
+<tr><th id="77">77</th><td>		<a class="tu ref fn" href="#udp_error_log" title='udp_error_log' data-use='c' data-ref="udp_error_log" data-ref-filename="udp_error_log">udp_error_log</a>(<a class="local col5 ref" href="#5skb" title='skb' data-ref="5skb" data-ref-filename="5skb">skb</a>, <a class="local col7 ref" href="#7state" title='state' data-ref="7state" data-ref-filename="7state">state</a>, <q>"bad checksum"</q>);</td></tr>
+<tr><th id="78">78</th><td>		<b>return</b> <a class="enum" href="../../include/linux/stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>;</td></tr>
+<tr><th id="79">79</th><td>	}</td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td>	<b>return</b> <a class="enum" href="../../include/linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="82">82</th><td>}</td></tr>
+<tr><th id="83">83</th><td></td></tr>
+<tr><th id="84">84</th><td><i>/* Returns verdict for packet, and may modify conntracktype */</i></td></tr>
+<tr><th id="85">85</th><td><em>int</em> <dfn class="decl def fn" id="nf_conntrack_udp_packet" title='nf_conntrack_udp_packet' data-ref="nf_conntrack_udp_packet" data-ref-filename="nf_conntrack_udp_packet">nf_conntrack_udp_packet</dfn>(<b>struct</b> <a class="type" href="../../include/net/netfilter/nf_conntrack.h.html#nf_conn" title='nf_conn' data-ref="nf_conn" data-ref-filename="nf_conn">nf_conn</a> *<dfn class="local col1 decl" id="11ct" title='ct' data-type='struct nf_conn *' data-ref="11ct" data-ref-filename="11ct">ct</dfn>,</td></tr>
+<tr><th id="86">86</th><td>			    <b>struct</b> <a class="type" href="../../include/linux/skbuff.h.html#sk_buff" title='sk_buff' data-ref="sk_buff" data-ref-filename="sk_buff">sk_buff</a> *<dfn class="local col2 decl" id="12skb" title='skb' data-type='struct sk_buff *' data-ref="12skb" data-ref-filename="12skb">skb</dfn>,</td></tr>
+<tr><th id="87">87</th><td>			    <em>unsigned</em> <em>int</em> <dfn class="local col3 decl" id="13dataoff" title='dataoff' data-type='unsigned int' data-ref="13dataoff" data-ref-filename="13dataoff">dataoff</dfn>,</td></tr>
+<tr><th id="88">88</th><td>			    <b>enum</b> <a class="type" href="../../include/uapi/linux/netfilter/nf_conntrack_common.h.html#ip_conntrack_info" title='ip_conntrack_info' data-ref="ip_conntrack_info" data-ref-filename="ip_conntrack_info">ip_conntrack_info</a> <dfn class="local col4 decl" id="14ctinfo" title='ctinfo' data-type='enum ip_conntrack_info' data-ref="14ctinfo" data-ref-filename="14ctinfo">ctinfo</dfn>,</td></tr>
+<tr><th id="89">89</th><td>			    <em>const</em> <b>struct</b> <a class="type" href="../../include/linux/netfilter.h.html#nf_hook_state" title='nf_hook_state' data-ref="nf_hook_state" data-ref-filename="nf_hook_state">nf_hook_state</a> *<dfn class="local col5 decl" id="15state" title='state' data-type='const struct nf_hook_state *' data-ref="15state" data-ref-filename="15state">state</dfn>)</td></tr>
+<tr><th id="90">90</th><td>{</td></tr>
+<tr><th id="91">91</th><td>	<em>unsigned</em> <em>int</em> *<dfn class="local col6 decl" id="16timeouts" title='timeouts' data-type='unsigned int *' data-ref="16timeouts" data-ref-filename="16timeouts">timeouts</dfn>;</td></tr>
+<tr><th id="92">92</th><td></td></tr>
+<tr><th id="93">93</th><td>	<b>if</b> (<a class="tu ref fn" href="#udp_error" title='udp_error' data-use='c' data-ref="udp_error" data-ref-filename="udp_error">udp_error</a>(<a class="local col2 ref" href="#12skb" title='skb' data-ref="12skb" data-ref-filename="12skb">skb</a>, <a class="local col3 ref" href="#13dataoff" title='dataoff' data-ref="13dataoff" data-ref-filename="13dataoff">dataoff</a>, <a class="local col5 ref" href="#15state" title='state' data-ref="15state" data-ref-filename="15state">state</a>))</td></tr>
+<tr><th id="94">94</th><td>		<b>return</b> -<a class="macro" href="../../include/uapi/linux/netfilter.h.html#12" title="1" data-ref="_M/NF_ACCEPT">NF_ACCEPT</a>;</td></tr>
+<tr><th id="95">95</th><td></td></tr>
+<tr><th id="96">96</th><td>	<a class="local col6 ref" href="#16timeouts" title='timeouts' data-ref="16timeouts" data-ref-filename="16timeouts">timeouts</a> = <a class="ref fn" href="../../include/net/netfilter/nf_conntrack_timeout.h.html#nf_ct_timeout_lookup" title='nf_ct_timeout_lookup' data-ref="nf_ct_timeout_lookup" data-ref-filename="nf_ct_timeout_lookup">nf_ct_timeout_lookup</a>(<a class="local col1 ref" href="#11ct" title='ct' data-ref="11ct" data-ref-filename="11ct">ct</a>);</td></tr>
+<tr><th id="97">97</th><td>	<b>if</b> (!<a class="local col6 ref" href="#16timeouts" title='timeouts' data-ref="16timeouts" data-ref-filename="16timeouts">timeouts</a>)</td></tr>
+<tr><th id="98">98</th><td>		<a class="local col6 ref" href="#16timeouts" title='timeouts' data-ref="16timeouts" data-ref-filename="16timeouts">timeouts</a> = <a class="tu ref fn" href="#udp_get_timeouts" title='udp_get_timeouts' data-use='c' data-ref="udp_get_timeouts" data-ref-filename="udp_get_timeouts">udp_get_timeouts</a>(<a class="ref fn" href="../../include/net/netfilter/nf_conntrack.h.html#nf_ct_net" title='nf_ct_net' data-ref="nf_ct_net" data-ref-filename="nf_ct_net">nf_ct_net</a>(<a class="local col1 ref" href="#11ct" title='ct' data-ref="11ct" data-ref-filename="11ct">ct</a>));</td></tr>
+<tr><th id="99">99</th><td></td></tr>
+<tr><th id="100">100</th><td>	<b>if</b> (!<a class="ref fn" href="../../include/net/netfilter/nf_conntrack.h.html#nf_ct_is_confirmed" title='nf_ct_is_confirmed' data-ref="nf_ct_is_confirmed" data-ref-filename="nf_ct_is_confirmed">nf_ct_is_confirmed</a>(<a class="local col1 ref" href="#11ct" title='ct' data-ref="11ct" data-ref-filename="11ct">ct</a>))</td></tr>
+<tr><th id="101">101</th><td>		<a class="local col1 ref" href="#11ct" title='ct' data-ref="11ct" data-ref-filename="11ct">ct</a>-&gt;<a class="ref field" href="../../include/net/netfilter/nf_conntrack.h.html#nf_conn::proto" title='nf_conn::proto' data-ref="nf_conn::proto" data-ref-filename="nf_conn..proto">proto</a>.<a class="ref field" href="../../include/net/netfilter/nf_conntrack.h.html#nf_conntrack_proto::udp" title='nf_conntrack_proto::udp' data-ref="nf_conntrack_proto::udp" data-ref-filename="nf_conntrack_proto..udp">udp</a>.<a class="ref field" href="../../include/net/netfilter/nf_conntrack.h.html#nf_ct_udp::stream_ts" title='nf_ct_udp::stream_ts' data-ref="nf_ct_udp::stream_ts" data-ref-filename="nf_ct_udp..stream_ts">stream_ts</a> = <var>2</var> * <a class="macro" href="../../include/asm-generic/param.h.html#8" title="1000" data-ref="_M/HZ">HZ</a> + <a class="ref" href="../../include/linux/jiffies.h.html#jiffies" title='jiffies' data-ref="jiffies" data-ref-filename="jiffies">jiffies</a>;</td></tr>
+<tr><th id="102">102</th><td></td></tr>
+<tr><th id="103">103</th><td>	<i>/* If we've seen traffic both ways, this is some kind of UDP</i></td></tr>
+<tr><th id="104">104</th><td><i>	 * stream. Set Assured.</i></td></tr>
+<tr><th id="105">105</th><td><i>	 */</i></td></tr>
+<tr><th id="106">106</th><td>	<b>if</b> (<a class="ref fn" href="../../include/asm-generic/bitops-instrumented.h.html#test_bit" title='test_bit' data-ref="test_bit" data-ref-filename="test_bit">test_bit</a>(<a class="enum" href="../../include/uapi/linux/netfilter/nf_conntrack_common.h.html#IPS_SEEN_REPLY_BIT" title='IPS_SEEN_REPLY_BIT' data-ref="IPS_SEEN_REPLY_BIT" data-ref-filename="IPS_SEEN_REPLY_BIT">IPS_SEEN_REPLY_BIT</a>, &amp;<a class="local col1 ref" href="#11ct" title='ct' data-ref="11ct" data-ref-filename="11ct">ct</a>-&gt;<a class="ref field" href="../../include/net/netfilter/nf_conntrack.h.html#nf_conn::status" title='nf_conn::status' data-ref="nf_conn::status" data-ref-filename="nf_conn..status">status</a>)) {</td></tr>
+<tr><th id="107">107</th><td>		<em>unsigned</em> <em>long</em> <dfn class="local col7 decl" id="17extra" title='extra' data-type='unsigned long' data-ref="17extra" data-ref-filename="17extra">extra</dfn> = <a class="local col6 ref" href="#16timeouts" title='timeouts' data-ref="16timeouts" data-ref-filename="16timeouts">timeouts</a>[<a class="enum" href="../../include/net/netns/conntrack.h.html#UDP_CT_UNREPLIED" title='UDP_CT_UNREPLIED' data-ref="UDP_CT_UNREPLIED" data-ref-filename="UDP_CT_UNREPLIED">UDP_CT_UNREPLIED</a>];</td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td>		<i>/* Still active after two seconds? Extend timeout. */</i></td></tr>
+<tr><th id="110">110</th><td>		<b>if</b> (<a class="macro" href="../../include/linux/jiffies.h.html#105" title="(({ unsigned long __dummy; typeof(jiffies) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }) &amp;&amp; ({ unsigned long __dummy; typeof(ct-&gt;proto.udp.stream_ts) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }) &amp;&amp; ((long)((ct-&gt;proto.udp.stream_ts) - (jiffies)) &lt; 0))" data-ref="_M/time_after">time_after</a>(<a class="ref" href="../../include/linux/jiffies.h.html#jiffies" title='jiffies' data-ref="jiffies" data-ref-filename="jiffies">jiffies</a>, <a class="local col1 ref" href="#11ct" title='ct' data-ref="11ct" data-ref-filename="11ct">ct</a>-&gt;<a class="ref field" href="../../include/net/netfilter/nf_conntrack.h.html#nf_conn::proto" title='nf_conn::proto' data-ref="nf_conn::proto" data-ref-filename="nf_conn..proto">proto</a>.<a class="ref field" href="../../include/net/netfilter/nf_conntrack.h.html#nf_conntrack_proto::udp" title='nf_conntrack_proto::udp' data-ref="nf_conntrack_proto::udp" data-ref-filename="nf_conntrack_proto..udp">udp</a>.<a class="ref field" href="../../include/net/netfilter/nf_conntrack.h.html#nf_ct_udp::stream_ts" title='nf_ct_udp::stream_ts' data-ref="nf_ct_udp::stream_ts" data-ref-filename="nf_ct_udp..stream_ts">stream_ts</a>))</td></tr>
+<tr><th id="111">111</th><td>			<a class="local col7 ref" href="#17extra" title='extra' data-ref="17extra" data-ref-filename="17extra">extra</a> = <a class="local col6 ref" href="#16timeouts" title='timeouts' data-ref="16timeouts" data-ref-filename="16timeouts">timeouts</a>[<a class="enum" href="../../include/net/netns/conntrack.h.html#UDP_CT_REPLIED" title='UDP_CT_REPLIED' data-ref="UDP_CT_REPLIED" data-ref-filename="UDP_CT_REPLIED">UDP_CT_REPLIED</a>];</td></tr>
+<tr><th id="112">112</th><td></td></tr>
+<tr><th id="113">113</th><td>		<a class="ref fn" href="../../include/net/netfilter/nf_conntrack.h.html#nf_ct_refresh_acct" title='nf_ct_refresh_acct' data-ref="nf_ct_refresh_acct" data-ref-filename="nf_ct_refresh_acct">nf_ct_refresh_acct</a>(<a class="local col1 ref" href="#11ct" title='ct' data-ref="11ct" data-ref-filename="11ct">ct</a>, <a class="local col4 ref" href="#14ctinfo" title='ctinfo' data-ref="14ctinfo" data-ref-filename="14ctinfo">ctinfo</a>, <a class="local col2 ref" href="#12skb" title='skb' data-ref="12skb" data-ref-filename="12skb">skb</a>, <a class="local col7 ref" href="#17extra" title='extra' data-ref="17extra" data-ref-filename="17extra">extra</a>);</td></tr>
+<tr><th id="114">114</th><td></td></tr>
+<tr><th id="115">115</th><td>		<i>/* Also, more likely to be important, and not a probe */</i></td></tr>
+<tr><th id="116">116</th><td>		<b>if</b> (!<a class="ref fn" href="../../include/asm-generic/bitops-instrumented.h.html#test_and_set_bit" title='test_and_set_bit' data-ref="test_and_set_bit" data-ref-filename="test_and_set_bit">test_and_set_bit</a>(<a class="enum" href="../../include/uapi/linux/netfilter/nf_conntrack_common.h.html#IPS_ASSURED_BIT" title='IPS_ASSURED_BIT' data-ref="IPS_ASSURED_BIT" data-ref-filename="IPS_ASSURED_BIT">IPS_ASSURED_BIT</a>, &amp;<a class="local col1 ref" href="#11ct" title='ct' data-ref="11ct" data-ref-filename="11ct">ct</a>-&gt;<a class="ref field" href="../../include/net/netfilter/nf_conntrack.h.html#nf_conn::status" title='nf_conn::status' data-ref="nf_conn::status" data-ref-filename="nf_conn..status">status</a>))</td></tr>
+<tr><th id="117">117</th><td>			<a class="ref fn" href="../../include/net/netfilter/nf_conntrack_ecache.h.html#nf_conntrack_event_cache" title='nf_conntrack_event_cache' data-ref="nf_conntrack_event_cache" data-ref-filename="nf_conntrack_event_cache">nf_conntrack_event_cache</a>(<a class="enum" href="../../include/uapi/linux/netfilter/nf_conntrack_common.h.html#IPCT_ASSURED" title='IPCT_ASSURED' data-ref="IPCT_ASSURED" data-ref-filename="IPCT_ASSURED">IPCT_ASSURED</a>, <a class="local col1 ref" href="#11ct" title='ct' data-ref="11ct" data-ref-filename="11ct">ct</a>);</td></tr>
+<tr><th id="118">118</th><td>	} <b>else</b> {</td></tr>
+<tr><th id="119">119</th><td>		<a class="ref fn" href="../../include/net/netfilter/nf_conntrack.h.html#nf_ct_refresh_acct" title='nf_ct_refresh_acct' data-ref="nf_ct_refresh_acct" data-ref-filename="nf_ct_refresh_acct">nf_ct_refresh_acct</a>(<a class="local col1 ref" href="#11ct" title='ct' data-ref="11ct" data-ref-filename="11ct">ct</a>, <a class="local col4 ref" href="#14ctinfo" title='ctinfo' data-ref="14ctinfo" data-ref-filename="14ctinfo">ctinfo</a>, <a class="local col2 ref" href="#12skb" title='skb' data-ref="12skb" data-ref-filename="12skb">skb</a>,</td></tr>
+<tr><th id="120">120</th><td>				   <a class="local col6 ref" href="#16timeouts" title='timeouts' data-ref="16timeouts" data-ref-filename="16timeouts">timeouts</a>[<a class="enum" href="../../include/net/netns/conntrack.h.html#UDP_CT_UNREPLIED" title='UDP_CT_UNREPLIED' data-ref="UDP_CT_UNREPLIED" data-ref-filename="UDP_CT_UNREPLIED">UDP_CT_UNREPLIED</a>]);</td></tr>
+<tr><th id="121">121</th><td>	}</td></tr>
+<tr><th id="122">122</th><td>	<b>return</b> <a class="macro" href="../../include/uapi/linux/netfilter.h.html#12" title="1" data-ref="_M/NF_ACCEPT">NF_ACCEPT</a>;</td></tr>
+<tr><th id="123">123</th><td>}</td></tr>
+<tr><th id="124">124</th><td></td></tr>
+<tr><th id="125">125</th><td><u>#<span data-ppcond="125">ifdef</span> <span class="macro" data-ref="_M/CONFIG_NF_CT_PROTO_UDPLITE">CONFIG_NF_CT_PROTO_UDPLITE</span></u></td></tr>
+<tr><th id="126">126</th><td><em>static</em> <em>void</em> udplite_error_log(<em>const</em> <b>struct</b> sk_buff *skb,</td></tr>
+<tr><th id="127">127</th><td>			      <em>const</em> <b>struct</b> nf_hook_state *state,</td></tr>
+<tr><th id="128">128</th><td>			      <em>const</em> <em>char</em> *msg)</td></tr>
+<tr><th id="129">129</th><td>{</td></tr>
+<tr><th id="130">130</th><td>	nf_l4proto_log_invalid(skb, state-&gt;net, state-&gt;pf,</td></tr>
+<tr><th id="131">131</th><td>			       IPPROTO_UDPLITE, <q>"%s"</q>, msg);</td></tr>
+<tr><th id="132">132</th><td>}</td></tr>
+<tr><th id="133">133</th><td></td></tr>
+<tr><th id="134">134</th><td><em>static</em> bool udplite_error(<b>struct</b> sk_buff *skb,</td></tr>
+<tr><th id="135">135</th><td>			  <em>unsigned</em> <em>int</em> dataoff,</td></tr>
+<tr><th id="136">136</th><td>			  <em>const</em> <b>struct</b> nf_hook_state *state)</td></tr>
+<tr><th id="137">137</th><td>{</td></tr>
+<tr><th id="138">138</th><td>	<em>unsigned</em> <em>int</em> udplen = skb-&gt;len - dataoff;</td></tr>
+<tr><th id="139">139</th><td>	<em>const</em> <b>struct</b> udphdr *hdr;</td></tr>
+<tr><th id="140">140</th><td>	<b>struct</b> udphdr _hdr;</td></tr>
+<tr><th id="141">141</th><td>	<em>unsigned</em> <em>int</em> cscov;</td></tr>
+<tr><th id="142">142</th><td></td></tr>
+<tr><th id="143">143</th><td>	<i>/* Header is too small? */</i></td></tr>
+<tr><th id="144">144</th><td>	hdr = skb_header_pointer(skb, dataoff, <b>sizeof</b>(_hdr), &amp;_hdr);</td></tr>
+<tr><th id="145">145</th><td>	<b>if</b> (!hdr) {</td></tr>
+<tr><th id="146">146</th><td>		udplite_error_log(skb, state, <q>"short packet"</q>);</td></tr>
+<tr><th id="147">147</th><td>		<b>return</b> true;</td></tr>
+<tr><th id="148">148</th><td>	}</td></tr>
+<tr><th id="149">149</th><td></td></tr>
+<tr><th id="150">150</th><td>	cscov = ntohs(hdr-&gt;len);</td></tr>
+<tr><th id="151">151</th><td>	<b>if</b> (cscov == <var>0</var>) {</td></tr>
+<tr><th id="152">152</th><td>		cscov = udplen;</td></tr>
+<tr><th id="153">153</th><td>	} <b>else</b> <b>if</b> (cscov &lt; <b>sizeof</b>(*hdr) || cscov &gt; udplen) {</td></tr>
+<tr><th id="154">154</th><td>		udplite_error_log(skb, state, <q>"invalid checksum coverage"</q>);</td></tr>
+<tr><th id="155">155</th><td>		<b>return</b> true;</td></tr>
+<tr><th id="156">156</th><td>	}</td></tr>
+<tr><th id="157">157</th><td></td></tr>
+<tr><th id="158">158</th><td>	<i>/* UDPLITE mandates checksums */</i></td></tr>
+<tr><th id="159">159</th><td>	<b>if</b> (!hdr-&gt;check) {</td></tr>
+<tr><th id="160">160</th><td>		udplite_error_log(skb, state, <q>"checksum missing"</q>);</td></tr>
+<tr><th id="161">161</th><td>		<b>return</b> true;</td></tr>
+<tr><th id="162">162</th><td>	}</td></tr>
+<tr><th id="163">163</th><td></td></tr>
+<tr><th id="164">164</th><td>	<i>/* Checksum invalid? Ignore. */</i></td></tr>
+<tr><th id="165">165</th><td>	<b>if</b> (state-&gt;hook == NF_INET_PRE_ROUTING &amp;&amp;</td></tr>
+<tr><th id="166">166</th><td>	    state-&gt;net-&gt;ct.sysctl_checksum &amp;&amp;</td></tr>
+<tr><th id="167">167</th><td>	    nf_checksum_partial(skb, state-&gt;hook, dataoff, cscov, IPPROTO_UDP,</td></tr>
+<tr><th id="168">168</th><td>				state-&gt;pf)) {</td></tr>
+<tr><th id="169">169</th><td>		udplite_error_log(skb, state, <q>"bad checksum"</q>);</td></tr>
+<tr><th id="170">170</th><td>		<b>return</b> true;</td></tr>
+<tr><th id="171">171</th><td>	}</td></tr>
+<tr><th id="172">172</th><td></td></tr>
+<tr><th id="173">173</th><td>	<b>return</b> false;</td></tr>
+<tr><th id="174">174</th><td>}</td></tr>
+<tr><th id="175">175</th><td></td></tr>
+<tr><th id="176">176</th><td><i>/* Returns verdict for packet, and may modify conntracktype */</i></td></tr>
+<tr><th id="177">177</th><td><em>int</em> nf_conntrack_udplite_packet(<b>struct</b> nf_conn *ct,</td></tr>
+<tr><th id="178">178</th><td>				<b>struct</b> sk_buff *skb,</td></tr>
+<tr><th id="179">179</th><td>				<em>unsigned</em> <em>int</em> dataoff,</td></tr>
+<tr><th id="180">180</th><td>				<b>enum</b> ip_conntrack_info ctinfo,</td></tr>
+<tr><th id="181">181</th><td>				<em>const</em> <b>struct</b> nf_hook_state *state)</td></tr>
+<tr><th id="182">182</th><td>{</td></tr>
+<tr><th id="183">183</th><td>	<em>unsigned</em> <em>int</em> *timeouts;</td></tr>
+<tr><th id="184">184</th><td></td></tr>
+<tr><th id="185">185</th><td>	<b>if</b> (udplite_error(skb, dataoff, state))</td></tr>
+<tr><th id="186">186</th><td>		<b>return</b> -NF_ACCEPT;</td></tr>
+<tr><th id="187">187</th><td></td></tr>
+<tr><th id="188">188</th><td>	timeouts = nf_ct_timeout_lookup(ct);</td></tr>
+<tr><th id="189">189</th><td>	<b>if</b> (!timeouts)</td></tr>
+<tr><th id="190">190</th><td>		timeouts = udp_get_timeouts(nf_ct_net(ct));</td></tr>
+<tr><th id="191">191</th><td></td></tr>
+<tr><th id="192">192</th><td>	<i>/* If we've seen traffic both ways, this is some kind of UDP</i></td></tr>
+<tr><th id="193">193</th><td><i>	   stream.  Extend timeout. */</i></td></tr>
+<tr><th id="194">194</th><td>	<b>if</b> (test_bit(IPS_SEEN_REPLY_BIT, &amp;ct-&gt;status)) {</td></tr>
+<tr><th id="195">195</th><td>		nf_ct_refresh_acct(ct, ctinfo, skb,</td></tr>
+<tr><th id="196">196</th><td>				   timeouts[UDP_CT_REPLIED]);</td></tr>
+<tr><th id="197">197</th><td>		<i>/* Also, more likely to be important, and not a probe */</i></td></tr>
+<tr><th id="198">198</th><td>		<b>if</b> (!test_and_set_bit(IPS_ASSURED_BIT, &amp;ct-&gt;status))</td></tr>
+<tr><th id="199">199</th><td>			nf_conntrack_event_cache(IPCT_ASSURED, ct);</td></tr>
+<tr><th id="200">200</th><td>	} <b>else</b> {</td></tr>
+<tr><th id="201">201</th><td>		nf_ct_refresh_acct(ct, ctinfo, skb,</td></tr>
+<tr><th id="202">202</th><td>				   timeouts[UDP_CT_UNREPLIED]);</td></tr>
+<tr><th id="203">203</th><td>	}</td></tr>
+<tr><th id="204">204</th><td>	<b>return</b> NF_ACCEPT;</td></tr>
+<tr><th id="205">205</th><td>}</td></tr>
+<tr><th id="206">206</th><td><u>#<span data-ppcond="125">endif</span></u></td></tr>
+<tr><th id="207">207</th><td></td></tr>
+<tr><th id="208">208</th><td><u>#<span data-ppcond="208">ifdef</span> <span class="macro" data-ref="_M/CONFIG_NF_CONNTRACK_TIMEOUT">CONFIG_NF_CONNTRACK_TIMEOUT</span></u></td></tr>
+<tr><th id="209">209</th><td></td></tr>
+<tr><th id="210">210</th><td><u>#include &lt;linux/netfilter/nfnetlink.h&gt;</u></td></tr>
+<tr><th id="211">211</th><td><u>#include &lt;linux/netfilter/nfnetlink_cttimeout.h&gt;</u></td></tr>
+<tr><th id="212">212</th><td></td></tr>
+<tr><th id="213">213</th><td><em>static</em> <em>int</em> udp_timeout_nlattr_to_obj(<b>struct</b> nlattr *tb[],</td></tr>
+<tr><th id="214">214</th><td>				     <b>struct</b> net *net, <em>void</em> *data)</td></tr>
+<tr><th id="215">215</th><td>{</td></tr>
+<tr><th id="216">216</th><td>	<em>unsigned</em> <em>int</em> *timeouts = data;</td></tr>
+<tr><th id="217">217</th><td>	<b>struct</b> nf_udp_net *un = nf_udp_pernet(net);</td></tr>
+<tr><th id="218">218</th><td></td></tr>
+<tr><th id="219">219</th><td>	<b>if</b> (!timeouts)</td></tr>
+<tr><th id="220">220</th><td>		timeouts = un-&gt;timeouts;</td></tr>
+<tr><th id="221">221</th><td></td></tr>
+<tr><th id="222">222</th><td>	<i>/* set default timeouts for UDP. */</i></td></tr>
+<tr><th id="223">223</th><td>	timeouts[UDP_CT_UNREPLIED] = un-&gt;timeouts[UDP_CT_UNREPLIED];</td></tr>
+<tr><th id="224">224</th><td>	timeouts[UDP_CT_REPLIED] = un-&gt;timeouts[UDP_CT_REPLIED];</td></tr>
+<tr><th id="225">225</th><td></td></tr>
+<tr><th id="226">226</th><td>	<b>if</b> (tb[CTA_TIMEOUT_UDP_UNREPLIED]) {</td></tr>
+<tr><th id="227">227</th><td>		timeouts[UDP_CT_UNREPLIED] =</td></tr>
+<tr><th id="228">228</th><td>			ntohl(nla_get_be32(tb[CTA_TIMEOUT_UDP_UNREPLIED])) * HZ;</td></tr>
+<tr><th id="229">229</th><td>	}</td></tr>
+<tr><th id="230">230</th><td>	<b>if</b> (tb[CTA_TIMEOUT_UDP_REPLIED]) {</td></tr>
+<tr><th id="231">231</th><td>		timeouts[UDP_CT_REPLIED] =</td></tr>
+<tr><th id="232">232</th><td>			ntohl(nla_get_be32(tb[CTA_TIMEOUT_UDP_REPLIED])) * HZ;</td></tr>
+<tr><th id="233">233</th><td>	}</td></tr>
+<tr><th id="234">234</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="235">235</th><td>}</td></tr>
+<tr><th id="236">236</th><td></td></tr>
+<tr><th id="237">237</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="238">238</th><td>udp_timeout_obj_to_nlattr(<b>struct</b> sk_buff *skb, <em>const</em> <em>void</em> *data)</td></tr>
+<tr><th id="239">239</th><td>{</td></tr>
+<tr><th id="240">240</th><td>	<em>const</em> <em>unsigned</em> <em>int</em> *timeouts = data;</td></tr>
+<tr><th id="241">241</th><td></td></tr>
+<tr><th id="242">242</th><td>	<b>if</b> (nla_put_be32(skb, CTA_TIMEOUT_UDP_UNREPLIED,</td></tr>
+<tr><th id="243">243</th><td>			 htonl(timeouts[UDP_CT_UNREPLIED] / HZ)) ||</td></tr>
+<tr><th id="244">244</th><td>	    nla_put_be32(skb, CTA_TIMEOUT_UDP_REPLIED,</td></tr>
+<tr><th id="245">245</th><td>			 htonl(timeouts[UDP_CT_REPLIED] / HZ)))</td></tr>
+<tr><th id="246">246</th><td>		<b>goto</b> nla_put_failure;</td></tr>
+<tr><th id="247">247</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="248">248</th><td></td></tr>
+<tr><th id="249">249</th><td>nla_put_failure:</td></tr>
+<tr><th id="250">250</th><td>	<b>return</b> -ENOSPC;</td></tr>
+<tr><th id="251">251</th><td>}</td></tr>
+<tr><th id="252">252</th><td></td></tr>
+<tr><th id="253">253</th><td><em>static</em> <em>const</em> <b>struct</b> nla_policy</td></tr>
+<tr><th id="254">254</th><td>udp_timeout_nla_policy[CTA_TIMEOUT_UDP_MAX+<var>1</var>] = {</td></tr>
+<tr><th id="255">255</th><td>       [CTA_TIMEOUT_UDP_UNREPLIED]	= { .type = NLA_U32 },</td></tr>
+<tr><th id="256">256</th><td>       [CTA_TIMEOUT_UDP_REPLIED]	= { .type = NLA_U32 },</td></tr>
+<tr><th id="257">257</th><td>};</td></tr>
+<tr><th id="258">258</th><td><u>#<span data-ppcond="208">endif</span> /* CONFIG_NF_CONNTRACK_TIMEOUT */</u></td></tr>
+<tr><th id="259">259</th><td></td></tr>
+<tr><th id="260">260</th><td><em>void</em> <dfn class="decl def fn" id="nf_conntrack_udp_init_net" title='nf_conntrack_udp_init_net' data-ref="nf_conntrack_udp_init_net" data-ref-filename="nf_conntrack_udp_init_net">nf_conntrack_udp_init_net</dfn>(<b>struct</b> <a class="type" href="../../include/net/net_namespace.h.html#net" title='net' data-ref="net" data-ref-filename="net">net</a> *<dfn class="local col8 decl" id="18net" title='net' data-type='struct net *' data-ref="18net" data-ref-filename="18net">net</dfn>)</td></tr>
+<tr><th id="261">261</th><td>{</td></tr>
+<tr><th id="262">262</th><td>	<b>struct</b> <a class="type" href="../../include/net/netns/conntrack.h.html#nf_udp_net" title='nf_udp_net' data-ref="nf_udp_net" data-ref-filename="nf_udp_net">nf_udp_net</a> *<dfn class="local col9 decl" id="19un" title='un' data-type='struct nf_udp_net *' data-ref="19un" data-ref-filename="19un">un</dfn> = <a class="ref fn" href="../../include/net/netfilter/nf_conntrack_l4proto.h.html#nf_udp_pernet" title='nf_udp_pernet' data-ref="nf_udp_pernet" data-ref-filename="nf_udp_pernet">nf_udp_pernet</a>(<a class="local col8 ref" href="#18net" title='net' data-ref="18net" data-ref-filename="18net">net</a>);</td></tr>
+<tr><th id="263">263</th><td>	<em>int</em> <dfn class="local col0 decl" id="20i" title='i' data-type='int' data-ref="20i" data-ref-filename="20i">i</dfn>;</td></tr>
+<tr><th id="264">264</th><td></td></tr>
+<tr><th id="265">265</th><td>	<b>for</b> (<a class="local col0 ref" href="#20i" title='i' data-ref="20i" data-ref-filename="20i">i</a> = <var>0</var>; <a class="local col0 ref" href="#20i" title='i' data-ref="20i" data-ref-filename="20i">i</a> &lt; <a class="enum" href="../../include/net/netns/conntrack.h.html#UDP_CT_MAX" title='UDP_CT_MAX' data-ref="UDP_CT_MAX" data-ref-filename="UDP_CT_MAX">UDP_CT_MAX</a>; <a class="local col0 ref" href="#20i" title='i' data-ref="20i" data-ref-filename="20i">i</a>++)</td></tr>
+<tr><th id="266">266</th><td>		<a class="local col9 ref" href="#19un" title='un' data-ref="19un" data-ref-filename="19un">un</a>-&gt;<a class="ref field" href="../../include/net/netns/conntrack.h.html#nf_udp_net::timeouts" title='nf_udp_net::timeouts' data-ref="nf_udp_net::timeouts" data-ref-filename="nf_udp_net..timeouts">timeouts</a>[<a class="local col0 ref" href="#20i" title='i' data-ref="20i" data-ref-filename="20i">i</a>] = <a class="tu ref" href="#udp_timeouts" title='udp_timeouts' data-use='r' data-ref="udp_timeouts" data-ref-filename="udp_timeouts">udp_timeouts</a>[<a class="local col0 ref" href="#20i" title='i' data-ref="20i" data-ref-filename="20i">i</a>];</td></tr>
+<tr><th id="267">267</th><td>}</td></tr>
+<tr><th id="268">268</th><td></td></tr>
+<tr><th id="269">269</th><td><em>const</em> <b>struct</b> <a class="type" href="../../include/net/netfilter/nf_conntrack_l4proto.h.html#nf_conntrack_l4proto" title='nf_conntrack_l4proto' data-ref="nf_conntrack_l4proto" data-ref-filename="nf_conntrack_l4proto">nf_conntrack_l4proto</a> <dfn class="decl def" id="nf_conntrack_l4proto_udp" title='nf_conntrack_l4proto_udp' data-ref="nf_conntrack_l4proto_udp" data-ref-filename="nf_conntrack_l4proto_udp">nf_conntrack_l4proto_udp</dfn> =</td></tr>
+<tr><th id="270">270</th><td>{</td></tr>
+<tr><th id="271">271</th><td>	.<a class="ref field" href="../../include/net/netfilter/nf_conntrack_l4proto.h.html#nf_conntrack_l4proto::l4proto" title='nf_conntrack_l4proto::l4proto' data-ref="nf_conntrack_l4proto::l4proto" data-ref-filename="nf_conntrack_l4proto..l4proto">l4proto</a>		= <a class="macro" href="../../include/uapi/linux/in.h.html#44" title="IPPROTO_UDP" data-ref="_M/IPPROTO_UDP">IPPROTO_UDP</a>,</td></tr>
+<tr><th id="272">272</th><td>	.<a class="ref field" href="../../include/net/netfilter/nf_conntrack_l4proto.h.html#nf_conntrack_l4proto::allow_clash" title='nf_conntrack_l4proto::allow_clash' data-ref="nf_conntrack_l4proto::allow_clash" data-ref-filename="nf_conntrack_l4proto..allow_clash">allow_clash</a>		= <a class="enum" href="../../include/linux/stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>,</td></tr>
+<tr><th id="273">273</th><td><u>#<span data-ppcond="273">if</span> <a class="macro" href="../../include/linux/kconfig.h.html#71" title="1" data-ref="_M/IS_ENABLED">IS_ENABLED</a>(<a class="macro" href="../../include/generated/autoconf.h.html#1368" title="1" data-ref="_M/CONFIG_NF_CT_NETLINK">CONFIG_NF_CT_NETLINK</a>)</u></td></tr>
+<tr><th id="274">274</th><td>	.<a class="ref field" href="../../include/net/netfilter/nf_conntrack_l4proto.h.html#nf_conntrack_l4proto::tuple_to_nlattr" title='nf_conntrack_l4proto::tuple_to_nlattr' data-ref="nf_conntrack_l4proto::tuple_to_nlattr" data-ref-filename="nf_conntrack_l4proto..tuple_to_nlattr">tuple_to_nlattr</a>	= <a class="ref fn" href="../../include/net/netfilter/nf_conntrack_l4proto.h.html#nf_ct_port_tuple_to_nlattr" title='nf_ct_port_tuple_to_nlattr' data-ref="nf_ct_port_tuple_to_nlattr" data-ref-filename="nf_ct_port_tuple_to_nlattr">nf_ct_port_tuple_to_nlattr</a>,</td></tr>
+<tr><th id="275">275</th><td>	.<a class="ref field" href="../../include/net/netfilter/nf_conntrack_l4proto.h.html#nf_conntrack_l4proto::nlattr_to_tuple" title='nf_conntrack_l4proto::nlattr_to_tuple' data-ref="nf_conntrack_l4proto::nlattr_to_tuple" data-ref-filename="nf_conntrack_l4proto..nlattr_to_tuple">nlattr_to_tuple</a>	= <a class="ref fn" href="../../include/net/netfilter/nf_conntrack_l4proto.h.html#nf_ct_port_nlattr_to_tuple" title='nf_ct_port_nlattr_to_tuple' data-ref="nf_ct_port_nlattr_to_tuple" data-ref-filename="nf_ct_port_nlattr_to_tuple">nf_ct_port_nlattr_to_tuple</a>,</td></tr>
+<tr><th id="276">276</th><td>	.<a class="ref field" href="../../include/net/netfilter/nf_conntrack_l4proto.h.html#nf_conntrack_l4proto::nlattr_tuple_size" title='nf_conntrack_l4proto::nlattr_tuple_size' data-ref="nf_conntrack_l4proto::nlattr_tuple_size" data-ref-filename="nf_conntrack_l4proto..nlattr_tuple_size">nlattr_tuple_size</a>	= <a class="ref fn" href="../../include/net/netfilter/nf_conntrack_l4proto.h.html#nf_ct_port_nlattr_tuple_size" title='nf_ct_port_nlattr_tuple_size' data-ref="nf_ct_port_nlattr_tuple_size" data-ref-filename="nf_ct_port_nlattr_tuple_size">nf_ct_port_nlattr_tuple_size</a>,</td></tr>
+<tr><th id="277">277</th><td>	.<a class="ref field" href="../../include/net/netfilter/nf_conntrack_l4proto.h.html#nf_conntrack_l4proto::nla_policy" title='nf_conntrack_l4proto::nla_policy' data-ref="nf_conntrack_l4proto::nla_policy" data-ref-filename="nf_conntrack_l4proto..nla_policy">nla_policy</a>		= <a class="ref" href="../../include/net/netfilter/nf_conntrack_l4proto.h.html#nf_ct_port_nla_policy" title='nf_ct_port_nla_policy' data-ref="nf_ct_port_nla_policy" data-ref-filename="nf_ct_port_nla_policy">nf_ct_port_nla_policy</a>,</td></tr>
+<tr><th id="278">278</th><td><u>#<span data-ppcond="273">endif</span></u></td></tr>
+<tr><th id="279">279</th><td><u>#<span data-ppcond="279">ifdef</span> <span class="macro" data-ref="_M/CONFIG_NF_CONNTRACK_TIMEOUT">CONFIG_NF_CONNTRACK_TIMEOUT</span></u></td></tr>
+<tr><th id="280">280</th><td>	.ctnl_timeout		= {</td></tr>
+<tr><th id="281">281</th><td>		.nlattr_to_obj	= udp_timeout_nlattr_to_obj,</td></tr>
+<tr><th id="282">282</th><td>		.obj_to_nlattr	= udp_timeout_obj_to_nlattr,</td></tr>
+<tr><th id="283">283</th><td>		.nlattr_max	= CTA_TIMEOUT_UDP_MAX,</td></tr>
+<tr><th id="284">284</th><td>		.obj_size	= <b>sizeof</b>(<em>unsigned</em> <em>int</em>) * CTA_TIMEOUT_UDP_MAX,</td></tr>
+<tr><th id="285">285</th><td>		.nla_policy	= udp_timeout_nla_policy,</td></tr>
+<tr><th id="286">286</th><td>	},</td></tr>
+<tr><th id="287">287</th><td><u>#<span data-ppcond="279">endif</span> /* CONFIG_NF_CONNTRACK_TIMEOUT */</u></td></tr>
+<tr><th id="288">288</th><td>};</td></tr>
+<tr><th id="289">289</th><td></td></tr>
+<tr><th id="290">290</th><td><u>#<span data-ppcond="290">ifdef</span> <span class="macro" data-ref="_M/CONFIG_NF_CT_PROTO_UDPLITE">CONFIG_NF_CT_PROTO_UDPLITE</span></u></td></tr>
+<tr><th id="291">291</th><td><em>const</em> <b>struct</b> nf_conntrack_l4proto nf_conntrack_l4proto_udplite =</td></tr>
+<tr><th id="292">292</th><td>{</td></tr>
+<tr><th id="293">293</th><td>	.l4proto		= IPPROTO_UDPLITE,</td></tr>
+<tr><th id="294">294</th><td>	.allow_clash		= true,</td></tr>
+<tr><th id="295">295</th><td><u>#if IS_ENABLED(CONFIG_NF_CT_NETLINK)</u></td></tr>
+<tr><th id="296">296</th><td>	.tuple_to_nlattr	= nf_ct_port_tuple_to_nlattr,</td></tr>
+<tr><th id="297">297</th><td>	.nlattr_to_tuple	= nf_ct_port_nlattr_to_tuple,</td></tr>
+<tr><th id="298">298</th><td>	.nlattr_tuple_size	= nf_ct_port_nlattr_tuple_size,</td></tr>
+<tr><th id="299">299</th><td>	.nla_policy		= nf_ct_port_nla_policy,</td></tr>
+<tr><th id="300">300</th><td><u>#endif</u></td></tr>
+<tr><th id="301">301</th><td><u>#ifdef CONFIG_NF_CONNTRACK_TIMEOUT</u></td></tr>
+<tr><th id="302">302</th><td>	.ctnl_timeout		= {</td></tr>
+<tr><th id="303">303</th><td>		.nlattr_to_obj	= udp_timeout_nlattr_to_obj,</td></tr>
+<tr><th id="304">304</th><td>		.obj_to_nlattr	= udp_timeout_obj_to_nlattr,</td></tr>
+<tr><th id="305">305</th><td>		.nlattr_max	= CTA_TIMEOUT_UDP_MAX,</td></tr>
+<tr><th id="306">306</th><td>		.obj_size	= <b>sizeof</b>(<em>unsigned</em> <em>int</em>) * CTA_TIMEOUT_UDP_MAX,</td></tr>
+<tr><th id="307">307</th><td>		.nla_policy	= udp_timeout_nla_policy,</td></tr>
+<tr><th id="308">308</th><td>	},</td></tr>
+<tr><th id="309">309</th><td><u>#endif /* CONFIG_NF_CONNTRACK_TIMEOUT */</u></td></tr>
+<tr><th id="310">310</th><td>};</td></tr>
+<tr><th id="311">311</th><td><u>#<span data-ppcond="290">endif</span></u></td></tr>
+<tr><th id="312">312</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

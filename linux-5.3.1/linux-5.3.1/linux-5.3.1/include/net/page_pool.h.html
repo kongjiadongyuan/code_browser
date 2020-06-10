@@ -1,0 +1,248 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>page_pool.h source code [linux-5.3.1/include/net/page_pool.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="page_pool,page_pool_params,pp_alloc_cache "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/include/net/page_pool.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>include</a>/<a href='./'>net</a>/<a href='page_pool.h.html'>page_pool.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><i> *</i></td></tr>
+<tr><th id="3">3</th><td><i> * page_pool.h</i></td></tr>
+<tr><th id="4">4</th><td><i> *	Author:	Jesper Dangaard Brouer &lt;netoptimizer@brouer.com&gt;</i></td></tr>
+<tr><th id="5">5</th><td><i> *	Copyright (C) 2016 Red Hat, Inc.</i></td></tr>
+<tr><th id="6">6</th><td><i> */</i></td></tr>
+<tr><th id="7">7</th><td></td></tr>
+<tr><th id="8">8</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="9">9</th><td><i class="doc"> * DOC: page_pool allocator</i></td></tr>
+<tr><th id="10">10</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="11">11</th><td><i class="doc"> * This page_pool allocator is optimized for the XDP mode that</i></td></tr>
+<tr><th id="12">12</th><td><i class="doc"> * uses one-frame-per-page, but have fallbacks that act like the</i></td></tr>
+<tr><th id="13">13</th><td><i class="doc"> * regular page allocator APIs.</i></td></tr>
+<tr><th id="14">14</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="15">15</th><td><i class="doc"> * Basic use involve replacing alloc_pages() calls with the</i></td></tr>
+<tr><th id="16">16</th><td><i class="doc"> * page_pool_alloc_pages() call.  Drivers should likely use</i></td></tr>
+<tr><th id="17">17</th><td><i class="doc"> * page_pool_dev_alloc_pages() replacing dev_alloc_pages().</i></td></tr>
+<tr><th id="18">18</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="19">19</th><td><i class="doc"> * API keeps track of in-flight pages, in-order to let API user know</i></td></tr>
+<tr><th id="20">20</th><td><i class="doc"> * when it is safe to dealloactor page_pool object.  Thus, API users</i></td></tr>
+<tr><th id="21">21</th><td><i class="doc"> * must make sure to call page_pool_release_page() when a page is</i></td></tr>
+<tr><th id="22">22</th><td><i class="doc"> * "leaving" the page_pool.  Or call page_pool_put_page() where</i></td></tr>
+<tr><th id="23">23</th><td><i class="doc"> * appropiate.  For maintaining correct accounting.</i></td></tr>
+<tr><th id="24">24</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="25">25</th><td><i class="doc"> * API user must only call page_pool_put_page() once on a page, as it</i></td></tr>
+<tr><th id="26">26</th><td><i class="doc"> * will either recycle the page, or in case of elevated refcnt, it</i></td></tr>
+<tr><th id="27">27</th><td><i class="doc"> * will release the DMA mapping and in-flight state accounting.  We</i></td></tr>
+<tr><th id="28">28</th><td><i class="doc"> * hope to lift this requirement in the future.</i></td></tr>
+<tr><th id="29">29</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="30">30</th><td><u>#<span data-ppcond="30">ifndef</span> <span class="macro" data-ref="_M/_NET_PAGE_POOL_H">_NET_PAGE_POOL_H</span></u></td></tr>
+<tr><th id="31">31</th><td><u>#define <dfn class="macro" id="_M/_NET_PAGE_POOL_H" data-ref="_M/_NET_PAGE_POOL_H">_NET_PAGE_POOL_H</dfn></u></td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td><u>#include <a href="../linux/mm.h.html">&lt;linux/mm.h&gt;</a> /* Needed by ptr_ring */</u></td></tr>
+<tr><th id="34">34</th><td><u>#include <a href="../linux/ptr_ring.h.html">&lt;linux/ptr_ring.h&gt;</a></u></td></tr>
+<tr><th id="35">35</th><td><u>#include <a href="../linux/dma-direction.h.html">&lt;linux/dma-direction.h&gt;</a></u></td></tr>
+<tr><th id="36">36</th><td></td></tr>
+<tr><th id="37">37</th><td><u>#define <dfn class="macro" id="_M/PP_FLAG_DMA_MAP" data-ref="_M/PP_FLAG_DMA_MAP">PP_FLAG_DMA_MAP</dfn> 1 /* Should page_pool do the DMA map/unmap */</u></td></tr>
+<tr><th id="38">38</th><td><u>#define <dfn class="macro" id="_M/PP_FLAG_ALL" data-ref="_M/PP_FLAG_ALL">PP_FLAG_ALL</dfn>	PP_FLAG_DMA_MAP</u></td></tr>
+<tr><th id="39">39</th><td></td></tr>
+<tr><th id="40">40</th><td><i>/*</i></td></tr>
+<tr><th id="41">41</th><td><i> * Fast allocation side cache array/stack</i></td></tr>
+<tr><th id="42">42</th><td><i> *</i></td></tr>
+<tr><th id="43">43</th><td><i> * The cache size and refill watermark is related to the network</i></td></tr>
+<tr><th id="44">44</th><td><i> * use-case.  The NAPI budget is 64 packets.  After a NAPI poll the RX</i></td></tr>
+<tr><th id="45">45</th><td><i> * ring is usually refilled and the max consumed elements will be 64,</i></td></tr>
+<tr><th id="46">46</th><td><i> * thus a natural max size of objects needed in the cache.</i></td></tr>
+<tr><th id="47">47</th><td><i> *</i></td></tr>
+<tr><th id="48">48</th><td><i> * Keeping room for more objects, is due to XDP_DROP use-case.  As</i></td></tr>
+<tr><th id="49">49</th><td><i> * XDP_DROP allows the opportunity to recycle objects directly into</i></td></tr>
+<tr><th id="50">50</th><td><i> * this array, as it shares the same softirq/NAPI protection.  If</i></td></tr>
+<tr><th id="51">51</th><td><i> * cache is already full (or partly full) then the XDP_DROP recycles</i></td></tr>
+<tr><th id="52">52</th><td><i> * would have to take a slower code path.</i></td></tr>
+<tr><th id="53">53</th><td><i> */</i></td></tr>
+<tr><th id="54">54</th><td><u>#define <dfn class="macro" id="_M/PP_ALLOC_CACHE_SIZE" data-ref="_M/PP_ALLOC_CACHE_SIZE">PP_ALLOC_CACHE_SIZE</dfn>	128</u></td></tr>
+<tr><th id="55">55</th><td><u>#define <dfn class="macro" id="_M/PP_ALLOC_CACHE_REFILL" data-ref="_M/PP_ALLOC_CACHE_REFILL">PP_ALLOC_CACHE_REFILL</dfn>	64</u></td></tr>
+<tr><th id="56">56</th><td><b>struct</b> <dfn class="type def" id="pp_alloc_cache" title='pp_alloc_cache' data-ref="pp_alloc_cache" data-ref-filename="pp_alloc_cache">pp_alloc_cache</dfn> {</td></tr>
+<tr><th id="57">57</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl field" id="pp_alloc_cache::count" title='pp_alloc_cache::count' data-ref="pp_alloc_cache::count" data-ref-filename="pp_alloc_cache..count">count</dfn>;</td></tr>
+<tr><th id="58">58</th><td>	<em>void</em> *<dfn class="decl field" id="pp_alloc_cache::cache" title='pp_alloc_cache::cache' data-ref="pp_alloc_cache::cache" data-ref-filename="pp_alloc_cache..cache">cache</dfn>[<a class="macro" href="#54" title="128" data-ref="_M/PP_ALLOC_CACHE_SIZE">PP_ALLOC_CACHE_SIZE</a>];</td></tr>
+<tr><th id="59">59</th><td>};</td></tr>
+<tr><th id="60">60</th><td></td></tr>
+<tr><th id="61">61</th><td><b>struct</b> <dfn class="type def" id="page_pool_params" title='page_pool_params' data-ref="page_pool_params" data-ref-filename="page_pool_params">page_pool_params</dfn> {</td></tr>
+<tr><th id="62">62</th><td>	<em>unsigned</em> <em>int</em>	<dfn class="decl field" id="page_pool_params::flags" title='page_pool_params::flags' data-ref="page_pool_params::flags" data-ref-filename="page_pool_params..flags">flags</dfn>;</td></tr>
+<tr><th id="63">63</th><td>	<em>unsigned</em> <em>int</em>	<dfn class="decl field" id="page_pool_params::order" title='page_pool_params::order' data-ref="page_pool_params::order" data-ref-filename="page_pool_params..order">order</dfn>;</td></tr>
+<tr><th id="64">64</th><td>	<em>unsigned</em> <em>int</em>	<dfn class="decl field" id="page_pool_params::pool_size" title='page_pool_params::pool_size' data-ref="page_pool_params::pool_size" data-ref-filename="page_pool_params..pool_size">pool_size</dfn>;</td></tr>
+<tr><th id="65">65</th><td>	<em>int</em>		<dfn class="decl field" id="page_pool_params::nid" title='page_pool_params::nid' data-ref="page_pool_params::nid" data-ref-filename="page_pool_params..nid">nid</dfn>;  <i>/* Numa node id to allocate from pages from */</i></td></tr>
+<tr><th id="66">66</th><td>	<b>struct</b> <a class="type" href="../linux/device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a>	*<dfn class="decl field" id="page_pool_params::dev" title='page_pool_params::dev' data-ref="page_pool_params::dev" data-ref-filename="page_pool_params..dev">dev</dfn>; <i>/* device, for DMA pre-mapping purposes */</i></td></tr>
+<tr><th id="67">67</th><td>	<b>enum</b> <a class="type" href="../linux/dma-direction.h.html#dma_data_direction" title='dma_data_direction' data-ref="dma_data_direction" data-ref-filename="dma_data_direction">dma_data_direction</a> <dfn class="decl field" id="page_pool_params::dma_dir" title='page_pool_params::dma_dir' data-ref="page_pool_params::dma_dir" data-ref-filename="page_pool_params..dma_dir">dma_dir</dfn>; <i>/* DMA mapping direction */</i></td></tr>
+<tr><th id="68">68</th><td>};</td></tr>
+<tr><th id="69">69</th><td></td></tr>
+<tr><th id="70">70</th><td><b>struct</b> <dfn class="type def" id="page_pool" title='page_pool' data-ref="page_pool" data-ref-filename="page_pool">page_pool</dfn> {</td></tr>
+<tr><th id="71">71</th><td>	<b>struct</b> <a class="type" href="#page_pool_params" title='page_pool_params' data-ref="page_pool_params" data-ref-filename="page_pool_params">page_pool_params</a> <dfn class="decl field" id="page_pool::p" title='page_pool::p' data-ref="page_pool::p" data-ref-filename="page_pool..p">p</dfn>;</td></tr>
+<tr><th id="72">72</th><td></td></tr>
+<tr><th id="73">73</th><td>        <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl field" id="page_pool::pages_state_hold_cnt" title='page_pool::pages_state_hold_cnt' data-ref="page_pool::pages_state_hold_cnt" data-ref-filename="page_pool..pages_state_hold_cnt">pages_state_hold_cnt</dfn>;</td></tr>
+<tr><th id="74">74</th><td></td></tr>
+<tr><th id="75">75</th><td>	<i>/*</i></td></tr>
+<tr><th id="76">76</th><td><i>	 * Data structure for allocation side</i></td></tr>
+<tr><th id="77">77</th><td><i>	 *</i></td></tr>
+<tr><th id="78">78</th><td><i>	 * Drivers allocation side usually already perform some kind</i></td></tr>
+<tr><th id="79">79</th><td><i>	 * of resource protection.  Piggyback on this protection, and</i></td></tr>
+<tr><th id="80">80</th><td><i>	 * require driver to protect allocation side.</i></td></tr>
+<tr><th id="81">81</th><td><i>	 *</i></td></tr>
+<tr><th id="82">82</th><td><i>	 * For NIC drivers this means, allocate a page_pool per</i></td></tr>
+<tr><th id="83">83</th><td><i>	 * RX-queue. As the RX-queue is already protected by</i></td></tr>
+<tr><th id="84">84</th><td><i>	 * Softirq/BH scheduling and napi_schedule. NAPI schedule</i></td></tr>
+<tr><th id="85">85</th><td><i>	 * guarantee that a single napi_struct will only be scheduled</i></td></tr>
+<tr><th id="86">86</th><td><i>	 * on a single CPU (see napi_schedule).</i></td></tr>
+<tr><th id="87">87</th><td><i>	 */</i></td></tr>
+<tr><th id="88">88</th><td>	<b>struct</b> <a class="type" href="#pp_alloc_cache" title='pp_alloc_cache' data-ref="pp_alloc_cache" data-ref-filename="pp_alloc_cache">pp_alloc_cache</a> <dfn class="decl field" id="page_pool::alloc" title='page_pool::alloc' data-ref="page_pool::alloc" data-ref-filename="page_pool..alloc">alloc</dfn> <a class="macro" href="../linux/cache.h.html#40" title="__attribute__((__aligned__((1 &lt;&lt; (6)))))" data-ref="_M/____cacheline_aligned_in_smp">____cacheline_aligned_in_smp</a>;</td></tr>
+<tr><th id="89">89</th><td></td></tr>
+<tr><th id="90">90</th><td>	<i>/* Data structure for storing recycled pages.</i></td></tr>
+<tr><th id="91">91</th><td><i>	 *</i></td></tr>
+<tr><th id="92">92</th><td><i>	 * Returning/freeing pages is more complicated synchronization</i></td></tr>
+<tr><th id="93">93</th><td><i>	 * wise, because free's can happen on remote CPUs, with no</i></td></tr>
+<tr><th id="94">94</th><td><i>	 * association with allocation resource.</i></td></tr>
+<tr><th id="95">95</th><td><i>	 *</i></td></tr>
+<tr><th id="96">96</th><td><i>	 * Use ptr_ring, as it separates consumer and producer</i></td></tr>
+<tr><th id="97">97</th><td><i>	 * effeciently, it a way that doesn't bounce cache-lines.</i></td></tr>
+<tr><th id="98">98</th><td><i>	 *</i></td></tr>
+<tr><th id="99">99</th><td><i>	 * TODO: Implement bulk return pages into this structure.</i></td></tr>
+<tr><th id="100">100</th><td><i>	 */</i></td></tr>
+<tr><th id="101">101</th><td>	<b>struct</b> <a class="type" href="../linux/ptr_ring.h.html#ptr_ring" title='ptr_ring' data-ref="ptr_ring" data-ref-filename="ptr_ring">ptr_ring</a> <dfn class="decl field" id="page_pool::ring" title='page_pool::ring' data-ref="page_pool::ring" data-ref-filename="page_pool..ring">ring</dfn>;</td></tr>
+<tr><th id="102">102</th><td></td></tr>
+<tr><th id="103">103</th><td>	<a class="typedef" href="../linux/types.h.html#atomic_t" title='atomic_t' data-type='struct atomic_t' data-ref="atomic_t" data-ref-filename="atomic_t">atomic_t</a> <dfn class="decl field" id="page_pool::pages_state_release_cnt" title='page_pool::pages_state_release_cnt' data-ref="page_pool::pages_state_release_cnt" data-ref-filename="page_pool..pages_state_release_cnt">pages_state_release_cnt</dfn>;</td></tr>
+<tr><th id="104">104</th><td></td></tr>
+<tr><th id="105">105</th><td>	<i>/* A page_pool is strictly tied to a single RX-queue being</i></td></tr>
+<tr><th id="106">106</th><td><i>	 * protected by NAPI, due to above pp_alloc_cache. This</i></td></tr>
+<tr><th id="107">107</th><td><i>	 * refcnt serves purpose is to simplify drivers error handling.</i></td></tr>
+<tr><th id="108">108</th><td><i>	 */</i></td></tr>
+<tr><th id="109">109</th><td>	<a class="typedef" href="../linux/refcount.h.html#refcount_t" title='refcount_t' data-type='struct refcount_struct' data-ref="refcount_t" data-ref-filename="refcount_t">refcount_t</a> <dfn class="decl field" id="page_pool::user_cnt" title='page_pool::user_cnt' data-ref="page_pool::user_cnt" data-ref-filename="page_pool..user_cnt">user_cnt</dfn>;</td></tr>
+<tr><th id="110">110</th><td>};</td></tr>
+<tr><th id="111">111</th><td></td></tr>
+<tr><th id="112">112</th><td><b>struct</b> <a class="type" href="../linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="decl fn" id="page_pool_alloc_pages" title='page_pool_alloc_pages' data-ref="page_pool_alloc_pages" data-ref-filename="page_pool_alloc_pages">page_pool_alloc_pages</dfn>(<b>struct</b> <a class="type" href="#page_pool" title='page_pool' data-ref="page_pool" data-ref-filename="page_pool">page_pool</a> *<dfn class="local col5 decl" id="115pool" title='pool' data-type='struct page_pool *' data-ref="115pool" data-ref-filename="115pool">pool</dfn>, <a class="typedef" href="../linux/types.h.html#gfp_t" title='gfp_t' data-type='unsigned int' data-ref="gfp_t" data-ref-filename="gfp_t">gfp_t</a> <dfn class="local col6 decl" id="116gfp" title='gfp' data-type='gfp_t' data-ref="116gfp" data-ref-filename="116gfp">gfp</dfn>);</td></tr>
+<tr><th id="113">113</th><td></td></tr>
+<tr><th id="114">114</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="../linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="decl def fn" id="page_pool_dev_alloc_pages" title='page_pool_dev_alloc_pages' data-ref="page_pool_dev_alloc_pages" data-ref-filename="page_pool_dev_alloc_pages">page_pool_dev_alloc_pages</dfn>(<b>struct</b> <a class="type" href="#page_pool" title='page_pool' data-ref="page_pool" data-ref-filename="page_pool">page_pool</a> *<dfn class="local col7 decl" id="117pool" title='pool' data-type='struct page_pool *' data-ref="117pool" data-ref-filename="117pool">pool</dfn>)</td></tr>
+<tr><th id="115">115</th><td>{</td></tr>
+<tr><th id="116">116</th><td>	<a class="typedef" href="../linux/types.h.html#gfp_t" title='gfp_t' data-type='unsigned int' data-ref="gfp_t" data-ref-filename="gfp_t">gfp_t</a> <dfn class="local col8 decl" id="118gfp" title='gfp' data-type='gfp_t' data-ref="118gfp" data-ref-filename="118gfp">gfp</dfn> = (<a class="macro" href="../linux/gfp.h.html#289" title="((( gfp_t)0x20u)|(( gfp_t)0x200u)|(( gfp_t)0x800u))" data-ref="_M/GFP_ATOMIC">GFP_ATOMIC</a> | <a class="macro" href="../linux/gfp.h.html#212" title="(( gfp_t)0x2000u)" data-ref="_M/__GFP_NOWARN">__GFP_NOWARN</a>);</td></tr>
+<tr><th id="117">117</th><td></td></tr>
+<tr><th id="118">118</th><td>	<b>return</b> <a class="ref fn" href="#page_pool_alloc_pages" title='page_pool_alloc_pages' data-ref="page_pool_alloc_pages" data-ref-filename="page_pool_alloc_pages">page_pool_alloc_pages</a>(<a class="local col7 ref" href="#117pool" title='pool' data-ref="117pool" data-ref-filename="117pool">pool</a>, <a class="local col8 ref" href="#118gfp" title='gfp' data-ref="118gfp" data-ref-filename="118gfp">gfp</a>);</td></tr>
+<tr><th id="119">119</th><td>}</td></tr>
+<tr><th id="120">120</th><td></td></tr>
+<tr><th id="121">121</th><td><i>/* get the stored dma direction. A driver might decide to treat this locally and</i></td></tr>
+<tr><th id="122">122</th><td><i> * avoid the extra cache line from page_pool to determine the direction</i></td></tr>
+<tr><th id="123">123</th><td><i> */</i></td></tr>
+<tr><th id="124">124</th><td><em>static</em></td></tr>
+<tr><th id="125">125</th><td><a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>enum</b> <a class="type" href="../linux/dma-direction.h.html#dma_data_direction" title='dma_data_direction' data-ref="dma_data_direction" data-ref-filename="dma_data_direction">dma_data_direction</a> <dfn class="decl def fn" id="page_pool_get_dma_dir" title='page_pool_get_dma_dir' data-ref="page_pool_get_dma_dir" data-ref-filename="page_pool_get_dma_dir">page_pool_get_dma_dir</dfn>(<b>struct</b> <a class="type" href="#page_pool" title='page_pool' data-ref="page_pool" data-ref-filename="page_pool">page_pool</a> *<dfn class="local col9 decl" id="119pool" title='pool' data-type='struct page_pool *' data-ref="119pool" data-ref-filename="119pool">pool</dfn>)</td></tr>
+<tr><th id="126">126</th><td>{</td></tr>
+<tr><th id="127">127</th><td>	<b>return</b> <a class="local col9 ref" href="#119pool" title='pool' data-ref="119pool" data-ref-filename="119pool">pool</a>-&gt;<a class="ref field" href="#page_pool::p" title='page_pool::p' data-ref="page_pool::p" data-ref-filename="page_pool..p">p</a>.<a class="ref field" href="#page_pool_params::dma_dir" title='page_pool_params::dma_dir' data-ref="page_pool_params::dma_dir" data-ref-filename="page_pool_params..dma_dir">dma_dir</a>;</td></tr>
+<tr><th id="128">128</th><td>}</td></tr>
+<tr><th id="129">129</th><td></td></tr>
+<tr><th id="130">130</th><td><b>struct</b> <a class="type" href="#page_pool" title='page_pool' data-ref="page_pool" data-ref-filename="page_pool">page_pool</a> *<dfn class="decl fn" id="page_pool_create" title='page_pool_create' data-ref="page_pool_create" data-ref-filename="page_pool_create">page_pool_create</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#page_pool_params" title='page_pool_params' data-ref="page_pool_params" data-ref-filename="page_pool_params">page_pool_params</a> *<dfn class="local col0 decl" id="120params" title='params' data-type='const struct page_pool_params *' data-ref="120params" data-ref-filename="120params">params</dfn>);</td></tr>
+<tr><th id="131">131</th><td></td></tr>
+<tr><th id="132">132</th><td><em>void</em> <dfn class="decl fn" id="__page_pool_free" title='__page_pool_free' data-ref="__page_pool_free" data-ref-filename="__page_pool_free">__page_pool_free</dfn>(<b>struct</b> <a class="type" href="#page_pool" title='page_pool' data-ref="page_pool" data-ref-filename="page_pool">page_pool</a> *<dfn class="local col1 decl" id="121pool" title='pool' data-type='struct page_pool *' data-ref="121pool" data-ref-filename="121pool">pool</dfn>);</td></tr>
+<tr><th id="133">133</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="page_pool_free" title='page_pool_free' data-ref="page_pool_free" data-ref-filename="page_pool_free">page_pool_free</dfn>(<b>struct</b> <a class="type" href="#page_pool" title='page_pool' data-ref="page_pool" data-ref-filename="page_pool">page_pool</a> *<dfn class="local col2 decl" id="122pool" title='pool' data-type='struct page_pool *' data-ref="122pool" data-ref-filename="122pool">pool</dfn>)</td></tr>
+<tr><th id="134">134</th><td>{</td></tr>
+<tr><th id="135">135</th><td>	<i>/* When page_pool isn't compiled-in, net/core/xdp.c doesn't</i></td></tr>
+<tr><th id="136">136</th><td><i>	 * allow registering MEM_TYPE_PAGE_POOL, but shield linker.</i></td></tr>
+<tr><th id="137">137</th><td><i>	 */</i></td></tr>
+<tr><th id="138">138</th><td><u>#<span data-ppcond="138">ifdef</span> <span class="macro" data-ref="_M/CONFIG_PAGE_POOL">CONFIG_PAGE_POOL</span></u></td></tr>
+<tr><th id="139">139</th><td>	__page_pool_free(pool);</td></tr>
+<tr><th id="140">140</th><td><u>#<span data-ppcond="138">endif</span></u></td></tr>
+<tr><th id="141">141</th><td>}</td></tr>
+<tr><th id="142">142</th><td></td></tr>
+<tr><th id="143">143</th><td><i>/* Drivers use this instead of page_pool_free */</i></td></tr>
+<tr><th id="144">144</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="page_pool_destroy" title='page_pool_destroy' data-ref="page_pool_destroy" data-ref-filename="page_pool_destroy">page_pool_destroy</dfn>(<b>struct</b> <a class="type" href="#page_pool" title='page_pool' data-ref="page_pool" data-ref-filename="page_pool">page_pool</a> *<dfn class="local col3 decl" id="123pool" title='pool' data-type='struct page_pool *' data-ref="123pool" data-ref-filename="123pool">pool</dfn>)</td></tr>
+<tr><th id="145">145</th><td>{</td></tr>
+<tr><th id="146">146</th><td>	<b>if</b> (!<a class="local col3 ref" href="#123pool" title='pool' data-ref="123pool" data-ref-filename="123pool">pool</a>)</td></tr>
+<tr><th id="147">147</th><td>		<b>return</b>;</td></tr>
+<tr><th id="148">148</th><td></td></tr>
+<tr><th id="149">149</th><td>	<a class="ref fn" href="#page_pool_free" title='page_pool_free' data-ref="page_pool_free" data-ref-filename="page_pool_free">page_pool_free</a>(<a class="local col3 ref" href="#123pool" title='pool' data-ref="123pool" data-ref-filename="123pool">pool</a>);</td></tr>
+<tr><th id="150">150</th><td>}</td></tr>
+<tr><th id="151">151</th><td></td></tr>
+<tr><th id="152">152</th><td><i>/* Never call this directly, use helpers below */</i></td></tr>
+<tr><th id="153">153</th><td><em>void</em> <dfn class="decl fn" id="__page_pool_put_page" title='__page_pool_put_page' data-ref="__page_pool_put_page" data-ref-filename="__page_pool_put_page">__page_pool_put_page</dfn>(<b>struct</b> <a class="type" href="#page_pool" title='page_pool' data-ref="page_pool" data-ref-filename="page_pool">page_pool</a> *<dfn class="local col4 decl" id="124pool" title='pool' data-type='struct page_pool *' data-ref="124pool" data-ref-filename="124pool">pool</dfn>,</td></tr>
+<tr><th id="154">154</th><td>			  <b>struct</b> <a class="type" href="../linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="local col5 decl" id="125page" title='page' data-type='struct page *' data-ref="125page" data-ref-filename="125page">page</dfn>, <a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col6 decl" id="126allow_direct" title='allow_direct' data-type='bool' data-ref="126allow_direct" data-ref-filename="126allow_direct">allow_direct</dfn>);</td></tr>
+<tr><th id="155">155</th><td></td></tr>
+<tr><th id="156">156</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="page_pool_put_page" title='page_pool_put_page' data-ref="page_pool_put_page" data-ref-filename="page_pool_put_page">page_pool_put_page</dfn>(<b>struct</b> <a class="type" href="#page_pool" title='page_pool' data-ref="page_pool" data-ref-filename="page_pool">page_pool</a> *<dfn class="local col7 decl" id="127pool" title='pool' data-type='struct page_pool *' data-ref="127pool" data-ref-filename="127pool">pool</dfn>,</td></tr>
+<tr><th id="157">157</th><td>				      <b>struct</b> <a class="type" href="../linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="local col8 decl" id="128page" title='page' data-type='struct page *' data-ref="128page" data-ref-filename="128page">page</dfn>, <a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col9 decl" id="129allow_direct" title='allow_direct' data-type='bool' data-ref="129allow_direct" data-ref-filename="129allow_direct">allow_direct</dfn>)</td></tr>
+<tr><th id="158">158</th><td>{</td></tr>
+<tr><th id="159">159</th><td>	<i>/* When page_pool isn't compiled-in, net/core/xdp.c doesn't</i></td></tr>
+<tr><th id="160">160</th><td><i>	 * allow registering MEM_TYPE_PAGE_POOL, but shield linker.</i></td></tr>
+<tr><th id="161">161</th><td><i>	 */</i></td></tr>
+<tr><th id="162">162</th><td><u>#<span data-ppcond="162">ifdef</span> <span class="macro" data-ref="_M/CONFIG_PAGE_POOL">CONFIG_PAGE_POOL</span></u></td></tr>
+<tr><th id="163">163</th><td>	__page_pool_put_page(pool, page, allow_direct);</td></tr>
+<tr><th id="164">164</th><td><u>#<span data-ppcond="162">endif</span></u></td></tr>
+<tr><th id="165">165</th><td>}</td></tr>
+<tr><th id="166">166</th><td><i>/* Very limited use-cases allow recycle direct */</i></td></tr>
+<tr><th id="167">167</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="page_pool_recycle_direct" title='page_pool_recycle_direct' data-ref="page_pool_recycle_direct" data-ref-filename="page_pool_recycle_direct">page_pool_recycle_direct</dfn>(<b>struct</b> <a class="type" href="#page_pool" title='page_pool' data-ref="page_pool" data-ref-filename="page_pool">page_pool</a> *<dfn class="local col0 decl" id="130pool" title='pool' data-type='struct page_pool *' data-ref="130pool" data-ref-filename="130pool">pool</dfn>,</td></tr>
+<tr><th id="168">168</th><td>					    <b>struct</b> <a class="type" href="../linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="local col1 decl" id="131page" title='page' data-type='struct page *' data-ref="131page" data-ref-filename="131page">page</dfn>)</td></tr>
+<tr><th id="169">169</th><td>{</td></tr>
+<tr><th id="170">170</th><td>	<a class="ref fn" href="#__page_pool_put_page" title='__page_pool_put_page' data-ref="__page_pool_put_page" data-ref-filename="__page_pool_put_page">__page_pool_put_page</a>(<a class="local col0 ref" href="#130pool" title='pool' data-ref="130pool" data-ref-filename="130pool">pool</a>, <a class="local col1 ref" href="#131page" title='page' data-ref="131page" data-ref-filename="131page">page</a>, <a class="enum" href="../linux/stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>);</td></tr>
+<tr><th id="171">171</th><td>}</td></tr>
+<tr><th id="172">172</th><td></td></tr>
+<tr><th id="173">173</th><td><i>/* API user MUST have disconnected alloc-side (not allowed to call</i></td></tr>
+<tr><th id="174">174</th><td><i> * page_pool_alloc_pages()) before calling this.  The free-side can</i></td></tr>
+<tr><th id="175">175</th><td><i> * still run concurrently, to handle in-flight packet-pages.</i></td></tr>
+<tr><th id="176">176</th><td><i> *</i></td></tr>
+<tr><th id="177">177</th><td><i> * A request to shutdown can fail (with false) if there are still</i></td></tr>
+<tr><th id="178">178</th><td><i> * in-flight packet-pages.</i></td></tr>
+<tr><th id="179">179</th><td><i> */</i></td></tr>
+<tr><th id="180">180</th><td><a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl fn" id="__page_pool_request_shutdown" title='__page_pool_request_shutdown' data-ref="__page_pool_request_shutdown" data-ref-filename="__page_pool_request_shutdown">__page_pool_request_shutdown</dfn>(<b>struct</b> <a class="type" href="#page_pool" title='page_pool' data-ref="page_pool" data-ref-filename="page_pool">page_pool</a> *<dfn class="local col2 decl" id="132pool" title='pool' data-type='struct page_pool *' data-ref="132pool" data-ref-filename="132pool">pool</dfn>);</td></tr>
+<tr><th id="181">181</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="page_pool_request_shutdown" title='page_pool_request_shutdown' data-ref="page_pool_request_shutdown" data-ref-filename="page_pool_request_shutdown">page_pool_request_shutdown</dfn>(<b>struct</b> <a class="type" href="#page_pool" title='page_pool' data-ref="page_pool" data-ref-filename="page_pool">page_pool</a> *<dfn class="local col3 decl" id="133pool" title='pool' data-type='struct page_pool *' data-ref="133pool" data-ref-filename="133pool">pool</dfn>)</td></tr>
+<tr><th id="182">182</th><td>{</td></tr>
+<tr><th id="183">183</th><td>	<a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col4 decl" id="134safe_to_remove" title='safe_to_remove' data-type='bool' data-ref="134safe_to_remove" data-ref-filename="134safe_to_remove">safe_to_remove</dfn> = <a class="enum" href="../linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="184">184</th><td></td></tr>
+<tr><th id="185">185</th><td><u>#<span data-ppcond="185">ifdef</span> <span class="macro" data-ref="_M/CONFIG_PAGE_POOL">CONFIG_PAGE_POOL</span></u></td></tr>
+<tr><th id="186">186</th><td>	safe_to_remove = __page_pool_request_shutdown(pool);</td></tr>
+<tr><th id="187">187</th><td><u>#<span data-ppcond="185">endif</span></u></td></tr>
+<tr><th id="188">188</th><td>	<b>return</b> <a class="local col4 ref" href="#134safe_to_remove" title='safe_to_remove' data-ref="134safe_to_remove" data-ref-filename="134safe_to_remove">safe_to_remove</a>;</td></tr>
+<tr><th id="189">189</th><td>}</td></tr>
+<tr><th id="190">190</th><td></td></tr>
+<tr><th id="191">191</th><td><i>/* Disconnects a page (from a page_pool).  API users can have a need</i></td></tr>
+<tr><th id="192">192</th><td><i> * to disconnect a page (from a page_pool), to allow it to be used as</i></td></tr>
+<tr><th id="193">193</th><td><i> * a regular page (that will eventually be returned to the normal</i></td></tr>
+<tr><th id="194">194</th><td><i> * page-allocator via put_page).</i></td></tr>
+<tr><th id="195">195</th><td><i> */</i></td></tr>
+<tr><th id="196">196</th><td><em>void</em> <dfn class="decl fn" id="page_pool_unmap_page" title='page_pool_unmap_page' data-ref="page_pool_unmap_page" data-ref-filename="page_pool_unmap_page">page_pool_unmap_page</dfn>(<b>struct</b> <a class="type" href="#page_pool" title='page_pool' data-ref="page_pool" data-ref-filename="page_pool">page_pool</a> *<dfn class="local col5 decl" id="135pool" title='pool' data-type='struct page_pool *' data-ref="135pool" data-ref-filename="135pool">pool</dfn>, <b>struct</b> <a class="type" href="../linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="local col6 decl" id="136page" title='page' data-type='struct page *' data-ref="136page" data-ref-filename="136page">page</dfn>);</td></tr>
+<tr><th id="197">197</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="page_pool_release_page" title='page_pool_release_page' data-ref="page_pool_release_page" data-ref-filename="page_pool_release_page">page_pool_release_page</dfn>(<b>struct</b> <a class="type" href="#page_pool" title='page_pool' data-ref="page_pool" data-ref-filename="page_pool">page_pool</a> *<dfn class="local col7 decl" id="137pool" title='pool' data-type='struct page_pool *' data-ref="137pool" data-ref-filename="137pool">pool</dfn>,</td></tr>
+<tr><th id="198">198</th><td>					  <b>struct</b> <a class="type" href="../linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="local col8 decl" id="138page" title='page' data-type='struct page *' data-ref="138page" data-ref-filename="138page">page</dfn>)</td></tr>
+<tr><th id="199">199</th><td>{</td></tr>
+<tr><th id="200">200</th><td><u>#<span data-ppcond="200">ifdef</span> <span class="macro" data-ref="_M/CONFIG_PAGE_POOL">CONFIG_PAGE_POOL</span></u></td></tr>
+<tr><th id="201">201</th><td>	page_pool_unmap_page(pool, page);</td></tr>
+<tr><th id="202">202</th><td><u>#<span data-ppcond="200">endif</span></u></td></tr>
+<tr><th id="203">203</th><td>}</td></tr>
+<tr><th id="204">204</th><td></td></tr>
+<tr><th id="205">205</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../linux/types.h.html#dma_addr_t" title='dma_addr_t' data-type='u64' data-ref="dma_addr_t" data-ref-filename="dma_addr_t">dma_addr_t</a> <dfn class="decl def fn" id="page_pool_get_dma_addr" title='page_pool_get_dma_addr' data-ref="page_pool_get_dma_addr" data-ref-filename="page_pool_get_dma_addr">page_pool_get_dma_addr</dfn>(<b>struct</b> <a class="type" href="../linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="local col9 decl" id="139page" title='page' data-type='struct page *' data-ref="139page" data-ref-filename="139page">page</dfn>)</td></tr>
+<tr><th id="206">206</th><td>{</td></tr>
+<tr><th id="207">207</th><td>	<b>return</b> <a class="local col9 ref" href="#139page" title='page' data-ref="139page" data-ref-filename="139page">page</a>-&gt;<a class="ref field" href="../linux/mm_types.h.html#page::(anonymousunion)::(anonymous)::dma_addr" title='page::(anonymous union)::(anonymous struct)::dma_addr' data-ref="page::(anonymousunion)::(anonymous)::dma_addr" data-ref-filename="page..(anonymousunion)..(anonymous)..dma_addr">dma_addr</a>;</td></tr>
+<tr><th id="208">208</th><td>}</td></tr>
+<tr><th id="209">209</th><td></td></tr>
+<tr><th id="210">210</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="is_page_pool_compiled_in" title='is_page_pool_compiled_in' data-ref="is_page_pool_compiled_in" data-ref-filename="is_page_pool_compiled_in">is_page_pool_compiled_in</dfn>(<em>void</em>)</td></tr>
+<tr><th id="211">211</th><td>{</td></tr>
+<tr><th id="212">212</th><td><u>#<span data-ppcond="212">ifdef</span> <span class="macro" data-ref="_M/CONFIG_PAGE_POOL">CONFIG_PAGE_POOL</span></u></td></tr>
+<tr><th id="213">213</th><td>	<b>return</b> true;</td></tr>
+<tr><th id="214">214</th><td><u>#<span data-ppcond="212">else</span></u></td></tr>
+<tr><th id="215">215</th><td>	<b>return</b> <a class="enum" href="../linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="216">216</th><td><u>#<span data-ppcond="212">endif</span></u></td></tr>
+<tr><th id="217">217</th><td>}</td></tr>
+<tr><th id="218">218</th><td></td></tr>
+<tr><th id="219">219</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="page_pool_get" title='page_pool_get' data-ref="page_pool_get" data-ref-filename="page_pool_get">page_pool_get</dfn>(<b>struct</b> <a class="type" href="#page_pool" title='page_pool' data-ref="page_pool" data-ref-filename="page_pool">page_pool</a> *<dfn class="local col0 decl" id="140pool" title='pool' data-type='struct page_pool *' data-ref="140pool" data-ref-filename="140pool">pool</dfn>)</td></tr>
+<tr><th id="220">220</th><td>{</td></tr>
+<tr><th id="221">221</th><td>	<a class="ref fn" href="../../arch/x86/include/asm/refcount.h.html#refcount_inc" title='refcount_inc' data-ref="refcount_inc" data-ref-filename="refcount_inc">refcount_inc</a>(&amp;<a class="local col0 ref" href="#140pool" title='pool' data-ref="140pool" data-ref-filename="140pool">pool</a>-&gt;<a class="ref field" href="#page_pool::user_cnt" title='page_pool::user_cnt' data-ref="page_pool::user_cnt" data-ref-filename="page_pool..user_cnt">user_cnt</a>);</td></tr>
+<tr><th id="222">222</th><td>}</td></tr>
+<tr><th id="223">223</th><td></td></tr>
+<tr><th id="224">224</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="page_pool_put" title='page_pool_put' data-ref="page_pool_put" data-ref-filename="page_pool_put">page_pool_put</dfn>(<b>struct</b> <a class="type" href="#page_pool" title='page_pool' data-ref="page_pool" data-ref-filename="page_pool">page_pool</a> *<dfn class="local col1 decl" id="141pool" title='pool' data-type='struct page_pool *' data-ref="141pool" data-ref-filename="141pool">pool</dfn>)</td></tr>
+<tr><th id="225">225</th><td>{</td></tr>
+<tr><th id="226">226</th><td>	<b>return</b> <a class="ref fn" href="../../arch/x86/include/asm/refcount.h.html#refcount_dec_and_test" title='refcount_dec_and_test' data-ref="refcount_dec_and_test" data-ref-filename="refcount_dec_and_test">refcount_dec_and_test</a>(&amp;<a class="local col1 ref" href="#141pool" title='pool' data-ref="141pool" data-ref-filename="141pool">pool</a>-&gt;<a class="ref field" href="#page_pool::user_cnt" title='page_pool::user_cnt' data-ref="page_pool::user_cnt" data-ref-filename="page_pool..user_cnt">user_cnt</a>);</td></tr>
+<tr><th id="227">227</th><td>}</td></tr>
+<tr><th id="228">228</th><td></td></tr>
+<tr><th id="229">229</th><td><u>#<span data-ppcond="30">endif</span> /* _NET_PAGE_POOL_H */</u></td></tr>
+<tr><th id="230">230</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../net/core/xdp.c.html'>linux-5.3.1/net/core/xdp.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

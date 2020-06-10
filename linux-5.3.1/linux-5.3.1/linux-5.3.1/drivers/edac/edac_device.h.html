@@ -1,0 +1,339 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>edac_device.h source code [linux-5.3.1/drivers/edac/edac_device.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="edac_dev_sysfs_attribute,edac_dev_sysfs_block_attribute,edac_device_block,edac_device_counter,edac_device_ctl_info,edac_device_instance "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/drivers/edac/edac_device.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>drivers</a>/<a href='./'>edac</a>/<a href='edac_device.h.html'>edac_device.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*</i></td></tr>
+<tr><th id="2">2</th><td><i> * Defines, structures, APIs for edac_device</i></td></tr>
+<tr><th id="3">3</th><td><i> *</i></td></tr>
+<tr><th id="4">4</th><td><i> * (C) 2007 Linux Networx (<a href="http://lnxi.com">http://lnxi.com</a>)</i></td></tr>
+<tr><th id="5">5</th><td><i> * This file may be distributed under the terms of the</i></td></tr>
+<tr><th id="6">6</th><td><i> * GNU General Public License.</i></td></tr>
+<tr><th id="7">7</th><td><i> *</i></td></tr>
+<tr><th id="8">8</th><td><i> * Written by Thayne Harbaugh</i></td></tr>
+<tr><th id="9">9</th><td><i> * Based on work by Dan Hollis &lt;goemon at anime dot net&gt; and others.</i></td></tr>
+<tr><th id="10">10</th><td><i> *	<a href="http://www.anime.net/~goemon/linux-ecc/">http://www.anime.net/~goemon/linux-ecc/</a></i></td></tr>
+<tr><th id="11">11</th><td><i> *</i></td></tr>
+<tr><th id="12">12</th><td><i> * NMI handling support added by</i></td></tr>
+<tr><th id="13">13</th><td><i> *     Dave Peterson &lt;dsp@llnl.gov&gt; &lt;dave_peterson@pobox.com&gt;</i></td></tr>
+<tr><th id="14">14</th><td><i> *</i></td></tr>
+<tr><th id="15">15</th><td><i> * Refactored for multi-source files:</i></td></tr>
+<tr><th id="16">16</th><td><i> *	Doug Thompson &lt;norsk5@xmission.com&gt;</i></td></tr>
+<tr><th id="17">17</th><td><i> *</i></td></tr>
+<tr><th id="18">18</th><td><i> * Please look at Documentation/driver-api/edac.rst for more info about</i></td></tr>
+<tr><th id="19">19</th><td><i> * EDAC core structs and functions.</i></td></tr>
+<tr><th id="20">20</th><td><i> */</i></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td><u>#<span data-ppcond="22">ifndef</span> <span class="macro" data-ref="_M/_EDAC_DEVICE_H_">_EDAC_DEVICE_H_</span></u></td></tr>
+<tr><th id="23">23</th><td><u>#define <dfn class="macro" id="_M/_EDAC_DEVICE_H_" data-ref="_M/_EDAC_DEVICE_H_">_EDAC_DEVICE_H_</dfn></u></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../../include/linux/completion.h.html">&lt;linux/completion.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../../include/linux/device.h.html">&lt;linux/device.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../../include/linux/edac.h.html">&lt;linux/edac.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../../include/linux/kobject.h.html">&lt;linux/kobject.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="../../include/linux/list.h.html">&lt;linux/list.h&gt;</a></u></td></tr>
+<tr><th id="30">30</th><td><u>#include <a href="../../include/linux/types.h.html">&lt;linux/types.h&gt;</a></u></td></tr>
+<tr><th id="31">31</th><td><u>#include <a href="../../include/linux/sysfs.h.html">&lt;linux/sysfs.h&gt;</a></u></td></tr>
+<tr><th id="32">32</th><td><u>#include <a href="../../include/linux/workqueue.h.html">&lt;linux/workqueue.h&gt;</a></u></td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td></td></tr>
+<tr><th id="35">35</th><td><i>/*</i></td></tr>
+<tr><th id="36">36</th><td><i> * The following are the structures to provide for a generic</i></td></tr>
+<tr><th id="37">37</th><td><i> * or abstract 'edac_device'. This set of structures and the</i></td></tr>
+<tr><th id="38">38</th><td><i> * code that implements the APIs for the same, provide for</i></td></tr>
+<tr><th id="39">39</th><td><i> * registering EDAC type devices which are NOT standard memory.</i></td></tr>
+<tr><th id="40">40</th><td><i> *</i></td></tr>
+<tr><th id="41">41</th><td><i> * CPU caches (L1 and L2)</i></td></tr>
+<tr><th id="42">42</th><td><i> * DMA engines</i></td></tr>
+<tr><th id="43">43</th><td><i> * Core CPU switches</i></td></tr>
+<tr><th id="44">44</th><td><i> * Fabric switch units</i></td></tr>
+<tr><th id="45">45</th><td><i> * PCIe interface controllers</i></td></tr>
+<tr><th id="46">46</th><td><i> * other EDAC/ECC type devices that can be monitored for</i></td></tr>
+<tr><th id="47">47</th><td><i> * errors, etc.</i></td></tr>
+<tr><th id="48">48</th><td><i> *</i></td></tr>
+<tr><th id="49">49</th><td><i> * It allows for a 2 level set of hierarchy. For example:</i></td></tr>
+<tr><th id="50">50</th><td><i> *</i></td></tr>
+<tr><th id="51">51</th><td><i> * cache could be composed of L1, L2 and L3 levels of cache.</i></td></tr>
+<tr><th id="52">52</th><td><i> * Each CPU core would have its own L1 cache, while sharing</i></td></tr>
+<tr><th id="53">53</th><td><i> * L2 and maybe L3 caches.</i></td></tr>
+<tr><th id="54">54</th><td><i> *</i></td></tr>
+<tr><th id="55">55</th><td><i> * View them arranged, via the sysfs presentation:</i></td></tr>
+<tr><th id="56">56</th><td><i> * /sys/devices/system/edac/..</i></td></tr>
+<tr><th id="57">57</th><td><i> *</i></td></tr>
+<tr><th id="58">58</th><td><i> *	mc/		&lt;existing memory device directory&gt;</i></td></tr>
+<tr><th id="59">59</th><td><i> *	cpu/cpu0/..	&lt;L1 and L2 block directory&gt;</i></td></tr>
+<tr><th id="60">60</th><td><i> *		/L1-cache/ce_count</i></td></tr>
+<tr><th id="61">61</th><td><i> *			 /ue_count</i></td></tr>
+<tr><th id="62">62</th><td><i> *		/L2-cache/ce_count</i></td></tr>
+<tr><th id="63">63</th><td><i> *			 /ue_count</i></td></tr>
+<tr><th id="64">64</th><td><i> *	cpu/cpu1/..	&lt;L1 and L2 block directory&gt;</i></td></tr>
+<tr><th id="65">65</th><td><i> *		/L1-cache/ce_count</i></td></tr>
+<tr><th id="66">66</th><td><i> *			 /ue_count</i></td></tr>
+<tr><th id="67">67</th><td><i> *		/L2-cache/ce_count</i></td></tr>
+<tr><th id="68">68</th><td><i> *			 /ue_count</i></td></tr>
+<tr><th id="69">69</th><td><i> *	...</i></td></tr>
+<tr><th id="70">70</th><td><i> *</i></td></tr>
+<tr><th id="71">71</th><td><i> *	the L1 and L2 directories would be "edac_device_block's"</i></td></tr>
+<tr><th id="72">72</th><td><i> */</i></td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td><b>struct</b> <dfn class="type def" id="edac_device_counter" title='edac_device_counter' data-ref="edac_device_counter" data-ref-filename="edac_device_counter">edac_device_counter</dfn> {</td></tr>
+<tr><th id="75">75</th><td>	<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl field" id="edac_device_counter::ue_count" title='edac_device_counter::ue_count' data-ref="edac_device_counter::ue_count" data-ref-filename="edac_device_counter..ue_count">ue_count</dfn>;</td></tr>
+<tr><th id="76">76</th><td>	<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl field" id="edac_device_counter::ce_count" title='edac_device_counter::ce_count' data-ref="edac_device_counter::ce_count" data-ref-filename="edac_device_counter..ce_count">ce_count</dfn>;</td></tr>
+<tr><th id="77">77</th><td>};</td></tr>
+<tr><th id="78">78</th><td></td></tr>
+<tr><th id="79">79</th><td><i>/* forward reference */</i></td></tr>
+<tr><th id="80">80</th><td><b>struct</b> <a class="type" href="#edac_device_ctl_info" title='edac_device_ctl_info' data-ref="edac_device_ctl_info" data-ref-filename="edac_device_ctl_info">edac_device_ctl_info</a>;</td></tr>
+<tr><th id="81">81</th><td><b>struct</b> <a class="type" href="#edac_device_block" title='edac_device_block' data-ref="edac_device_block" data-ref-filename="edac_device_block">edac_device_block</a>;</td></tr>
+<tr><th id="82">82</th><td></td></tr>
+<tr><th id="83">83</th><td><i>/* edac_dev_sysfs_attribute structure</i></td></tr>
+<tr><th id="84">84</th><td><i> *	used for driver sysfs attributes in mem_ctl_info</i></td></tr>
+<tr><th id="85">85</th><td><i> *	for extra controls and attributes:</i></td></tr>
+<tr><th id="86">86</th><td><i> *		like high level error Injection controls</i></td></tr>
+<tr><th id="87">87</th><td><i> */</i></td></tr>
+<tr><th id="88">88</th><td><b>struct</b> <dfn class="type def" id="edac_dev_sysfs_attribute" title='edac_dev_sysfs_attribute' data-ref="edac_dev_sysfs_attribute" data-ref-filename="edac_dev_sysfs_attribute">edac_dev_sysfs_attribute</dfn> {</td></tr>
+<tr><th id="89">89</th><td>	<b>struct</b> <a class="type" href="../../include/linux/sysfs.h.html#attribute" title='attribute' data-ref="attribute" data-ref-filename="attribute">attribute</a> <dfn class="decl field" id="edac_dev_sysfs_attribute::attr" title='edac_dev_sysfs_attribute::attr' data-ref="edac_dev_sysfs_attribute::attr" data-ref-filename="edac_dev_sysfs_attribute..attr">attr</dfn>;</td></tr>
+<tr><th id="90">90</th><td>	<a class="typedef" href="../../include/linux/types.h.html#ssize_t" title='ssize_t' data-type='__kernel_ssize_t' data-ref="ssize_t" data-ref-filename="ssize_t">ssize_t</a> (*<dfn class="decl field" id="edac_dev_sysfs_attribute::show" title='edac_dev_sysfs_attribute::show' data-ref="edac_dev_sysfs_attribute::show" data-ref-filename="edac_dev_sysfs_attribute..show">show</dfn>)(<b>struct</b> <a class="type" href="#edac_device_ctl_info" title='edac_device_ctl_info' data-ref="edac_device_ctl_info" data-ref-filename="edac_device_ctl_info">edac_device_ctl_info</a> *, <em>char</em> *);</td></tr>
+<tr><th id="91">91</th><td>	<a class="typedef" href="../../include/linux/types.h.html#ssize_t" title='ssize_t' data-type='__kernel_ssize_t' data-ref="ssize_t" data-ref-filename="ssize_t">ssize_t</a> (*<dfn class="decl field" id="edac_dev_sysfs_attribute::store" title='edac_dev_sysfs_attribute::store' data-ref="edac_dev_sysfs_attribute::store" data-ref-filename="edac_dev_sysfs_attribute..store">store</dfn>)(<b>struct</b> <a class="type" href="#edac_device_ctl_info" title='edac_device_ctl_info' data-ref="edac_device_ctl_info" data-ref-filename="edac_device_ctl_info">edac_device_ctl_info</a> *, <em>const</em> <em>char</em> *, <a class="typedef" href="../../include/linux/types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a>);</td></tr>
+<tr><th id="92">92</th><td>};</td></tr>
+<tr><th id="93">93</th><td></td></tr>
+<tr><th id="94">94</th><td><i>/* edac_dev_sysfs_block_attribute structure</i></td></tr>
+<tr><th id="95">95</th><td><i> *</i></td></tr>
+<tr><th id="96">96</th><td><i> *	used in leaf 'block' nodes for adding controls/attributes</i></td></tr>
+<tr><th id="97">97</th><td><i> *</i></td></tr>
+<tr><th id="98">98</th><td><i> *	each block in each instance of the containing control structure</i></td></tr>
+<tr><th id="99">99</th><td><i> *	can have an array of the following. The show and store functions</i></td></tr>
+<tr><th id="100">100</th><td><i> *	will be filled in with the show/store function in the</i></td></tr>
+<tr><th id="101">101</th><td><i> *	low level driver.</i></td></tr>
+<tr><th id="102">102</th><td><i> *</i></td></tr>
+<tr><th id="103">103</th><td><i> *	The 'value' field will be the actual value field used for</i></td></tr>
+<tr><th id="104">104</th><td><i> *	counting</i></td></tr>
+<tr><th id="105">105</th><td><i> */</i></td></tr>
+<tr><th id="106">106</th><td><b>struct</b> <dfn class="type def" id="edac_dev_sysfs_block_attribute" title='edac_dev_sysfs_block_attribute' data-ref="edac_dev_sysfs_block_attribute" data-ref-filename="edac_dev_sysfs_block_attribute">edac_dev_sysfs_block_attribute</dfn> {</td></tr>
+<tr><th id="107">107</th><td>	<b>struct</b> <a class="type" href="../../include/linux/sysfs.h.html#attribute" title='attribute' data-ref="attribute" data-ref-filename="attribute">attribute</a> <dfn class="decl field" id="edac_dev_sysfs_block_attribute::attr" title='edac_dev_sysfs_block_attribute::attr' data-ref="edac_dev_sysfs_block_attribute::attr" data-ref-filename="edac_dev_sysfs_block_attribute..attr">attr</dfn>;</td></tr>
+<tr><th id="108">108</th><td>	<a class="typedef" href="../../include/linux/types.h.html#ssize_t" title='ssize_t' data-type='__kernel_ssize_t' data-ref="ssize_t" data-ref-filename="ssize_t">ssize_t</a> (*<dfn class="decl field" id="edac_dev_sysfs_block_attribute::show" title='edac_dev_sysfs_block_attribute::show' data-ref="edac_dev_sysfs_block_attribute::show" data-ref-filename="edac_dev_sysfs_block_attribute..show">show</dfn>)(<b>struct</b> <a class="type" href="../../include/linux/kobject.h.html#kobject" title='kobject' data-ref="kobject" data-ref-filename="kobject">kobject</a> *, <b>struct</b> <a class="type" href="../../include/linux/sysfs.h.html#attribute" title='attribute' data-ref="attribute" data-ref-filename="attribute">attribute</a> *, <em>char</em> *);</td></tr>
+<tr><th id="109">109</th><td>	<a class="typedef" href="../../include/linux/types.h.html#ssize_t" title='ssize_t' data-type='__kernel_ssize_t' data-ref="ssize_t" data-ref-filename="ssize_t">ssize_t</a> (*<dfn class="decl field" id="edac_dev_sysfs_block_attribute::store" title='edac_dev_sysfs_block_attribute::store' data-ref="edac_dev_sysfs_block_attribute::store" data-ref-filename="edac_dev_sysfs_block_attribute..store">store</dfn>)(<b>struct</b> <a class="type" href="../../include/linux/kobject.h.html#kobject" title='kobject' data-ref="kobject" data-ref-filename="kobject">kobject</a> *, <b>struct</b> <a class="type" href="../../include/linux/sysfs.h.html#attribute" title='attribute' data-ref="attribute" data-ref-filename="attribute">attribute</a> *,</td></tr>
+<tr><th id="110">110</th><td>			<em>const</em> <em>char</em> *, <a class="typedef" href="../../include/linux/types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a>);</td></tr>
+<tr><th id="111">111</th><td>	<b>struct</b> <a class="type" href="#edac_device_block" title='edac_device_block' data-ref="edac_device_block" data-ref-filename="edac_device_block">edac_device_block</a> *<dfn class="decl field" id="edac_dev_sysfs_block_attribute::block" title='edac_dev_sysfs_block_attribute::block' data-ref="edac_dev_sysfs_block_attribute::block" data-ref-filename="edac_dev_sysfs_block_attribute..block">block</dfn>;</td></tr>
+<tr><th id="112">112</th><td></td></tr>
+<tr><th id="113">113</th><td>	<em>unsigned</em> <em>int</em> <dfn class="decl field" id="edac_dev_sysfs_block_attribute::value" title='edac_dev_sysfs_block_attribute::value' data-ref="edac_dev_sysfs_block_attribute::value" data-ref-filename="edac_dev_sysfs_block_attribute..value">value</dfn>;</td></tr>
+<tr><th id="114">114</th><td>};</td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td><i>/* device block control structure */</i></td></tr>
+<tr><th id="117">117</th><td><b>struct</b> <dfn class="type def" id="edac_device_block" title='edac_device_block' data-ref="edac_device_block" data-ref-filename="edac_device_block">edac_device_block</dfn> {</td></tr>
+<tr><th id="118">118</th><td>	<b>struct</b> <a class="type" href="#edac_device_instance" title='edac_device_instance' data-ref="edac_device_instance" data-ref-filename="edac_device_instance">edac_device_instance</a> *<dfn class="decl field" id="edac_device_block::instance" title='edac_device_block::instance' data-ref="edac_device_block::instance" data-ref-filename="edac_device_block..instance">instance</dfn>;	<i>/* Up Pointer */</i></td></tr>
+<tr><th id="119">119</th><td>	<em>char</em> <dfn class="decl field" id="edac_device_block::name" title='edac_device_block::name' data-ref="edac_device_block::name" data-ref-filename="edac_device_block..name">name</dfn>[<a class="macro" href="../../include/linux/edac.h.html#22" title="31" data-ref="_M/EDAC_DEVICE_NAME_LEN">EDAC_DEVICE_NAME_LEN</a> + <var>1</var>];</td></tr>
+<tr><th id="120">120</th><td></td></tr>
+<tr><th id="121">121</th><td>	<b>struct</b> <a class="type" href="#edac_device_counter" title='edac_device_counter' data-ref="edac_device_counter" data-ref-filename="edac_device_counter">edac_device_counter</a> <dfn class="decl field" id="edac_device_block::counters" title='edac_device_block::counters' data-ref="edac_device_block::counters" data-ref-filename="edac_device_block..counters">counters</dfn>;	<i>/* basic UE and CE counters */</i></td></tr>
+<tr><th id="122">122</th><td></td></tr>
+<tr><th id="123">123</th><td>	<em>int</em> <dfn class="decl field" id="edac_device_block::nr_attribs" title='edac_device_block::nr_attribs' data-ref="edac_device_block::nr_attribs" data-ref-filename="edac_device_block..nr_attribs">nr_attribs</dfn>;		<i>/* how many attributes */</i></td></tr>
+<tr><th id="124">124</th><td></td></tr>
+<tr><th id="125">125</th><td>	<i>/* this block's attributes, could be NULL */</i></td></tr>
+<tr><th id="126">126</th><td>	<b>struct</b> <a class="type" href="#edac_dev_sysfs_block_attribute" title='edac_dev_sysfs_block_attribute' data-ref="edac_dev_sysfs_block_attribute" data-ref-filename="edac_dev_sysfs_block_attribute">edac_dev_sysfs_block_attribute</a> *<dfn class="decl field" id="edac_device_block::block_attributes" title='edac_device_block::block_attributes' data-ref="edac_device_block::block_attributes" data-ref-filename="edac_device_block..block_attributes">block_attributes</dfn>;</td></tr>
+<tr><th id="127">127</th><td></td></tr>
+<tr><th id="128">128</th><td>	<i>/* edac sysfs device control */</i></td></tr>
+<tr><th id="129">129</th><td>	<b>struct</b> <a class="type" href="../../include/linux/kobject.h.html#kobject" title='kobject' data-ref="kobject" data-ref-filename="kobject">kobject</a> <dfn class="decl field" id="edac_device_block::kobj" title='edac_device_block::kobj' data-ref="edac_device_block::kobj" data-ref-filename="edac_device_block..kobj">kobj</dfn>;</td></tr>
+<tr><th id="130">130</th><td>};</td></tr>
+<tr><th id="131">131</th><td></td></tr>
+<tr><th id="132">132</th><td><i>/* device instance control structure */</i></td></tr>
+<tr><th id="133">133</th><td><b>struct</b> <dfn class="type def" id="edac_device_instance" title='edac_device_instance' data-ref="edac_device_instance" data-ref-filename="edac_device_instance">edac_device_instance</dfn> {</td></tr>
+<tr><th id="134">134</th><td>	<b>struct</b> <a class="type" href="#edac_device_ctl_info" title='edac_device_ctl_info' data-ref="edac_device_ctl_info" data-ref-filename="edac_device_ctl_info">edac_device_ctl_info</a> *<dfn class="decl field" id="edac_device_instance::ctl" title='edac_device_instance::ctl' data-ref="edac_device_instance::ctl" data-ref-filename="edac_device_instance..ctl">ctl</dfn>;	<i>/* Up pointer */</i></td></tr>
+<tr><th id="135">135</th><td>	<em>char</em> <dfn class="decl field" id="edac_device_instance::name" title='edac_device_instance::name' data-ref="edac_device_instance::name" data-ref-filename="edac_device_instance..name">name</dfn>[<a class="macro" href="../../include/linux/edac.h.html#22" title="31" data-ref="_M/EDAC_DEVICE_NAME_LEN">EDAC_DEVICE_NAME_LEN</a> + <var>4</var>];</td></tr>
+<tr><th id="136">136</th><td></td></tr>
+<tr><th id="137">137</th><td>	<b>struct</b> <a class="type" href="#edac_device_counter" title='edac_device_counter' data-ref="edac_device_counter" data-ref-filename="edac_device_counter">edac_device_counter</a> <dfn class="decl field" id="edac_device_instance::counters" title='edac_device_instance::counters' data-ref="edac_device_instance::counters" data-ref-filename="edac_device_instance..counters">counters</dfn>;	<i>/* instance counters */</i></td></tr>
+<tr><th id="138">138</th><td></td></tr>
+<tr><th id="139">139</th><td>	<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl field" id="edac_device_instance::nr_blocks" title='edac_device_instance::nr_blocks' data-ref="edac_device_instance::nr_blocks" data-ref-filename="edac_device_instance..nr_blocks">nr_blocks</dfn>;		<i>/* how many blocks */</i></td></tr>
+<tr><th id="140">140</th><td>	<b>struct</b> <a class="type" href="#edac_device_block" title='edac_device_block' data-ref="edac_device_block" data-ref-filename="edac_device_block">edac_device_block</a> *<dfn class="decl field" id="edac_device_instance::blocks" title='edac_device_instance::blocks' data-ref="edac_device_instance::blocks" data-ref-filename="edac_device_instance..blocks">blocks</dfn>;	<i>/* block array */</i></td></tr>
+<tr><th id="141">141</th><td></td></tr>
+<tr><th id="142">142</th><td>	<i>/* edac sysfs device control */</i></td></tr>
+<tr><th id="143">143</th><td>	<b>struct</b> <a class="type" href="../../include/linux/kobject.h.html#kobject" title='kobject' data-ref="kobject" data-ref-filename="kobject">kobject</a> <dfn class="decl field" id="edac_device_instance::kobj" title='edac_device_instance::kobj' data-ref="edac_device_instance::kobj" data-ref-filename="edac_device_instance..kobj">kobj</dfn>;</td></tr>
+<tr><th id="144">144</th><td>};</td></tr>
+<tr><th id="145">145</th><td></td></tr>
+<tr><th id="146">146</th><td></td></tr>
+<tr><th id="147">147</th><td><i>/*</i></td></tr>
+<tr><th id="148">148</th><td><i> * Abstract edac_device control info structure</i></td></tr>
+<tr><th id="149">149</th><td><i> *</i></td></tr>
+<tr><th id="150">150</th><td><i> */</i></td></tr>
+<tr><th id="151">151</th><td><b>struct</b> <dfn class="type def" id="edac_device_ctl_info" title='edac_device_ctl_info' data-ref="edac_device_ctl_info" data-ref-filename="edac_device_ctl_info">edac_device_ctl_info</dfn> {</td></tr>
+<tr><th id="152">152</th><td>	<i>/* for global list of edac_device_ctl_info structs */</i></td></tr>
+<tr><th id="153">153</th><td>	<b>struct</b> <a class="type" href="../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="edac_device_ctl_info::link" title='edac_device_ctl_info::link' data-ref="edac_device_ctl_info::link" data-ref-filename="edac_device_ctl_info..link">link</dfn>;</td></tr>
+<tr><th id="154">154</th><td></td></tr>
+<tr><th id="155">155</th><td>	<b>struct</b> <a class="type" href="../../include/linux/module.h.html#module" title='module' data-ref="module" data-ref-filename="module">module</a> *<dfn class="decl field" id="edac_device_ctl_info::owner" title='edac_device_ctl_info::owner' data-ref="edac_device_ctl_info::owner" data-ref-filename="edac_device_ctl_info..owner">owner</dfn>;	<i>/* Module owner of this control struct */</i></td></tr>
+<tr><th id="156">156</th><td></td></tr>
+<tr><th id="157">157</th><td>	<em>int</em> <dfn class="decl field" id="edac_device_ctl_info::dev_idx" title='edac_device_ctl_info::dev_idx' data-ref="edac_device_ctl_info::dev_idx" data-ref-filename="edac_device_ctl_info..dev_idx">dev_idx</dfn>;</td></tr>
+<tr><th id="158">158</th><td></td></tr>
+<tr><th id="159">159</th><td>	<i>/* Per instance controls for this edac_device */</i></td></tr>
+<tr><th id="160">160</th><td>	<em>int</em> <dfn class="decl field" id="edac_device_ctl_info::log_ue" title='edac_device_ctl_info::log_ue' data-ref="edac_device_ctl_info::log_ue" data-ref-filename="edac_device_ctl_info..log_ue">log_ue</dfn>;		<i>/* boolean for logging UEs */</i></td></tr>
+<tr><th id="161">161</th><td>	<em>int</em> <dfn class="decl field" id="edac_device_ctl_info::log_ce" title='edac_device_ctl_info::log_ce' data-ref="edac_device_ctl_info::log_ce" data-ref-filename="edac_device_ctl_info..log_ce">log_ce</dfn>;		<i>/* boolean for logging CEs */</i></td></tr>
+<tr><th id="162">162</th><td>	<em>int</em> <dfn class="decl field" id="edac_device_ctl_info::panic_on_ue" title='edac_device_ctl_info::panic_on_ue' data-ref="edac_device_ctl_info::panic_on_ue" data-ref-filename="edac_device_ctl_info..panic_on_ue">panic_on_ue</dfn>;	<i>/* boolean for panic'ing on an UE */</i></td></tr>
+<tr><th id="163">163</th><td>	<em>unsigned</em> <dfn class="decl field" id="edac_device_ctl_info::poll_msec" title='edac_device_ctl_info::poll_msec' data-ref="edac_device_ctl_info::poll_msec" data-ref-filename="edac_device_ctl_info..poll_msec">poll_msec</dfn>;	<i>/* number of milliseconds to poll interval */</i></td></tr>
+<tr><th id="164">164</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="edac_device_ctl_info::delay" title='edac_device_ctl_info::delay' data-ref="edac_device_ctl_info::delay" data-ref-filename="edac_device_ctl_info..delay">delay</dfn>;	<i>/* number of jiffies for poll_msec */</i></td></tr>
+<tr><th id="165">165</th><td></td></tr>
+<tr><th id="166">166</th><td>	<i>/* Additional top controller level attributes, but specified</i></td></tr>
+<tr><th id="167">167</th><td><i>	 * by the low level driver.</i></td></tr>
+<tr><th id="168">168</th><td><i>	 *</i></td></tr>
+<tr><th id="169">169</th><td><i>	 * Set by the low level driver to provide attributes at the</i></td></tr>
+<tr><th id="170">170</th><td><i>	 * controller level, same level as 'ue_count' and 'ce_count' above.</i></td></tr>
+<tr><th id="171">171</th><td><i>	 * An array of structures, NULL terminated</i></td></tr>
+<tr><th id="172">172</th><td><i>	 *</i></td></tr>
+<tr><th id="173">173</th><td><i>	 * If attributes are desired, then set to array of attributes</i></td></tr>
+<tr><th id="174">174</th><td><i>	 * If no attributes are desired, leave NULL</i></td></tr>
+<tr><th id="175">175</th><td><i>	 */</i></td></tr>
+<tr><th id="176">176</th><td>	<b>struct</b> <a class="type" href="#edac_dev_sysfs_attribute" title='edac_dev_sysfs_attribute' data-ref="edac_dev_sysfs_attribute" data-ref-filename="edac_dev_sysfs_attribute">edac_dev_sysfs_attribute</a> *<dfn class="decl field" id="edac_device_ctl_info::sysfs_attributes" title='edac_device_ctl_info::sysfs_attributes' data-ref="edac_device_ctl_info::sysfs_attributes" data-ref-filename="edac_device_ctl_info..sysfs_attributes">sysfs_attributes</dfn>;</td></tr>
+<tr><th id="177">177</th><td></td></tr>
+<tr><th id="178">178</th><td>	<i>/* pointer to main 'edac' subsys in sysfs */</i></td></tr>
+<tr><th id="179">179</th><td>	<b>struct</b> <a class="type" href="../../include/linux/device.h.html#bus_type" title='bus_type' data-ref="bus_type" data-ref-filename="bus_type">bus_type</a> *<dfn class="decl field" id="edac_device_ctl_info::edac_subsys" title='edac_device_ctl_info::edac_subsys' data-ref="edac_device_ctl_info::edac_subsys" data-ref-filename="edac_device_ctl_info..edac_subsys">edac_subsys</dfn>;</td></tr>
+<tr><th id="180">180</th><td></td></tr>
+<tr><th id="181">181</th><td>	<i>/* the internal state of this controller instance */</i></td></tr>
+<tr><th id="182">182</th><td>	<em>int</em> <dfn class="decl field" id="edac_device_ctl_info::op_state" title='edac_device_ctl_info::op_state' data-ref="edac_device_ctl_info::op_state" data-ref-filename="edac_device_ctl_info..op_state">op_state</dfn>;</td></tr>
+<tr><th id="183">183</th><td>	<i>/* work struct for this instance */</i></td></tr>
+<tr><th id="184">184</th><td>	<b>struct</b> <a class="type" href="../../include/linux/workqueue.h.html#delayed_work" title='delayed_work' data-ref="delayed_work" data-ref-filename="delayed_work">delayed_work</a> <dfn class="decl field" id="edac_device_ctl_info::work" title='edac_device_ctl_info::work' data-ref="edac_device_ctl_info::work" data-ref-filename="edac_device_ctl_info..work">work</dfn>;</td></tr>
+<tr><th id="185">185</th><td></td></tr>
+<tr><th id="186">186</th><td>	<i>/* pointer to edac polling checking routine:</i></td></tr>
+<tr><th id="187">187</th><td><i>	 *      If NOT NULL: points to polling check routine</i></td></tr>
+<tr><th id="188">188</th><td><i>	 *      If NULL: Then assumes INTERRUPT operation, where</i></td></tr>
+<tr><th id="189">189</th><td><i>	 *              MC driver will receive events</i></td></tr>
+<tr><th id="190">190</th><td><i>	 */</i></td></tr>
+<tr><th id="191">191</th><td>	<em>void</em> (*<dfn class="decl field" id="edac_device_ctl_info::edac_check" title='edac_device_ctl_info::edac_check' data-ref="edac_device_ctl_info::edac_check" data-ref-filename="edac_device_ctl_info..edac_check">edac_check</dfn>) (<b>struct</b> <a class="type" href="#edac_device_ctl_info" title='edac_device_ctl_info' data-ref="edac_device_ctl_info" data-ref-filename="edac_device_ctl_info">edac_device_ctl_info</a> * <dfn class="local col1 decl" id="1edac_dev" title='edac_dev' data-type='struct edac_device_ctl_info *' data-ref="1edac_dev" data-ref-filename="1edac_dev">edac_dev</dfn>);</td></tr>
+<tr><th id="192">192</th><td></td></tr>
+<tr><th id="193">193</th><td>	<b>struct</b> <a class="type" href="../../include/linux/device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="decl field" id="edac_device_ctl_info::dev" title='edac_device_ctl_info::dev' data-ref="edac_device_ctl_info::dev" data-ref-filename="edac_device_ctl_info..dev">dev</dfn>;	<i>/* pointer to device structure */</i></td></tr>
+<tr><th id="194">194</th><td></td></tr>
+<tr><th id="195">195</th><td>	<em>const</em> <em>char</em> *<dfn class="decl field" id="edac_device_ctl_info::mod_name" title='edac_device_ctl_info::mod_name' data-ref="edac_device_ctl_info::mod_name" data-ref-filename="edac_device_ctl_info..mod_name">mod_name</dfn>;	<i>/* module name */</i></td></tr>
+<tr><th id="196">196</th><td>	<em>const</em> <em>char</em> *<dfn class="decl field" id="edac_device_ctl_info::ctl_name" title='edac_device_ctl_info::ctl_name' data-ref="edac_device_ctl_info::ctl_name" data-ref-filename="edac_device_ctl_info..ctl_name">ctl_name</dfn>;	<i>/* edac controller  name */</i></td></tr>
+<tr><th id="197">197</th><td>	<em>const</em> <em>char</em> *<dfn class="decl field" id="edac_device_ctl_info::dev_name" title='edac_device_ctl_info::dev_name' data-ref="edac_device_ctl_info::dev_name" data-ref-filename="edac_device_ctl_info..dev_name">dev_name</dfn>;	<i>/* pci/platform/etc... name */</i></td></tr>
+<tr><th id="198">198</th><td></td></tr>
+<tr><th id="199">199</th><td>	<em>void</em> *<dfn class="decl field" id="edac_device_ctl_info::pvt_info" title='edac_device_ctl_info::pvt_info' data-ref="edac_device_ctl_info::pvt_info" data-ref-filename="edac_device_ctl_info..pvt_info">pvt_info</dfn>;		<i>/* pointer to 'private driver' info */</i></td></tr>
+<tr><th id="200">200</th><td></td></tr>
+<tr><th id="201">201</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="edac_device_ctl_info::start_time" title='edac_device_ctl_info::start_time' data-ref="edac_device_ctl_info::start_time" data-ref-filename="edac_device_ctl_info..start_time">start_time</dfn>;	<i>/* edac_device load start time (jiffies) */</i></td></tr>
+<tr><th id="202">202</th><td></td></tr>
+<tr><th id="203">203</th><td>	<b>struct</b> <a class="type" href="../../include/linux/completion.h.html#completion" title='completion' data-ref="completion" data-ref-filename="completion">completion</a> <dfn class="decl field" id="edac_device_ctl_info::removal_complete" title='edac_device_ctl_info::removal_complete' data-ref="edac_device_ctl_info::removal_complete" data-ref-filename="edac_device_ctl_info..removal_complete">removal_complete</dfn>;</td></tr>
+<tr><th id="204">204</th><td></td></tr>
+<tr><th id="205">205</th><td>	<i>/* sysfs top name under 'edac' directory</i></td></tr>
+<tr><th id="206">206</th><td><i>	 * and instance name:</i></td></tr>
+<tr><th id="207">207</th><td><i>	 *      cpu/cpu0/...</i></td></tr>
+<tr><th id="208">208</th><td><i>	 *      cpu/cpu1/...</i></td></tr>
+<tr><th id="209">209</th><td><i>	 *      cpu/cpu2/...</i></td></tr>
+<tr><th id="210">210</th><td><i>	 *      ...</i></td></tr>
+<tr><th id="211">211</th><td><i>	 */</i></td></tr>
+<tr><th id="212">212</th><td>	<em>char</em> <dfn class="decl field" id="edac_device_ctl_info::name" title='edac_device_ctl_info::name' data-ref="edac_device_ctl_info::name" data-ref-filename="edac_device_ctl_info..name">name</dfn>[<a class="macro" href="../../include/linux/edac.h.html#22" title="31" data-ref="_M/EDAC_DEVICE_NAME_LEN">EDAC_DEVICE_NAME_LEN</a> + <var>1</var>];</td></tr>
+<tr><th id="213">213</th><td></td></tr>
+<tr><th id="214">214</th><td>	<i>/* Number of instances supported on this control structure</i></td></tr>
+<tr><th id="215">215</th><td><i>	 * and the array of those instances</i></td></tr>
+<tr><th id="216">216</th><td><i>	 */</i></td></tr>
+<tr><th id="217">217</th><td>	<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl field" id="edac_device_ctl_info::nr_instances" title='edac_device_ctl_info::nr_instances' data-ref="edac_device_ctl_info::nr_instances" data-ref-filename="edac_device_ctl_info..nr_instances">nr_instances</dfn>;</td></tr>
+<tr><th id="218">218</th><td>	<b>struct</b> <a class="type" href="#edac_device_instance" title='edac_device_instance' data-ref="edac_device_instance" data-ref-filename="edac_device_instance">edac_device_instance</a> *<dfn class="decl field" id="edac_device_ctl_info::instances" title='edac_device_ctl_info::instances' data-ref="edac_device_ctl_info::instances" data-ref-filename="edac_device_ctl_info..instances">instances</dfn>;</td></tr>
+<tr><th id="219">219</th><td></td></tr>
+<tr><th id="220">220</th><td>	<i>/* Event counters for the this whole EDAC Device */</i></td></tr>
+<tr><th id="221">221</th><td>	<b>struct</b> <a class="type" href="#edac_device_counter" title='edac_device_counter' data-ref="edac_device_counter" data-ref-filename="edac_device_counter">edac_device_counter</a> <dfn class="decl field" id="edac_device_ctl_info::counters" title='edac_device_ctl_info::counters' data-ref="edac_device_ctl_info::counters" data-ref-filename="edac_device_ctl_info..counters">counters</dfn>;</td></tr>
+<tr><th id="222">222</th><td></td></tr>
+<tr><th id="223">223</th><td>	<i>/* edac sysfs device control for the 'name'</i></td></tr>
+<tr><th id="224">224</th><td><i>	 * device this structure controls</i></td></tr>
+<tr><th id="225">225</th><td><i>	 */</i></td></tr>
+<tr><th id="226">226</th><td>	<b>struct</b> <a class="type" href="../../include/linux/kobject.h.html#kobject" title='kobject' data-ref="kobject" data-ref-filename="kobject">kobject</a> <dfn class="decl field" id="edac_device_ctl_info::kobj" title='edac_device_ctl_info::kobj' data-ref="edac_device_ctl_info::kobj" data-ref-filename="edac_device_ctl_info..kobj">kobj</dfn>;</td></tr>
+<tr><th id="227">227</th><td>};</td></tr>
+<tr><th id="228">228</th><td></td></tr>
+<tr><th id="229">229</th><td><i>/* To get from the instance's wq to the beginning of the ctl structure */</i></td></tr>
+<tr><th id="230">230</th><td><u>#define <dfn class="macro" id="_M/to_edac_mem_ctl_work" data-ref="_M/to_edac_mem_ctl_work">to_edac_mem_ctl_work</dfn>(w) \</u></td></tr>
+<tr><th id="231">231</th><td><u>		container_of(w, struct mem_ctl_info, work)</u></td></tr>
+<tr><th id="232">232</th><td></td></tr>
+<tr><th id="233">233</th><td><u>#define <dfn class="macro" id="_M/to_edac_device_ctl_work" data-ref="_M/to_edac_device_ctl_work">to_edac_device_ctl_work</dfn>(w) \</u></td></tr>
+<tr><th id="234">234</th><td><u>		container_of(w,struct edac_device_ctl_info,work)</u></td></tr>
+<tr><th id="235">235</th><td></td></tr>
+<tr><th id="236">236</th><td><i>/*</i></td></tr>
+<tr><th id="237">237</th><td><i> * The alloc() and free() functions for the 'edac_device' control info</i></td></tr>
+<tr><th id="238">238</th><td><i> * structure. A MC driver will allocate one of these for each edac_device</i></td></tr>
+<tr><th id="239">239</th><td><i> * it is going to control/register with the EDAC CORE.</i></td></tr>
+<tr><th id="240">240</th><td><i> */</i></td></tr>
+<tr><th id="241">241</th><td><b>extern</b> <b>struct</b> <a class="type" href="#edac_device_ctl_info" title='edac_device_ctl_info' data-ref="edac_device_ctl_info" data-ref-filename="edac_device_ctl_info">edac_device_ctl_info</a> *<a class="decl fn" href="edac_device.c.html#edac_device_alloc_ctl_info" title='edac_device_alloc_ctl_info' data-ref="edac_device_alloc_ctl_info" data-ref-filename="edac_device_alloc_ctl_info" id="edac_device_alloc_ctl_info">edac_device_alloc_ctl_info</a>(</td></tr>
+<tr><th id="242">242</th><td>		<em>unsigned</em> <dfn class="local col2 decl" id="2sizeof_private" title='sizeof_private' data-type='unsigned int' data-ref="2sizeof_private" data-ref-filename="2sizeof_private">sizeof_private</dfn>,</td></tr>
+<tr><th id="243">243</th><td>		<em>char</em> *<dfn class="local col3 decl" id="3edac_device_name" title='edac_device_name' data-type='char *' data-ref="3edac_device_name" data-ref-filename="3edac_device_name">edac_device_name</dfn>, <em>unsigned</em> <dfn class="local col4 decl" id="4nr_instances" title='nr_instances' data-type='unsigned int' data-ref="4nr_instances" data-ref-filename="4nr_instances">nr_instances</dfn>,</td></tr>
+<tr><th id="244">244</th><td>		<em>char</em> *<dfn class="local col5 decl" id="5edac_block_name" title='edac_block_name' data-type='char *' data-ref="5edac_block_name" data-ref-filename="5edac_block_name">edac_block_name</dfn>, <em>unsigned</em> <dfn class="local col6 decl" id="6nr_blocks" title='nr_blocks' data-type='unsigned int' data-ref="6nr_blocks" data-ref-filename="6nr_blocks">nr_blocks</dfn>,</td></tr>
+<tr><th id="245">245</th><td>		<em>unsigned</em> <dfn class="local col7 decl" id="7offset_value" title='offset_value' data-type='unsigned int' data-ref="7offset_value" data-ref-filename="7offset_value">offset_value</dfn>,</td></tr>
+<tr><th id="246">246</th><td>		<b>struct</b> <a class="type" href="#edac_dev_sysfs_block_attribute" title='edac_dev_sysfs_block_attribute' data-ref="edac_dev_sysfs_block_attribute" data-ref-filename="edac_dev_sysfs_block_attribute">edac_dev_sysfs_block_attribute</a> *<dfn class="local col8 decl" id="8block_attributes" title='block_attributes' data-type='struct edac_dev_sysfs_block_attribute *' data-ref="8block_attributes" data-ref-filename="8block_attributes">block_attributes</dfn>,</td></tr>
+<tr><th id="247">247</th><td>		<em>unsigned</em> <dfn class="local col9 decl" id="9nr_attribs" title='nr_attribs' data-type='unsigned int' data-ref="9nr_attribs" data-ref-filename="9nr_attribs">nr_attribs</dfn>,</td></tr>
+<tr><th id="248">248</th><td>		<em>int</em> <dfn class="local col0 decl" id="10device_index" title='device_index' data-type='int' data-ref="10device_index" data-ref-filename="10device_index">device_index</dfn>);</td></tr>
+<tr><th id="249">249</th><td></td></tr>
+<tr><th id="250">250</th><td><i>/* The offset value can be:</i></td></tr>
+<tr><th id="251">251</th><td><i> *	-1 indicating no offset value</i></td></tr>
+<tr><th id="252">252</th><td><i> *	0 for zero-based block numbers</i></td></tr>
+<tr><th id="253">253</th><td><i> *	1 for 1-based block number</i></td></tr>
+<tr><th id="254">254</th><td><i> *	other for other-based block number</i></td></tr>
+<tr><th id="255">255</th><td><i> */</i></td></tr>
+<tr><th id="256">256</th><td><u>#define	<dfn class="macro" id="_M/BLOCK_OFFSET_VALUE_OFF" data-ref="_M/BLOCK_OFFSET_VALUE_OFF">BLOCK_OFFSET_VALUE_OFF</dfn>	((unsigned) -1)</u></td></tr>
+<tr><th id="257">257</th><td></td></tr>
+<tr><th id="258">258</th><td><b>extern</b> <em>void</em> <a class="decl fn" href="edac_device.c.html#edac_device_free_ctl_info" title='edac_device_free_ctl_info' data-ref="edac_device_free_ctl_info" data-ref-filename="edac_device_free_ctl_info" id="edac_device_free_ctl_info">edac_device_free_ctl_info</a>(<b>struct</b> <a class="type" href="#edac_device_ctl_info" title='edac_device_ctl_info' data-ref="edac_device_ctl_info" data-ref-filename="edac_device_ctl_info">edac_device_ctl_info</a> *<dfn class="local col1 decl" id="11ctl_info" title='ctl_info' data-type='struct edac_device_ctl_info *' data-ref="11ctl_info" data-ref-filename="11ctl_info">ctl_info</dfn>);</td></tr>
+<tr><th id="259">259</th><td></td></tr>
+<tr><th id="260">260</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="261">261</th><td><i class="doc"> * edac_device_add_device: Insert the 'edac_dev' structure into the</i></td></tr>
+<tr><th id="262">262</th><td><i class="doc"> *	 edac_device global list and create sysfs entries associated with</i></td></tr>
+<tr><th id="263">263</th><td><i class="doc"> *	 edac_device structure.</i></td></tr>
+<tr><th id="264">264</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="265">265</th><td><i class="doc"> *<span class="command"> @edac</span>_dev: pointer to edac_device structure to be added to the list</i></td></tr>
+<tr><th id="266">266</th><td><i class="doc"> *	'edac_device' structure.</i></td></tr>
+<tr><th id="267">267</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="268">268</th><td><i class="doc"> * Returns:</i></td></tr>
+<tr><th id="269">269</th><td><i class="doc"> *	0 on Success, or an error code on failure</i></td></tr>
+<tr><th id="270">270</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="271">271</th><td><b>extern</b> <em>int</em> <a class="decl fn" href="edac_device.c.html#edac_device_add_device" title='edac_device_add_device' data-ref="edac_device_add_device" data-ref-filename="edac_device_add_device" id="edac_device_add_device">edac_device_add_device</a>(<b>struct</b> <a class="type" href="#edac_device_ctl_info" title='edac_device_ctl_info' data-ref="edac_device_ctl_info" data-ref-filename="edac_device_ctl_info">edac_device_ctl_info</a> *<dfn class="local col2 decl" id="12edac_dev" title='edac_dev' data-type='struct edac_device_ctl_info *' data-ref="12edac_dev" data-ref-filename="12edac_dev">edac_dev</dfn>);</td></tr>
+<tr><th id="272">272</th><td></td></tr>
+<tr><th id="273">273</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="274">274</th><td><i class="doc"> * edac_device_del_device:</i></td></tr>
+<tr><th id="275">275</th><td><i class="doc"> *	Remove sysfs entries for specified edac_device structure and</i></td></tr>
+<tr><th id="276">276</th><td><i class="doc"> *	then remove edac_device structure from global list</i></td></tr>
+<tr><th id="277">277</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="278">278</th><td><i class="doc"> * <span class="command">@dev</span>:</i></td></tr>
+<tr><th id="279">279</th><td><i class="doc"> *	Pointer to struct &amp;device representing the edac device</i></td></tr>
+<tr><th id="280">280</th><td><i class="doc"> *	structure to remove.</i></td></tr>
+<tr><th id="281">281</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="282">282</th><td><i class="doc"> * Returns:</i></td></tr>
+<tr><th id="283">283</th><td><i class="doc"> *	Pointer to removed edac_device structure,</i></td></tr>
+<tr><th id="284">284</th><td><i class="doc"> *	or %NULL if device not found.</i></td></tr>
+<tr><th id="285">285</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="286">286</th><td><b>extern</b> <b>struct</b> <a class="type" href="#edac_device_ctl_info" title='edac_device_ctl_info' data-ref="edac_device_ctl_info" data-ref-filename="edac_device_ctl_info">edac_device_ctl_info</a> *<a class="decl fn" href="edac_device.c.html#edac_device_del_device" title='edac_device_del_device' data-ref="edac_device_del_device" data-ref-filename="edac_device_del_device" id="edac_device_del_device">edac_device_del_device</a>(<b>struct</b> <a class="type" href="../../include/linux/device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col3 decl" id="13dev" title='dev' data-type='struct device *' data-ref="13dev" data-ref-filename="13dev">dev</dfn>);</td></tr>
+<tr><th id="287">287</th><td></td></tr>
+<tr><th id="288">288</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="289">289</th><td><i class="doc"> * edac_device_handle_ue():</i></td></tr>
+<tr><th id="290">290</th><td><i class="doc"> *	perform a common output and handling of an 'edac_dev' UE event</i></td></tr>
+<tr><th id="291">291</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="292">292</th><td><i class="doc"> *<span class="command"> @edac</span>_dev: pointer to struct &amp;edac_device_ctl_info</i></td></tr>
+<tr><th id="293">293</th><td><i class="doc"> *<span class="command"> @inst</span>_nr: number of the instance where the UE error happened</i></td></tr>
+<tr><th id="294">294</th><td><i class="doc"> *<span class="command"> @block</span>_nr: number of the block where the UE error happened</i></td></tr>
+<tr><th id="295">295</th><td><i class="doc"> * <span class="command">@msg</span><span class="verb">: message to be printed</span></i></td></tr>
+<tr><th id="296">296</th><td><i class="doc"><span class="verb"></span><span class="verb"> *</span>/</i><span class="verb"></span></td></tr>
+<tr><th id="297">297</th><td><span class="verb"></span><b>extern</b> <em>void</em> <a class="decl fn" href="edac_device.c.html#edac_device_handle_ue" title='edac_device_handle_ue' data-ref="edac_device_handle_ue" data-ref-filename="edac_device_handle_ue" id="edac_device_handle_ue">edac_device_handle_ue</a>(<b>struct</b> <a class="type" href="#edac_device_ctl_info" title='edac_device_ctl_info' data-ref="edac_device_ctl_info" data-ref-filename="edac_device_ctl_info">edac_device_ctl_info</a> *<dfn class="local col4 decl" id="14edac_dev" title='edac_dev' data-type='struct edac_device_ctl_info *' data-ref="14edac_dev" data-ref-filename="14edac_dev">edac_dev</dfn>,</td></tr>
+<tr><th id="298">298</th><td>				<em>int</em> <dfn class="local col5 decl" id="15inst_nr" title='inst_nr' data-type='int' data-ref="15inst_nr" data-ref-filename="15inst_nr">inst_nr</dfn>, <em>int</em> <dfn class="local col6 decl" id="16block_nr" title='block_nr' data-type='int' data-ref="16block_nr" data-ref-filename="16block_nr">block_nr</dfn>, <em>const</em> <em>char</em> *<dfn class="local col7 decl" id="17msg" title='msg' data-type='const char *' data-ref="17msg" data-ref-filename="17msg">msg</dfn>);</td></tr>
+<tr><th id="299">299</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="300">300</th><td><i class="doc"> * edac_device_handle_ce():</i></td></tr>
+<tr><th id="301">301</th><td><i class="doc"> *	perform a common output and handling of an 'edac_dev' CE event</i></td></tr>
+<tr><th id="302">302</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="303">303</th><td><i class="doc"> *<span class="command"> @edac</span>_dev: pointer to struct &amp;edac_device_ctl_info</i></td></tr>
+<tr><th id="304">304</th><td><i class="doc"> *<span class="command"> @inst</span>_nr: number of the instance where the CE error happened</i></td></tr>
+<tr><th id="305">305</th><td><i class="doc"> *<span class="command"> @block</span>_nr: number of the block where the CE error happened</i></td></tr>
+<tr><th id="306">306</th><td><i class="doc"> * <span class="command">@msg</span><span class="verb">: message to be printed</span></i></td></tr>
+<tr><th id="307">307</th><td><i class="doc"><span class="verb"></span><span class="verb"> *</span>/</i><span class="verb"></span></td></tr>
+<tr><th id="308">308</th><td><span class="verb"></span><b>extern</b> <em>void</em> <a class="decl fn" href="edac_device.c.html#edac_device_handle_ce" title='edac_device_handle_ce' data-ref="edac_device_handle_ce" data-ref-filename="edac_device_handle_ce" id="edac_device_handle_ce">edac_device_handle_ce</a>(<b>struct</b> <a class="type" href="#edac_device_ctl_info" title='edac_device_ctl_info' data-ref="edac_device_ctl_info" data-ref-filename="edac_device_ctl_info">edac_device_ctl_info</a> *<dfn class="local col8 decl" id="18edac_dev" title='edac_dev' data-type='struct edac_device_ctl_info *' data-ref="18edac_dev" data-ref-filename="18edac_dev">edac_dev</dfn>,</td></tr>
+<tr><th id="309">309</th><td>				<em>int</em> <dfn class="local col9 decl" id="19inst_nr" title='inst_nr' data-type='int' data-ref="19inst_nr" data-ref-filename="19inst_nr">inst_nr</dfn>, <em>int</em> <dfn class="local col0 decl" id="20block_nr" title='block_nr' data-type='int' data-ref="20block_nr" data-ref-filename="20block_nr">block_nr</dfn>, <em>const</em> <em>char</em> *<dfn class="local col1 decl" id="21msg" title='msg' data-type='const char *' data-ref="21msg" data-ref-filename="21msg">msg</dfn>);</td></tr>
+<tr><th id="310">310</th><td></td></tr>
+<tr><th id="311">311</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="312">312</th><td><i class="doc"> * edac_device_alloc_index: Allocate a unique device index number</i></td></tr>
+<tr><th id="313">313</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="314">314</th><td><i class="doc"> * Returns:</i></td></tr>
+<tr><th id="315">315</th><td><i class="doc"> *	allocated index number</i></td></tr>
+<tr><th id="316">316</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="317">317</th><td><b>extern</b> <em>int</em> <a class="decl fn" href="edac_device.c.html#edac_device_alloc_index" title='edac_device_alloc_index' data-ref="edac_device_alloc_index" data-ref-filename="edac_device_alloc_index" id="edac_device_alloc_index">edac_device_alloc_index</a>(<em>void</em>);</td></tr>
+<tr><th id="318">318</th><td><b>extern</b> <em>const</em> <em>char</em> *<dfn class="decl" id="edac_layer_name" title='edac_layer_name' data-ref="edac_layer_name" data-ref-filename="edac_layer_name">edac_layer_name</dfn>[];</td></tr>
+<tr><th id="319">319</th><td></td></tr>
+<tr><th id="320">320</th><td><u>#<span data-ppcond="22">endif</span></u></td></tr>
+<tr><th id="321">321</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='edac_device.c.html'>linux-5.3.1/drivers/edac/edac_device.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

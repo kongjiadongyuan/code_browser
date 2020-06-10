@@ -1,0 +1,216 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>check.c source code [linux-5.3.1/block/partitions/check.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/block/partitions/check.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>block</a>/<a href='./'>partitions</a>/<a href='check.c.html'>check.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> *  fs/partitions/check.c</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> *  Code extracted from drivers/block/genhd.c</i></td></tr>
+<tr><th id="6">6</th><td><i> *  Copyright (C) 1991-1998  Linus Torvalds</i></td></tr>
+<tr><th id="7">7</th><td><i> *  Re-organised Feb 1998 Russell King</i></td></tr>
+<tr><th id="8">8</th><td><i> *</i></td></tr>
+<tr><th id="9">9</th><td><i> *  We now have independent partition support from the</i></td></tr>
+<tr><th id="10">10</th><td><i> *  block drivers, which allows all the partition code to</i></td></tr>
+<tr><th id="11">11</th><td><i> *  be grouped in one location, and it to be mostly self</i></td></tr>
+<tr><th id="12">12</th><td><i> *  contained.</i></td></tr>
+<tr><th id="13">13</th><td><i> *</i></td></tr>
+<tr><th id="14">14</th><td><i> *  Added needed MAJORS for new pairs, {hdi,hdj}, {hdk,hdl}</i></td></tr>
+<tr><th id="15">15</th><td><i> */</i></td></tr>
+<tr><th id="16">16</th><td></td></tr>
+<tr><th id="17">17</th><td><u>#include <a href="../../include/linux/slab.h.html">&lt;linux/slab.h&gt;</a></u></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../../include/linux/vmalloc.h.html">&lt;linux/vmalloc.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../include/linux/ctype.h.html">&lt;linux/ctype.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../include/linux/genhd.h.html">&lt;linux/genhd.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="check.h.html">"check.h"</a></u></td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="acorn.h.html">"acorn.h"</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="amiga.h.html">"amiga.h"</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="atari.h.html">"atari.h"</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="ldm.h.html">"ldm.h"</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="mac.h.html">"mac.h"</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="msdos.h.html">"msdos.h"</a></u></td></tr>
+<tr><th id="30">30</th><td><u>#include <a href="osf.h.html">"osf.h"</a></u></td></tr>
+<tr><th id="31">31</th><td><u>#include <a href="sgi.h.html">"sgi.h"</a></u></td></tr>
+<tr><th id="32">32</th><td><u>#include <a href="sun.h.html">"sun.h"</a></u></td></tr>
+<tr><th id="33">33</th><td><u>#include <a href="ibm.h.html">"ibm.h"</a></u></td></tr>
+<tr><th id="34">34</th><td><u>#include <a href="ultrix.h.html">"ultrix.h"</a></u></td></tr>
+<tr><th id="35">35</th><td><u>#include <a href="efi.h.html">"efi.h"</a></u></td></tr>
+<tr><th id="36">36</th><td><u>#include <a href="karma.h.html">"karma.h"</a></u></td></tr>
+<tr><th id="37">37</th><td><u>#include <a href="sysv68.h.html">"sysv68.h"</a></u></td></tr>
+<tr><th id="38">38</th><td><u>#include <a href="cmdline.h.html">"cmdline.h"</a></u></td></tr>
+<tr><th id="39">39</th><td></td></tr>
+<tr><th id="40">40</th><td><em>int</em> <dfn class="decl def" id="warn_no_part" title='warn_no_part' data-ref="warn_no_part" data-ref-filename="warn_no_part">warn_no_part</dfn> = <var>1</var>; <i>/*This is ugly: should make genhd removable media aware*/</i></td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td><em>static</em> <em>int</em> (*<dfn class="tu decl def" id="check_part" title='check_part' data-type='int (*[3])(struct parsed_partitions *)' data-ref="check_part" data-ref-filename="check_part">check_part</dfn>[])(<b>struct</b> <a class="type" href="check.h.html#parsed_partitions" title='parsed_partitions' data-ref="parsed_partitions" data-ref-filename="parsed_partitions">parsed_partitions</a> *) = {</td></tr>
+<tr><th id="43">43</th><td>	<i>/*</i></td></tr>
+<tr><th id="44">44</th><td><i>	 * Probe partition formats with tables at disk address 0</i></td></tr>
+<tr><th id="45">45</th><td><i>	 * that also have an ADFS boot block at 0xdc0.</i></td></tr>
+<tr><th id="46">46</th><td><i>	 */</i></td></tr>
+<tr><th id="47">47</th><td><u>#<span data-ppcond="47">ifdef</span> <span class="macro" data-ref="_M/CONFIG_ACORN_PARTITION_ICS">CONFIG_ACORN_PARTITION_ICS</span></u></td></tr>
+<tr><th id="48">48</th><td>	adfspart_check_ICS,</td></tr>
+<tr><th id="49">49</th><td><u>#<span data-ppcond="47">endif</span></u></td></tr>
+<tr><th id="50">50</th><td><u>#<span data-ppcond="50">ifdef</span> <span class="macro" data-ref="_M/CONFIG_ACORN_PARTITION_POWERTEC">CONFIG_ACORN_PARTITION_POWERTEC</span></u></td></tr>
+<tr><th id="51">51</th><td>	adfspart_check_POWERTEC,</td></tr>
+<tr><th id="52">52</th><td><u>#<span data-ppcond="50">endif</span></u></td></tr>
+<tr><th id="53">53</th><td><u>#<span data-ppcond="53">ifdef</span> <span class="macro" data-ref="_M/CONFIG_ACORN_PARTITION_EESOX">CONFIG_ACORN_PARTITION_EESOX</span></u></td></tr>
+<tr><th id="54">54</th><td>	adfspart_check_EESOX,</td></tr>
+<tr><th id="55">55</th><td><u>#<span data-ppcond="53">endif</span></u></td></tr>
+<tr><th id="56">56</th><td></td></tr>
+<tr><th id="57">57</th><td>	<i>/*</i></td></tr>
+<tr><th id="58">58</th><td><i>	 * Now move on to formats that only have partition info at</i></td></tr>
+<tr><th id="59">59</th><td><i>	 * disk address 0xdc0.  Since these may also have stale</i></td></tr>
+<tr><th id="60">60</th><td><i>	 * PC/BIOS partition tables, they need to come before</i></td></tr>
+<tr><th id="61">61</th><td><i>	 * the msdos entry.</i></td></tr>
+<tr><th id="62">62</th><td><i>	 */</i></td></tr>
+<tr><th id="63">63</th><td><u>#<span data-ppcond="63">ifdef</span> <span class="macro" data-ref="_M/CONFIG_ACORN_PARTITION_CUMANA">CONFIG_ACORN_PARTITION_CUMANA</span></u></td></tr>
+<tr><th id="64">64</th><td>	adfspart_check_CUMANA,</td></tr>
+<tr><th id="65">65</th><td><u>#<span data-ppcond="63">endif</span></u></td></tr>
+<tr><th id="66">66</th><td><u>#<span data-ppcond="66">ifdef</span> <span class="macro" data-ref="_M/CONFIG_ACORN_PARTITION_ADFS">CONFIG_ACORN_PARTITION_ADFS</span></u></td></tr>
+<tr><th id="67">67</th><td>	adfspart_check_ADFS,</td></tr>
+<tr><th id="68">68</th><td><u>#<span data-ppcond="66">endif</span></u></td></tr>
+<tr><th id="69">69</th><td></td></tr>
+<tr><th id="70">70</th><td><u>#<span data-ppcond="70">ifdef</span> <span class="macro" data-ref="_M/CONFIG_CMDLINE_PARTITION">CONFIG_CMDLINE_PARTITION</span></u></td></tr>
+<tr><th id="71">71</th><td>	cmdline_partition,</td></tr>
+<tr><th id="72">72</th><td><u>#<span data-ppcond="70">endif</span></u></td></tr>
+<tr><th id="73">73</th><td><u>#<span data-ppcond="73">ifdef</span> <a class="macro" href="../../include/generated/autoconf.h.html#597" data-ref="_M/CONFIG_EFI_PARTITION">CONFIG_EFI_PARTITION</a></u></td></tr>
+<tr><th id="74">74</th><td>	<a class="ref fn" href="efi.h.html#efi_partition" title='efi_partition' data-ref="efi_partition" data-ref-filename="efi_partition">efi_partition</a>,		<i>/* this must come before msdos */</i></td></tr>
+<tr><th id="75">75</th><td><u>#<span data-ppcond="73">endif</span></u></td></tr>
+<tr><th id="76">76</th><td><u>#<span data-ppcond="76">ifdef</span> <span class="macro" data-ref="_M/CONFIG_SGI_PARTITION">CONFIG_SGI_PARTITION</span></u></td></tr>
+<tr><th id="77">77</th><td>	sgi_partition,</td></tr>
+<tr><th id="78">78</th><td><u>#<span data-ppcond="76">endif</span></u></td></tr>
+<tr><th id="79">79</th><td><u>#<span data-ppcond="79">ifdef</span> <span class="macro" data-ref="_M/CONFIG_LDM_PARTITION">CONFIG_LDM_PARTITION</span></u></td></tr>
+<tr><th id="80">80</th><td>	ldm_partition,		<i>/* this must come before msdos */</i></td></tr>
+<tr><th id="81">81</th><td><u>#<span data-ppcond="79">endif</span></u></td></tr>
+<tr><th id="82">82</th><td><u>#<span data-ppcond="82">ifdef</span> <a class="macro" href="../../include/generated/autoconf.h.html#1120" data-ref="_M/CONFIG_MSDOS_PARTITION">CONFIG_MSDOS_PARTITION</a></u></td></tr>
+<tr><th id="83">83</th><td>	<a class="ref fn" href="msdos.h.html#msdos_partition" title='msdos_partition' data-ref="msdos_partition" data-ref-filename="msdos_partition">msdos_partition</a>,</td></tr>
+<tr><th id="84">84</th><td><u>#<span data-ppcond="82">endif</span></u></td></tr>
+<tr><th id="85">85</th><td><u>#<span data-ppcond="85">ifdef</span> <span class="macro" data-ref="_M/CONFIG_OSF_PARTITION">CONFIG_OSF_PARTITION</span></u></td></tr>
+<tr><th id="86">86</th><td>	osf_partition,</td></tr>
+<tr><th id="87">87</th><td><u>#<span data-ppcond="85">endif</span></u></td></tr>
+<tr><th id="88">88</th><td><u>#<span data-ppcond="88">ifdef</span> <span class="macro" data-ref="_M/CONFIG_SUN_PARTITION">CONFIG_SUN_PARTITION</span></u></td></tr>
+<tr><th id="89">89</th><td>	sun_partition,</td></tr>
+<tr><th id="90">90</th><td><u>#<span data-ppcond="88">endif</span></u></td></tr>
+<tr><th id="91">91</th><td><u>#<span data-ppcond="91">ifdef</span> <span class="macro" data-ref="_M/CONFIG_AMIGA_PARTITION">CONFIG_AMIGA_PARTITION</span></u></td></tr>
+<tr><th id="92">92</th><td>	amiga_partition,</td></tr>
+<tr><th id="93">93</th><td><u>#<span data-ppcond="91">endif</span></u></td></tr>
+<tr><th id="94">94</th><td><u>#<span data-ppcond="94">ifdef</span> <span class="macro" data-ref="_M/CONFIG_ATARI_PARTITION">CONFIG_ATARI_PARTITION</span></u></td></tr>
+<tr><th id="95">95</th><td>	atari_partition,</td></tr>
+<tr><th id="96">96</th><td><u>#<span data-ppcond="94">endif</span></u></td></tr>
+<tr><th id="97">97</th><td><u>#<span data-ppcond="97">ifdef</span> <span class="macro" data-ref="_M/CONFIG_MAC_PARTITION">CONFIG_MAC_PARTITION</span></u></td></tr>
+<tr><th id="98">98</th><td>	mac_partition,</td></tr>
+<tr><th id="99">99</th><td><u>#<span data-ppcond="97">endif</span></u></td></tr>
+<tr><th id="100">100</th><td><u>#<span data-ppcond="100">ifdef</span> <span class="macro" data-ref="_M/CONFIG_ULTRIX_PARTITION">CONFIG_ULTRIX_PARTITION</span></u></td></tr>
+<tr><th id="101">101</th><td>	ultrix_partition,</td></tr>
+<tr><th id="102">102</th><td><u>#<span data-ppcond="100">endif</span></u></td></tr>
+<tr><th id="103">103</th><td><u>#<span data-ppcond="103">ifdef</span> <span class="macro" data-ref="_M/CONFIG_IBM_PARTITION">CONFIG_IBM_PARTITION</span></u></td></tr>
+<tr><th id="104">104</th><td>	ibm_partition,</td></tr>
+<tr><th id="105">105</th><td><u>#<span data-ppcond="103">endif</span></u></td></tr>
+<tr><th id="106">106</th><td><u>#<span data-ppcond="106">ifdef</span> <span class="macro" data-ref="_M/CONFIG_KARMA_PARTITION">CONFIG_KARMA_PARTITION</span></u></td></tr>
+<tr><th id="107">107</th><td>	karma_partition,</td></tr>
+<tr><th id="108">108</th><td><u>#<span data-ppcond="106">endif</span></u></td></tr>
+<tr><th id="109">109</th><td><u>#<span data-ppcond="109">ifdef</span> <span class="macro" data-ref="_M/CONFIG_SYSV68_PARTITION">CONFIG_SYSV68_PARTITION</span></u></td></tr>
+<tr><th id="110">110</th><td>	sysv68_partition,</td></tr>
+<tr><th id="111">111</th><td><u>#<span data-ppcond="109">endif</span></u></td></tr>
+<tr><th id="112">112</th><td>	<a class="macro" href="../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a></td></tr>
+<tr><th id="113">113</th><td>};</td></tr>
+<tr><th id="114">114</th><td></td></tr>
+<tr><th id="115">115</th><td><em>static</em> <b>struct</b> <a class="type" href="check.h.html#parsed_partitions" title='parsed_partitions' data-ref="parsed_partitions" data-ref-filename="parsed_partitions">parsed_partitions</a> *<dfn class="tu decl def fn" id="allocate_partitions" title='allocate_partitions' data-type='struct parsed_partitions * allocate_partitions(struct gendisk * hd)' data-ref="allocate_partitions" data-ref-filename="allocate_partitions">allocate_partitions</dfn>(<b>struct</b> <a class="type" href="../../include/linux/genhd.h.html#gendisk" title='gendisk' data-ref="gendisk" data-ref-filename="gendisk">gendisk</a> *<dfn class="local col7 decl" id="37hd" title='hd' data-type='struct gendisk *' data-ref="37hd" data-ref-filename="37hd">hd</dfn>)</td></tr>
+<tr><th id="116">116</th><td>{</td></tr>
+<tr><th id="117">117</th><td>	<b>struct</b> <a class="type" href="check.h.html#parsed_partitions" title='parsed_partitions' data-ref="parsed_partitions" data-ref-filename="parsed_partitions">parsed_partitions</a> *<dfn class="local col8 decl" id="38state" title='state' data-type='struct parsed_partitions *' data-ref="38state" data-ref-filename="38state">state</dfn>;</td></tr>
+<tr><th id="118">118</th><td>	<em>int</em> <dfn class="local col9 decl" id="39nr" title='nr' data-type='int' data-ref="39nr" data-ref-filename="39nr">nr</dfn>;</td></tr>
+<tr><th id="119">119</th><td></td></tr>
+<tr><th id="120">120</th><td>	<a class="local col8 ref" href="#38state" title='state' data-ref="38state" data-ref-filename="38state">state</a> = <a class="ref fn" href="../../include/linux/slab.h.html#kzalloc" title='kzalloc' data-ref="kzalloc" data-ref-filename="kzalloc">kzalloc</a>(<b>sizeof</b>(*<a class="local col8 ref" href="#38state" title='state' data-ref="38state" data-ref-filename="38state">state</a>), <a class="macro" href="../../include/linux/gfp.h.html#290" title="((( gfp_t)(0x400u|0x800u)) | (( gfp_t)0x40u) | (( gfp_t)0x80u))" data-ref="_M/GFP_KERNEL">GFP_KERNEL</a>);</td></tr>
+<tr><th id="121">121</th><td>	<b>if</b> (!<a class="local col8 ref" href="#38state" title='state' data-ref="38state" data-ref-filename="38state">state</a>)</td></tr>
+<tr><th id="122">122</th><td>		<b>return</b> <a class="macro" href="../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="123">123</th><td></td></tr>
+<tr><th id="124">124</th><td>	<a class="local col9 ref" href="#39nr" title='nr' data-ref="39nr" data-ref-filename="39nr">nr</a> = <a class="ref fn" href="../../include/linux/genhd.h.html#disk_max_parts" title='disk_max_parts' data-ref="disk_max_parts" data-ref-filename="disk_max_parts">disk_max_parts</a>(<a class="local col7 ref" href="#37hd" title='hd' data-ref="37hd" data-ref-filename="37hd">hd</a>);</td></tr>
+<tr><th id="125">125</th><td>	<a class="local col8 ref" href="#38state" title='state' data-ref="38state" data-ref-filename="38state">state</a>-&gt;<a class="ref field" href="check.h.html#parsed_partitions::parts" title='parsed_partitions::parts' data-ref="parsed_partitions::parts" data-ref-filename="parsed_partitions..parts">parts</a> = <a class="ref fn" href="../../include/linux/vmalloc.h.html#vzalloc" title='vzalloc' data-ref="vzalloc" data-ref-filename="vzalloc">vzalloc</a>(<a class="ref fn" href="../../include/linux/overflow.h.html#array_size" title='array_size' data-ref="array_size" data-ref-filename="array_size">array_size</a>(<a class="local col9 ref" href="#39nr" title='nr' data-ref="39nr" data-ref-filename="39nr">nr</a>, <b>sizeof</b>(<a class="local col8 ref" href="#38state" title='state' data-ref="38state" data-ref-filename="38state">state</a>-&gt;<a class="ref field" href="check.h.html#parsed_partitions::parts" title='parsed_partitions::parts' data-ref="parsed_partitions::parts" data-ref-filename="parsed_partitions..parts">parts</a>[<var>0</var>])));</td></tr>
+<tr><th id="126">126</th><td>	<b>if</b> (!<a class="local col8 ref" href="#38state" title='state' data-ref="38state" data-ref-filename="38state">state</a>-&gt;<a class="ref field" href="check.h.html#parsed_partitions::parts" title='parsed_partitions::parts' data-ref="parsed_partitions::parts" data-ref-filename="parsed_partitions..parts">parts</a>) {</td></tr>
+<tr><th id="127">127</th><td>		<a class="ref fn" href="../../include/linux/slab.h.html#kfree" title='kfree' data-ref="kfree" data-ref-filename="kfree">kfree</a>(<a class="local col8 ref" href="#38state" title='state' data-ref="38state" data-ref-filename="38state">state</a>);</td></tr>
+<tr><th id="128">128</th><td>		<b>return</b> <a class="macro" href="../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="129">129</th><td>	}</td></tr>
+<tr><th id="130">130</th><td></td></tr>
+<tr><th id="131">131</th><td>	<a class="local col8 ref" href="#38state" title='state' data-ref="38state" data-ref-filename="38state">state</a>-&gt;<a class="ref field" href="check.h.html#parsed_partitions::limit" title='parsed_partitions::limit' data-ref="parsed_partitions::limit" data-ref-filename="parsed_partitions..limit">limit</a> = <a class="local col9 ref" href="#39nr" title='nr' data-ref="39nr" data-ref-filename="39nr">nr</a>;</td></tr>
+<tr><th id="132">132</th><td></td></tr>
+<tr><th id="133">133</th><td>	<b>return</b> <a class="local col8 ref" href="#38state" title='state' data-ref="38state" data-ref-filename="38state">state</a>;</td></tr>
+<tr><th id="134">134</th><td>}</td></tr>
+<tr><th id="135">135</th><td></td></tr>
+<tr><th id="136">136</th><td><em>void</em> <dfn class="decl def fn" id="free_partitions" title='free_partitions' data-ref="free_partitions" data-ref-filename="free_partitions">free_partitions</dfn>(<b>struct</b> <a class="type" href="check.h.html#parsed_partitions" title='parsed_partitions' data-ref="parsed_partitions" data-ref-filename="parsed_partitions">parsed_partitions</a> *<dfn class="local col0 decl" id="40state" title='state' data-type='struct parsed_partitions *' data-ref="40state" data-ref-filename="40state">state</dfn>)</td></tr>
+<tr><th id="137">137</th><td>{</td></tr>
+<tr><th id="138">138</th><td>	<a class="ref fn" href="../../include/linux/vmalloc.h.html#vfree" title='vfree' data-ref="vfree" data-ref-filename="vfree">vfree</a>(<a class="local col0 ref" href="#40state" title='state' data-ref="40state" data-ref-filename="40state">state</a>-&gt;<a class="ref field" href="check.h.html#parsed_partitions::parts" title='parsed_partitions::parts' data-ref="parsed_partitions::parts" data-ref-filename="parsed_partitions..parts">parts</a>);</td></tr>
+<tr><th id="139">139</th><td>	<a class="ref fn" href="../../include/linux/slab.h.html#kfree" title='kfree' data-ref="kfree" data-ref-filename="kfree">kfree</a>(<a class="local col0 ref" href="#40state" title='state' data-ref="40state" data-ref-filename="40state">state</a>);</td></tr>
+<tr><th id="140">140</th><td>}</td></tr>
+<tr><th id="141">141</th><td></td></tr>
+<tr><th id="142">142</th><td><b>struct</b> <a class="type" href="check.h.html#parsed_partitions" title='parsed_partitions' data-ref="parsed_partitions" data-ref-filename="parsed_partitions">parsed_partitions</a> *</td></tr>
+<tr><th id="143">143</th><td><dfn class="decl def fn" id="check_partition" title='check_partition' data-ref="check_partition" data-ref-filename="check_partition">check_partition</dfn>(<b>struct</b> <a class="type" href="../../include/linux/genhd.h.html#gendisk" title='gendisk' data-ref="gendisk" data-ref-filename="gendisk">gendisk</a> *<dfn class="local col1 decl" id="41hd" title='hd' data-type='struct gendisk *' data-ref="41hd" data-ref-filename="41hd">hd</dfn>, <b>struct</b> <a class="type" href="../../include/linux/fs.h.html#block_device" title='block_device' data-ref="block_device" data-ref-filename="block_device">block_device</a> *<dfn class="local col2 decl" id="42bdev" title='bdev' data-type='struct block_device *' data-ref="42bdev" data-ref-filename="42bdev">bdev</dfn>)</td></tr>
+<tr><th id="144">144</th><td>{</td></tr>
+<tr><th id="145">145</th><td>	<b>struct</b> <a class="type" href="check.h.html#parsed_partitions" title='parsed_partitions' data-ref="parsed_partitions" data-ref-filename="parsed_partitions">parsed_partitions</a> *<dfn class="local col3 decl" id="43state" title='state' data-type='struct parsed_partitions *' data-ref="43state" data-ref-filename="43state">state</dfn>;</td></tr>
+<tr><th id="146">146</th><td>	<em>int</em> <dfn class="local col4 decl" id="44i" title='i' data-type='int' data-ref="44i" data-ref-filename="44i">i</dfn>, <dfn class="local col5 decl" id="45res" title='res' data-type='int' data-ref="45res" data-ref-filename="45res">res</dfn>, <dfn class="local col6 decl" id="46err" title='err' data-type='int' data-ref="46err" data-ref-filename="46err">err</dfn>;</td></tr>
+<tr><th id="147">147</th><td></td></tr>
+<tr><th id="148">148</th><td>	<a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a> = <a class="tu ref fn" href="#allocate_partitions" title='allocate_partitions' data-use='c' data-ref="allocate_partitions" data-ref-filename="allocate_partitions">allocate_partitions</a>(<a class="local col1 ref" href="#41hd" title='hd' data-ref="41hd" data-ref-filename="41hd">hd</a>);</td></tr>
+<tr><th id="149">149</th><td>	<b>if</b> (!<a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>)</td></tr>
+<tr><th id="150">150</th><td>		<b>return</b> <a class="macro" href="../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="151">151</th><td>	<a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>-&gt;<a class="ref field" href="check.h.html#parsed_partitions::pp_buf" title='parsed_partitions::pp_buf' data-ref="parsed_partitions::pp_buf" data-ref-filename="parsed_partitions..pp_buf">pp_buf</a> = (<em>char</em> *)<a class="macro" href="../../include/linux/gfp.h.html#533" title="__get_free_pages((((( gfp_t)(0x400u|0x800u)) | (( gfp_t)0x40u) | (( gfp_t)0x80u))), 0)" data-ref="_M/__get_free_page">__get_free_page</a>(<a class="macro" href="../../include/linux/gfp.h.html#290" title="((( gfp_t)(0x400u|0x800u)) | (( gfp_t)0x40u) | (( gfp_t)0x80u))" data-ref="_M/GFP_KERNEL">GFP_KERNEL</a>);</td></tr>
+<tr><th id="152">152</th><td>	<b>if</b> (!<a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>-&gt;<a class="ref field" href="check.h.html#parsed_partitions::pp_buf" title='parsed_partitions::pp_buf' data-ref="parsed_partitions::pp_buf" data-ref-filename="parsed_partitions..pp_buf">pp_buf</a>) {</td></tr>
+<tr><th id="153">153</th><td>		<a class="ref fn" href="#free_partitions" title='free_partitions' data-ref="free_partitions" data-ref-filename="free_partitions">free_partitions</a>(<a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>);</td></tr>
+<tr><th id="154">154</th><td>		<b>return</b> <a class="macro" href="../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="155">155</th><td>	}</td></tr>
+<tr><th id="156">156</th><td>	<a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>-&gt;<a class="ref field" href="check.h.html#parsed_partitions::pp_buf" title='parsed_partitions::pp_buf' data-ref="parsed_partitions::pp_buf" data-ref-filename="parsed_partitions..pp_buf">pp_buf</a>[<var>0</var>] = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="157">157</th><td></td></tr>
+<tr><th id="158">158</th><td>	<a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>-&gt;<a class="ref field" href="check.h.html#parsed_partitions::bdev" title='parsed_partitions::bdev' data-ref="parsed_partitions::bdev" data-ref-filename="parsed_partitions..bdev">bdev</a> = <a class="local col2 ref" href="#42bdev" title='bdev' data-ref="42bdev" data-ref-filename="42bdev">bdev</a>;</td></tr>
+<tr><th id="159">159</th><td>	<a class="ref fn" href="../../include/linux/genhd.h.html#disk_name" title='disk_name' data-ref="disk_name" data-ref-filename="disk_name">disk_name</a>(<a class="local col1 ref" href="#41hd" title='hd' data-ref="41hd" data-ref-filename="41hd">hd</a>, <var>0</var>, <a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>-&gt;<a class="ref field" href="check.h.html#parsed_partitions::name" title='parsed_partitions::name' data-ref="parsed_partitions::name" data-ref-filename="parsed_partitions..name">name</a>);</td></tr>
+<tr><th id="160">160</th><td>	<a class="ref fn" href="../../include/linux/kernel.h.html#snprintf" title='snprintf' data-ref="snprintf" data-ref-filename="snprintf">snprintf</a>(<a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>-&gt;<a class="ref field" href="check.h.html#parsed_partitions::pp_buf" title='parsed_partitions::pp_buf' data-ref="parsed_partitions::pp_buf" data-ref-filename="parsed_partitions..pp_buf">pp_buf</a>, <a class="macro" href="../../arch/x86/include/asm/page_types.h.html#11" title="((1UL) &lt;&lt; 12)" data-ref="_M/PAGE_SIZE">PAGE_SIZE</a>, <q>" %s:"</q>, <a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>-&gt;<a class="ref field" href="check.h.html#parsed_partitions::name" title='parsed_partitions::name' data-ref="parsed_partitions::name" data-ref-filename="parsed_partitions..name">name</a>);</td></tr>
+<tr><th id="161">161</th><td>	<b>if</b> (<a class="ref fn" href="../../include/linux/ctype.h.html#isdigit" title='isdigit' data-ref="isdigit" data-ref-filename="isdigit">isdigit</a>(<a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>-&gt;<a class="ref field" href="check.h.html#parsed_partitions::name" title='parsed_partitions::name' data-ref="parsed_partitions::name" data-ref-filename="parsed_partitions..name">name</a>[<a class="ref fn" href="../../arch/x86/include/asm/string_64.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a>(<a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>-&gt;<a class="ref field" href="check.h.html#parsed_partitions::name" title='parsed_partitions::name' data-ref="parsed_partitions::name" data-ref-filename="parsed_partitions..name">name</a>)-<var>1</var>]))</td></tr>
+<tr><th id="162">162</th><td>		<a class="ref fn" href="../../include/linux/kernel.h.html#sprintf" title='sprintf' data-ref="sprintf" data-ref-filename="sprintf">sprintf</a>(<a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>-&gt;<a class="ref field" href="check.h.html#parsed_partitions::name" title='parsed_partitions::name' data-ref="parsed_partitions::name" data-ref-filename="parsed_partitions..name">name</a>, <q>"p"</q>);</td></tr>
+<tr><th id="163">163</th><td></td></tr>
+<tr><th id="164">164</th><td>	<a class="local col4 ref" href="#44i" title='i' data-ref="44i" data-ref-filename="44i">i</a> = <a class="local col5 ref" href="#45res" title='res' data-ref="45res" data-ref-filename="45res">res</a> = <a class="local col6 ref" href="#46err" title='err' data-ref="46err" data-ref-filename="46err">err</a> = <var>0</var>;</td></tr>
+<tr><th id="165">165</th><td>	<b>while</b> (!<a class="local col5 ref" href="#45res" title='res' data-ref="45res" data-ref-filename="45res">res</a> &amp;&amp; <a class="tu ref" href="#check_part" title='check_part' data-use='r' data-ref="check_part" data-ref-filename="check_part">check_part</a>[<a class="local col4 ref" href="#44i" title='i' data-ref="44i" data-ref-filename="44i">i</a>]) {</td></tr>
+<tr><th id="166">166</th><td>		<a class="ref fn" href="../../arch/x86/include/asm/string_64.h.html#memset" title='memset' data-ref="memset" data-ref-filename="memset">memset</a>(<a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>-&gt;<a class="ref field" href="check.h.html#parsed_partitions::parts" title='parsed_partitions::parts' data-ref="parsed_partitions::parts" data-ref-filename="parsed_partitions..parts">parts</a>, <var>0</var>, <a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>-&gt;<a class="ref field" href="check.h.html#parsed_partitions::limit" title='parsed_partitions::limit' data-ref="parsed_partitions::limit" data-ref-filename="parsed_partitions..limit">limit</a> * <b>sizeof</b>(<a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>-&gt;<a class="ref field" href="check.h.html#parsed_partitions::parts" title='parsed_partitions::parts' data-ref="parsed_partitions::parts" data-ref-filename="parsed_partitions..parts">parts</a>[<var>0</var>]));</td></tr>
+<tr><th id="167">167</th><td>		<a class="local col5 ref" href="#45res" title='res' data-ref="45res" data-ref-filename="45res">res</a> = <a class="tu ref" href="#check_part" title='check_part' data-use='r' data-ref="check_part" data-ref-filename="check_part">check_part</a>[<a class="local col4 ref" href="#44i" title='i' data-ref="44i" data-ref-filename="44i">i</a>++](<a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>);</td></tr>
+<tr><th id="168">168</th><td>		<b>if</b> (<a class="local col5 ref" href="#45res" title='res' data-ref="45res" data-ref-filename="45res">res</a> &lt; <var>0</var>) {</td></tr>
+<tr><th id="169">169</th><td>			<i>/* We have hit an I/O error which we don't report now.</i></td></tr>
+<tr><th id="170">170</th><td><i>		 	* But record it, and let the others do their job.</i></td></tr>
+<tr><th id="171">171</th><td><i>		 	*/</i></td></tr>
+<tr><th id="172">172</th><td>			<a class="local col6 ref" href="#46err" title='err' data-ref="46err" data-ref-filename="46err">err</a> = <a class="local col5 ref" href="#45res" title='res' data-ref="45res" data-ref-filename="45res">res</a>;</td></tr>
+<tr><th id="173">173</th><td>			<a class="local col5 ref" href="#45res" title='res' data-ref="45res" data-ref-filename="45res">res</a> = <var>0</var>;</td></tr>
+<tr><th id="174">174</th><td>		}</td></tr>
+<tr><th id="175">175</th><td></td></tr>
+<tr><th id="176">176</th><td>	}</td></tr>
+<tr><th id="177">177</th><td>	<b>if</b> (<a class="local col5 ref" href="#45res" title='res' data-ref="45res" data-ref-filename="45res">res</a> &gt; <var>0</var>) {</td></tr>
+<tr><th id="178">178</th><td>		<a class="ref fn" href="../../include/linux/printk.h.html#printk" title='printk' data-ref="printk" data-ref-filename="printk">printk</a>(<a class="macro" href="../../include/linux/kern_levels.h.html#14" title="&quot;\001&quot; &quot;6&quot;" data-ref="_M/KERN_INFO">KERN_INFO</a> <q>"%s"</q>, <a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>-&gt;<a class="ref field" href="check.h.html#parsed_partitions::pp_buf" title='parsed_partitions::pp_buf' data-ref="parsed_partitions::pp_buf" data-ref-filename="parsed_partitions..pp_buf">pp_buf</a>);</td></tr>
+<tr><th id="179">179</th><td></td></tr>
+<tr><th id="180">180</th><td>		<a class="macro" href="../../include/linux/gfp.h.html#551" title="free_pages(((unsigned long)state-&gt;pp_buf), 0)" data-ref="_M/free_page">free_page</a>((<em>unsigned</em> <em>long</em>)<a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>-&gt;<a class="ref field" href="check.h.html#parsed_partitions::pp_buf" title='parsed_partitions::pp_buf' data-ref="parsed_partitions::pp_buf" data-ref-filename="parsed_partitions..pp_buf">pp_buf</a>);</td></tr>
+<tr><th id="181">181</th><td>		<b>return</b> <a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>;</td></tr>
+<tr><th id="182">182</th><td>	}</td></tr>
+<tr><th id="183">183</th><td>	<b>if</b> (<a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>-&gt;<a class="ref field" href="check.h.html#parsed_partitions::access_beyond_eod" title='parsed_partitions::access_beyond_eod' data-ref="parsed_partitions::access_beyond_eod" data-ref-filename="parsed_partitions..access_beyond_eod">access_beyond_eod</a>)</td></tr>
+<tr><th id="184">184</th><td>		<a class="local col6 ref" href="#46err" title='err' data-ref="46err" data-ref-filename="46err">err</a> = -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#32" title="28" data-ref="_M/ENOSPC">ENOSPC</a>;</td></tr>
+<tr><th id="185">185</th><td>	<b>if</b> (<a class="local col6 ref" href="#46err" title='err' data-ref="46err" data-ref-filename="46err">err</a>)</td></tr>
+<tr><th id="186">186</th><td>	<i>/* The partition is unrecognized. So report I/O errors if there were any */</i></td></tr>
+<tr><th id="187">187</th><td>		<a class="local col5 ref" href="#45res" title='res' data-ref="45res" data-ref-filename="45res">res</a> = <a class="local col6 ref" href="#46err" title='err' data-ref="46err" data-ref-filename="46err">err</a>;</td></tr>
+<tr><th id="188">188</th><td>	<b>if</b> (<a class="local col5 ref" href="#45res" title='res' data-ref="45res" data-ref-filename="45res">res</a>) {</td></tr>
+<tr><th id="189">189</th><td>		<b>if</b> (<a class="ref" href="check.h.html#warn_no_part" title='warn_no_part' data-ref="warn_no_part" data-ref-filename="warn_no_part">warn_no_part</a>)</td></tr>
+<tr><th id="190">190</th><td>			<a class="ref fn" href="../../include/linux/string.h.html#strlcat" title='strlcat' data-ref="strlcat" data-ref-filename="strlcat">strlcat</a>(<a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>-&gt;<a class="ref field" href="check.h.html#parsed_partitions::pp_buf" title='parsed_partitions::pp_buf' data-ref="parsed_partitions::pp_buf" data-ref-filename="parsed_partitions..pp_buf">pp_buf</a>,</td></tr>
+<tr><th id="191">191</th><td>				<q>" unable to read partition table\n"</q>, <a class="macro" href="../../arch/x86/include/asm/page_types.h.html#11" title="((1UL) &lt;&lt; 12)" data-ref="_M/PAGE_SIZE">PAGE_SIZE</a>);</td></tr>
+<tr><th id="192">192</th><td>		<a class="ref fn" href="../../include/linux/printk.h.html#printk" title='printk' data-ref="printk" data-ref-filename="printk">printk</a>(<a class="macro" href="../../include/linux/kern_levels.h.html#14" title="&quot;\001&quot; &quot;6&quot;" data-ref="_M/KERN_INFO">KERN_INFO</a> <q>"%s"</q>, <a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>-&gt;<a class="ref field" href="check.h.html#parsed_partitions::pp_buf" title='parsed_partitions::pp_buf' data-ref="parsed_partitions::pp_buf" data-ref-filename="parsed_partitions..pp_buf">pp_buf</a>);</td></tr>
+<tr><th id="193">193</th><td>	}</td></tr>
+<tr><th id="194">194</th><td></td></tr>
+<tr><th id="195">195</th><td>	<a class="macro" href="../../include/linux/gfp.h.html#551" title="free_pages(((unsigned long)state-&gt;pp_buf), 0)" data-ref="_M/free_page">free_page</a>((<em>unsigned</em> <em>long</em>)<a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>-&gt;<a class="ref field" href="check.h.html#parsed_partitions::pp_buf" title='parsed_partitions::pp_buf' data-ref="parsed_partitions::pp_buf" data-ref-filename="parsed_partitions..pp_buf">pp_buf</a>);</td></tr>
+<tr><th id="196">196</th><td>	<a class="ref fn" href="#free_partitions" title='free_partitions' data-ref="free_partitions" data-ref-filename="free_partitions">free_partitions</a>(<a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>);</td></tr>
+<tr><th id="197">197</th><td>	<b>return</b> <a class="ref fn" href="../../include/linux/err.h.html#ERR_PTR" title='ERR_PTR' data-ref="ERR_PTR" data-ref-filename="ERR_PTR">ERR_PTR</a>(<a class="local col5 ref" href="#45res" title='res' data-ref="45res" data-ref-filename="45res">res</a>);</td></tr>
+<tr><th id="198">198</th><td>}</td></tr>
+<tr><th id="199">199</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

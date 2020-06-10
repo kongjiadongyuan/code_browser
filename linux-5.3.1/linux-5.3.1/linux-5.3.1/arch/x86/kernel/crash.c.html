@@ -1,0 +1,504 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>crash.c source code [linux-5.3.1/arch/x86/kernel/crash.c] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="crash_memmap_data "/>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/arch/x86/kernel/crash.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>linux-5.3.1</a>/<a href='../..'>arch</a>/<a href='..'>x86</a>/<a href='./'>kernel</a>/<a href='crash.c.html'>crash.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0-only</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * Architecture specific (i386/x86_64) functions for kexec based crash dumps.</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * Created by: Hariprasad Nellitheertha (hari@in.ibm.com)</i></td></tr>
+<tr><th id="6">6</th><td><i> *</i></td></tr>
+<tr><th id="7">7</th><td><i> * Copyright (C) IBM Corporation, 2004. All rights reserved.</i></td></tr>
+<tr><th id="8">8</th><td><i> * Copyright (C) Red Hat Inc., 2014. All rights reserved.</i></td></tr>
+<tr><th id="9">9</th><td><i> * Authors:</i></td></tr>
+<tr><th id="10">10</th><td><i> *      Vivek Goyal &lt;vgoyal@redhat.com&gt;</i></td></tr>
+<tr><th id="11">11</th><td><i> *</i></td></tr>
+<tr><th id="12">12</th><td><i> */</i></td></tr>
+<tr><th id="13">13</th><td></td></tr>
+<tr><th id="14">14</th><td><u>#define <dfn class="macro" id="_M/pr_fmt" data-ref="_M/pr_fmt">pr_fmt</dfn>(fmt)	"kexec: " fmt</u></td></tr>
+<tr><th id="15">15</th><td></td></tr>
+<tr><th id="16">16</th><td><u>#include <a href="../../../include/linux/types.h.html">&lt;linux/types.h&gt;</a></u></td></tr>
+<tr><th id="17">17</th><td><u>#include <a href="../../../include/linux/kernel.h.html">&lt;linux/kernel.h&gt;</a></u></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../../../include/linux/smp.h.html">&lt;linux/smp.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../../include/linux/reboot.h.html">&lt;linux/reboot.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../../include/linux/kexec.h.html">&lt;linux/kexec.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../../include/linux/delay.h.html">&lt;linux/delay.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../../../include/linux/elf.h.html">&lt;linux/elf.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../../../include/linux/elfcore.h.html">&lt;linux/elfcore.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../../../include/linux/export.h.html">&lt;linux/export.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../../../include/linux/slab.h.html">&lt;linux/slab.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../../../include/linux/vmalloc.h.html">&lt;linux/vmalloc.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../include/asm/processor.h.html">&lt;asm/processor.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="../include/asm/hardirq.h.html">&lt;asm/hardirq.h&gt;</a></u></td></tr>
+<tr><th id="30">30</th><td><u>#include <a href="../include/asm/nmi.h.html">&lt;asm/nmi.h&gt;</a></u></td></tr>
+<tr><th id="31">31</th><td><u>#include <a href="../include/asm/hw_irq.h.html">&lt;asm/hw_irq.h&gt;</a></u></td></tr>
+<tr><th id="32">32</th><td><u>#include <a href="../include/asm/apic.h.html">&lt;asm/apic.h&gt;</a></u></td></tr>
+<tr><th id="33">33</th><td><u>#include <a href="../include/asm/e820/types.h.html">&lt;asm/e820/types.h&gt;</a></u></td></tr>
+<tr><th id="34">34</th><td><u>#include <a href="../include/asm/io_apic.h.html">&lt;asm/io_apic.h&gt;</a></u></td></tr>
+<tr><th id="35">35</th><td><u>#include <a href="../include/asm/hpet.h.html">&lt;asm/hpet.h&gt;</a></u></td></tr>
+<tr><th id="36">36</th><td><u>#include <a href="../../../include/linux/kdebug.h.html">&lt;linux/kdebug.h&gt;</a></u></td></tr>
+<tr><th id="37">37</th><td><u>#include <a href="../include/asm/cpu.h.html">&lt;asm/cpu.h&gt;</a></u></td></tr>
+<tr><th id="38">38</th><td><u>#include <a href="../include/asm/reboot.h.html">&lt;asm/reboot.h&gt;</a></u></td></tr>
+<tr><th id="39">39</th><td><u>#include <a href="../include/asm/virtext.h.html">&lt;asm/virtext.h&gt;</a></u></td></tr>
+<tr><th id="40">40</th><td><u>#include <a href="../include/asm/intel_pt.h.html">&lt;asm/intel_pt.h&gt;</a></u></td></tr>
+<tr><th id="41">41</th><td><u>#include <a href="../include/asm/crash.h.html">&lt;asm/crash.h&gt;</a></u></td></tr>
+<tr><th id="42">42</th><td></td></tr>
+<tr><th id="43">43</th><td><i>/* Used while preparing memory map entries for second kernel */</i></td></tr>
+<tr><th id="44">44</th><td><b>struct</b> <dfn class="type def" id="crash_memmap_data" title='crash_memmap_data' data-ref="crash_memmap_data" data-ref-filename="crash_memmap_data">crash_memmap_data</dfn> {</td></tr>
+<tr><th id="45">45</th><td>	<b>struct</b> <a class="type" href="../include/uapi/asm/bootparam.h.html#boot_params" title='boot_params' data-ref="boot_params" data-ref-filename="boot_params">boot_params</a> *<dfn class="tu decl field" id="crash_memmap_data::params" title='crash_memmap_data::params' data-type='struct boot_params *' data-ref="crash_memmap_data::params" data-ref-filename="crash_memmap_data..params">params</dfn>;</td></tr>
+<tr><th id="46">46</th><td>	<i  data-doc="crash_memmap_data::type">/* Type of memory */</i></td></tr>
+<tr><th id="47">47</th><td>	<em>unsigned</em> <em>int</em> <dfn class="tu decl field" id="crash_memmap_data::type" title='crash_memmap_data::type' data-type='unsigned int' data-ref="crash_memmap_data::type" data-ref-filename="crash_memmap_data..type">type</dfn>;</td></tr>
+<tr><th id="48">48</th><td>};</td></tr>
+<tr><th id="49">49</th><td></td></tr>
+<tr><th id="50">50</th><td><i>/*</i></td></tr>
+<tr><th id="51">51</th><td><i> * This is used to VMCLEAR all VMCSs loaded on the</i></td></tr>
+<tr><th id="52">52</th><td><i> * processor. And when loading kvm_intel module, the</i></td></tr>
+<tr><th id="53">53</th><td><i> * callback function pointer will be assigned.</i></td></tr>
+<tr><th id="54">54</th><td><i> *</i></td></tr>
+<tr><th id="55">55</th><td><i> * protected by rcu.</i></td></tr>
+<tr><th id="56">56</th><td><i> */</i></td></tr>
+<tr><th id="57">57</th><td><a class="typedef" href="../include/asm/kexec.h.html#crash_vmclear_fn" title='crash_vmclear_fn' data-type='void (void)' data-ref="crash_vmclear_fn" data-ref-filename="crash_vmclear_fn">crash_vmclear_fn</a> <a class="macro" href="../../../include/linux/compiler_types.h.html#47" title="" data-ref="_M/__rcu">__rcu</a> *<dfn class="decl def" id="crash_vmclear_loaded_vmcss" title='crash_vmclear_loaded_vmcss' data-ref="crash_vmclear_loaded_vmcss" data-ref-filename="crash_vmclear_loaded_vmcss">crash_vmclear_loaded_vmcss</dfn> = <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="58">58</th><td><a class="macro" href="../../../include/linux/export.h.html#126" title="extern typeof(crash_vmclear_loaded_vmcss) crash_vmclear_loaded_vmcss; static const char __kstrtab_crash_vmclear_loaded_vmcss[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;crash_vmclear_loaded_vmcss&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_crash_vmclear_loaded_vmcss58 = (void *)&amp;crash_vmclear_loaded_vmcss; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;crash_vmclear_loaded_vmcss&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;crash_vmclear_loaded_vmcss&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;crash_vmclear_loaded_vmcss&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;crash_vmclear_loaded_vmcss&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl" href="../include/asm/kexec.h.html#crash_vmclear_loaded_vmcss" title='crash_vmclear_loaded_vmcss' data-ref="crash_vmclear_loaded_vmcss" data-ref-filename="crash_vmclear_loaded_vmcss" id="crash_vmclear_loaded_vmcss"><a class="ref" href="../include/asm/kexec.h.html#crash_vmclear_loaded_vmcss" title='crash_vmclear_loaded_vmcss' data-ref="crash_vmclear_loaded_vmcss" data-ref-filename="crash_vmclear_loaded_vmcss"><a class="ref" href="../include/asm/kexec.h.html#crash_vmclear_loaded_vmcss" title='crash_vmclear_loaded_vmcss' data-ref="crash_vmclear_loaded_vmcss" data-ref-filename="crash_vmclear_loaded_vmcss">crash_vmclear_loaded_vmcss</a></a></a>);</td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="tu decl def fn" id="cpu_crash_vmclear_loaded_vmcss" title='cpu_crash_vmclear_loaded_vmcss' data-type='void cpu_crash_vmclear_loaded_vmcss()' data-ref="cpu_crash_vmclear_loaded_vmcss" data-ref-filename="cpu_crash_vmclear_loaded_vmcss">cpu_crash_vmclear_loaded_vmcss</dfn>(<em>void</em>)</td></tr>
+<tr><th id="61">61</th><td>{</td></tr>
+<tr><th id="62">62</th><td>	<a class="typedef" href="../include/asm/kexec.h.html#crash_vmclear_fn" title='crash_vmclear_fn' data-type='void (void)' data-ref="crash_vmclear_fn" data-ref-filename="crash_vmclear_fn">crash_vmclear_fn</a> *<dfn class="local col9 decl" id="69do_vmclear_operation" title='do_vmclear_operation' data-type='crash_vmclear_fn *' data-ref="69do_vmclear_operation" data-ref-filename="69do_vmclear_operation">do_vmclear_operation</dfn> = <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="63">63</th><td></td></tr>
+<tr><th id="64">64</th><td>	<a class="ref fn" href="../../../include/linux/rcupdate.h.html#rcu_read_lock" title='rcu_read_lock' data-ref="rcu_read_lock" data-ref-filename="rcu_read_lock">rcu_read_lock</a>();</td></tr>
+<tr><th id="65">65</th><td>	<a class="local col9 ref" href="#69do_vmclear_operation" title='do_vmclear_operation' data-ref="69do_vmclear_operation" data-ref-filename="69do_vmclear_operation">do_vmclear_operation</a> = <a class="macro" href="../../../include/linux/rcupdate.h.html#507" title="({ typeof(*(crash_vmclear_loaded_vmcss)) *________p1 = (typeof(*(crash_vmclear_loaded_vmcss)) *)({ union { typeof((crash_vmclear_loaded_vmcss)) __val; char __c[1]; } __u; if (1) __read_once_size(&amp;((crash_vmclear_loaded_vmcss)), __u.__c, sizeof((crash_vmclear_loaded_vmcss))); else __read_once_size_nocheck(&amp;((crash_vmclear_loaded_vmcss)), __u.__c, sizeof((crash_vmclear_loaded_vmcss))); do { } while (0); __u.__val; }); do { } while (0); ; ((typeof(*(crash_vmclear_loaded_vmcss)) *)(________p1)); })" data-ref="_M/rcu_dereference">rcu_dereference</a>(<a class="ref" href="../include/asm/kexec.h.html#crash_vmclear_loaded_vmcss" title='crash_vmclear_loaded_vmcss' data-ref="crash_vmclear_loaded_vmcss" data-ref-filename="crash_vmclear_loaded_vmcss">crash_vmclear_loaded_vmcss</a>);</td></tr>
+<tr><th id="66">66</th><td>	<b>if</b> (<a class="local col9 ref" href="#69do_vmclear_operation" title='do_vmclear_operation' data-ref="69do_vmclear_operation" data-ref-filename="69do_vmclear_operation">do_vmclear_operation</a>)</td></tr>
+<tr><th id="67">67</th><td>		<a class="local col9 ref" href="#69do_vmclear_operation" title='do_vmclear_operation' data-ref="69do_vmclear_operation" data-ref-filename="69do_vmclear_operation">do_vmclear_operation</a>();</td></tr>
+<tr><th id="68">68</th><td>	<a class="ref fn" href="../../../include/linux/rcupdate.h.html#rcu_read_unlock" title='rcu_read_unlock' data-ref="rcu_read_unlock" data-ref-filename="rcu_read_unlock">rcu_read_unlock</a>();</td></tr>
+<tr><th id="69">69</th><td>}</td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td><u>#<span data-ppcond="71">if</span> defined(<a class="macro" href="../../../include/generated/autoconf.h.html#860" data-ref="_M/CONFIG_SMP">CONFIG_SMP</a>) &amp;&amp; defined(<a class="macro" href="../../../include/generated/autoconf.h.html#779" data-ref="_M/CONFIG_X86_LOCAL_APIC">CONFIG_X86_LOCAL_APIC</a>)</u></td></tr>
+<tr><th id="72">72</th><td></td></tr>
+<tr><th id="73">73</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="kdump_nmi_callback" title='kdump_nmi_callback' data-type='void kdump_nmi_callback(int cpu, struct pt_regs * regs)' data-ref="kdump_nmi_callback" data-ref-filename="kdump_nmi_callback">kdump_nmi_callback</dfn>(<em>int</em> <dfn class="local col0 decl" id="70cpu" title='cpu' data-type='int' data-ref="70cpu" data-ref-filename="70cpu">cpu</dfn>, <b>struct</b> <a class="type" href="../include/asm/ptrace.h.html#pt_regs" title='pt_regs' data-ref="pt_regs" data-ref-filename="pt_regs">pt_regs</a> *<dfn class="local col1 decl" id="71regs" title='regs' data-type='struct pt_regs *' data-ref="71regs" data-ref-filename="71regs">regs</dfn>)</td></tr>
+<tr><th id="74">74</th><td>{</td></tr>
+<tr><th id="75">75</th><td>	<a class="ref fn" href="../../../include/linux/kexec.h.html#crash_save_cpu" title='crash_save_cpu' data-ref="crash_save_cpu" data-ref-filename="crash_save_cpu">crash_save_cpu</a>(<a class="local col1 ref" href="#71regs" title='regs' data-ref="71regs" data-ref-filename="71regs">regs</a>, <a class="local col0 ref" href="#70cpu" title='cpu' data-ref="70cpu" data-ref-filename="70cpu">cpu</a>);</td></tr>
+<tr><th id="76">76</th><td></td></tr>
+<tr><th id="77">77</th><td>	<i>/*</i></td></tr>
+<tr><th id="78">78</th><td><i>	 * VMCLEAR VMCSs loaded on all cpus if needed.</i></td></tr>
+<tr><th id="79">79</th><td><i>	 */</i></td></tr>
+<tr><th id="80">80</th><td>	<a class="tu ref fn" href="#cpu_crash_vmclear_loaded_vmcss" title='cpu_crash_vmclear_loaded_vmcss' data-use='c' data-ref="cpu_crash_vmclear_loaded_vmcss" data-ref-filename="cpu_crash_vmclear_loaded_vmcss">cpu_crash_vmclear_loaded_vmcss</a>();</td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td>	<i>/* Disable VMX or SVM if needed.</i></td></tr>
+<tr><th id="83">83</th><td><i>	 *</i></td></tr>
+<tr><th id="84">84</th><td><i>	 * We need to disable virtualization on all CPUs.</i></td></tr>
+<tr><th id="85">85</th><td><i>	 * Having VMX or SVM enabled on any CPU may break rebooting</i></td></tr>
+<tr><th id="86">86</th><td><i>	 * after the kdump kernel has finished its task.</i></td></tr>
+<tr><th id="87">87</th><td><i>	 */</i></td></tr>
+<tr><th id="88">88</th><td>	<a class="ref fn" href="../include/asm/virtext.h.html#cpu_emergency_vmxoff" title='cpu_emergency_vmxoff' data-ref="cpu_emergency_vmxoff" data-ref-filename="cpu_emergency_vmxoff">cpu_emergency_vmxoff</a>();</td></tr>
+<tr><th id="89">89</th><td>	<a class="ref fn" href="../include/asm/virtext.h.html#cpu_emergency_svm_disable" title='cpu_emergency_svm_disable' data-ref="cpu_emergency_svm_disable" data-ref-filename="cpu_emergency_svm_disable">cpu_emergency_svm_disable</a>();</td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td>	<i>/*</i></td></tr>
+<tr><th id="92">92</th><td><i>	 * Disable Intel PT to stop its logging</i></td></tr>
+<tr><th id="93">93</th><td><i>	 */</i></td></tr>
+<tr><th id="94">94</th><td>	<a class="ref fn" href="../include/asm/intel_pt.h.html#cpu_emergency_stop_pt" title='cpu_emergency_stop_pt' data-ref="cpu_emergency_stop_pt" data-ref-filename="cpu_emergency_stop_pt">cpu_emergency_stop_pt</a>();</td></tr>
+<tr><th id="95">95</th><td></td></tr>
+<tr><th id="96">96</th><td>	<a class="ref fn" href="../include/asm/apic.h.html#disable_local_APIC" title='disable_local_APIC' data-ref="disable_local_APIC" data-ref-filename="disable_local_APIC">disable_local_APIC</a>();</td></tr>
+<tr><th id="97">97</th><td>}</td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td><em>void</em> <dfn class="decl def fn" id="kdump_nmi_shootdown_cpus" title='kdump_nmi_shootdown_cpus' data-ref="kdump_nmi_shootdown_cpus" data-ref-filename="kdump_nmi_shootdown_cpus">kdump_nmi_shootdown_cpus</dfn>(<em>void</em>)</td></tr>
+<tr><th id="100">100</th><td>{</td></tr>
+<tr><th id="101">101</th><td>	<a class="ref fn" href="../include/asm/reboot.h.html#nmi_shootdown_cpus" title='nmi_shootdown_cpus' data-ref="nmi_shootdown_cpus" data-ref-filename="nmi_shootdown_cpus">nmi_shootdown_cpus</a>(<a class="tu ref fn" href="#kdump_nmi_callback" title='kdump_nmi_callback' data-use='r' data-ref="kdump_nmi_callback" data-ref-filename="kdump_nmi_callback">kdump_nmi_callback</a>);</td></tr>
+<tr><th id="102">102</th><td></td></tr>
+<tr><th id="103">103</th><td>	<a class="ref fn" href="../include/asm/apic.h.html#disable_local_APIC" title='disable_local_APIC' data-ref="disable_local_APIC" data-ref-filename="disable_local_APIC">disable_local_APIC</a>();</td></tr>
+<tr><th id="104">104</th><td>}</td></tr>
+<tr><th id="105">105</th><td></td></tr>
+<tr><th id="106">106</th><td><i>/* Override the weak function in kernel/panic.c */</i></td></tr>
+<tr><th id="107">107</th><td><em>void</em> <dfn class="decl def fn" id="crash_smp_send_stop" title='crash_smp_send_stop' data-ref="crash_smp_send_stop" data-ref-filename="crash_smp_send_stop">crash_smp_send_stop</dfn>(<em>void</em>)</td></tr>
+<tr><th id="108">108</th><td>{</td></tr>
+<tr><th id="109">109</th><td>	<em>static</em> <em>int</em> <dfn class="local col2 decl" id="72cpus_stopped" title='cpus_stopped' data-type='int' data-ref="72cpus_stopped" data-ref-filename="72cpus_stopped">cpus_stopped</dfn>;</td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td>	<b>if</b> (<a class="local col2 ref" href="#72cpus_stopped" title='cpus_stopped' data-ref="72cpus_stopped" data-ref-filename="72cpus_stopped">cpus_stopped</a>)</td></tr>
+<tr><th id="112">112</th><td>		<b>return</b>;</td></tr>
+<tr><th id="113">113</th><td></td></tr>
+<tr><th id="114">114</th><td>	<b>if</b> (<a class="ref" href="../include/asm/smp.h.html#smp_ops" title='smp_ops' data-ref="smp_ops" data-ref-filename="smp_ops">smp_ops</a>.<a class="ref field" href="../include/asm/smp.h.html#smp_ops::crash_stop_other_cpus" title='smp_ops::crash_stop_other_cpus' data-ref="smp_ops::crash_stop_other_cpus" data-ref-filename="smp_ops..crash_stop_other_cpus">crash_stop_other_cpus</a>)</td></tr>
+<tr><th id="115">115</th><td>		<a class="ref" href="../include/asm/smp.h.html#smp_ops" title='smp_ops' data-ref="smp_ops" data-ref-filename="smp_ops">smp_ops</a>.<a class="ref field" href="../include/asm/smp.h.html#smp_ops::crash_stop_other_cpus" title='smp_ops::crash_stop_other_cpus' data-ref="smp_ops::crash_stop_other_cpus" data-ref-filename="smp_ops..crash_stop_other_cpus">crash_stop_other_cpus</a>();</td></tr>
+<tr><th id="116">116</th><td>	<b>else</b></td></tr>
+<tr><th id="117">117</th><td>		<a class="ref fn" href="../include/asm/smp.h.html#smp_send_stop" title='smp_send_stop' data-ref="smp_send_stop" data-ref-filename="smp_send_stop">smp_send_stop</a>();</td></tr>
+<tr><th id="118">118</th><td></td></tr>
+<tr><th id="119">119</th><td>	<a class="local col2 ref" href="#72cpus_stopped" title='cpus_stopped' data-ref="72cpus_stopped" data-ref-filename="72cpus_stopped">cpus_stopped</a> = <var>1</var>;</td></tr>
+<tr><th id="120">120</th><td>}</td></tr>
+<tr><th id="121">121</th><td></td></tr>
+<tr><th id="122">122</th><td><u>#<span data-ppcond="71">else</span></u></td></tr>
+<tr><th id="123">123</th><td><em>void</em> crash_smp_send_stop(<em>void</em>)</td></tr>
+<tr><th id="124">124</th><td>{</td></tr>
+<tr><th id="125">125</th><td>	<i>/* There are no cpus to shootdown */</i></td></tr>
+<tr><th id="126">126</th><td>}</td></tr>
+<tr><th id="127">127</th><td><u>#<span data-ppcond="71">endif</span></u></td></tr>
+<tr><th id="128">128</th><td></td></tr>
+<tr><th id="129">129</th><td><em>void</em> <dfn class="decl def fn" id="native_machine_crash_shutdown" title='native_machine_crash_shutdown' data-ref="native_machine_crash_shutdown" data-ref-filename="native_machine_crash_shutdown">native_machine_crash_shutdown</dfn>(<b>struct</b> <a class="type" href="../include/asm/ptrace.h.html#pt_regs" title='pt_regs' data-ref="pt_regs" data-ref-filename="pt_regs">pt_regs</a> *<dfn class="local col3 decl" id="73regs" title='regs' data-type='struct pt_regs *' data-ref="73regs" data-ref-filename="73regs">regs</dfn>)</td></tr>
+<tr><th id="130">130</th><td>{</td></tr>
+<tr><th id="131">131</th><td>	<i>/* This function is only called after the system</i></td></tr>
+<tr><th id="132">132</th><td><i>	 * has panicked or is otherwise in a critical state.</i></td></tr>
+<tr><th id="133">133</th><td><i>	 * The minimum amount of code to allow a kexec'd kernel</i></td></tr>
+<tr><th id="134">134</th><td><i>	 * to run successfully needs to happen here.</i></td></tr>
+<tr><th id="135">135</th><td><i>	 *</i></td></tr>
+<tr><th id="136">136</th><td><i>	 * In practice this means shooting down the other cpus in</i></td></tr>
+<tr><th id="137">137</th><td><i>	 * an SMP system.</i></td></tr>
+<tr><th id="138">138</th><td><i>	 */</i></td></tr>
+<tr><th id="139">139</th><td>	<i>/* The kernel is broken so disable interrupts */</i></td></tr>
+<tr><th id="140">140</th><td>	<a class="macro" href="../../../include/linux/irqflags.h.html#141" title="do { arch_local_irq_disable(); } while (0)" data-ref="_M/local_irq_disable">local_irq_disable</a>();</td></tr>
+<tr><th id="141">141</th><td></td></tr>
+<tr><th id="142">142</th><td>	<a class="ref fn" href="#crash_smp_send_stop" title='crash_smp_send_stop' data-ref="crash_smp_send_stop" data-ref-filename="crash_smp_send_stop">crash_smp_send_stop</a>();</td></tr>
+<tr><th id="143">143</th><td></td></tr>
+<tr><th id="144">144</th><td>	<i>/*</i></td></tr>
+<tr><th id="145">145</th><td><i>	 * VMCLEAR VMCSs loaded on this cpu if needed.</i></td></tr>
+<tr><th id="146">146</th><td><i>	 */</i></td></tr>
+<tr><th id="147">147</th><td>	<a class="tu ref fn" href="#cpu_crash_vmclear_loaded_vmcss" title='cpu_crash_vmclear_loaded_vmcss' data-use='c' data-ref="cpu_crash_vmclear_loaded_vmcss" data-ref-filename="cpu_crash_vmclear_loaded_vmcss">cpu_crash_vmclear_loaded_vmcss</a>();</td></tr>
+<tr><th id="148">148</th><td></td></tr>
+<tr><th id="149">149</th><td>	<i>/* Booting kdump kernel with VMX or SVM enabled won't work,</i></td></tr>
+<tr><th id="150">150</th><td><i>	 * because (among other limitations) we can't disable paging</i></td></tr>
+<tr><th id="151">151</th><td><i>	 * with the virt flags.</i></td></tr>
+<tr><th id="152">152</th><td><i>	 */</i></td></tr>
+<tr><th id="153">153</th><td>	<a class="ref fn" href="../include/asm/virtext.h.html#cpu_emergency_vmxoff" title='cpu_emergency_vmxoff' data-ref="cpu_emergency_vmxoff" data-ref-filename="cpu_emergency_vmxoff">cpu_emergency_vmxoff</a>();</td></tr>
+<tr><th id="154">154</th><td>	<a class="ref fn" href="../include/asm/virtext.h.html#cpu_emergency_svm_disable" title='cpu_emergency_svm_disable' data-ref="cpu_emergency_svm_disable" data-ref-filename="cpu_emergency_svm_disable">cpu_emergency_svm_disable</a>();</td></tr>
+<tr><th id="155">155</th><td></td></tr>
+<tr><th id="156">156</th><td>	<i>/*</i></td></tr>
+<tr><th id="157">157</th><td><i>	 * Disable Intel PT to stop its logging</i></td></tr>
+<tr><th id="158">158</th><td><i>	 */</i></td></tr>
+<tr><th id="159">159</th><td>	<a class="ref fn" href="../include/asm/intel_pt.h.html#cpu_emergency_stop_pt" title='cpu_emergency_stop_pt' data-ref="cpu_emergency_stop_pt" data-ref-filename="cpu_emergency_stop_pt">cpu_emergency_stop_pt</a>();</td></tr>
+<tr><th id="160">160</th><td></td></tr>
+<tr><th id="161">161</th><td><u>#<span data-ppcond="161">ifdef</span> <a class="macro" href="../../../include/generated/autoconf.h.html#1038" data-ref="_M/CONFIG_X86_IO_APIC">CONFIG_X86_IO_APIC</a></u></td></tr>
+<tr><th id="162">162</th><td>	<i>/* Prevent crash_kexec() from deadlocking on ioapic_lock. */</i></td></tr>
+<tr><th id="163">163</th><td>	<a class="ref fn" href="../include/asm/apic.h.html#ioapic_zap_locks" title='ioapic_zap_locks' data-ref="ioapic_zap_locks" data-ref-filename="ioapic_zap_locks">ioapic_zap_locks</a>();</td></tr>
+<tr><th id="164">164</th><td>	<a class="ref fn" href="../include/asm/io_apic.h.html#clear_IO_APIC" title='clear_IO_APIC' data-ref="clear_IO_APIC" data-ref-filename="clear_IO_APIC">clear_IO_APIC</a>();</td></tr>
+<tr><th id="165">165</th><td><u>#<span data-ppcond="161">endif</span></u></td></tr>
+<tr><th id="166">166</th><td>	<a class="ref fn" href="../include/asm/apic.h.html#lapic_shutdown" title='lapic_shutdown' data-ref="lapic_shutdown" data-ref-filename="lapic_shutdown">lapic_shutdown</a>();</td></tr>
+<tr><th id="167">167</th><td>	<a class="ref fn" href="../include/asm/io_apic.h.html#restore_boot_irq_mode" title='restore_boot_irq_mode' data-ref="restore_boot_irq_mode" data-ref-filename="restore_boot_irq_mode">restore_boot_irq_mode</a>();</td></tr>
+<tr><th id="168">168</th><td><u>#<span data-ppcond="168">ifdef</span> <a class="macro" href="../../../include/generated/autoconf.h.html#572" data-ref="_M/CONFIG_HPET_TIMER">CONFIG_HPET_TIMER</a></u></td></tr>
+<tr><th id="169">169</th><td>	<a class="ref fn" href="../include/asm/hpet.h.html#hpet_disable" title='hpet_disable' data-ref="hpet_disable" data-ref-filename="hpet_disable">hpet_disable</a>();</td></tr>
+<tr><th id="170">170</th><td><u>#<span data-ppcond="168">endif</span></u></td></tr>
+<tr><th id="171">171</th><td>	<a class="ref fn" href="../../../include/linux/kexec.h.html#crash_save_cpu" title='crash_save_cpu' data-ref="crash_save_cpu" data-ref-filename="crash_save_cpu">crash_save_cpu</a>(<a class="local col3 ref" href="#73regs" title='regs' data-ref="73regs" data-ref-filename="73regs">regs</a>, <a class="macro" href="../include/asm/smp.h.html#172" title="({ __this_cpu_preempt_check(&quot;read&quot;); ({ typeof(cpu_number) pscr_ret__; do { const void *__vpp_verify = (typeof((&amp;(cpu_number)) + 0))((void *)0); (void)__vpp_verify; } while (0); switch(sizeof(cpu_number)) { case 1: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; case 2: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; case 4: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; case 8: pscr_ret__ = ({ typeof(cpu_number) pfo_ret__; switch (sizeof(cpu_number)) { case 1: asm (&quot;mov&quot; &quot;b &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=q&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 2: asm (&quot;mov&quot; &quot;w &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 4: asm (&quot;mov&quot; &quot;l &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; case 8: asm (&quot;mov&quot; &quot;q &quot;&quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot;&quot;,%0&quot; : &quot;=r&quot; (pfo_ret__) : &quot;m&quot; (cpu_number)); break; default: __bad_percpu_size(); } pfo_ret__; }); break; default: __bad_size_call_parameter(); break; } pscr_ret__; }); })" data-ref="_M/safe_smp_processor_id">safe_smp_processor_id</a>());</td></tr>
+<tr><th id="172">172</th><td>}</td></tr>
+<tr><th id="173">173</th><td></td></tr>
+<tr><th id="174">174</th><td><u>#<span data-ppcond="174">ifdef</span> <span class="macro" data-ref="_M/CONFIG_KEXEC_FILE">CONFIG_KEXEC_FILE</span></u></td></tr>
+<tr><th id="175">175</th><td></td></tr>
+<tr><th id="176">176</th><td><em>static</em> <em>unsigned</em> <em>long</em> crash_zero_bytes;</td></tr>
+<tr><th id="177">177</th><td></td></tr>
+<tr><th id="178">178</th><td><em>static</em> <em>int</em> get_nr_ram_ranges_callback(<b>struct</b> resource *res, <em>void</em> *arg)</td></tr>
+<tr><th id="179">179</th><td>{</td></tr>
+<tr><th id="180">180</th><td>	<em>unsigned</em> <em>int</em> *nr_ranges = arg;</td></tr>
+<tr><th id="181">181</th><td></td></tr>
+<tr><th id="182">182</th><td>	(*nr_ranges)++;</td></tr>
+<tr><th id="183">183</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="184">184</th><td>}</td></tr>
+<tr><th id="185">185</th><td></td></tr>
+<tr><th id="186">186</th><td><i>/* Gather all the required information to prepare elf headers for ram regions */</i></td></tr>
+<tr><th id="187">187</th><td><em>static</em> <b>struct</b> crash_mem *fill_up_crash_elf_data(<em>void</em>)</td></tr>
+<tr><th id="188">188</th><td>{</td></tr>
+<tr><th id="189">189</th><td>	<em>unsigned</em> <em>int</em> nr_ranges = <var>0</var>;</td></tr>
+<tr><th id="190">190</th><td>	<b>struct</b> crash_mem *cmem;</td></tr>
+<tr><th id="191">191</th><td></td></tr>
+<tr><th id="192">192</th><td>	walk_system_ram_res(<var>0</var>, -<var>1</var>, &amp;nr_ranges,</td></tr>
+<tr><th id="193">193</th><td>				get_nr_ram_ranges_callback);</td></tr>
+<tr><th id="194">194</th><td>	<b>if</b> (!nr_ranges)</td></tr>
+<tr><th id="195">195</th><td>		<b>return</b> NULL;</td></tr>
+<tr><th id="196">196</th><td></td></tr>
+<tr><th id="197">197</th><td>	<i>/*</i></td></tr>
+<tr><th id="198">198</th><td><i>	 * Exclusion of crash region and/or crashk_low_res may cause</i></td></tr>
+<tr><th id="199">199</th><td><i>	 * another range split. So add extra two slots here.</i></td></tr>
+<tr><th id="200">200</th><td><i>	 */</i></td></tr>
+<tr><th id="201">201</th><td>	nr_ranges += <var>2</var>;</td></tr>
+<tr><th id="202">202</th><td>	cmem = vzalloc(struct_size(cmem, ranges, nr_ranges));</td></tr>
+<tr><th id="203">203</th><td>	<b>if</b> (!cmem)</td></tr>
+<tr><th id="204">204</th><td>		<b>return</b> NULL;</td></tr>
+<tr><th id="205">205</th><td></td></tr>
+<tr><th id="206">206</th><td>	cmem-&gt;max_nr_ranges = nr_ranges;</td></tr>
+<tr><th id="207">207</th><td>	cmem-&gt;nr_ranges = <var>0</var>;</td></tr>
+<tr><th id="208">208</th><td></td></tr>
+<tr><th id="209">209</th><td>	<b>return</b> cmem;</td></tr>
+<tr><th id="210">210</th><td>}</td></tr>
+<tr><th id="211">211</th><td></td></tr>
+<tr><th id="212">212</th><td><i>/*</i></td></tr>
+<tr><th id="213">213</th><td><i> * Look for any unwanted ranges between mstart, mend and remove them. This</i></td></tr>
+<tr><th id="214">214</th><td><i> * might lead to split and split ranges are put in cmem-&gt;ranges[] array</i></td></tr>
+<tr><th id="215">215</th><td><i> */</i></td></tr>
+<tr><th id="216">216</th><td><em>static</em> <em>int</em> elf_header_exclude_ranges(<b>struct</b> crash_mem *cmem)</td></tr>
+<tr><th id="217">217</th><td>{</td></tr>
+<tr><th id="218">218</th><td>	<em>int</em> ret = <var>0</var>;</td></tr>
+<tr><th id="219">219</th><td></td></tr>
+<tr><th id="220">220</th><td>	<i>/* Exclude crashkernel region */</i></td></tr>
+<tr><th id="221">221</th><td>	ret = crash_exclude_mem_range(cmem, crashk_res.start, crashk_res.end);</td></tr>
+<tr><th id="222">222</th><td>	<b>if</b> (ret)</td></tr>
+<tr><th id="223">223</th><td>		<b>return</b> ret;</td></tr>
+<tr><th id="224">224</th><td></td></tr>
+<tr><th id="225">225</th><td>	<b>if</b> (crashk_low_res.end) {</td></tr>
+<tr><th id="226">226</th><td>		ret = crash_exclude_mem_range(cmem, crashk_low_res.start,</td></tr>
+<tr><th id="227">227</th><td>							crashk_low_res.end);</td></tr>
+<tr><th id="228">228</th><td>		<b>if</b> (ret)</td></tr>
+<tr><th id="229">229</th><td>			<b>return</b> ret;</td></tr>
+<tr><th id="230">230</th><td>	}</td></tr>
+<tr><th id="231">231</th><td></td></tr>
+<tr><th id="232">232</th><td>	<b>return</b> ret;</td></tr>
+<tr><th id="233">233</th><td>}</td></tr>
+<tr><th id="234">234</th><td></td></tr>
+<tr><th id="235">235</th><td><em>static</em> <em>int</em> prepare_elf64_ram_headers_callback(<b>struct</b> resource *res, <em>void</em> *arg)</td></tr>
+<tr><th id="236">236</th><td>{</td></tr>
+<tr><th id="237">237</th><td>	<b>struct</b> crash_mem *cmem = arg;</td></tr>
+<tr><th id="238">238</th><td></td></tr>
+<tr><th id="239">239</th><td>	cmem-&gt;ranges[cmem-&gt;nr_ranges].start = res-&gt;start;</td></tr>
+<tr><th id="240">240</th><td>	cmem-&gt;ranges[cmem-&gt;nr_ranges].end = res-&gt;end;</td></tr>
+<tr><th id="241">241</th><td>	cmem-&gt;nr_ranges++;</td></tr>
+<tr><th id="242">242</th><td></td></tr>
+<tr><th id="243">243</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="244">244</th><td>}</td></tr>
+<tr><th id="245">245</th><td></td></tr>
+<tr><th id="246">246</th><td><i>/* Prepare elf headers. Return addr and size */</i></td></tr>
+<tr><th id="247">247</th><td><em>static</em> <em>int</em> prepare_elf_headers(<b>struct</b> kimage *image, <em>void</em> **addr,</td></tr>
+<tr><th id="248">248</th><td>					<em>unsigned</em> <em>long</em> *sz)</td></tr>
+<tr><th id="249">249</th><td>{</td></tr>
+<tr><th id="250">250</th><td>	<b>struct</b> crash_mem *cmem;</td></tr>
+<tr><th id="251">251</th><td>	Elf64_Ehdr *ehdr;</td></tr>
+<tr><th id="252">252</th><td>	Elf64_Phdr *phdr;</td></tr>
+<tr><th id="253">253</th><td>	<em>int</em> ret, i;</td></tr>
+<tr><th id="254">254</th><td></td></tr>
+<tr><th id="255">255</th><td>	cmem = fill_up_crash_elf_data();</td></tr>
+<tr><th id="256">256</th><td>	<b>if</b> (!cmem)</td></tr>
+<tr><th id="257">257</th><td>		<b>return</b> -ENOMEM;</td></tr>
+<tr><th id="258">258</th><td></td></tr>
+<tr><th id="259">259</th><td>	ret = walk_system_ram_res(<var>0</var>, -<var>1</var>, cmem,</td></tr>
+<tr><th id="260">260</th><td>				prepare_elf64_ram_headers_callback);</td></tr>
+<tr><th id="261">261</th><td>	<b>if</b> (ret)</td></tr>
+<tr><th id="262">262</th><td>		<b>goto</b> out;</td></tr>
+<tr><th id="263">263</th><td></td></tr>
+<tr><th id="264">264</th><td>	<i>/* Exclude unwanted mem ranges */</i></td></tr>
+<tr><th id="265">265</th><td>	ret = elf_header_exclude_ranges(cmem);</td></tr>
+<tr><th id="266">266</th><td>	<b>if</b> (ret)</td></tr>
+<tr><th id="267">267</th><td>		<b>goto</b> out;</td></tr>
+<tr><th id="268">268</th><td></td></tr>
+<tr><th id="269">269</th><td>	<i>/* By default prepare 64bit headers */</i></td></tr>
+<tr><th id="270">270</th><td>	ret =  crash_prepare_elf64_headers(cmem,</td></tr>
+<tr><th id="271">271</th><td>				IS_ENABLED(CONFIG_X86_64), addr, sz);</td></tr>
+<tr><th id="272">272</th><td>	<b>if</b> (ret)</td></tr>
+<tr><th id="273">273</th><td>		<b>goto</b> out;</td></tr>
+<tr><th id="274">274</th><td></td></tr>
+<tr><th id="275">275</th><td>	<i>/*</i></td></tr>
+<tr><th id="276">276</th><td><i>	 * If a range matches backup region, adjust offset to backup</i></td></tr>
+<tr><th id="277">277</th><td><i>	 * segment.</i></td></tr>
+<tr><th id="278">278</th><td><i>	 */</i></td></tr>
+<tr><th id="279">279</th><td>	ehdr = (Elf64_Ehdr *)*addr;</td></tr>
+<tr><th id="280">280</th><td>	phdr = (Elf64_Phdr *)(ehdr + <var>1</var>);</td></tr>
+<tr><th id="281">281</th><td>	<b>for</b> (i = <var>0</var>; i &lt; ehdr-&gt;e_phnum; phdr++, i++)</td></tr>
+<tr><th id="282">282</th><td>		<b>if</b> (phdr-&gt;p_type == PT_LOAD &amp;&amp;</td></tr>
+<tr><th id="283">283</th><td>				phdr-&gt;p_paddr == image-&gt;arch.backup_src_start &amp;&amp;</td></tr>
+<tr><th id="284">284</th><td>				phdr-&gt;p_memsz == image-&gt;arch.backup_src_sz) {</td></tr>
+<tr><th id="285">285</th><td>			phdr-&gt;p_offset = image-&gt;arch.backup_load_addr;</td></tr>
+<tr><th id="286">286</th><td>			<b>break</b>;</td></tr>
+<tr><th id="287">287</th><td>		}</td></tr>
+<tr><th id="288">288</th><td>out:</td></tr>
+<tr><th id="289">289</th><td>	vfree(cmem);</td></tr>
+<tr><th id="290">290</th><td>	<b>return</b> ret;</td></tr>
+<tr><th id="291">291</th><td>}</td></tr>
+<tr><th id="292">292</th><td></td></tr>
+<tr><th id="293">293</th><td><em>static</em> <em>int</em> add_e820_entry(<b>struct</b> boot_params *params, <b>struct</b> e820_entry *entry)</td></tr>
+<tr><th id="294">294</th><td>{</td></tr>
+<tr><th id="295">295</th><td>	<em>unsigned</em> <em>int</em> nr_e820_entries;</td></tr>
+<tr><th id="296">296</th><td></td></tr>
+<tr><th id="297">297</th><td>	nr_e820_entries = params-&gt;e820_entries;</td></tr>
+<tr><th id="298">298</th><td>	<b>if</b> (nr_e820_entries &gt;= E820_MAX_ENTRIES_ZEROPAGE)</td></tr>
+<tr><th id="299">299</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="300">300</th><td></td></tr>
+<tr><th id="301">301</th><td>	memcpy(&amp;params-&gt;e820_table[nr_e820_entries], entry,</td></tr>
+<tr><th id="302">302</th><td>			<b>sizeof</b>(<b>struct</b> e820_entry));</td></tr>
+<tr><th id="303">303</th><td>	params-&gt;e820_entries++;</td></tr>
+<tr><th id="304">304</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="305">305</th><td>}</td></tr>
+<tr><th id="306">306</th><td></td></tr>
+<tr><th id="307">307</th><td><em>static</em> <em>int</em> memmap_entry_callback(<b>struct</b> resource *res, <em>void</em> *arg)</td></tr>
+<tr><th id="308">308</th><td>{</td></tr>
+<tr><th id="309">309</th><td>	<b>struct</b> crash_memmap_data *cmd = arg;</td></tr>
+<tr><th id="310">310</th><td>	<b>struct</b> boot_params *params = cmd-&gt;params;</td></tr>
+<tr><th id="311">311</th><td>	<b>struct</b> e820_entry ei;</td></tr>
+<tr><th id="312">312</th><td></td></tr>
+<tr><th id="313">313</th><td>	ei.addr = res-&gt;start;</td></tr>
+<tr><th id="314">314</th><td>	ei.size = resource_size(res);</td></tr>
+<tr><th id="315">315</th><td>	ei.type = cmd-&gt;type;</td></tr>
+<tr><th id="316">316</th><td>	add_e820_entry(params, &amp;ei);</td></tr>
+<tr><th id="317">317</th><td></td></tr>
+<tr><th id="318">318</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="319">319</th><td>}</td></tr>
+<tr><th id="320">320</th><td></td></tr>
+<tr><th id="321">321</th><td><em>static</em> <em>int</em> memmap_exclude_ranges(<b>struct</b> kimage *image, <b>struct</b> crash_mem *cmem,</td></tr>
+<tr><th id="322">322</th><td>				 <em>unsigned</em> <em>long</em> <em>long</em> mstart,</td></tr>
+<tr><th id="323">323</th><td>				 <em>unsigned</em> <em>long</em> <em>long</em> mend)</td></tr>
+<tr><th id="324">324</th><td>{</td></tr>
+<tr><th id="325">325</th><td>	<em>unsigned</em> <em>long</em> start, end;</td></tr>
+<tr><th id="326">326</th><td>	<em>int</em> ret = <var>0</var>;</td></tr>
+<tr><th id="327">327</th><td></td></tr>
+<tr><th id="328">328</th><td>	cmem-&gt;ranges[<var>0</var>].start = mstart;</td></tr>
+<tr><th id="329">329</th><td>	cmem-&gt;ranges[<var>0</var>].end = mend;</td></tr>
+<tr><th id="330">330</th><td>	cmem-&gt;nr_ranges = <var>1</var>;</td></tr>
+<tr><th id="331">331</th><td></td></tr>
+<tr><th id="332">332</th><td>	<i>/* Exclude Backup region */</i></td></tr>
+<tr><th id="333">333</th><td>	start = image-&gt;arch.backup_load_addr;</td></tr>
+<tr><th id="334">334</th><td>	end = start + image-&gt;arch.backup_src_sz - <var>1</var>;</td></tr>
+<tr><th id="335">335</th><td>	ret = crash_exclude_mem_range(cmem, start, end);</td></tr>
+<tr><th id="336">336</th><td>	<b>if</b> (ret)</td></tr>
+<tr><th id="337">337</th><td>		<b>return</b> ret;</td></tr>
+<tr><th id="338">338</th><td></td></tr>
+<tr><th id="339">339</th><td>	<i>/* Exclude elf header region */</i></td></tr>
+<tr><th id="340">340</th><td>	start = image-&gt;arch.elf_load_addr;</td></tr>
+<tr><th id="341">341</th><td>	end = start + image-&gt;arch.elf_headers_sz - <var>1</var>;</td></tr>
+<tr><th id="342">342</th><td>	<b>return</b> crash_exclude_mem_range(cmem, start, end);</td></tr>
+<tr><th id="343">343</th><td>}</td></tr>
+<tr><th id="344">344</th><td></td></tr>
+<tr><th id="345">345</th><td><i>/* Prepare memory map for crash dump kernel */</i></td></tr>
+<tr><th id="346">346</th><td><em>int</em> crash_setup_memmap_entries(<b>struct</b> kimage *image, <b>struct</b> boot_params *params)</td></tr>
+<tr><th id="347">347</th><td>{</td></tr>
+<tr><th id="348">348</th><td>	<em>int</em> i, ret = <var>0</var>;</td></tr>
+<tr><th id="349">349</th><td>	<em>unsigned</em> <em>long</em> flags;</td></tr>
+<tr><th id="350">350</th><td>	<b>struct</b> e820_entry ei;</td></tr>
+<tr><th id="351">351</th><td>	<b>struct</b> crash_memmap_data cmd;</td></tr>
+<tr><th id="352">352</th><td>	<b>struct</b> crash_mem *cmem;</td></tr>
+<tr><th id="353">353</th><td></td></tr>
+<tr><th id="354">354</th><td>	cmem = vzalloc(<b>sizeof</b>(<b>struct</b> crash_mem));</td></tr>
+<tr><th id="355">355</th><td>	<b>if</b> (!cmem)</td></tr>
+<tr><th id="356">356</th><td>		<b>return</b> -ENOMEM;</td></tr>
+<tr><th id="357">357</th><td></td></tr>
+<tr><th id="358">358</th><td>	memset(&amp;cmd, <var>0</var>, <b>sizeof</b>(<b>struct</b> crash_memmap_data));</td></tr>
+<tr><th id="359">359</th><td>	cmd.params = params;</td></tr>
+<tr><th id="360">360</th><td></td></tr>
+<tr><th id="361">361</th><td>	<i>/* Add first 640K segment */</i></td></tr>
+<tr><th id="362">362</th><td>	ei.addr = image-&gt;arch.backup_src_start;</td></tr>
+<tr><th id="363">363</th><td>	ei.size = image-&gt;arch.backup_src_sz;</td></tr>
+<tr><th id="364">364</th><td>	ei.type = E820_TYPE_RAM;</td></tr>
+<tr><th id="365">365</th><td>	add_e820_entry(params, &amp;ei);</td></tr>
+<tr><th id="366">366</th><td></td></tr>
+<tr><th id="367">367</th><td>	<i>/* Add ACPI tables */</i></td></tr>
+<tr><th id="368">368</th><td>	cmd.type = E820_TYPE_ACPI;</td></tr>
+<tr><th id="369">369</th><td>	flags = IORESOURCE_MEM | IORESOURCE_BUSY;</td></tr>
+<tr><th id="370">370</th><td>	walk_iomem_res_desc(IORES_DESC_ACPI_TABLES, flags, <var>0</var>, -<var>1</var>, &amp;cmd,</td></tr>
+<tr><th id="371">371</th><td>		       memmap_entry_callback);</td></tr>
+<tr><th id="372">372</th><td></td></tr>
+<tr><th id="373">373</th><td>	<i>/* Add ACPI Non-volatile Storage */</i></td></tr>
+<tr><th id="374">374</th><td>	cmd.type = E820_TYPE_NVS;</td></tr>
+<tr><th id="375">375</th><td>	walk_iomem_res_desc(IORES_DESC_ACPI_NV_STORAGE, flags, <var>0</var>, -<var>1</var>, &amp;cmd,</td></tr>
+<tr><th id="376">376</th><td>			memmap_entry_callback);</td></tr>
+<tr><th id="377">377</th><td></td></tr>
+<tr><th id="378">378</th><td>	<i>/* Add e820 reserved ranges */</i></td></tr>
+<tr><th id="379">379</th><td>	cmd.type = E820_TYPE_RESERVED;</td></tr>
+<tr><th id="380">380</th><td>	flags = IORESOURCE_MEM;</td></tr>
+<tr><th id="381">381</th><td>	walk_iomem_res_desc(IORES_DESC_RESERVED, flags, <var>0</var>, -<var>1</var>, &amp;cmd,</td></tr>
+<tr><th id="382">382</th><td>			   memmap_entry_callback);</td></tr>
+<tr><th id="383">383</th><td></td></tr>
+<tr><th id="384">384</th><td>	<i>/* Add crashk_low_res region */</i></td></tr>
+<tr><th id="385">385</th><td>	<b>if</b> (crashk_low_res.end) {</td></tr>
+<tr><th id="386">386</th><td>		ei.addr = crashk_low_res.start;</td></tr>
+<tr><th id="387">387</th><td>		ei.size = crashk_low_res.end - crashk_low_res.start + <var>1</var>;</td></tr>
+<tr><th id="388">388</th><td>		ei.type = E820_TYPE_RAM;</td></tr>
+<tr><th id="389">389</th><td>		add_e820_entry(params, &amp;ei);</td></tr>
+<tr><th id="390">390</th><td>	}</td></tr>
+<tr><th id="391">391</th><td></td></tr>
+<tr><th id="392">392</th><td>	<i>/* Exclude some ranges from crashk_res and add rest to memmap */</i></td></tr>
+<tr><th id="393">393</th><td>	ret = memmap_exclude_ranges(image, cmem, crashk_res.start,</td></tr>
+<tr><th id="394">394</th><td>						crashk_res.end);</td></tr>
+<tr><th id="395">395</th><td>	<b>if</b> (ret)</td></tr>
+<tr><th id="396">396</th><td>		<b>goto</b> out;</td></tr>
+<tr><th id="397">397</th><td></td></tr>
+<tr><th id="398">398</th><td>	<b>for</b> (i = <var>0</var>; i &lt; cmem-&gt;nr_ranges; i++) {</td></tr>
+<tr><th id="399">399</th><td>		ei.size = cmem-&gt;ranges[i].end - cmem-&gt;ranges[i].start + <var>1</var>;</td></tr>
+<tr><th id="400">400</th><td></td></tr>
+<tr><th id="401">401</th><td>		<i>/* If entry is less than a page, skip it */</i></td></tr>
+<tr><th id="402">402</th><td>		<b>if</b> (ei.size &lt; PAGE_SIZE)</td></tr>
+<tr><th id="403">403</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="404">404</th><td>		ei.addr = cmem-&gt;ranges[i].start;</td></tr>
+<tr><th id="405">405</th><td>		ei.type = E820_TYPE_RAM;</td></tr>
+<tr><th id="406">406</th><td>		add_e820_entry(params, &amp;ei);</td></tr>
+<tr><th id="407">407</th><td>	}</td></tr>
+<tr><th id="408">408</th><td></td></tr>
+<tr><th id="409">409</th><td>out:</td></tr>
+<tr><th id="410">410</th><td>	vfree(cmem);</td></tr>
+<tr><th id="411">411</th><td>	<b>return</b> ret;</td></tr>
+<tr><th id="412">412</th><td>}</td></tr>
+<tr><th id="413">413</th><td></td></tr>
+<tr><th id="414">414</th><td><em>static</em> <em>int</em> determine_backup_region(<b>struct</b> resource *res, <em>void</em> *arg)</td></tr>
+<tr><th id="415">415</th><td>{</td></tr>
+<tr><th id="416">416</th><td>	<b>struct</b> kimage *image = arg;</td></tr>
+<tr><th id="417">417</th><td></td></tr>
+<tr><th id="418">418</th><td>	image-&gt;arch.backup_src_start = res-&gt;start;</td></tr>
+<tr><th id="419">419</th><td>	image-&gt;arch.backup_src_sz = resource_size(res);</td></tr>
+<tr><th id="420">420</th><td></td></tr>
+<tr><th id="421">421</th><td>	<i>/* Expecting only one range for backup region */</i></td></tr>
+<tr><th id="422">422</th><td>	<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="423">423</th><td>}</td></tr>
+<tr><th id="424">424</th><td></td></tr>
+<tr><th id="425">425</th><td><em>int</em> crash_load_segments(<b>struct</b> kimage *image)</td></tr>
+<tr><th id="426">426</th><td>{</td></tr>
+<tr><th id="427">427</th><td>	<em>int</em> ret;</td></tr>
+<tr><th id="428">428</th><td>	<b>struct</b> kexec_buf kbuf = { .image = image, .buf_min = <var>0</var>,</td></tr>
+<tr><th id="429">429</th><td>				  .buf_max = ULONG_MAX, .top_down = false };</td></tr>
+<tr><th id="430">430</th><td></td></tr>
+<tr><th id="431">431</th><td>	<i>/*</i></td></tr>
+<tr><th id="432">432</th><td><i>	 * Determine and load a segment for backup area. First 640K RAM</i></td></tr>
+<tr><th id="433">433</th><td><i>	 * region is backup source</i></td></tr>
+<tr><th id="434">434</th><td><i>	 */</i></td></tr>
+<tr><th id="435">435</th><td></td></tr>
+<tr><th id="436">436</th><td>	ret = walk_system_ram_res(KEXEC_BACKUP_SRC_START, KEXEC_BACKUP_SRC_END,</td></tr>
+<tr><th id="437">437</th><td>				image, determine_backup_region);</td></tr>
+<tr><th id="438">438</th><td></td></tr>
+<tr><th id="439">439</th><td>	<i>/* Zero or postive return values are ok */</i></td></tr>
+<tr><th id="440">440</th><td>	<b>if</b> (ret &lt; <var>0</var>)</td></tr>
+<tr><th id="441">441</th><td>		<b>return</b> ret;</td></tr>
+<tr><th id="442">442</th><td></td></tr>
+<tr><th id="443">443</th><td>	<i>/* Add backup segment. */</i></td></tr>
+<tr><th id="444">444</th><td>	<b>if</b> (image-&gt;arch.backup_src_sz) {</td></tr>
+<tr><th id="445">445</th><td>		kbuf.buffer = &amp;crash_zero_bytes;</td></tr>
+<tr><th id="446">446</th><td>		kbuf.bufsz = <b>sizeof</b>(crash_zero_bytes);</td></tr>
+<tr><th id="447">447</th><td>		kbuf.memsz = image-&gt;arch.backup_src_sz;</td></tr>
+<tr><th id="448">448</th><td>		kbuf.buf_align = PAGE_SIZE;</td></tr>
+<tr><th id="449">449</th><td>		<i>/*</i></td></tr>
+<tr><th id="450">450</th><td><i>		 * Ideally there is no source for backup segment. This is</i></td></tr>
+<tr><th id="451">451</th><td><i>		 * copied in purgatory after crash. Just add a zero filled</i></td></tr>
+<tr><th id="452">452</th><td><i>		 * segment for now to make sure checksum logic works fine.</i></td></tr>
+<tr><th id="453">453</th><td><i>		 */</i></td></tr>
+<tr><th id="454">454</th><td>		ret = kexec_add_buffer(&amp;kbuf);</td></tr>
+<tr><th id="455">455</th><td>		<b>if</b> (ret)</td></tr>
+<tr><th id="456">456</th><td>			<b>return</b> ret;</td></tr>
+<tr><th id="457">457</th><td>		image-&gt;arch.backup_load_addr = kbuf.mem;</td></tr>
+<tr><th id="458">458</th><td>		pr_debug(<q>"Loaded backup region at 0x%lx backup_start=0x%lx memsz=0x%lx\n"</q>,</td></tr>
+<tr><th id="459">459</th><td>			 image-&gt;arch.backup_load_addr,</td></tr>
+<tr><th id="460">460</th><td>			 image-&gt;arch.backup_src_start, kbuf.memsz);</td></tr>
+<tr><th id="461">461</th><td>	}</td></tr>
+<tr><th id="462">462</th><td></td></tr>
+<tr><th id="463">463</th><td>	<i>/* Prepare elf headers and add a segment */</i></td></tr>
+<tr><th id="464">464</th><td>	ret = prepare_elf_headers(image, &amp;kbuf.buffer, &amp;kbuf.bufsz);</td></tr>
+<tr><th id="465">465</th><td>	<b>if</b> (ret)</td></tr>
+<tr><th id="466">466</th><td>		<b>return</b> ret;</td></tr>
+<tr><th id="467">467</th><td></td></tr>
+<tr><th id="468">468</th><td>	image-&gt;arch.elf_headers = kbuf.buffer;</td></tr>
+<tr><th id="469">469</th><td>	image-&gt;arch.elf_headers_sz = kbuf.bufsz;</td></tr>
+<tr><th id="470">470</th><td></td></tr>
+<tr><th id="471">471</th><td>	kbuf.memsz = kbuf.bufsz;</td></tr>
+<tr><th id="472">472</th><td>	kbuf.buf_align = ELF_CORE_HEADER_ALIGN;</td></tr>
+<tr><th id="473">473</th><td>	kbuf.mem = KEXEC_BUF_MEM_UNKNOWN;</td></tr>
+<tr><th id="474">474</th><td>	ret = kexec_add_buffer(&amp;kbuf);</td></tr>
+<tr><th id="475">475</th><td>	<b>if</b> (ret) {</td></tr>
+<tr><th id="476">476</th><td>		vfree((<em>void</em> *)image-&gt;arch.elf_headers);</td></tr>
+<tr><th id="477">477</th><td>		<b>return</b> ret;</td></tr>
+<tr><th id="478">478</th><td>	}</td></tr>
+<tr><th id="479">479</th><td>	image-&gt;arch.elf_load_addr = kbuf.mem;</td></tr>
+<tr><th id="480">480</th><td>	pr_debug(<q>"Loaded ELF headers at 0x%lx bufsz=0x%lx memsz=0x%lx\n"</q>,</td></tr>
+<tr><th id="481">481</th><td>		 image-&gt;arch.elf_load_addr, kbuf.bufsz, kbuf.bufsz);</td></tr>
+<tr><th id="482">482</th><td></td></tr>
+<tr><th id="483">483</th><td>	<b>return</b> ret;</td></tr>
+<tr><th id="484">484</th><td>}</td></tr>
+<tr><th id="485">485</th><td><u>#<span data-ppcond="174">endif</span> /* CONFIG_KEXEC_FILE */</u></td></tr>
+<tr><th id="486">486</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

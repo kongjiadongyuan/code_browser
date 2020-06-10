@@ -1,0 +1,114 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>mmap.c source code [linux-5.3.1/drivers/pci/mmap.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/drivers/pci/mmap.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>drivers</a>/<a href='./'>pci</a>/<a href='mmap.c.html'>mmap.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * Generic PCI resource mmap helper</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * Copyright © 2017 Amazon.com, Inc. or its affiliates.</i></td></tr>
+<tr><th id="6">6</th><td><i> *</i></td></tr>
+<tr><th id="7">7</th><td><i> * Author: David Woodhouse &lt;dwmw2@infradead.org&gt;</i></td></tr>
+<tr><th id="8">8</th><td><i> */</i></td></tr>
+<tr><th id="9">9</th><td></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="../../include/linux/kernel.h.html">&lt;linux/kernel.h&gt;</a></u></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../../include/linux/mm.h.html">&lt;linux/mm.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="../../include/linux/pci.h.html">&lt;linux/pci.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td></td></tr>
+<tr><th id="14">14</th><td><u>#<span data-ppcond="14">ifdef</span> <a class="macro" href="../../arch/x86/include/asm/pci.h.html#101" data-ref="_M/ARCH_GENERIC_PCI_MMAP_RESOURCE">ARCH_GENERIC_PCI_MMAP_RESOURCE</a></u></td></tr>
+<tr><th id="15">15</th><td></td></tr>
+<tr><th id="16">16</th><td><i>/*</i></td></tr>
+<tr><th id="17">17</th><td><i> * Modern setup: generic pci_mmap_resource_range(), and implement the legacy</i></td></tr>
+<tr><th id="18">18</th><td><i> * pci_mmap_page_range() (if needed) as a wrapper round it.</i></td></tr>
+<tr><th id="19">19</th><td><i> */</i></td></tr>
+<tr><th id="20">20</th><td></td></tr>
+<tr><th id="21">21</th><td><u>#<span data-ppcond="21">ifdef</span> <a class="macro" href="../../arch/x86/include/asm/pci.h.html#99" data-ref="_M/HAVE_PCI_MMAP">HAVE_PCI_MMAP</a></u></td></tr>
+<tr><th id="22">22</th><td><em>int</em> <dfn class="decl def fn" id="pci_mmap_page_range" title='pci_mmap_page_range' data-ref="pci_mmap_page_range" data-ref-filename="pci_mmap_page_range">pci_mmap_page_range</dfn>(<b>struct</b> <a class="type" href="../../include/linux/pci.h.html#pci_dev" title='pci_dev' data-ref="pci_dev" data-ref-filename="pci_dev">pci_dev</a> *<dfn class="local col1 decl" id="1pdev" title='pdev' data-type='struct pci_dev *' data-ref="1pdev" data-ref-filename="1pdev">pdev</dfn>, <em>int</em> <dfn class="local col2 decl" id="2bar" title='bar' data-type='int' data-ref="2bar" data-ref-filename="2bar">bar</dfn>,</td></tr>
+<tr><th id="23">23</th><td>			<b>struct</b> <a class="type" href="../../include/linux/mm_types.h.html#vm_area_struct" title='vm_area_struct' data-ref="vm_area_struct" data-ref-filename="vm_area_struct">vm_area_struct</a> *<dfn class="local col3 decl" id="3vma" title='vma' data-type='struct vm_area_struct *' data-ref="3vma" data-ref-filename="3vma">vma</dfn>,</td></tr>
+<tr><th id="24">24</th><td>			<b>enum</b> <a class="type" href="../../include/linux/pci.h.html#pci_mmap_state" title='pci_mmap_state' data-ref="pci_mmap_state" data-ref-filename="pci_mmap_state">pci_mmap_state</a> <dfn class="local col4 decl" id="4mmap_state" title='mmap_state' data-type='enum pci_mmap_state' data-ref="4mmap_state" data-ref-filename="4mmap_state">mmap_state</dfn>, <em>int</em> <dfn class="local col5 decl" id="5write_combine" title='write_combine' data-type='int' data-ref="5write_combine" data-ref-filename="5write_combine">write_combine</dfn>)</td></tr>
+<tr><th id="25">25</th><td>{</td></tr>
+<tr><th id="26">26</th><td>	<a class="typedef" href="../../include/linux/types.h.html#resource_size_t" title='resource_size_t' data-type='phys_addr_t' data-ref="resource_size_t" data-ref-filename="resource_size_t">resource_size_t</a> <dfn class="local col6 decl" id="6start" title='start' data-type='resource_size_t' data-ref="6start" data-ref-filename="6start">start</dfn>, <dfn class="local col7 decl" id="7end" title='end' data-type='resource_size_t' data-ref="7end" data-ref-filename="7end">end</dfn>;</td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td>	<a class="ref fn" href="../../include/linux/pci.h.html#pci_resource_to_user" title='pci_resource_to_user' data-ref="pci_resource_to_user" data-ref-filename="pci_resource_to_user">pci_resource_to_user</a>(<a class="local col1 ref" href="#1pdev" title='pdev' data-ref="1pdev" data-ref-filename="1pdev">pdev</a>, <a class="local col2 ref" href="#2bar" title='bar' data-ref="2bar" data-ref-filename="2bar">bar</a>, &amp;<a class="local col1 ref" href="#1pdev" title='pdev' data-ref="1pdev" data-ref-filename="1pdev">pdev</a>-&gt;<a class="ref field" href="../../include/linux/pci.h.html#pci_dev::resource" title='pci_dev::resource' data-ref="pci_dev::resource" data-ref-filename="pci_dev..resource">resource</a>[<a class="local col2 ref" href="#2bar" title='bar' data-ref="2bar" data-ref-filename="2bar">bar</a>], &amp;<a class="local col6 ref" href="#6start" title='start' data-ref="6start" data-ref-filename="6start">start</a>, &amp;<a class="local col7 ref" href="#7end" title='end' data-ref="7end" data-ref-filename="7end">end</a>);</td></tr>
+<tr><th id="29">29</th><td></td></tr>
+<tr><th id="30">30</th><td>	<i>/* Adjust vm_pgoff to be the offset within the resource */</i></td></tr>
+<tr><th id="31">31</th><td>	<a class="local col3 ref" href="#3vma" title='vma' data-ref="3vma" data-ref-filename="3vma">vma</a>-&gt;<a class="ref field" href="../../include/linux/mm_types.h.html#vm_area_struct::vm_pgoff" title='vm_area_struct::vm_pgoff' data-ref="vm_area_struct::vm_pgoff" data-ref-filename="vm_area_struct..vm_pgoff">vm_pgoff</a> -= <a class="local col6 ref" href="#6start" title='start' data-ref="6start" data-ref-filename="6start">start</a> &gt;&gt; <a class="macro" href="../../arch/x86/include/asm/page_types.h.html#10" title="12" data-ref="_M/PAGE_SHIFT">PAGE_SHIFT</a>;</td></tr>
+<tr><th id="32">32</th><td>	<b>return</b> <a class="ref fn" href="#pci_mmap_resource_range" title='pci_mmap_resource_range' data-ref="pci_mmap_resource_range" data-ref-filename="pci_mmap_resource_range">pci_mmap_resource_range</a>(<a class="local col1 ref" href="#1pdev" title='pdev' data-ref="1pdev" data-ref-filename="1pdev">pdev</a>, <a class="local col2 ref" href="#2bar" title='bar' data-ref="2bar" data-ref-filename="2bar">bar</a>, <a class="local col3 ref" href="#3vma" title='vma' data-ref="3vma" data-ref-filename="3vma">vma</a>, <a class="local col4 ref" href="#4mmap_state" title='mmap_state' data-ref="4mmap_state" data-ref-filename="4mmap_state">mmap_state</a>,</td></tr>
+<tr><th id="33">33</th><td>				       <a class="local col5 ref" href="#5write_combine" title='write_combine' data-ref="5write_combine" data-ref-filename="5write_combine">write_combine</a>);</td></tr>
+<tr><th id="34">34</th><td>}</td></tr>
+<tr><th id="35">35</th><td><u>#<span data-ppcond="21">endif</span></u></td></tr>
+<tr><th id="36">36</th><td></td></tr>
+<tr><th id="37">37</th><td><em>static</em> <em>const</em> <b>struct</b> <a class="type" href="../../include/linux/mm.h.html#vm_operations_struct" title='vm_operations_struct' data-ref="vm_operations_struct" data-ref-filename="vm_operations_struct">vm_operations_struct</a> <dfn class="tu decl def" id="pci_phys_vm_ops" title='pci_phys_vm_ops' data-type='const struct vm_operations_struct' data-ref="pci_phys_vm_ops" data-ref-filename="pci_phys_vm_ops">pci_phys_vm_ops</dfn> = {</td></tr>
+<tr><th id="38">38</th><td><u>#<span data-ppcond="38">ifdef</span> <a class="macro" href="../../include/generated/autoconf.h.html#889" data-ref="_M/CONFIG_HAVE_IOREMAP_PROT">CONFIG_HAVE_IOREMAP_PROT</a></u></td></tr>
+<tr><th id="39">39</th><td>	.<a class="ref field" href="../../include/linux/mm.h.html#vm_operations_struct::access" title='vm_operations_struct::access' data-ref="vm_operations_struct::access" data-ref-filename="vm_operations_struct..access">access</a> = <a class="ref fn" href="../../include/linux/mm.h.html#generic_access_phys" title='generic_access_phys' data-ref="generic_access_phys" data-ref-filename="generic_access_phys">generic_access_phys</a>,</td></tr>
+<tr><th id="40">40</th><td><u>#<span data-ppcond="38">endif</span></u></td></tr>
+<tr><th id="41">41</th><td>};</td></tr>
+<tr><th id="42">42</th><td></td></tr>
+<tr><th id="43">43</th><td><em>int</em> <dfn class="decl def fn" id="pci_mmap_resource_range" title='pci_mmap_resource_range' data-ref="pci_mmap_resource_range" data-ref-filename="pci_mmap_resource_range">pci_mmap_resource_range</dfn>(<b>struct</b> <a class="type" href="../../include/linux/pci.h.html#pci_dev" title='pci_dev' data-ref="pci_dev" data-ref-filename="pci_dev">pci_dev</a> *<dfn class="local col8 decl" id="8pdev" title='pdev' data-type='struct pci_dev *' data-ref="8pdev" data-ref-filename="8pdev">pdev</dfn>, <em>int</em> <dfn class="local col9 decl" id="9bar" title='bar' data-type='int' data-ref="9bar" data-ref-filename="9bar">bar</dfn>,</td></tr>
+<tr><th id="44">44</th><td>			    <b>struct</b> <a class="type" href="../../include/linux/mm_types.h.html#vm_area_struct" title='vm_area_struct' data-ref="vm_area_struct" data-ref-filename="vm_area_struct">vm_area_struct</a> *<dfn class="local col0 decl" id="10vma" title='vma' data-type='struct vm_area_struct *' data-ref="10vma" data-ref-filename="10vma">vma</dfn>,</td></tr>
+<tr><th id="45">45</th><td>			    <b>enum</b> <a class="type" href="../../include/linux/pci.h.html#pci_mmap_state" title='pci_mmap_state' data-ref="pci_mmap_state" data-ref-filename="pci_mmap_state">pci_mmap_state</a> <dfn class="local col1 decl" id="11mmap_state" title='mmap_state' data-type='enum pci_mmap_state' data-ref="11mmap_state" data-ref-filename="11mmap_state">mmap_state</dfn>, <em>int</em> <dfn class="local col2 decl" id="12write_combine" title='write_combine' data-type='int' data-ref="12write_combine" data-ref-filename="12write_combine">write_combine</dfn>)</td></tr>
+<tr><th id="46">46</th><td>{</td></tr>
+<tr><th id="47">47</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col3 decl" id="13size" title='size' data-type='unsigned long' data-ref="13size" data-ref-filename="13size">size</dfn>;</td></tr>
+<tr><th id="48">48</th><td>	<em>int</em> <dfn class="local col4 decl" id="14ret" title='ret' data-type='int' data-ref="14ret" data-ref-filename="14ret">ret</dfn>;</td></tr>
+<tr><th id="49">49</th><td></td></tr>
+<tr><th id="50">50</th><td>	<a class="local col3 ref" href="#13size" title='size' data-ref="13size" data-ref-filename="13size">size</a> = ((<a class="macro" href="../../include/linux/pci.h.html#1847" title="(((((pdev))-&gt;resource[((bar))].start) == 0 &amp;&amp; (((pdev))-&gt;resource[((bar))].end) == (((pdev))-&gt;resource[((bar))].start)) ? 0 : ((((pdev))-&gt;resource[((bar))].end) - (((pdev))-&gt;resource[((bar))].start) + 1))" data-ref="_M/pci_resource_len">pci_resource_len</a>(<a class="local col8 ref" href="#8pdev" title='pdev' data-ref="8pdev" data-ref-filename="8pdev">pdev</a>, <a class="local col9 ref" href="#9bar" title='bar' data-ref="9bar" data-ref-filename="9bar">bar</a>) - <var>1</var>) &gt;&gt; <a class="macro" href="../../arch/x86/include/asm/page_types.h.html#10" title="12" data-ref="_M/PAGE_SHIFT">PAGE_SHIFT</a>) + <var>1</var>;</td></tr>
+<tr><th id="51">51</th><td>	<b>if</b> (<a class="local col0 ref" href="#10vma" title='vma' data-ref="10vma" data-ref-filename="10vma">vma</a>-&gt;<a class="ref field" href="../../include/linux/mm_types.h.html#vm_area_struct::vm_pgoff" title='vm_area_struct::vm_pgoff' data-ref="vm_area_struct::vm_pgoff" data-ref-filename="vm_area_struct..vm_pgoff">vm_pgoff</a> + <a class="ref fn" href="../../include/linux/mm.h.html#vma_pages" title='vma_pages' data-ref="vma_pages" data-ref-filename="vma_pages">vma_pages</a>(<a class="local col0 ref" href="#10vma" title='vma' data-ref="10vma" data-ref-filename="10vma">vma</a>) &gt; <a class="local col3 ref" href="#13size" title='size' data-ref="13size" data-ref-filename="13size">size</a>)</td></tr>
+<tr><th id="52">52</th><td>		<b>return</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td>	<b>if</b> (<a class="local col2 ref" href="#12write_combine" title='write_combine' data-ref="12write_combine" data-ref-filename="12write_combine">write_combine</a>)</td></tr>
+<tr><th id="55">55</th><td>		<a class="local col0 ref" href="#10vma" title='vma' data-ref="10vma" data-ref-filename="10vma">vma</a>-&gt;<a class="ref field" href="../../include/linux/mm_types.h.html#vm_area_struct::vm_page_prot" title='vm_area_struct::vm_page_prot' data-ref="vm_area_struct::vm_page_prot" data-ref-filename="vm_area_struct..vm_page_prot">vm_page_prot</a> = <a class="macro" href="../../arch/x86/include/asm/pgtable_types.h.html#514" title="pgprot_writecombine" data-ref="_M/pgprot_writecombine">pgprot_writecombine</a>(<a class="local col0 ref" href="#10vma" title='vma' data-ref="10vma" data-ref-filename="10vma">vma</a>-&gt;<a class="ref field" href="../../include/linux/mm_types.h.html#vm_area_struct::vm_page_prot" title='vm_area_struct::vm_page_prot' data-ref="vm_area_struct::vm_page_prot" data-ref-filename="vm_area_struct..vm_page_prot">vm_page_prot</a>);</td></tr>
+<tr><th id="56">56</th><td>	<b>else</b></td></tr>
+<tr><th id="57">57</th><td>		<a class="local col0 ref" href="#10vma" title='vma' data-ref="10vma" data-ref-filename="10vma">vma</a>-&gt;<a class="ref field" href="../../include/linux/mm_types.h.html#vm_area_struct::vm_page_prot" title='vm_area_struct::vm_page_prot' data-ref="vm_area_struct::vm_page_prot" data-ref-filename="vm_area_struct..vm_page_prot">vm_page_prot</a> = <a class="macro" href="../../include/asm-generic/pgtable.h.html#506" title="pgprot_noncached" data-ref="_M/pgprot_device">pgprot_device</a>(<a class="local col0 ref" href="#10vma" title='vma' data-ref="10vma" data-ref-filename="10vma">vma</a>-&gt;<a class="ref field" href="../../include/linux/mm_types.h.html#vm_area_struct::vm_page_prot" title='vm_area_struct::vm_page_prot' data-ref="vm_area_struct::vm_page_prot" data-ref-filename="vm_area_struct..vm_page_prot">vm_page_prot</a>);</td></tr>
+<tr><th id="58">58</th><td></td></tr>
+<tr><th id="59">59</th><td>	<b>if</b> (<a class="local col1 ref" href="#11mmap_state" title='mmap_state' data-ref="11mmap_state" data-ref-filename="11mmap_state">mmap_state</a> == <a class="enum" href="../../include/linux/pci.h.html#pci_mmap_io" title='pci_mmap_io' data-ref="pci_mmap_io" data-ref-filename="pci_mmap_io">pci_mmap_io</a>) {</td></tr>
+<tr><th id="60">60</th><td>		<a class="local col4 ref" href="#14ret" title='ret' data-ref="14ret" data-ref-filename="14ret">ret</a> = <a class="macro" href="../../include/linux/pci.h.html#1831" title="(-22)" data-ref="_M/pci_iobar_pfn">pci_iobar_pfn</a>(pdev, bar, vma);</td></tr>
+<tr><th id="61">61</th><td>		<b>if</b> (<a class="local col4 ref" href="#14ret" title='ret' data-ref="14ret" data-ref-filename="14ret">ret</a>)</td></tr>
+<tr><th id="62">62</th><td>			<b>return</b> <a class="local col4 ref" href="#14ret" title='ret' data-ref="14ret" data-ref-filename="14ret">ret</a>;</td></tr>
+<tr><th id="63">63</th><td>	} <b>else</b></td></tr>
+<tr><th id="64">64</th><td>		<a class="local col0 ref" href="#10vma" title='vma' data-ref="10vma" data-ref-filename="10vma">vma</a>-&gt;<a class="ref field" href="../../include/linux/mm_types.h.html#vm_area_struct::vm_pgoff" title='vm_area_struct::vm_pgoff' data-ref="vm_area_struct::vm_pgoff" data-ref-filename="vm_area_struct..vm_pgoff">vm_pgoff</a> += (<a class="macro" href="../../include/linux/pci.h.html#1844" title="((pdev)-&gt;resource[(bar)].start)" data-ref="_M/pci_resource_start">pci_resource_start</a>(<a class="local col8 ref" href="#8pdev" title='pdev' data-ref="8pdev" data-ref-filename="8pdev">pdev</a>, <a class="local col9 ref" href="#9bar" title='bar' data-ref="9bar" data-ref-filename="9bar">bar</a>) &gt;&gt; <a class="macro" href="../../arch/x86/include/asm/page_types.h.html#10" title="12" data-ref="_M/PAGE_SHIFT">PAGE_SHIFT</a>);</td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td>	<a class="local col0 ref" href="#10vma" title='vma' data-ref="10vma" data-ref-filename="10vma">vma</a>-&gt;<a class="ref field" href="../../include/linux/mm_types.h.html#vm_area_struct::vm_ops" title='vm_area_struct::vm_ops' data-ref="vm_area_struct::vm_ops" data-ref-filename="vm_area_struct..vm_ops">vm_ops</a> = &amp;<a class="tu ref" href="#pci_phys_vm_ops" title='pci_phys_vm_ops' data-use='a' data-ref="pci_phys_vm_ops" data-ref-filename="pci_phys_vm_ops">pci_phys_vm_ops</a>;</td></tr>
+<tr><th id="67">67</th><td></td></tr>
+<tr><th id="68">68</th><td>	<b>return</b> <a class="macro" href="../../include/asm-generic/pgtable.h.html#1164" title="remap_pfn_range" data-ref="_M/io_remap_pfn_range">io_remap_pfn_range</a>(<a class="local col0 ref" href="#10vma" title='vma' data-ref="10vma" data-ref-filename="10vma">vma</a>, <a class="local col0 ref" href="#10vma" title='vma' data-ref="10vma" data-ref-filename="10vma">vma</a>-&gt;<a class="ref field" href="../../include/linux/mm_types.h.html#vm_area_struct::vm_start" title='vm_area_struct::vm_start' data-ref="vm_area_struct::vm_start" data-ref-filename="vm_area_struct..vm_start">vm_start</a>, <a class="local col0 ref" href="#10vma" title='vma' data-ref="10vma" data-ref-filename="10vma">vma</a>-&gt;<a class="ref field" href="../../include/linux/mm_types.h.html#vm_area_struct::vm_pgoff" title='vm_area_struct::vm_pgoff' data-ref="vm_area_struct::vm_pgoff" data-ref-filename="vm_area_struct..vm_pgoff">vm_pgoff</a>,</td></tr>
+<tr><th id="69">69</th><td>				  <a class="local col0 ref" href="#10vma" title='vma' data-ref="10vma" data-ref-filename="10vma">vma</a>-&gt;<a class="ref field" href="../../include/linux/mm_types.h.html#vm_area_struct::vm_end" title='vm_area_struct::vm_end' data-ref="vm_area_struct::vm_end" data-ref-filename="vm_area_struct..vm_end">vm_end</a> - <a class="local col0 ref" href="#10vma" title='vma' data-ref="10vma" data-ref-filename="10vma">vma</a>-&gt;<a class="ref field" href="../../include/linux/mm_types.h.html#vm_area_struct::vm_start" title='vm_area_struct::vm_start' data-ref="vm_area_struct::vm_start" data-ref-filename="vm_area_struct..vm_start">vm_start</a>,</td></tr>
+<tr><th id="70">70</th><td>				  <a class="local col0 ref" href="#10vma" title='vma' data-ref="10vma" data-ref-filename="10vma">vma</a>-&gt;<a class="ref field" href="../../include/linux/mm_types.h.html#vm_area_struct::vm_page_prot" title='vm_area_struct::vm_page_prot' data-ref="vm_area_struct::vm_page_prot" data-ref-filename="vm_area_struct..vm_page_prot">vm_page_prot</a>);</td></tr>
+<tr><th id="71">71</th><td>}</td></tr>
+<tr><th id="72">72</th><td></td></tr>
+<tr><th id="73">73</th><td><u>#<span data-ppcond="14">elif</span> defined(HAVE_PCI_MMAP) /* &amp;&amp; !ARCH_GENERIC_PCI_MMAP_RESOURCE */</u></td></tr>
+<tr><th id="74">74</th><td></td></tr>
+<tr><th id="75">75</th><td><i>/*</i></td></tr>
+<tr><th id="76">76</th><td><i> * Legacy setup: Implement pci_mmap_resource_range() as a wrapper around</i></td></tr>
+<tr><th id="77">77</th><td><i> * the architecture's pci_mmap_page_range(), converting to "user visible"</i></td></tr>
+<tr><th id="78">78</th><td><i> * addresses as necessary.</i></td></tr>
+<tr><th id="79">79</th><td><i> */</i></td></tr>
+<tr><th id="80">80</th><td></td></tr>
+<tr><th id="81">81</th><td><em>int</em> pci_mmap_resource_range(<b>struct</b> pci_dev *pdev, <em>int</em> bar,</td></tr>
+<tr><th id="82">82</th><td>			    <b>struct</b> vm_area_struct *vma,</td></tr>
+<tr><th id="83">83</th><td>			    <b>enum</b> pci_mmap_state mmap_state, <em>int</em> write_combine)</td></tr>
+<tr><th id="84">84</th><td>{</td></tr>
+<tr><th id="85">85</th><td>	resource_size_t start, end;</td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td>	<i>/*</i></td></tr>
+<tr><th id="88">88</th><td><i>	 * pci_mmap_page_range() expects the same kind of entry as coming</i></td></tr>
+<tr><th id="89">89</th><td><i>	 * from /proc/bus/pci/ which is a "user visible" value. If this is</i></td></tr>
+<tr><th id="90">90</th><td><i>	 * different from the resource itself, arch will do necessary fixup.</i></td></tr>
+<tr><th id="91">91</th><td><i>	 */</i></td></tr>
+<tr><th id="92">92</th><td>	pci_resource_to_user(pdev, bar, &amp;pdev-&gt;resource[bar], &amp;start, &amp;end);</td></tr>
+<tr><th id="93">93</th><td>	vma-&gt;vm_pgoff += start &gt;&gt; PAGE_SHIFT;</td></tr>
+<tr><th id="94">94</th><td>	<b>return</b> pci_mmap_page_range(pdev, bar, vma, mmap_state, write_combine);</td></tr>
+<tr><th id="95">95</th><td>}</td></tr>
+<tr><th id="96">96</th><td><u>#<span data-ppcond="14">endif</span></u></td></tr>
+<tr><th id="97">97</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

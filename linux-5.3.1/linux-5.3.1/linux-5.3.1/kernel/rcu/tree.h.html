@@ -1,0 +1,470 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>tree.h source code [linux-5.3.1/kernel/rcu/tree.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="rcu_data,rcu_exp_work,rcu_node,rcu_noqs,rcu_state "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/kernel/rcu/tree.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>kernel</a>/<a href='./'>rcu</a>/<a href='tree.h.html'>tree.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0+ */</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * Read-Copy Update mechanism for mutual exclusion (tree-based version)</i></td></tr>
+<tr><th id="4">4</th><td><i> * Internal non-public definitions.</i></td></tr>
+<tr><th id="5">5</th><td><i> *</i></td></tr>
+<tr><th id="6">6</th><td><i> * Copyright IBM Corporation, 2008</i></td></tr>
+<tr><th id="7">7</th><td><i> *</i></td></tr>
+<tr><th id="8">8</th><td><i> * Author: Ingo Molnar &lt;mingo@elte.hu&gt;</i></td></tr>
+<tr><th id="9">9</th><td><i> *	   Paul E. McKenney &lt;paulmck@linux.ibm.com&gt;</i></td></tr>
+<tr><th id="10">10</th><td><i> */</i></td></tr>
+<tr><th id="11">11</th><td></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="../../include/linux/cache.h.html">&lt;linux/cache.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="../../include/linux/spinlock.h.html">&lt;linux/spinlock.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="../../include/linux/rtmutex.h.html">&lt;linux/rtmutex.h&gt;</a></u></td></tr>
+<tr><th id="15">15</th><td><u>#include <a href="../../include/linux/threads.h.html">&lt;linux/threads.h&gt;</a></u></td></tr>
+<tr><th id="16">16</th><td><u>#include <a href="../../include/linux/cpumask.h.html">&lt;linux/cpumask.h&gt;</a></u></td></tr>
+<tr><th id="17">17</th><td><u>#include <a href="../../include/linux/seqlock.h.html">&lt;linux/seqlock.h&gt;</a></u></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="../../include/linux/swait.h.html">&lt;linux/swait.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="../../include/linux/stop_machine.h.html">&lt;linux/stop_machine.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../include/linux/rcu_node_tree.h.html">&lt;linux/rcu_node_tree.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="rcu_segcblist.h.html">"rcu_segcblist.h"</a></u></td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td><i>/* Communicate arguments to a workqueue handler. */</i></td></tr>
+<tr><th id="25">25</th><td><b>struct</b> <dfn class="type def" id="rcu_exp_work" title='rcu_exp_work' data-ref="rcu_exp_work" data-ref-filename="rcu_exp_work">rcu_exp_work</dfn> {</td></tr>
+<tr><th id="26">26</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_exp_work::rew_s" title='rcu_exp_work::rew_s' data-ref="rcu_exp_work::rew_s" data-ref-filename="rcu_exp_work..rew_s">rew_s</dfn>;</td></tr>
+<tr><th id="27">27</th><td>	<b>struct</b> <a class="type" href="../../include/linux/workqueue.h.html#work_struct" title='work_struct' data-ref="work_struct" data-ref-filename="work_struct">work_struct</a> <dfn class="decl field" id="rcu_exp_work::rew_work" title='rcu_exp_work::rew_work' data-ref="rcu_exp_work::rew_work" data-ref-filename="rcu_exp_work..rew_work">rew_work</dfn>;</td></tr>
+<tr><th id="28">28</th><td>};</td></tr>
+<tr><th id="29">29</th><td></td></tr>
+<tr><th id="30">30</th><td><i>/* RCU's kthread states for tracing. */</i></td></tr>
+<tr><th id="31">31</th><td><u>#define <dfn class="macro" id="_M/RCU_KTHREAD_STOPPED" data-ref="_M/RCU_KTHREAD_STOPPED">RCU_KTHREAD_STOPPED</dfn>  0</u></td></tr>
+<tr><th id="32">32</th><td><u>#define <dfn class="macro" id="_M/RCU_KTHREAD_RUNNING" data-ref="_M/RCU_KTHREAD_RUNNING">RCU_KTHREAD_RUNNING</dfn>  1</u></td></tr>
+<tr><th id="33">33</th><td><u>#define <dfn class="macro" id="_M/RCU_KTHREAD_WAITING" data-ref="_M/RCU_KTHREAD_WAITING">RCU_KTHREAD_WAITING</dfn>  2</u></td></tr>
+<tr><th id="34">34</th><td><u>#define <dfn class="macro" id="_M/RCU_KTHREAD_OFFCPU" data-ref="_M/RCU_KTHREAD_OFFCPU">RCU_KTHREAD_OFFCPU</dfn>   3</u></td></tr>
+<tr><th id="35">35</th><td><u>#define <dfn class="macro" id="_M/RCU_KTHREAD_YIELDING" data-ref="_M/RCU_KTHREAD_YIELDING">RCU_KTHREAD_YIELDING</dfn> 4</u></td></tr>
+<tr><th id="36">36</th><td><u>#define <dfn class="macro" id="_M/RCU_KTHREAD_MAX" data-ref="_M/RCU_KTHREAD_MAX">RCU_KTHREAD_MAX</dfn>      4</u></td></tr>
+<tr><th id="37">37</th><td></td></tr>
+<tr><th id="38">38</th><td><i>/*</i></td></tr>
+<tr><th id="39">39</th><td><i> * Definition for node within the RCU grace-period-detection hierarchy.</i></td></tr>
+<tr><th id="40">40</th><td><i> */</i></td></tr>
+<tr><th id="41">41</th><td><b>struct</b> <dfn class="type def" id="rcu_node" title='rcu_node' data-ref="rcu_node" data-ref-filename="rcu_node">rcu_node</dfn> {</td></tr>
+<tr><th id="42">42</th><td>	<a class="typedef" href="../../include/linux/spinlock_types.h.html#raw_spinlock_t" title='raw_spinlock_t' data-type='struct raw_spinlock' data-ref="raw_spinlock_t" data-ref-filename="raw_spinlock_t">raw_spinlock_t</a> <a class="macro" href="../../include/linux/compiler_types.h.html#48" title="" data-ref="_M/__private">__private</a> <dfn class="decl field" id="rcu_node::lock" title='rcu_node::lock' data-ref="rcu_node::lock" data-ref-filename="rcu_node..lock">lock</dfn>;	<i>/* Root rcu_node's lock protects */</i></td></tr>
+<tr><th id="43">43</th><td>					<i>/*  some rcu_state fields as well as */</i></td></tr>
+<tr><th id="44">44</th><td>					<i>/*  following. */</i></td></tr>
+<tr><th id="45">45</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_node::gp_seq" title='rcu_node::gp_seq' data-ref="rcu_node::gp_seq" data-ref-filename="rcu_node..gp_seq">gp_seq</dfn>;	<i>/* Track rsp-&gt;rcu_gp_seq. */</i></td></tr>
+<tr><th id="46">46</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_node::gp_seq_needed" title='rcu_node::gp_seq_needed' data-ref="rcu_node::gp_seq_needed" data-ref-filename="rcu_node..gp_seq_needed">gp_seq_needed</dfn>; <i>/* Track furthest future GP request. */</i></td></tr>
+<tr><th id="47">47</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_node::completedqs" title='rcu_node::completedqs' data-ref="rcu_node::completedqs" data-ref-filename="rcu_node..completedqs">completedqs</dfn>; <i>/* All QSes done for this node. */</i></td></tr>
+<tr><th id="48">48</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_node::qsmask" title='rcu_node::qsmask' data-ref="rcu_node::qsmask" data-ref-filename="rcu_node..qsmask">qsmask</dfn>;	<i>/* CPUs or groups that need to switch in */</i></td></tr>
+<tr><th id="49">49</th><td>				<i>/*  order for current grace period to proceed.*/</i></td></tr>
+<tr><th id="50">50</th><td>				<i>/*  In leaf rcu_node, each bit corresponds to */</i></td></tr>
+<tr><th id="51">51</th><td>				<i>/*  an rcu_data structure, otherwise, each */</i></td></tr>
+<tr><th id="52">52</th><td>				<i>/*  bit corresponds to a child rcu_node */</i></td></tr>
+<tr><th id="53">53</th><td>				<i>/*  structure. */</i></td></tr>
+<tr><th id="54">54</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_node::rcu_gp_init_mask" title='rcu_node::rcu_gp_init_mask' data-ref="rcu_node::rcu_gp_init_mask" data-ref-filename="rcu_node..rcu_gp_init_mask">rcu_gp_init_mask</dfn>;	<i>/* Mask of offline CPUs at GP init. */</i></td></tr>
+<tr><th id="55">55</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_node::qsmaskinit" title='rcu_node::qsmaskinit' data-ref="rcu_node::qsmaskinit" data-ref-filename="rcu_node..qsmaskinit">qsmaskinit</dfn>;</td></tr>
+<tr><th id="56">56</th><td>				<i>/* Per-GP initial value for qsmask. */</i></td></tr>
+<tr><th id="57">57</th><td>				<i>/*  Initialized from -&gt;qsmaskinitnext at the */</i></td></tr>
+<tr><th id="58">58</th><td>				<i>/*  beginning of each grace period. */</i></td></tr>
+<tr><th id="59">59</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_node::qsmaskinitnext" title='rcu_node::qsmaskinitnext' data-ref="rcu_node::qsmaskinitnext" data-ref-filename="rcu_node..qsmaskinitnext">qsmaskinitnext</dfn>;</td></tr>
+<tr><th id="60">60</th><td>				<i>/* Online CPUs for next grace period. */</i></td></tr>
+<tr><th id="61">61</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_node::expmask" title='rcu_node::expmask' data-ref="rcu_node::expmask" data-ref-filename="rcu_node..expmask">expmask</dfn>;	<i>/* CPUs or groups that need to check in */</i></td></tr>
+<tr><th id="62">62</th><td>				<i>/*  to allow the current expedited GP */</i></td></tr>
+<tr><th id="63">63</th><td>				<i>/*  to complete. */</i></td></tr>
+<tr><th id="64">64</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_node::expmaskinit" title='rcu_node::expmaskinit' data-ref="rcu_node::expmaskinit" data-ref-filename="rcu_node..expmaskinit">expmaskinit</dfn>;</td></tr>
+<tr><th id="65">65</th><td>				<i>/* Per-GP initial values for expmask. */</i></td></tr>
+<tr><th id="66">66</th><td>				<i>/*  Initialized from -&gt;expmaskinitnext at the */</i></td></tr>
+<tr><th id="67">67</th><td>				<i>/*  beginning of each expedited GP. */</i></td></tr>
+<tr><th id="68">68</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_node::expmaskinitnext" title='rcu_node::expmaskinitnext' data-ref="rcu_node::expmaskinitnext" data-ref-filename="rcu_node..expmaskinitnext">expmaskinitnext</dfn>;</td></tr>
+<tr><th id="69">69</th><td>				<i>/* Online CPUs for next expedited GP. */</i></td></tr>
+<tr><th id="70">70</th><td>				<i>/*  Any CPU that has ever been online will */</i></td></tr>
+<tr><th id="71">71</th><td>				<i>/*  have its bit set. */</i></td></tr>
+<tr><th id="72">72</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_node::ffmask" title='rcu_node::ffmask' data-ref="rcu_node::ffmask" data-ref-filename="rcu_node..ffmask">ffmask</dfn>;	<i>/* Fully functional CPUs. */</i></td></tr>
+<tr><th id="73">73</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_node::grpmask" title='rcu_node::grpmask' data-ref="rcu_node::grpmask" data-ref-filename="rcu_node..grpmask">grpmask</dfn>;	<i>/* Mask to apply to parent qsmask. */</i></td></tr>
+<tr><th id="74">74</th><td>				<i>/*  Only one bit will be set in this mask. */</i></td></tr>
+<tr><th id="75">75</th><td>	<em>int</em>	<dfn class="decl field" id="rcu_node::grplo" title='rcu_node::grplo' data-ref="rcu_node::grplo" data-ref-filename="rcu_node..grplo">grplo</dfn>;		<i>/* lowest-numbered CPU or group here. */</i></td></tr>
+<tr><th id="76">76</th><td>	<em>int</em>	<dfn class="decl field" id="rcu_node::grphi" title='rcu_node::grphi' data-ref="rcu_node::grphi" data-ref-filename="rcu_node..grphi">grphi</dfn>;		<i>/* highest-numbered CPU or group here. */</i></td></tr>
+<tr><th id="77">77</th><td>	<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a>	<dfn class="decl field" id="rcu_node::grpnum" title='rcu_node::grpnum' data-ref="rcu_node::grpnum" data-ref-filename="rcu_node..grpnum">grpnum</dfn>;		<i>/* CPU/group number for next level up. */</i></td></tr>
+<tr><th id="78">78</th><td>	<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a>	<dfn class="decl field" id="rcu_node::level" title='rcu_node::level' data-ref="rcu_node::level" data-ref-filename="rcu_node..level">level</dfn>;		<i>/* root is at level 0. */</i></td></tr>
+<tr><th id="79">79</th><td>	<a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a>	<dfn class="decl field" id="rcu_node::wait_blkd_tasks" title='rcu_node::wait_blkd_tasks' data-ref="rcu_node::wait_blkd_tasks" data-ref-filename="rcu_node..wait_blkd_tasks">wait_blkd_tasks</dfn>;<i>/* Necessary to wait for blocked tasks to */</i></td></tr>
+<tr><th id="80">80</th><td>				<i>/*  exit RCU read-side critical sections */</i></td></tr>
+<tr><th id="81">81</th><td>				<i>/*  before propagating offline up the */</i></td></tr>
+<tr><th id="82">82</th><td>				<i>/*  rcu_node tree? */</i></td></tr>
+<tr><th id="83">83</th><td>	<b>struct</b> <a class="type" href="#rcu_node" title='rcu_node' data-ref="rcu_node" data-ref-filename="rcu_node">rcu_node</a> *<dfn class="decl field" id="rcu_node::parent" title='rcu_node::parent' data-ref="rcu_node::parent" data-ref-filename="rcu_node..parent">parent</dfn>;</td></tr>
+<tr><th id="84">84</th><td>	<b>struct</b> <a class="type" href="../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="rcu_node::blkd_tasks" title='rcu_node::blkd_tasks' data-ref="rcu_node::blkd_tasks" data-ref-filename="rcu_node..blkd_tasks">blkd_tasks</dfn>;</td></tr>
+<tr><th id="85">85</th><td>				<i>/* Tasks blocked in RCU read-side critical */</i></td></tr>
+<tr><th id="86">86</th><td>				<i>/*  section.  Tasks are placed at the head */</i></td></tr>
+<tr><th id="87">87</th><td>				<i>/*  of this list and age towards the tail. */</i></td></tr>
+<tr><th id="88">88</th><td>	<b>struct</b> <a class="type" href="../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> *<dfn class="decl field" id="rcu_node::gp_tasks" title='rcu_node::gp_tasks' data-ref="rcu_node::gp_tasks" data-ref-filename="rcu_node..gp_tasks">gp_tasks</dfn>;</td></tr>
+<tr><th id="89">89</th><td>				<i>/* Pointer to the first task blocking the */</i></td></tr>
+<tr><th id="90">90</th><td>				<i>/*  current grace period, or NULL if there */</i></td></tr>
+<tr><th id="91">91</th><td>				<i>/*  is no such task. */</i></td></tr>
+<tr><th id="92">92</th><td>	<b>struct</b> <a class="type" href="../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> *<dfn class="decl field" id="rcu_node::exp_tasks" title='rcu_node::exp_tasks' data-ref="rcu_node::exp_tasks" data-ref-filename="rcu_node..exp_tasks">exp_tasks</dfn>;</td></tr>
+<tr><th id="93">93</th><td>				<i>/* Pointer to the first task blocking the */</i></td></tr>
+<tr><th id="94">94</th><td>				<i>/*  current expedited grace period, or NULL */</i></td></tr>
+<tr><th id="95">95</th><td>				<i>/*  if there is no such task.  If there */</i></td></tr>
+<tr><th id="96">96</th><td>				<i>/*  is no current expedited grace period, */</i></td></tr>
+<tr><th id="97">97</th><td>				<i>/*  then there can cannot be any such task. */</i></td></tr>
+<tr><th id="98">98</th><td>	<b>struct</b> <a class="type" href="../../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> *<dfn class="decl field" id="rcu_node::boost_tasks" title='rcu_node::boost_tasks' data-ref="rcu_node::boost_tasks" data-ref-filename="rcu_node..boost_tasks">boost_tasks</dfn>;</td></tr>
+<tr><th id="99">99</th><td>				<i>/* Pointer to first task that needs to be */</i></td></tr>
+<tr><th id="100">100</th><td>				<i>/*  priority boosted, or NULL if no priority */</i></td></tr>
+<tr><th id="101">101</th><td>				<i>/*  boosting is needed for this rcu_node */</i></td></tr>
+<tr><th id="102">102</th><td>				<i>/*  structure.  If there are no tasks */</i></td></tr>
+<tr><th id="103">103</th><td>				<i>/*  queued on this rcu_node structure that */</i></td></tr>
+<tr><th id="104">104</th><td>				<i>/*  are blocking the current grace period, */</i></td></tr>
+<tr><th id="105">105</th><td>				<i>/*  there can be no such task. */</i></td></tr>
+<tr><th id="106">106</th><td>	<b>struct</b> <a class="type" href="../../include/linux/rtmutex.h.html#rt_mutex" title='rt_mutex' data-ref="rt_mutex" data-ref-filename="rt_mutex">rt_mutex</a> <dfn class="decl field" id="rcu_node::boost_mtx" title='rcu_node::boost_mtx' data-ref="rcu_node::boost_mtx" data-ref-filename="rcu_node..boost_mtx">boost_mtx</dfn>;</td></tr>
+<tr><th id="107">107</th><td>				<i>/* Used only for the priority-boosting */</i></td></tr>
+<tr><th id="108">108</th><td>				<i>/*  side effect, not as a lock. */</i></td></tr>
+<tr><th id="109">109</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_node::boost_time" title='rcu_node::boost_time' data-ref="rcu_node::boost_time" data-ref-filename="rcu_node..boost_time">boost_time</dfn>;</td></tr>
+<tr><th id="110">110</th><td>				<i>/* When to start boosting (jiffies). */</i></td></tr>
+<tr><th id="111">111</th><td>	<b>struct</b> <a class="type" href="../../include/linux/sched.h.html#task_struct" title='task_struct' data-ref="task_struct" data-ref-filename="task_struct">task_struct</a> *<dfn class="decl field" id="rcu_node::boost_kthread_task" title='rcu_node::boost_kthread_task' data-ref="rcu_node::boost_kthread_task" data-ref-filename="rcu_node..boost_kthread_task">boost_kthread_task</dfn>;</td></tr>
+<tr><th id="112">112</th><td>				<i>/* kthread that takes care of priority */</i></td></tr>
+<tr><th id="113">113</th><td>				<i>/*  boosting for this rcu_node structure. */</i></td></tr>
+<tr><th id="114">114</th><td>	<em>unsigned</em> <em>int</em> <dfn class="decl field" id="rcu_node::boost_kthread_status" title='rcu_node::boost_kthread_status' data-ref="rcu_node::boost_kthread_status" data-ref-filename="rcu_node..boost_kthread_status">boost_kthread_status</dfn>;</td></tr>
+<tr><th id="115">115</th><td>				<i>/* State of boost_kthread_task for tracing. */</i></td></tr>
+<tr><th id="116">116</th><td><u>#<span data-ppcond="116">ifdef</span> <span class="macro" data-ref="_M/CONFIG_RCU_NOCB_CPU">CONFIG_RCU_NOCB_CPU</span></u></td></tr>
+<tr><th id="117">117</th><td>	<b>struct</b> swait_queue_head nocb_gp_wq[<var>2</var>];</td></tr>
+<tr><th id="118">118</th><td>				<i>/* Place for rcu_nocb_kthread() to wait GP. */</i></td></tr>
+<tr><th id="119">119</th><td><u>#<span data-ppcond="116">endif</span> /* #ifdef CONFIG_RCU_NOCB_CPU */</u></td></tr>
+<tr><th id="120">120</th><td>	<a class="typedef" href="../../include/linux/spinlock_types.h.html#raw_spinlock_t" title='raw_spinlock_t' data-type='struct raw_spinlock' data-ref="raw_spinlock_t" data-ref-filename="raw_spinlock_t">raw_spinlock_t</a> <dfn class="decl field" id="rcu_node::fqslock" title='rcu_node::fqslock' data-ref="rcu_node::fqslock" data-ref-filename="rcu_node..fqslock">fqslock</dfn> <a class="macro" href="../../include/linux/cache.h.html#71" title="__attribute__((__aligned__(1 &lt;&lt; (6))))" data-ref="_M/____cacheline_internodealigned_in_smp">____cacheline_internodealigned_in_smp</a>;</td></tr>
+<tr><th id="121">121</th><td></td></tr>
+<tr><th id="122">122</th><td>	<a class="typedef" href="../../include/linux/spinlock_types.h.html#spinlock_t" title='spinlock_t' data-type='struct spinlock' data-ref="spinlock_t" data-ref-filename="spinlock_t">spinlock_t</a> <dfn class="decl field" id="rcu_node::exp_lock" title='rcu_node::exp_lock' data-ref="rcu_node::exp_lock" data-ref-filename="rcu_node..exp_lock">exp_lock</dfn> <a class="macro" href="../../include/linux/cache.h.html#71" title="__attribute__((__aligned__(1 &lt;&lt; (6))))" data-ref="_M/____cacheline_internodealigned_in_smp">____cacheline_internodealigned_in_smp</a>;</td></tr>
+<tr><th id="123">123</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_node::exp_seq_rq" title='rcu_node::exp_seq_rq' data-ref="rcu_node::exp_seq_rq" data-ref-filename="rcu_node..exp_seq_rq">exp_seq_rq</dfn>;</td></tr>
+<tr><th id="124">124</th><td>	<a class="typedef" href="../../include/linux/wait.h.html#wait_queue_head_t" title='wait_queue_head_t' data-type='struct wait_queue_head' data-ref="wait_queue_head_t" data-ref-filename="wait_queue_head_t">wait_queue_head_t</a> <dfn class="decl field" id="rcu_node::exp_wq" title='rcu_node::exp_wq' data-ref="rcu_node::exp_wq" data-ref-filename="rcu_node..exp_wq">exp_wq</dfn>[<var>4</var>];</td></tr>
+<tr><th id="125">125</th><td>	<b>struct</b> <a class="type" href="#rcu_exp_work" title='rcu_exp_work' data-ref="rcu_exp_work" data-ref-filename="rcu_exp_work">rcu_exp_work</a> <dfn class="decl field" id="rcu_node::rew" title='rcu_node::rew' data-ref="rcu_node::rew" data-ref-filename="rcu_node..rew">rew</dfn>;</td></tr>
+<tr><th id="126">126</th><td>	<a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="rcu_node::exp_need_flush" title='rcu_node::exp_need_flush' data-ref="rcu_node::exp_need_flush" data-ref-filename="rcu_node..exp_need_flush">exp_need_flush</dfn>;	<i>/* Need to flush workitem? */</i></td></tr>
+<tr><th id="127">127</th><td>} <a class="macro" href="../../include/linux/cache.h.html#71" title="__attribute__((__aligned__(1 &lt;&lt; (6))))" data-ref="_M/____cacheline_internodealigned_in_smp">____cacheline_internodealigned_in_smp</a>;</td></tr>
+<tr><th id="128">128</th><td></td></tr>
+<tr><th id="129">129</th><td><i>/*</i></td></tr>
+<tr><th id="130">130</th><td><i> * Bitmasks in an rcu_node cover the interval [grplo, grphi] of CPU IDs, and</i></td></tr>
+<tr><th id="131">131</th><td><i> * are indexed relative to this interval rather than the global CPU ID space.</i></td></tr>
+<tr><th id="132">132</th><td><i> * This generates the bit for a CPU in node-local masks.</i></td></tr>
+<tr><th id="133">133</th><td><i> */</i></td></tr>
+<tr><th id="134">134</th><td><u>#define <dfn class="macro" id="_M/leaf_node_cpu_bit" data-ref="_M/leaf_node_cpu_bit">leaf_node_cpu_bit</dfn>(rnp, cpu) (BIT((cpu) - (rnp)-&gt;grplo))</u></td></tr>
+<tr><th id="135">135</th><td></td></tr>
+<tr><th id="136">136</th><td><i>/*</i></td></tr>
+<tr><th id="137">137</th><td><i> * Union to allow "aggregate OR" operation on the need for a quiescent</i></td></tr>
+<tr><th id="138">138</th><td><i> * state by the normal and expedited grace periods.</i></td></tr>
+<tr><th id="139">139</th><td><i> */</i></td></tr>
+<tr><th id="140">140</th><td><b>union</b> <dfn class="type def" id="rcu_noqs" title='rcu_noqs' data-ref="rcu_noqs" data-ref-filename="rcu_noqs">rcu_noqs</dfn> {</td></tr>
+<tr><th id="141">141</th><td>	<b>struct</b> {</td></tr>
+<tr><th id="142">142</th><td>		<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="decl field" id="rcu_noqs::(anonymous)::norm" title='rcu_noqs::(anonymous struct)::norm' data-ref="rcu_noqs::(anonymous)::norm" data-ref-filename="rcu_noqs..(anonymous)..norm">norm</dfn>;</td></tr>
+<tr><th id="143">143</th><td>		<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="decl field" id="rcu_noqs::(anonymous)::exp" title='rcu_noqs::(anonymous struct)::exp' data-ref="rcu_noqs::(anonymous)::exp" data-ref-filename="rcu_noqs..(anonymous)..exp">exp</dfn>;</td></tr>
+<tr><th id="144">144</th><td>	} <dfn class="decl field" id="rcu_noqs::b" title='rcu_noqs::b' data-ref="rcu_noqs::b" data-ref-filename="rcu_noqs..b">b</dfn>; <i>/* Bits. */</i></td></tr>
+<tr><th id="145">145</th><td>	<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="decl field" id="rcu_noqs::s" title='rcu_noqs::s' data-ref="rcu_noqs::s" data-ref-filename="rcu_noqs..s">s</dfn>; <i>/* Set of bits, aggregate OR here. */</i></td></tr>
+<tr><th id="146">146</th><td>};</td></tr>
+<tr><th id="147">147</th><td></td></tr>
+<tr><th id="148">148</th><td><i>/* Per-CPU data for read-copy update. */</i></td></tr>
+<tr><th id="149">149</th><td><b>struct</b> <dfn class="type def" id="rcu_data" title='rcu_data' data-ref="rcu_data" data-ref-filename="rcu_data">rcu_data</dfn> {</td></tr>
+<tr><th id="150">150</th><td>	<i>/* 1) quiescent-state and grace-period handling : */</i></td></tr>
+<tr><th id="151">151</th><td>	<em>unsigned</em> <em>long</em>	<dfn class="decl field" id="rcu_data::gp_seq" title='rcu_data::gp_seq' data-ref="rcu_data::gp_seq" data-ref-filename="rcu_data..gp_seq">gp_seq</dfn>;		<i>/* Track rsp-&gt;rcu_gp_seq counter. */</i></td></tr>
+<tr><th id="152">152</th><td>	<em>unsigned</em> <em>long</em>	<dfn class="decl field" id="rcu_data::gp_seq_needed" title='rcu_data::gp_seq_needed' data-ref="rcu_data::gp_seq_needed" data-ref-filename="rcu_data..gp_seq_needed">gp_seq_needed</dfn>;	<i>/* Track furthest future GP request. */</i></td></tr>
+<tr><th id="153">153</th><td>	<b>union</b> <a class="type" href="#rcu_noqs" title='rcu_noqs' data-ref="rcu_noqs" data-ref-filename="rcu_noqs">rcu_noqs</a>	<dfn class="decl field" id="rcu_data::cpu_no_qs" title='rcu_data::cpu_no_qs' data-ref="rcu_data::cpu_no_qs" data-ref-filename="rcu_data..cpu_no_qs">cpu_no_qs</dfn>;	<i>/* No QSes yet for this CPU. */</i></td></tr>
+<tr><th id="154">154</th><td>	<a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a>		<dfn class="decl field" id="rcu_data::core_needs_qs" title='rcu_data::core_needs_qs' data-ref="rcu_data::core_needs_qs" data-ref-filename="rcu_data..core_needs_qs">core_needs_qs</dfn>;	<i>/* Core waits for quiesc state. */</i></td></tr>
+<tr><th id="155">155</th><td>	<a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a>		<dfn class="decl field" id="rcu_data::beenonline" title='rcu_data::beenonline' data-ref="rcu_data::beenonline" data-ref-filename="rcu_data..beenonline">beenonline</dfn>;	<i>/* CPU online at least once. */</i></td></tr>
+<tr><th id="156">156</th><td>	<a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a>		<dfn class="decl field" id="rcu_data::gpwrap" title='rcu_data::gpwrap' data-ref="rcu_data::gpwrap" data-ref-filename="rcu_data..gpwrap">gpwrap</dfn>;		<i>/* Possible -&gt;gp_seq wrap. */</i></td></tr>
+<tr><th id="157">157</th><td>	<a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a>		<dfn class="decl field" id="rcu_data::exp_deferred_qs" title='rcu_data::exp_deferred_qs' data-ref="rcu_data::exp_deferred_qs" data-ref-filename="rcu_data..exp_deferred_qs">exp_deferred_qs</dfn>; <i>/* This CPU awaiting a deferred QS? */</i></td></tr>
+<tr><th id="158">158</th><td>	<b>struct</b> <a class="type" href="#rcu_node" title='rcu_node' data-ref="rcu_node" data-ref-filename="rcu_node">rcu_node</a> *<dfn class="decl field" id="rcu_data::mynode" title='rcu_data::mynode' data-ref="rcu_data::mynode" data-ref-filename="rcu_data..mynode">mynode</dfn>;	<i>/* This CPU's leaf of hierarchy */</i></td></tr>
+<tr><th id="159">159</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_data::grpmask" title='rcu_data::grpmask' data-ref="rcu_data::grpmask" data-ref-filename="rcu_data..grpmask">grpmask</dfn>;		<i>/* Mask to apply to leaf qsmask. */</i></td></tr>
+<tr><th id="160">160</th><td>	<em>unsigned</em> <em>long</em>	<dfn class="decl field" id="rcu_data::ticks_this_gp" title='rcu_data::ticks_this_gp' data-ref="rcu_data::ticks_this_gp" data-ref-filename="rcu_data..ticks_this_gp">ticks_this_gp</dfn>;	<i>/* The number of scheduling-clock */</i></td></tr>
+<tr><th id="161">161</th><td>					<i>/*  ticks this CPU has handled */</i></td></tr>
+<tr><th id="162">162</th><td>					<i>/*  during and after the last grace */</i></td></tr>
+<tr><th id="163">163</th><td>					<i>/* period it is aware of. */</i></td></tr>
+<tr><th id="164">164</th><td>	<b>struct</b> <a class="type" href="../../include/linux/irq_work.h.html#irq_work" title='irq_work' data-ref="irq_work" data-ref-filename="irq_work">irq_work</a> <dfn class="decl field" id="rcu_data::defer_qs_iw" title='rcu_data::defer_qs_iw' data-ref="rcu_data::defer_qs_iw" data-ref-filename="rcu_data..defer_qs_iw">defer_qs_iw</dfn>;	<i>/* Obtain later scheduler attention. */</i></td></tr>
+<tr><th id="165">165</th><td>	<a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="rcu_data::defer_qs_iw_pending" title='rcu_data::defer_qs_iw_pending' data-ref="rcu_data::defer_qs_iw_pending" data-ref-filename="rcu_data..defer_qs_iw_pending">defer_qs_iw_pending</dfn>;	<i>/* Scheduler attention pending? */</i></td></tr>
+<tr><th id="166">166</th><td></td></tr>
+<tr><th id="167">167</th><td>	<i>/* 2) batch handling */</i></td></tr>
+<tr><th id="168">168</th><td>	<b>struct</b> <a class="type" href="../../include/linux/rcu_segcblist.h.html#rcu_segcblist" title='rcu_segcblist' data-ref="rcu_segcblist" data-ref-filename="rcu_segcblist">rcu_segcblist</a> <dfn class="decl field" id="rcu_data::cblist" title='rcu_data::cblist' data-ref="rcu_data::cblist" data-ref-filename="rcu_data..cblist">cblist</dfn>;	<i>/* Segmented callback list, with */</i></td></tr>
+<tr><th id="169">169</th><td>					<i>/* different callbacks waiting for */</i></td></tr>
+<tr><th id="170">170</th><td>					<i>/* different grace periods. */</i></td></tr>
+<tr><th id="171">171</th><td>	<em>long</em>		<dfn class="decl field" id="rcu_data::qlen_last_fqs_check" title='rcu_data::qlen_last_fqs_check' data-ref="rcu_data::qlen_last_fqs_check" data-ref-filename="rcu_data..qlen_last_fqs_check">qlen_last_fqs_check</dfn>;</td></tr>
+<tr><th id="172">172</th><td>					<i>/* qlen at last check for QS forcing */</i></td></tr>
+<tr><th id="173">173</th><td>	<em>unsigned</em> <em>long</em>	<dfn class="decl field" id="rcu_data::n_force_qs_snap" title='rcu_data::n_force_qs_snap' data-ref="rcu_data::n_force_qs_snap" data-ref-filename="rcu_data..n_force_qs_snap">n_force_qs_snap</dfn>;</td></tr>
+<tr><th id="174">174</th><td>					<i>/* did other CPU force QS recently? */</i></td></tr>
+<tr><th id="175">175</th><td>	<em>long</em>		<dfn class="decl field" id="rcu_data::blimit" title='rcu_data::blimit' data-ref="rcu_data::blimit" data-ref-filename="rcu_data..blimit">blimit</dfn>;		<i>/* Upper limit on a processed batch */</i></td></tr>
+<tr><th id="176">176</th><td></td></tr>
+<tr><th id="177">177</th><td>	<i>/* 3) dynticks interface. */</i></td></tr>
+<tr><th id="178">178</th><td>	<em>int</em> <dfn class="decl field" id="rcu_data::dynticks_snap" title='rcu_data::dynticks_snap' data-ref="rcu_data::dynticks_snap" data-ref-filename="rcu_data..dynticks_snap">dynticks_snap</dfn>;		<i>/* Per-GP tracking for dynticks. */</i></td></tr>
+<tr><th id="179">179</th><td>	<em>long</em> <dfn class="decl field" id="rcu_data::dynticks_nesting" title='rcu_data::dynticks_nesting' data-ref="rcu_data::dynticks_nesting" data-ref-filename="rcu_data..dynticks_nesting">dynticks_nesting</dfn>;		<i>/* Track process nesting level. */</i></td></tr>
+<tr><th id="180">180</th><td>	<em>long</em> <dfn class="decl field" id="rcu_data::dynticks_nmi_nesting" title='rcu_data::dynticks_nmi_nesting' data-ref="rcu_data::dynticks_nmi_nesting" data-ref-filename="rcu_data..dynticks_nmi_nesting">dynticks_nmi_nesting</dfn>;	<i>/* Track irq/NMI nesting level. */</i></td></tr>
+<tr><th id="181">181</th><td>	<a class="typedef" href="../../include/linux/types.h.html#atomic_t" title='atomic_t' data-type='struct atomic_t' data-ref="atomic_t" data-ref-filename="atomic_t">atomic_t</a> <dfn class="decl field" id="rcu_data::dynticks" title='rcu_data::dynticks' data-ref="rcu_data::dynticks" data-ref-filename="rcu_data..dynticks">dynticks</dfn>;		<i>/* Even value for idle, else odd. */</i></td></tr>
+<tr><th id="182">182</th><td>	<a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="rcu_data::rcu_need_heavy_qs" title='rcu_data::rcu_need_heavy_qs' data-ref="rcu_data::rcu_need_heavy_qs" data-ref-filename="rcu_data..rcu_need_heavy_qs">rcu_need_heavy_qs</dfn>;		<i>/* GP old, so heavy quiescent state! */</i></td></tr>
+<tr><th id="183">183</th><td>	<a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="rcu_data::rcu_urgent_qs" title='rcu_data::rcu_urgent_qs' data-ref="rcu_data::rcu_urgent_qs" data-ref-filename="rcu_data..rcu_urgent_qs">rcu_urgent_qs</dfn>;		<i>/* GP old need light quiescent state. */</i></td></tr>
+<tr><th id="184">184</th><td><u>#<span data-ppcond="184">ifdef</span> <span class="macro" data-ref="_M/CONFIG_RCU_FAST_NO_HZ">CONFIG_RCU_FAST_NO_HZ</span></u></td></tr>
+<tr><th id="185">185</th><td>	bool all_lazy;			<i>/* All CPU's CBs lazy at idle start? */</i></td></tr>
+<tr><th id="186">186</th><td>	<em>unsigned</em> <em>long</em> last_accelerate;	<i>/* Last jiffy CBs were accelerated. */</i></td></tr>
+<tr><th id="187">187</th><td>	<em>unsigned</em> <em>long</em> last_advance_all;	<i>/* Last jiffy CBs were all advanced. */</i></td></tr>
+<tr><th id="188">188</th><td>	<em>int</em> tick_nohz_enabled_snap;	<i>/* Previously seen value from sysfs. */</i></td></tr>
+<tr><th id="189">189</th><td><u>#<span data-ppcond="184">endif</span> /* #ifdef CONFIG_RCU_FAST_NO_HZ */</u></td></tr>
+<tr><th id="190">190</th><td></td></tr>
+<tr><th id="191">191</th><td>	<i>/* 4) rcu_barrier(), OOM callbacks, and expediting. */</i></td></tr>
+<tr><th id="192">192</th><td>	<b>struct</b> <a class="macro" href="../../include/linux/types.h.html#223" title="callback_head" data-ref="_M/rcu_head">rcu_head</a> <dfn class="decl field" id="rcu_data::barrier_head" title='rcu_data::barrier_head' data-ref="rcu_data::barrier_head" data-ref-filename="rcu_data..barrier_head">barrier_head</dfn>;</td></tr>
+<tr><th id="193">193</th><td>	<em>int</em> <dfn class="decl field" id="rcu_data::exp_dynticks_snap" title='rcu_data::exp_dynticks_snap' data-ref="rcu_data::exp_dynticks_snap" data-ref-filename="rcu_data..exp_dynticks_snap">exp_dynticks_snap</dfn>;		<i>/* Double-check need for IPI. */</i></td></tr>
+<tr><th id="194">194</th><td></td></tr>
+<tr><th id="195">195</th><td>	<i>/* 5) Callback offloading. */</i></td></tr>
+<tr><th id="196">196</th><td><u>#<span data-ppcond="196">ifdef</span> <span class="macro" data-ref="_M/CONFIG_RCU_NOCB_CPU">CONFIG_RCU_NOCB_CPU</span></u></td></tr>
+<tr><th id="197">197</th><td>	<b>struct</b> rcu_head *nocb_head;	<i>/* CBs waiting for kthread. */</i></td></tr>
+<tr><th id="198">198</th><td>	<b>struct</b> rcu_head **nocb_tail;</td></tr>
+<tr><th id="199">199</th><td>	atomic_long_t nocb_q_count;	<i>/* # CBs waiting for nocb */</i></td></tr>
+<tr><th id="200">200</th><td>	atomic_long_t nocb_q_count_lazy; <i>/*  invocation (all stages). */</i></td></tr>
+<tr><th id="201">201</th><td>	<b>struct</b> rcu_head *nocb_follower_head; <i>/* CBs ready to invoke. */</i></td></tr>
+<tr><th id="202">202</th><td>	<b>struct</b> rcu_head **nocb_follower_tail;</td></tr>
+<tr><th id="203">203</th><td>	<b>struct</b> swait_queue_head nocb_wq; <i>/* For nocb kthreads to sleep on. */</i></td></tr>
+<tr><th id="204">204</th><td>	<b>struct</b> task_struct *nocb_kthread;</td></tr>
+<tr><th id="205">205</th><td>	raw_spinlock_t nocb_lock;	<i>/* Guard following pair of fields. */</i></td></tr>
+<tr><th id="206">206</th><td>	<em>int</em> nocb_defer_wakeup;		<i>/* Defer wakeup of nocb_kthread. */</i></td></tr>
+<tr><th id="207">207</th><td>	<b>struct</b> timer_list nocb_timer;	<i>/* Enforce finite deferral. */</i></td></tr>
+<tr><th id="208">208</th><td></td></tr>
+<tr><th id="209">209</th><td>	<i>/* The following fields are used by the leader, hence own cacheline. */</i></td></tr>
+<tr><th id="210">210</th><td>	<b>struct</b> rcu_head *nocb_gp_head ____cacheline_internodealigned_in_smp;</td></tr>
+<tr><th id="211">211</th><td>					<i>/* CBs waiting for GP. */</i></td></tr>
+<tr><th id="212">212</th><td>	<b>struct</b> rcu_head **nocb_gp_tail;</td></tr>
+<tr><th id="213">213</th><td>	bool nocb_leader_sleep;		<i>/* Is the nocb leader thread asleep? */</i></td></tr>
+<tr><th id="214">214</th><td>	<b>struct</b> rcu_data *nocb_next_follower;</td></tr>
+<tr><th id="215">215</th><td>					<i>/* Next follower in wakeup chain. */</i></td></tr>
+<tr><th id="216">216</th><td></td></tr>
+<tr><th id="217">217</th><td>	<i>/* The following fields are used by the follower, hence new cachline. */</i></td></tr>
+<tr><th id="218">218</th><td>	<b>struct</b> rcu_data *nocb_leader ____cacheline_internodealigned_in_smp;</td></tr>
+<tr><th id="219">219</th><td>					<i>/* Leader CPU takes GP-end wakeups. */</i></td></tr>
+<tr><th id="220">220</th><td><u>#<span data-ppcond="196">endif</span> /* #ifdef CONFIG_RCU_NOCB_CPU */</u></td></tr>
+<tr><th id="221">221</th><td></td></tr>
+<tr><th id="222">222</th><td>	<i>/* 6) RCU priority boosting. */</i></td></tr>
+<tr><th id="223">223</th><td>	<b>struct</b> <a class="type" href="../../include/linux/sched.h.html#task_struct" title='task_struct' data-ref="task_struct" data-ref-filename="task_struct">task_struct</a> *<dfn class="decl field" id="rcu_data::rcu_cpu_kthread_task" title='rcu_data::rcu_cpu_kthread_task' data-ref="rcu_data::rcu_cpu_kthread_task" data-ref-filename="rcu_data..rcu_cpu_kthread_task">rcu_cpu_kthread_task</dfn>;</td></tr>
+<tr><th id="224">224</th><td>					<i>/* rcuc per-CPU kthread or NULL. */</i></td></tr>
+<tr><th id="225">225</th><td>	<em>unsigned</em> <em>int</em> <dfn class="decl field" id="rcu_data::rcu_cpu_kthread_status" title='rcu_data::rcu_cpu_kthread_status' data-ref="rcu_data::rcu_cpu_kthread_status" data-ref-filename="rcu_data..rcu_cpu_kthread_status">rcu_cpu_kthread_status</dfn>;</td></tr>
+<tr><th id="226">226</th><td>	<em>char</em> <dfn class="decl field" id="rcu_data::rcu_cpu_has_work" title='rcu_data::rcu_cpu_has_work' data-ref="rcu_data::rcu_cpu_has_work" data-ref-filename="rcu_data..rcu_cpu_has_work">rcu_cpu_has_work</dfn>;</td></tr>
+<tr><th id="227">227</th><td></td></tr>
+<tr><th id="228">228</th><td>	<i>/* 7) Diagnostic data, including RCU CPU stall warnings. */</i></td></tr>
+<tr><th id="229">229</th><td>	<em>unsigned</em> <em>int</em> <dfn class="decl field" id="rcu_data::softirq_snap" title='rcu_data::softirq_snap' data-ref="rcu_data::softirq_snap" data-ref-filename="rcu_data..softirq_snap">softirq_snap</dfn>;	<i>/* Snapshot of softirq activity. */</i></td></tr>
+<tr><th id="230">230</th><td>	<i>/* -&gt;rcu_iw* fields protected by leaf rcu_node -&gt;lock. */</i></td></tr>
+<tr><th id="231">231</th><td>	<b>struct</b> <a class="type" href="../../include/linux/irq_work.h.html#irq_work" title='irq_work' data-ref="irq_work" data-ref-filename="irq_work">irq_work</a> <dfn class="decl field" id="rcu_data::rcu_iw" title='rcu_data::rcu_iw' data-ref="rcu_data::rcu_iw" data-ref-filename="rcu_data..rcu_iw">rcu_iw</dfn>;		<i>/* Check for non-irq activity. */</i></td></tr>
+<tr><th id="232">232</th><td>	<a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="rcu_data::rcu_iw_pending" title='rcu_data::rcu_iw_pending' data-ref="rcu_data::rcu_iw_pending" data-ref-filename="rcu_data..rcu_iw_pending">rcu_iw_pending</dfn>;		<i>/* Is -&gt;rcu_iw pending? */</i></td></tr>
+<tr><th id="233">233</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_data::rcu_iw_gp_seq" title='rcu_data::rcu_iw_gp_seq' data-ref="rcu_data::rcu_iw_gp_seq" data-ref-filename="rcu_data..rcu_iw_gp_seq">rcu_iw_gp_seq</dfn>;	<i>/* -&gt;gp_seq associated with -&gt;rcu_iw. */</i></td></tr>
+<tr><th id="234">234</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_data::rcu_ofl_gp_seq" title='rcu_data::rcu_ofl_gp_seq' data-ref="rcu_data::rcu_ofl_gp_seq" data-ref-filename="rcu_data..rcu_ofl_gp_seq">rcu_ofl_gp_seq</dfn>;	<i>/* -&gt;gp_seq at last offline. */</i></td></tr>
+<tr><th id="235">235</th><td>	<em>short</em> <dfn class="decl field" id="rcu_data::rcu_ofl_gp_flags" title='rcu_data::rcu_ofl_gp_flags' data-ref="rcu_data::rcu_ofl_gp_flags" data-ref-filename="rcu_data..rcu_ofl_gp_flags">rcu_ofl_gp_flags</dfn>;		<i>/* -&gt;gp_flags at last offline. */</i></td></tr>
+<tr><th id="236">236</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_data::rcu_onl_gp_seq" title='rcu_data::rcu_onl_gp_seq' data-ref="rcu_data::rcu_onl_gp_seq" data-ref-filename="rcu_data..rcu_onl_gp_seq">rcu_onl_gp_seq</dfn>;	<i>/* -&gt;gp_seq at last online. */</i></td></tr>
+<tr><th id="237">237</th><td>	<em>short</em> <dfn class="decl field" id="rcu_data::rcu_onl_gp_flags" title='rcu_data::rcu_onl_gp_flags' data-ref="rcu_data::rcu_onl_gp_flags" data-ref-filename="rcu_data..rcu_onl_gp_flags">rcu_onl_gp_flags</dfn>;		<i>/* -&gt;gp_flags at last online. */</i></td></tr>
+<tr><th id="238">238</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_data::last_fqs_resched" title='rcu_data::last_fqs_resched' data-ref="rcu_data::last_fqs_resched" data-ref-filename="rcu_data..last_fqs_resched">last_fqs_resched</dfn>;	<i>/* Time of last rcu_resched(). */</i></td></tr>
+<tr><th id="239">239</th><td></td></tr>
+<tr><th id="240">240</th><td>	<em>int</em> <dfn class="decl field" id="rcu_data::cpu" title='rcu_data::cpu' data-ref="rcu_data::cpu" data-ref-filename="rcu_data..cpu">cpu</dfn>;</td></tr>
+<tr><th id="241">241</th><td>};</td></tr>
+<tr><th id="242">242</th><td></td></tr>
+<tr><th id="243">243</th><td><i>/* Values for nocb_defer_wakeup field in struct rcu_data. */</i></td></tr>
+<tr><th id="244">244</th><td><u>#define <dfn class="macro" id="_M/RCU_NOCB_WAKE_NOT" data-ref="_M/RCU_NOCB_WAKE_NOT">RCU_NOCB_WAKE_NOT</dfn>	0</u></td></tr>
+<tr><th id="245">245</th><td><u>#define <dfn class="macro" id="_M/RCU_NOCB_WAKE" data-ref="_M/RCU_NOCB_WAKE">RCU_NOCB_WAKE</dfn>		1</u></td></tr>
+<tr><th id="246">246</th><td><u>#define <dfn class="macro" id="_M/RCU_NOCB_WAKE_FORCE" data-ref="_M/RCU_NOCB_WAKE_FORCE">RCU_NOCB_WAKE_FORCE</dfn>	2</u></td></tr>
+<tr><th id="247">247</th><td></td></tr>
+<tr><th id="248">248</th><td><u>#define <dfn class="macro" id="_M/RCU_JIFFIES_TILL_FORCE_QS" data-ref="_M/RCU_JIFFIES_TILL_FORCE_QS">RCU_JIFFIES_TILL_FORCE_QS</dfn> (1 + (HZ &gt; 250) + (HZ &gt; 500))</u></td></tr>
+<tr><th id="249">249</th><td>					<i>/* For jiffies_till_first_fqs and */</i></td></tr>
+<tr><th id="250">250</th><td>					<i>/*  and jiffies_till_next_fqs. */</i></td></tr>
+<tr><th id="251">251</th><td></td></tr>
+<tr><th id="252">252</th><td><u>#define <dfn class="macro" id="_M/RCU_JIFFIES_FQS_DIV" data-ref="_M/RCU_JIFFIES_FQS_DIV">RCU_JIFFIES_FQS_DIV</dfn>	256	/* Very large systems need more */</u></td></tr>
+<tr><th id="253">253</th><td>					<i>/*  delay between bouts of */</i></td></tr>
+<tr><th id="254">254</th><td>					<i>/*  quiescent-state forcing. */</i></td></tr>
+<tr><th id="255">255</th><td></td></tr>
+<tr><th id="256">256</th><td><u>#define <dfn class="macro" id="_M/RCU_STALL_RAT_DELAY" data-ref="_M/RCU_STALL_RAT_DELAY">RCU_STALL_RAT_DELAY</dfn>	2	/* Allow other CPUs time to take */</u></td></tr>
+<tr><th id="257">257</th><td>					<i>/*  at least one scheduling clock */</i></td></tr>
+<tr><th id="258">258</th><td>					<i>/*  irq before ratting on them. */</i></td></tr>
+<tr><th id="259">259</th><td></td></tr>
+<tr><th id="260">260</th><td><u>#define <dfn class="macro" id="_M/rcu_wait" data-ref="_M/rcu_wait">rcu_wait</dfn>(cond)							\</u></td></tr>
+<tr><th id="261">261</th><td><u>do {									\</u></td></tr>
+<tr><th id="262">262</th><td><u>	for (;;) {							\</u></td></tr>
+<tr><th id="263">263</th><td><u>		set_current_state(TASK_INTERRUPTIBLE);			\</u></td></tr>
+<tr><th id="264">264</th><td><u>		if (cond)						\</u></td></tr>
+<tr><th id="265">265</th><td><u>			break;						\</u></td></tr>
+<tr><th id="266">266</th><td><u>		schedule();						\</u></td></tr>
+<tr><th id="267">267</th><td><u>	}								\</u></td></tr>
+<tr><th id="268">268</th><td><u>	__set_current_state(TASK_RUNNING);				\</u></td></tr>
+<tr><th id="269">269</th><td><u>} while (0)</u></td></tr>
+<tr><th id="270">270</th><td></td></tr>
+<tr><th id="271">271</th><td><i>/*</i></td></tr>
+<tr><th id="272">272</th><td><i> * RCU global state, including node hierarchy.  This hierarchy is</i></td></tr>
+<tr><th id="273">273</th><td><i> * represented in "heap" form in a dense array.  The root (first level)</i></td></tr>
+<tr><th id="274">274</th><td><i> * of the hierarchy is in -&gt;node[0] (referenced by -&gt;level[0]), the second</i></td></tr>
+<tr><th id="275">275</th><td><i> * level in -&gt;node[1] through -&gt;node[m] (-&gt;node[1] referenced by -&gt;level[1]),</i></td></tr>
+<tr><th id="276">276</th><td><i> * and the third level in -&gt;node[m+1] and following (-&gt;node[m+1] referenced</i></td></tr>
+<tr><th id="277">277</th><td><i> * by -&gt;level[2]).  The number of levels is determined by the number of</i></td></tr>
+<tr><th id="278">278</th><td><i> * CPUs and by CONFIG_RCU_FANOUT.  Small systems will have a "hierarchy"</i></td></tr>
+<tr><th id="279">279</th><td><i> * consisting of a single rcu_node.</i></td></tr>
+<tr><th id="280">280</th><td><i> */</i></td></tr>
+<tr><th id="281">281</th><td><b>struct</b> <dfn class="type def" id="rcu_state" title='rcu_state' data-ref="rcu_state" data-ref-filename="rcu_state">rcu_state</dfn> {</td></tr>
+<tr><th id="282">282</th><td>	<b>struct</b> <a class="type" href="#rcu_node" title='rcu_node' data-ref="rcu_node" data-ref-filename="rcu_node">rcu_node</a> <dfn class="decl field" id="rcu_state::node" title='rcu_state::node' data-ref="rcu_state::node" data-ref-filename="rcu_state..node">node</dfn>[<a class="macro" href="../../include/linux/rcu_node_tree.h.html#63" title="(1 + (((64) + ((16)) - 1) / ((16))))" data-ref="_M/NUM_RCU_NODES">NUM_RCU_NODES</a>];	<i>/* Hierarchy. */</i></td></tr>
+<tr><th id="283">283</th><td>	<b>struct</b> <a class="type" href="#rcu_node" title='rcu_node' data-ref="rcu_node" data-ref-filename="rcu_node">rcu_node</a> *<dfn class="decl field" id="rcu_state::level" title='rcu_state::level' data-ref="rcu_state::level" data-ref-filename="rcu_state..level">level</dfn>[<a class="macro" href="../../include/linux/rcu_node_tree.h.html#60" title="2" data-ref="_M/RCU_NUM_LVLS">RCU_NUM_LVLS</a> + <var>1</var>];</td></tr>
+<tr><th id="284">284</th><td>						<i>/* Hierarchy levels (+1 to */</i></td></tr>
+<tr><th id="285">285</th><td>						<i>/*  shut bogus gcc warning) */</i></td></tr>
+<tr><th id="286">286</th><td>	<em>int</em> <dfn class="decl field" id="rcu_state::ncpus" title='rcu_state::ncpus' data-ref="rcu_state::ncpus" data-ref-filename="rcu_state..ncpus">ncpus</dfn>;				<i>/* # CPUs seen so far. */</i></td></tr>
+<tr><th id="287">287</th><td></td></tr>
+<tr><th id="288">288</th><td>	<i>/* The following fields are guarded by the root rcu_node's lock. */</i></td></tr>
+<tr><th id="289">289</th><td></td></tr>
+<tr><th id="290">290</th><td>	<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a>	<dfn class="decl field" id="rcu_state::boost" title='rcu_state::boost' data-ref="rcu_state::boost" data-ref-filename="rcu_state..boost">boost</dfn> <a class="macro" href="../../include/linux/cache.h.html#71" title="__attribute__((__aligned__(1 &lt;&lt; (6))))" data-ref="_M/____cacheline_internodealigned_in_smp">____cacheline_internodealigned_in_smp</a>;</td></tr>
+<tr><th id="291">291</th><td>						<i>/* Subject to priority boost. */</i></td></tr>
+<tr><th id="292">292</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_state::gp_seq" title='rcu_state::gp_seq' data-ref="rcu_state::gp_seq" data-ref-filename="rcu_state..gp_seq">gp_seq</dfn>;			<i>/* Grace-period sequence #. */</i></td></tr>
+<tr><th id="293">293</th><td>	<b>struct</b> <a class="type" href="../../include/linux/sched.h.html#task_struct" title='task_struct' data-ref="task_struct" data-ref-filename="task_struct">task_struct</a> *<dfn class="decl field" id="rcu_state::gp_kthread" title='rcu_state::gp_kthread' data-ref="rcu_state::gp_kthread" data-ref-filename="rcu_state..gp_kthread">gp_kthread</dfn>;		<i>/* Task for grace periods. */</i></td></tr>
+<tr><th id="294">294</th><td>	<b>struct</b> <a class="type" href="../../include/linux/swait.h.html#swait_queue_head" title='swait_queue_head' data-ref="swait_queue_head" data-ref-filename="swait_queue_head">swait_queue_head</a> <dfn class="decl field" id="rcu_state::gp_wq" title='rcu_state::gp_wq' data-ref="rcu_state::gp_wq" data-ref-filename="rcu_state..gp_wq">gp_wq</dfn>;		<i>/* Where GP task waits. */</i></td></tr>
+<tr><th id="295">295</th><td>	<em>short</em> <dfn class="decl field" id="rcu_state::gp_flags" title='rcu_state::gp_flags' data-ref="rcu_state::gp_flags" data-ref-filename="rcu_state..gp_flags">gp_flags</dfn>;				<i>/* Commands for GP task. */</i></td></tr>
+<tr><th id="296">296</th><td>	<em>short</em> <dfn class="decl field" id="rcu_state::gp_state" title='rcu_state::gp_state' data-ref="rcu_state::gp_state" data-ref-filename="rcu_state..gp_state">gp_state</dfn>;				<i>/* GP kthread sleep state. */</i></td></tr>
+<tr><th id="297">297</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_state::gp_wake_time" title='rcu_state::gp_wake_time' data-ref="rcu_state::gp_wake_time" data-ref-filename="rcu_state..gp_wake_time">gp_wake_time</dfn>;		<i>/* Last GP kthread wake. */</i></td></tr>
+<tr><th id="298">298</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_state::gp_wake_seq" title='rcu_state::gp_wake_seq' data-ref="rcu_state::gp_wake_seq" data-ref-filename="rcu_state..gp_wake_seq">gp_wake_seq</dfn>;		<i>/* -&gt;gp_seq at ^^^. */</i></td></tr>
+<tr><th id="299">299</th><td></td></tr>
+<tr><th id="300">300</th><td>	<i>/* End of fields guarded by root rcu_node's lock. */</i></td></tr>
+<tr><th id="301">301</th><td></td></tr>
+<tr><th id="302">302</th><td>	<b>struct</b> <a class="type" href="../../include/linux/mutex.h.html#mutex" title='mutex' data-ref="mutex" data-ref-filename="mutex">mutex</a> <dfn class="decl field" id="rcu_state::barrier_mutex" title='rcu_state::barrier_mutex' data-ref="rcu_state::barrier_mutex" data-ref-filename="rcu_state..barrier_mutex">barrier_mutex</dfn>;		<i>/* Guards barrier fields. */</i></td></tr>
+<tr><th id="303">303</th><td>	<a class="typedef" href="../../include/linux/types.h.html#atomic_t" title='atomic_t' data-type='struct atomic_t' data-ref="atomic_t" data-ref-filename="atomic_t">atomic_t</a> <dfn class="decl field" id="rcu_state::barrier_cpu_count" title='rcu_state::barrier_cpu_count' data-ref="rcu_state::barrier_cpu_count" data-ref-filename="rcu_state..barrier_cpu_count">barrier_cpu_count</dfn>;		<i>/* # CPUs waiting on. */</i></td></tr>
+<tr><th id="304">304</th><td>	<b>struct</b> <a class="type" href="../../include/linux/completion.h.html#completion" title='completion' data-ref="completion" data-ref-filename="completion">completion</a> <dfn class="decl field" id="rcu_state::barrier_completion" title='rcu_state::barrier_completion' data-ref="rcu_state::barrier_completion" data-ref-filename="rcu_state..barrier_completion">barrier_completion</dfn>;	<i>/* Wake at barrier end. */</i></td></tr>
+<tr><th id="305">305</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_state::barrier_sequence" title='rcu_state::barrier_sequence' data-ref="rcu_state::barrier_sequence" data-ref-filename="rcu_state..barrier_sequence">barrier_sequence</dfn>;		<i>/* ++ at start and end of */</i></td></tr>
+<tr><th id="306">306</th><td>						<i>/*  rcu_barrier(). */</i></td></tr>
+<tr><th id="307">307</th><td>	<i>/* End of fields guarded by barrier_mutex. */</i></td></tr>
+<tr><th id="308">308</th><td></td></tr>
+<tr><th id="309">309</th><td>	<b>struct</b> <a class="type" href="../../include/linux/mutex.h.html#mutex" title='mutex' data-ref="mutex" data-ref-filename="mutex">mutex</a> <dfn class="decl field" id="rcu_state::exp_mutex" title='rcu_state::exp_mutex' data-ref="rcu_state::exp_mutex" data-ref-filename="rcu_state..exp_mutex">exp_mutex</dfn>;			<i>/* Serialize expedited GP. */</i></td></tr>
+<tr><th id="310">310</th><td>	<b>struct</b> <a class="type" href="../../include/linux/mutex.h.html#mutex" title='mutex' data-ref="mutex" data-ref-filename="mutex">mutex</a> <dfn class="decl field" id="rcu_state::exp_wake_mutex" title='rcu_state::exp_wake_mutex' data-ref="rcu_state::exp_wake_mutex" data-ref-filename="rcu_state..exp_wake_mutex">exp_wake_mutex</dfn>;		<i>/* Serialize wakeup. */</i></td></tr>
+<tr><th id="311">311</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_state::expedited_sequence" title='rcu_state::expedited_sequence' data-ref="rcu_state::expedited_sequence" data-ref-filename="rcu_state..expedited_sequence">expedited_sequence</dfn>;	<i>/* Take a ticket. */</i></td></tr>
+<tr><th id="312">312</th><td>	<a class="typedef" href="../../include/linux/types.h.html#atomic_t" title='atomic_t' data-type='struct atomic_t' data-ref="atomic_t" data-ref-filename="atomic_t">atomic_t</a> <dfn class="decl field" id="rcu_state::expedited_need_qs" title='rcu_state::expedited_need_qs' data-ref="rcu_state::expedited_need_qs" data-ref-filename="rcu_state..expedited_need_qs">expedited_need_qs</dfn>;		<i>/* # CPUs left to check in. */</i></td></tr>
+<tr><th id="313">313</th><td>	<b>struct</b> <a class="type" href="../../include/linux/swait.h.html#swait_queue_head" title='swait_queue_head' data-ref="swait_queue_head" data-ref-filename="swait_queue_head">swait_queue_head</a> <dfn class="decl field" id="rcu_state::expedited_wq" title='rcu_state::expedited_wq' data-ref="rcu_state::expedited_wq" data-ref-filename="rcu_state..expedited_wq">expedited_wq</dfn>;	<i>/* Wait for check-ins. */</i></td></tr>
+<tr><th id="314">314</th><td>	<em>int</em> <dfn class="decl field" id="rcu_state::ncpus_snap" title='rcu_state::ncpus_snap' data-ref="rcu_state::ncpus_snap" data-ref-filename="rcu_state..ncpus_snap">ncpus_snap</dfn>;				<i>/* # CPUs seen last time. */</i></td></tr>
+<tr><th id="315">315</th><td></td></tr>
+<tr><th id="316">316</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_state::jiffies_force_qs" title='rcu_state::jiffies_force_qs' data-ref="rcu_state::jiffies_force_qs" data-ref-filename="rcu_state..jiffies_force_qs">jiffies_force_qs</dfn>;		<i>/* Time at which to invoke */</i></td></tr>
+<tr><th id="317">317</th><td>						<i>/*  force_quiescent_state(). */</i></td></tr>
+<tr><th id="318">318</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_state::jiffies_kick_kthreads" title='rcu_state::jiffies_kick_kthreads' data-ref="rcu_state::jiffies_kick_kthreads" data-ref-filename="rcu_state..jiffies_kick_kthreads">jiffies_kick_kthreads</dfn>;	<i>/* Time at which to kick */</i></td></tr>
+<tr><th id="319">319</th><td>						<i>/*  kthreads, if configured. */</i></td></tr>
+<tr><th id="320">320</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_state::n_force_qs" title='rcu_state::n_force_qs' data-ref="rcu_state::n_force_qs" data-ref-filename="rcu_state..n_force_qs">n_force_qs</dfn>;		<i>/* Number of calls to */</i></td></tr>
+<tr><th id="321">321</th><td>						<i>/*  force_quiescent_state(). */</i></td></tr>
+<tr><th id="322">322</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_state::gp_start" title='rcu_state::gp_start' data-ref="rcu_state::gp_start" data-ref-filename="rcu_state..gp_start">gp_start</dfn>;			<i>/* Time at which GP started, */</i></td></tr>
+<tr><th id="323">323</th><td>						<i>/*  but in jiffies. */</i></td></tr>
+<tr><th id="324">324</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_state::gp_end" title='rcu_state::gp_end' data-ref="rcu_state::gp_end" data-ref-filename="rcu_state..gp_end">gp_end</dfn>;			<i>/* Time last GP ended, again */</i></td></tr>
+<tr><th id="325">325</th><td>						<i>/*  in jiffies. */</i></td></tr>
+<tr><th id="326">326</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_state::gp_activity" title='rcu_state::gp_activity' data-ref="rcu_state::gp_activity" data-ref-filename="rcu_state..gp_activity">gp_activity</dfn>;		<i>/* Time of last GP kthread */</i></td></tr>
+<tr><th id="327">327</th><td>						<i>/*  activity in jiffies. */</i></td></tr>
+<tr><th id="328">328</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_state::gp_req_activity" title='rcu_state::gp_req_activity' data-ref="rcu_state::gp_req_activity" data-ref-filename="rcu_state..gp_req_activity">gp_req_activity</dfn>;		<i>/* Time of last GP request */</i></td></tr>
+<tr><th id="329">329</th><td>						<i>/*  in jiffies. */</i></td></tr>
+<tr><th id="330">330</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_state::jiffies_stall" title='rcu_state::jiffies_stall' data-ref="rcu_state::jiffies_stall" data-ref-filename="rcu_state..jiffies_stall">jiffies_stall</dfn>;		<i>/* Time at which to check */</i></td></tr>
+<tr><th id="331">331</th><td>						<i>/*  for CPU stalls. */</i></td></tr>
+<tr><th id="332">332</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_state::jiffies_resched" title='rcu_state::jiffies_resched' data-ref="rcu_state::jiffies_resched" data-ref-filename="rcu_state..jiffies_resched">jiffies_resched</dfn>;		<i>/* Time at which to resched */</i></td></tr>
+<tr><th id="333">333</th><td>						<i>/*  a reluctant CPU. */</i></td></tr>
+<tr><th id="334">334</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_state::n_force_qs_gpstart" title='rcu_state::n_force_qs_gpstart' data-ref="rcu_state::n_force_qs_gpstart" data-ref-filename="rcu_state..n_force_qs_gpstart">n_force_qs_gpstart</dfn>;	<i>/* Snapshot of n_force_qs at */</i></td></tr>
+<tr><th id="335">335</th><td>						<i>/*  GP start. */</i></td></tr>
+<tr><th id="336">336</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="rcu_state::gp_max" title='rcu_state::gp_max' data-ref="rcu_state::gp_max" data-ref-filename="rcu_state..gp_max">gp_max</dfn>;			<i>/* Maximum GP duration in */</i></td></tr>
+<tr><th id="337">337</th><td>						<i>/*  jiffies. */</i></td></tr>
+<tr><th id="338">338</th><td>	<em>const</em> <em>char</em> *<dfn class="decl field" id="rcu_state::name" title='rcu_state::name' data-ref="rcu_state::name" data-ref-filename="rcu_state..name">name</dfn>;			<i>/* Name of structure. */</i></td></tr>
+<tr><th id="339">339</th><td>	<em>char</em> <dfn class="decl field" id="rcu_state::abbr" title='rcu_state::abbr' data-ref="rcu_state::abbr" data-ref-filename="rcu_state..abbr">abbr</dfn>;				<i>/* Abbreviated name. */</i></td></tr>
+<tr><th id="340">340</th><td></td></tr>
+<tr><th id="341">341</th><td>	<a class="typedef" href="../../include/linux/spinlock_types.h.html#raw_spinlock_t" title='raw_spinlock_t' data-type='struct raw_spinlock' data-ref="raw_spinlock_t" data-ref-filename="raw_spinlock_t">raw_spinlock_t</a> <dfn class="decl field" id="rcu_state::ofl_lock" title='rcu_state::ofl_lock' data-ref="rcu_state::ofl_lock" data-ref-filename="rcu_state..ofl_lock">ofl_lock</dfn> <a class="macro" href="../../include/linux/cache.h.html#71" title="__attribute__((__aligned__(1 &lt;&lt; (6))))" data-ref="_M/____cacheline_internodealigned_in_smp">____cacheline_internodealigned_in_smp</a>;</td></tr>
+<tr><th id="342">342</th><td>						<i>/* Synchronize offline with */</i></td></tr>
+<tr><th id="343">343</th><td>						<i>/*  GP pre-initialization. */</i></td></tr>
+<tr><th id="344">344</th><td>};</td></tr>
+<tr><th id="345">345</th><td></td></tr>
+<tr><th id="346">346</th><td><i>/* Values for rcu_state structure's gp_flags field. */</i></td></tr>
+<tr><th id="347">347</th><td><u>#define <dfn class="macro" id="_M/RCU_GP_FLAG_INIT" data-ref="_M/RCU_GP_FLAG_INIT">RCU_GP_FLAG_INIT</dfn> 0x1	/* Need grace-period initialization. */</u></td></tr>
+<tr><th id="348">348</th><td><u>#define <dfn class="macro" id="_M/RCU_GP_FLAG_FQS" data-ref="_M/RCU_GP_FLAG_FQS">RCU_GP_FLAG_FQS</dfn>  0x2	/* Need grace-period quiescent-state forcing. */</u></td></tr>
+<tr><th id="349">349</th><td></td></tr>
+<tr><th id="350">350</th><td><i>/* Values for rcu_state structure's gp_state field. */</i></td></tr>
+<tr><th id="351">351</th><td><u>#define <dfn class="macro" id="_M/RCU_GP_IDLE" data-ref="_M/RCU_GP_IDLE">RCU_GP_IDLE</dfn>	 0	/* Initial state and no GP in progress. */</u></td></tr>
+<tr><th id="352">352</th><td><u>#define <dfn class="macro" id="_M/RCU_GP_WAIT_GPS" data-ref="_M/RCU_GP_WAIT_GPS">RCU_GP_WAIT_GPS</dfn>  1	/* Wait for grace-period start. */</u></td></tr>
+<tr><th id="353">353</th><td><u>#define <dfn class="macro" id="_M/RCU_GP_DONE_GPS" data-ref="_M/RCU_GP_DONE_GPS">RCU_GP_DONE_GPS</dfn>  2	/* Wait done for grace-period start. */</u></td></tr>
+<tr><th id="354">354</th><td><u>#define <dfn class="macro" id="_M/RCU_GP_ONOFF" data-ref="_M/RCU_GP_ONOFF">RCU_GP_ONOFF</dfn>     3	/* Grace-period initialization hotplug. */</u></td></tr>
+<tr><th id="355">355</th><td><u>#define <dfn class="macro" id="_M/RCU_GP_INIT" data-ref="_M/RCU_GP_INIT">RCU_GP_INIT</dfn>      4	/* Grace-period initialization. */</u></td></tr>
+<tr><th id="356">356</th><td><u>#define <dfn class="macro" id="_M/RCU_GP_WAIT_FQS" data-ref="_M/RCU_GP_WAIT_FQS">RCU_GP_WAIT_FQS</dfn>  5	/* Wait for force-quiescent-state time. */</u></td></tr>
+<tr><th id="357">357</th><td><u>#define <dfn class="macro" id="_M/RCU_GP_DOING_FQS" data-ref="_M/RCU_GP_DOING_FQS">RCU_GP_DOING_FQS</dfn> 6	/* Wait done for force-quiescent-state time. */</u></td></tr>
+<tr><th id="358">358</th><td><u>#define <dfn class="macro" id="_M/RCU_GP_CLEANUP" data-ref="_M/RCU_GP_CLEANUP">RCU_GP_CLEANUP</dfn>   7	/* Grace-period cleanup started. */</u></td></tr>
+<tr><th id="359">359</th><td><u>#define <dfn class="macro" id="_M/RCU_GP_CLEANED" data-ref="_M/RCU_GP_CLEANED">RCU_GP_CLEANED</dfn>   8	/* Grace-period cleanup complete. */</u></td></tr>
+<tr><th id="360">360</th><td></td></tr>
+<tr><th id="361">361</th><td><em>static</em> <em>const</em> <em>char</em> * <em>const</em> <dfn class="decl def" id="gp_state_names" title='gp_state_names' data-ref="gp_state_names" data-ref-filename="gp_state_names">gp_state_names</dfn>[] = {</td></tr>
+<tr><th id="362">362</th><td>	<q>"RCU_GP_IDLE"</q>,</td></tr>
+<tr><th id="363">363</th><td>	<q>"RCU_GP_WAIT_GPS"</q>,</td></tr>
+<tr><th id="364">364</th><td>	<q>"RCU_GP_DONE_GPS"</q>,</td></tr>
+<tr><th id="365">365</th><td>	<q>"RCU_GP_ONOFF"</q>,</td></tr>
+<tr><th id="366">366</th><td>	<q>"RCU_GP_INIT"</q>,</td></tr>
+<tr><th id="367">367</th><td>	<q>"RCU_GP_WAIT_FQS"</q>,</td></tr>
+<tr><th id="368">368</th><td>	<q>"RCU_GP_DOING_FQS"</q>,</td></tr>
+<tr><th id="369">369</th><td>	<q>"RCU_GP_CLEANUP"</q>,</td></tr>
+<tr><th id="370">370</th><td>	<q>"RCU_GP_CLEANED"</q>,</td></tr>
+<tr><th id="371">371</th><td>};</td></tr>
+<tr><th id="372">372</th><td></td></tr>
+<tr><th id="373">373</th><td><i>/*</i></td></tr>
+<tr><th id="374">374</th><td><i> * In order to export the rcu_state name to the tracing tools, it</i></td></tr>
+<tr><th id="375">375</th><td><i> * needs to be added in the __tracepoint_string section.</i></td></tr>
+<tr><th id="376">376</th><td><i> * This requires defining a separate variable tp_&lt;sname&gt;_varname</i></td></tr>
+<tr><th id="377">377</th><td><i> * that points to the string being used, and this will allow</i></td></tr>
+<tr><th id="378">378</th><td><i> * the tracing userspace tools to be able to decipher the string</i></td></tr>
+<tr><th id="379">379</th><td><i> * address to the matching string.</i></td></tr>
+<tr><th id="380">380</th><td><i> */</i></td></tr>
+<tr><th id="381">381</th><td><u>#<span data-ppcond="381">ifdef</span> <span class="macro" data-ref="_M/CONFIG_PREEMPT_RCU">CONFIG_PREEMPT_RCU</span></u></td></tr>
+<tr><th id="382">382</th><td><u>#define RCU_ABBR 'p'</u></td></tr>
+<tr><th id="383">383</th><td><u>#define RCU_NAME_RAW "rcu_preempt"</u></td></tr>
+<tr><th id="384">384</th><td><u>#<span data-ppcond="381">else</span> /* #ifdef CONFIG_PREEMPT_RCU */</u></td></tr>
+<tr><th id="385">385</th><td><u>#define <dfn class="macro" id="_M/RCU_ABBR" data-ref="_M/RCU_ABBR">RCU_ABBR</dfn> 's'</u></td></tr>
+<tr><th id="386">386</th><td><u>#define <dfn class="macro" id="_M/RCU_NAME_RAW" data-ref="_M/RCU_NAME_RAW">RCU_NAME_RAW</dfn> "rcu_sched"</u></td></tr>
+<tr><th id="387">387</th><td><u>#<span data-ppcond="381">endif</span> /* #else #ifdef CONFIG_PREEMPT_RCU */</u></td></tr>
+<tr><th id="388">388</th><td><u>#<span data-ppcond="388">ifndef</span> <a class="macro" href="../../include/generated/autoconf.h.html#1114" data-ref="_M/CONFIG_TRACING">CONFIG_TRACING</a></u></td></tr>
+<tr><th id="389">389</th><td><u>#define RCU_NAME RCU_NAME_RAW</u></td></tr>
+<tr><th id="390">390</th><td><u>#<span data-ppcond="388">else</span> /* #ifdef CONFIG_TRACING */</u></td></tr>
+<tr><th id="391">391</th><td><em>static</em> <em>char</em> <dfn class="decl def" id="rcu_name" title='rcu_name' data-ref="rcu_name" data-ref-filename="rcu_name">rcu_name</dfn>[] = <a class="macro" href="#386" title="&quot;rcu_sched&quot;" data-ref="_M/RCU_NAME_RAW">RCU_NAME_RAW</a>;</td></tr>
+<tr><th id="392">392</th><td><em>static</em> <em>const</em> <em>char</em> *<dfn class="decl def" id="tp_rcu_varname" title='tp_rcu_varname' data-ref="tp_rcu_varname" data-ref-filename="tp_rcu_varname">tp_rcu_varname</dfn> <a class="macro" href="../../include/linux/compiler_attributes.h.html#248" title="__attribute__((__used__))" data-ref="_M/__used">__used</a> <a class="macro" href="../../include/linux/tracepoint.h.html#365" title="__attribute__((section(&quot;__tracepoint_str&quot;)))" data-ref="_M/__tracepoint_string">__tracepoint_string</a> = <a class="ref" href="#rcu_name" title='rcu_name' data-ref="rcu_name" data-ref-filename="rcu_name">rcu_name</a>;</td></tr>
+<tr><th id="393">393</th><td><u>#define <dfn class="macro" id="_M/RCU_NAME" data-ref="_M/RCU_NAME">RCU_NAME</dfn> rcu_name</u></td></tr>
+<tr><th id="394">394</th><td><u>#<span data-ppcond="388">endif</span> /* #else #ifdef CONFIG_TRACING */</u></td></tr>
+<tr><th id="395">395</th><td></td></tr>
+<tr><th id="396">396</th><td><em>int</em> <a class="decl fn" href="tree.c.html#rcu_dynticks_snap" title='rcu_dynticks_snap' data-ref="rcu_dynticks_snap" data-ref-filename="rcu_dynticks_snap" id="rcu_dynticks_snap">rcu_dynticks_snap</a>(<b>struct</b> <a class="type" href="#rcu_data" title='rcu_data' data-ref="rcu_data" data-ref-filename="rcu_data">rcu_data</a> *<dfn class="local col5 decl" id="55rdp" title='rdp' data-type='struct rcu_data *' data-ref="55rdp" data-ref-filename="55rdp">rdp</dfn>);</td></tr>
+<tr><th id="397">397</th><td></td></tr>
+<tr><th id="398">398</th><td><i>/* Forward declarations for tree_plugin.h */</i></td></tr>
+<tr><th id="399">399</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_plugin.h.html#rcu_bootup_announce" title='rcu_bootup_announce' data-ref="rcu_bootup_announce" data-ref-filename="rcu_bootup_announce" id="rcu_bootup_announce">rcu_bootup_announce</a>(<em>void</em>);</td></tr>
+<tr><th id="400">400</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_plugin.h.html#rcu_qs" title='rcu_qs' data-ref="rcu_qs" data-ref-filename="rcu_qs" id="rcu_qs">rcu_qs</a>(<em>void</em>);</td></tr>
+<tr><th id="401">401</th><td><em>static</em> <em>int</em> <a class="decl fn" href="tree_plugin.h.html#rcu_preempt_blocked_readers_cgp" title='rcu_preempt_blocked_readers_cgp' data-ref="rcu_preempt_blocked_readers_cgp" data-ref-filename="rcu_preempt_blocked_readers_cgp" id="rcu_preempt_blocked_readers_cgp">rcu_preempt_blocked_readers_cgp</a>(<b>struct</b> <a class="type" href="#rcu_node" title='rcu_node' data-ref="rcu_node" data-ref-filename="rcu_node">rcu_node</a> *<dfn class="local col6 decl" id="56rnp" title='rnp' data-type='struct rcu_node *' data-ref="56rnp" data-ref-filename="56rnp">rnp</dfn>);</td></tr>
+<tr><th id="402">402</th><td><u>#<span data-ppcond="402">ifdef</span> <a class="macro" href="../../include/generated/autoconf.h.html#100" data-ref="_M/CONFIG_HOTPLUG_CPU">CONFIG_HOTPLUG_CPU</a></u></td></tr>
+<tr><th id="403">403</th><td><em>static</em> <a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <a class="decl fn" href="tree_plugin.h.html#rcu_preempt_has_tasks" title='rcu_preempt_has_tasks' data-ref="rcu_preempt_has_tasks" data-ref-filename="rcu_preempt_has_tasks" id="rcu_preempt_has_tasks">rcu_preempt_has_tasks</a>(<b>struct</b> <a class="type" href="#rcu_node" title='rcu_node' data-ref="rcu_node" data-ref-filename="rcu_node">rcu_node</a> *<dfn class="local col7 decl" id="57rnp" title='rnp' data-type='struct rcu_node *' data-ref="57rnp" data-ref-filename="57rnp">rnp</dfn>);</td></tr>
+<tr><th id="404">404</th><td><u>#<span data-ppcond="402">endif</span> /* #ifdef CONFIG_HOTPLUG_CPU */</u></td></tr>
+<tr><th id="405">405</th><td><em>static</em> <em>int</em> <a class="decl fn" href="tree_exp.h.html#rcu_print_task_exp_stall" title='rcu_print_task_exp_stall' data-ref="rcu_print_task_exp_stall" data-ref-filename="rcu_print_task_exp_stall" id="rcu_print_task_exp_stall">rcu_print_task_exp_stall</a>(<b>struct</b> <a class="type" href="#rcu_node" title='rcu_node' data-ref="rcu_node" data-ref-filename="rcu_node">rcu_node</a> *<dfn class="local col8 decl" id="58rnp" title='rnp' data-type='struct rcu_node *' data-ref="58rnp" data-ref-filename="58rnp">rnp</dfn>);</td></tr>
+<tr><th id="406">406</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_plugin.h.html#rcu_preempt_check_blocked_tasks" title='rcu_preempt_check_blocked_tasks' data-ref="rcu_preempt_check_blocked_tasks" data-ref-filename="rcu_preempt_check_blocked_tasks" id="rcu_preempt_check_blocked_tasks">rcu_preempt_check_blocked_tasks</a>(<b>struct</b> <a class="type" href="#rcu_node" title='rcu_node' data-ref="rcu_node" data-ref-filename="rcu_node">rcu_node</a> *<dfn class="local col9 decl" id="59rnp" title='rnp' data-type='struct rcu_node *' data-ref="59rnp" data-ref-filename="59rnp">rnp</dfn>);</td></tr>
+<tr><th id="407">407</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_plugin.h.html#rcu_flavor_sched_clock_irq" title='rcu_flavor_sched_clock_irq' data-ref="rcu_flavor_sched_clock_irq" data-ref-filename="rcu_flavor_sched_clock_irq" id="rcu_flavor_sched_clock_irq">rcu_flavor_sched_clock_irq</a>(<em>int</em> <dfn class="local col0 decl" id="60user" title='user' data-type='int' data-ref="60user" data-ref-filename="60user">user</dfn>);</td></tr>
+<tr><th id="408">408</th><td><em>void</em> <a class="decl fn" href="tree.c.html#call_rcu" title='call_rcu' data-ref="call_rcu" data-ref-filename="call_rcu" id="call_rcu">call_rcu</a>(<b>struct</b> <a class="macro" href="../../include/linux/types.h.html#223" title="callback_head" data-ref="_M/rcu_head">rcu_head</a> *<dfn class="local col1 decl" id="61head" title='head' data-type='struct callback_head *' data-ref="61head" data-ref-filename="61head">head</dfn>, <a class="typedef" href="../../include/linux/types.h.html#rcu_callback_t" title='rcu_callback_t' data-type='void (*)(struct callback_head *)' data-ref="rcu_callback_t" data-ref-filename="rcu_callback_t">rcu_callback_t</a> <dfn class="local col2 decl" id="62func" title='func' data-type='rcu_callback_t' data-ref="62func" data-ref-filename="62func">func</dfn>);</td></tr>
+<tr><th id="409">409</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_plugin.h.html#dump_blkd_tasks" title='dump_blkd_tasks' data-ref="dump_blkd_tasks" data-ref-filename="dump_blkd_tasks" id="dump_blkd_tasks">dump_blkd_tasks</a>(<b>struct</b> <a class="type" href="#rcu_node" title='rcu_node' data-ref="rcu_node" data-ref-filename="rcu_node">rcu_node</a> *<dfn class="local col3 decl" id="63rnp" title='rnp' data-type='struct rcu_node *' data-ref="63rnp" data-ref-filename="63rnp">rnp</dfn>, <em>int</em> <dfn class="local col4 decl" id="64ncheck" title='ncheck' data-type='int' data-ref="64ncheck" data-ref-filename="64ncheck">ncheck</dfn>);</td></tr>
+<tr><th id="410">410</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_plugin.h.html#rcu_initiate_boost" title='rcu_initiate_boost' data-ref="rcu_initiate_boost" data-ref-filename="rcu_initiate_boost" id="rcu_initiate_boost">rcu_initiate_boost</a>(<b>struct</b> <a class="type" href="#rcu_node" title='rcu_node' data-ref="rcu_node" data-ref-filename="rcu_node">rcu_node</a> *<dfn class="local col5 decl" id="65rnp" title='rnp' data-type='struct rcu_node *' data-ref="65rnp" data-ref-filename="65rnp">rnp</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col6 decl" id="66flags" title='flags' data-type='unsigned long' data-ref="66flags" data-ref-filename="66flags">flags</dfn>);</td></tr>
+<tr><th id="411">411</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_plugin.h.html#rcu_preempt_boost_start_gp" title='rcu_preempt_boost_start_gp' data-ref="rcu_preempt_boost_start_gp" data-ref-filename="rcu_preempt_boost_start_gp" id="rcu_preempt_boost_start_gp">rcu_preempt_boost_start_gp</a>(<b>struct</b> <a class="type" href="#rcu_node" title='rcu_node' data-ref="rcu_node" data-ref-filename="rcu_node">rcu_node</a> *<dfn class="local col7 decl" id="67rnp" title='rnp' data-type='struct rcu_node *' data-ref="67rnp" data-ref-filename="67rnp">rnp</dfn>);</td></tr>
+<tr><th id="412">412</th><td><em>static</em> <a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <a class="decl fn" href="tree_plugin.h.html#rcu_is_callbacks_kthread" title='rcu_is_callbacks_kthread' data-ref="rcu_is_callbacks_kthread" data-ref-filename="rcu_is_callbacks_kthread" id="rcu_is_callbacks_kthread">rcu_is_callbacks_kthread</a>(<em>void</em>);</td></tr>
+<tr><th id="413">413</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_plugin.h.html#rcu_cpu_kthread_setup" title='rcu_cpu_kthread_setup' data-ref="rcu_cpu_kthread_setup" data-ref-filename="rcu_cpu_kthread_setup" id="rcu_cpu_kthread_setup">rcu_cpu_kthread_setup</a>(<em>unsigned</em> <em>int</em> <dfn class="local col8 decl" id="68cpu" title='cpu' data-type='unsigned int' data-ref="68cpu" data-ref-filename="68cpu">cpu</dfn>);</td></tr>
+<tr><th id="414">414</th><td><em>static</em> <em>void</em> <a class="macro" href="../../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <a class="decl fn" href="tree_plugin.h.html#rcu_spawn_boost_kthreads" title='rcu_spawn_boost_kthreads' data-ref="rcu_spawn_boost_kthreads" data-ref-filename="rcu_spawn_boost_kthreads" id="rcu_spawn_boost_kthreads">rcu_spawn_boost_kthreads</a>(<em>void</em>);</td></tr>
+<tr><th id="415">415</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_plugin.h.html#rcu_prepare_kthreads" title='rcu_prepare_kthreads' data-ref="rcu_prepare_kthreads" data-ref-filename="rcu_prepare_kthreads" id="rcu_prepare_kthreads">rcu_prepare_kthreads</a>(<em>int</em> <dfn class="local col9 decl" id="69cpu" title='cpu' data-type='int' data-ref="69cpu" data-ref-filename="69cpu">cpu</dfn>);</td></tr>
+<tr><th id="416">416</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_plugin.h.html#rcu_cleanup_after_idle" title='rcu_cleanup_after_idle' data-ref="rcu_cleanup_after_idle" data-ref-filename="rcu_cleanup_after_idle" id="rcu_cleanup_after_idle">rcu_cleanup_after_idle</a>(<em>void</em>);</td></tr>
+<tr><th id="417">417</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_plugin.h.html#rcu_prepare_for_idle" title='rcu_prepare_for_idle' data-ref="rcu_prepare_for_idle" data-ref-filename="rcu_prepare_for_idle" id="rcu_prepare_for_idle">rcu_prepare_for_idle</a>(<em>void</em>);</td></tr>
+<tr><th id="418">418</th><td><em>static</em> <a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <a class="decl fn" href="tree_plugin.h.html#rcu_preempt_has_tasks" title='rcu_preempt_has_tasks' data-ref="rcu_preempt_has_tasks" data-ref-filename="rcu_preempt_has_tasks" id="rcu_preempt_has_tasks">rcu_preempt_has_tasks</a>(<b>struct</b> <a class="type" href="#rcu_node" title='rcu_node' data-ref="rcu_node" data-ref-filename="rcu_node">rcu_node</a> *<dfn class="local col0 decl" id="70rnp" title='rnp' data-type='struct rcu_node *' data-ref="70rnp" data-ref-filename="70rnp">rnp</dfn>);</td></tr>
+<tr><th id="419">419</th><td><em>static</em> <a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <a class="decl fn" href="tree_plugin.h.html#rcu_preempt_need_deferred_qs" title='rcu_preempt_need_deferred_qs' data-ref="rcu_preempt_need_deferred_qs" data-ref-filename="rcu_preempt_need_deferred_qs" id="rcu_preempt_need_deferred_qs">rcu_preempt_need_deferred_qs</a>(<b>struct</b> <a class="type" href="../../include/linux/sched.h.html#task_struct" title='task_struct' data-ref="task_struct" data-ref-filename="task_struct">task_struct</a> *<dfn class="local col1 decl" id="71t" title='t' data-type='struct task_struct *' data-ref="71t" data-ref-filename="71t">t</dfn>);</td></tr>
+<tr><th id="420">420</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_plugin.h.html#rcu_preempt_deferred_qs" title='rcu_preempt_deferred_qs' data-ref="rcu_preempt_deferred_qs" data-ref-filename="rcu_preempt_deferred_qs" id="rcu_preempt_deferred_qs">rcu_preempt_deferred_qs</a>(<b>struct</b> <a class="type" href="../../include/linux/sched.h.html#task_struct" title='task_struct' data-ref="task_struct" data-ref-filename="task_struct">task_struct</a> *<dfn class="local col2 decl" id="72t" title='t' data-type='struct task_struct *' data-ref="72t" data-ref-filename="72t">t</dfn>);</td></tr>
+<tr><th id="421">421</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_stall.h.html#zero_cpu_stall_ticks" title='zero_cpu_stall_ticks' data-ref="zero_cpu_stall_ticks" data-ref-filename="zero_cpu_stall_ticks" id="zero_cpu_stall_ticks">zero_cpu_stall_ticks</a>(<b>struct</b> <a class="type" href="#rcu_data" title='rcu_data' data-ref="rcu_data" data-ref-filename="rcu_data">rcu_data</a> *<dfn class="local col3 decl" id="73rdp" title='rdp' data-type='struct rcu_data *' data-ref="73rdp" data-ref-filename="73rdp">rdp</dfn>);</td></tr>
+<tr><th id="422">422</th><td><em>static</em> <a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <a class="decl fn" href="tree_plugin.h.html#rcu_nocb_cpu_needs_barrier" title='rcu_nocb_cpu_needs_barrier' data-ref="rcu_nocb_cpu_needs_barrier" data-ref-filename="rcu_nocb_cpu_needs_barrier" id="rcu_nocb_cpu_needs_barrier">rcu_nocb_cpu_needs_barrier</a>(<em>int</em> <dfn class="local col4 decl" id="74cpu" title='cpu' data-type='int' data-ref="74cpu" data-ref-filename="74cpu">cpu</dfn>);</td></tr>
+<tr><th id="423">423</th><td><em>static</em> <b>struct</b> <a class="type" href="../../include/linux/swait.h.html#swait_queue_head" title='swait_queue_head' data-ref="swait_queue_head" data-ref-filename="swait_queue_head">swait_queue_head</a> *<a class="decl fn" href="tree_plugin.h.html#rcu_nocb_gp_get" title='rcu_nocb_gp_get' data-ref="rcu_nocb_gp_get" data-ref-filename="rcu_nocb_gp_get" id="rcu_nocb_gp_get">rcu_nocb_gp_get</a>(<b>struct</b> <a class="type" href="#rcu_node" title='rcu_node' data-ref="rcu_node" data-ref-filename="rcu_node">rcu_node</a> *<dfn class="local col5 decl" id="75rnp" title='rnp' data-type='struct rcu_node *' data-ref="75rnp" data-ref-filename="75rnp">rnp</dfn>);</td></tr>
+<tr><th id="424">424</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_plugin.h.html#rcu_nocb_gp_cleanup" title='rcu_nocb_gp_cleanup' data-ref="rcu_nocb_gp_cleanup" data-ref-filename="rcu_nocb_gp_cleanup" id="rcu_nocb_gp_cleanup">rcu_nocb_gp_cleanup</a>(<b>struct</b> <a class="type" href="../../include/linux/swait.h.html#swait_queue_head" title='swait_queue_head' data-ref="swait_queue_head" data-ref-filename="swait_queue_head">swait_queue_head</a> *<dfn class="local col6 decl" id="76sq" title='sq' data-type='struct swait_queue_head *' data-ref="76sq" data-ref-filename="76sq">sq</dfn>);</td></tr>
+<tr><th id="425">425</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_plugin.h.html#rcu_init_one_nocb" title='rcu_init_one_nocb' data-ref="rcu_init_one_nocb" data-ref-filename="rcu_init_one_nocb" id="rcu_init_one_nocb">rcu_init_one_nocb</a>(<b>struct</b> <a class="type" href="#rcu_node" title='rcu_node' data-ref="rcu_node" data-ref-filename="rcu_node">rcu_node</a> *<dfn class="local col7 decl" id="77rnp" title='rnp' data-type='struct rcu_node *' data-ref="77rnp" data-ref-filename="77rnp">rnp</dfn>);</td></tr>
+<tr><th id="426">426</th><td><em>static</em> <a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <a class="decl fn" href="tree_plugin.h.html#__call_rcu_nocb" title='__call_rcu_nocb' data-ref="__call_rcu_nocb" data-ref-filename="__call_rcu_nocb" id="__call_rcu_nocb">__call_rcu_nocb</a>(<b>struct</b> <a class="type" href="#rcu_data" title='rcu_data' data-ref="rcu_data" data-ref-filename="rcu_data">rcu_data</a> *<dfn class="local col8 decl" id="78rdp" title='rdp' data-type='struct rcu_data *' data-ref="78rdp" data-ref-filename="78rdp">rdp</dfn>, <b>struct</b> <a class="macro" href="../../include/linux/types.h.html#223" title="callback_head" data-ref="_M/rcu_head">rcu_head</a> *<dfn class="local col9 decl" id="79rhp" title='rhp' data-type='struct callback_head *' data-ref="79rhp" data-ref-filename="79rhp">rhp</dfn>,</td></tr>
+<tr><th id="427">427</th><td>			    <a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col0 decl" id="80lazy" title='lazy' data-type='bool' data-ref="80lazy" data-ref-filename="80lazy">lazy</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col1 decl" id="81flags" title='flags' data-type='unsigned long' data-ref="81flags" data-ref-filename="81flags">flags</dfn>);</td></tr>
+<tr><th id="428">428</th><td><em>static</em> <a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <a class="decl fn" href="tree_plugin.h.html#rcu_nocb_adopt_orphan_cbs" title='rcu_nocb_adopt_orphan_cbs' data-ref="rcu_nocb_adopt_orphan_cbs" data-ref-filename="rcu_nocb_adopt_orphan_cbs" id="rcu_nocb_adopt_orphan_cbs">rcu_nocb_adopt_orphan_cbs</a>(<b>struct</b> <a class="type" href="#rcu_data" title='rcu_data' data-ref="rcu_data" data-ref-filename="rcu_data">rcu_data</a> *<dfn class="local col2 decl" id="82my_rdp" title='my_rdp' data-type='struct rcu_data *' data-ref="82my_rdp" data-ref-filename="82my_rdp">my_rdp</dfn>,</td></tr>
+<tr><th id="429">429</th><td>				      <b>struct</b> <a class="type" href="#rcu_data" title='rcu_data' data-ref="rcu_data" data-ref-filename="rcu_data">rcu_data</a> *<dfn class="local col3 decl" id="83rdp" title='rdp' data-type='struct rcu_data *' data-ref="83rdp" data-ref-filename="83rdp">rdp</dfn>,</td></tr>
+<tr><th id="430">430</th><td>				      <em>unsigned</em> <em>long</em> <dfn class="local col4 decl" id="84flags" title='flags' data-type='unsigned long' data-ref="84flags" data-ref-filename="84flags">flags</dfn>);</td></tr>
+<tr><th id="431">431</th><td><em>static</em> <em>int</em> <a class="decl fn" href="tree_plugin.h.html#rcu_nocb_need_deferred_wakeup" title='rcu_nocb_need_deferred_wakeup' data-ref="rcu_nocb_need_deferred_wakeup" data-ref-filename="rcu_nocb_need_deferred_wakeup" id="rcu_nocb_need_deferred_wakeup">rcu_nocb_need_deferred_wakeup</a>(<b>struct</b> <a class="type" href="#rcu_data" title='rcu_data' data-ref="rcu_data" data-ref-filename="rcu_data">rcu_data</a> *<dfn class="local col5 decl" id="85rdp" title='rdp' data-type='struct rcu_data *' data-ref="85rdp" data-ref-filename="85rdp">rdp</dfn>);</td></tr>
+<tr><th id="432">432</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_plugin.h.html#do_nocb_deferred_wakeup" title='do_nocb_deferred_wakeup' data-ref="do_nocb_deferred_wakeup" data-ref-filename="do_nocb_deferred_wakeup" id="do_nocb_deferred_wakeup">do_nocb_deferred_wakeup</a>(<b>struct</b> <a class="type" href="#rcu_data" title='rcu_data' data-ref="rcu_data" data-ref-filename="rcu_data">rcu_data</a> *<dfn class="local col6 decl" id="86rdp" title='rdp' data-type='struct rcu_data *' data-ref="86rdp" data-ref-filename="86rdp">rdp</dfn>);</td></tr>
+<tr><th id="433">433</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_plugin.h.html#rcu_boot_init_nocb_percpu_data" title='rcu_boot_init_nocb_percpu_data' data-ref="rcu_boot_init_nocb_percpu_data" data-ref-filename="rcu_boot_init_nocb_percpu_data" id="rcu_boot_init_nocb_percpu_data">rcu_boot_init_nocb_percpu_data</a>(<b>struct</b> <a class="type" href="#rcu_data" title='rcu_data' data-ref="rcu_data" data-ref-filename="rcu_data">rcu_data</a> *<dfn class="local col7 decl" id="87rdp" title='rdp' data-type='struct rcu_data *' data-ref="87rdp" data-ref-filename="87rdp">rdp</dfn>);</td></tr>
+<tr><th id="434">434</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_plugin.h.html#rcu_spawn_cpu_nocb_kthread" title='rcu_spawn_cpu_nocb_kthread' data-ref="rcu_spawn_cpu_nocb_kthread" data-ref-filename="rcu_spawn_cpu_nocb_kthread" id="rcu_spawn_cpu_nocb_kthread">rcu_spawn_cpu_nocb_kthread</a>(<em>int</em> <dfn class="local col8 decl" id="88cpu" title='cpu' data-type='int' data-ref="88cpu" data-ref-filename="88cpu">cpu</dfn>);</td></tr>
+<tr><th id="435">435</th><td><em>static</em> <em>void</em> <a class="macro" href="../../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <a class="decl fn" href="tree_plugin.h.html#rcu_spawn_nocb_kthreads" title='rcu_spawn_nocb_kthreads' data-ref="rcu_spawn_nocb_kthreads" data-ref-filename="rcu_spawn_nocb_kthreads" id="rcu_spawn_nocb_kthreads">rcu_spawn_nocb_kthreads</a>(<em>void</em>);</td></tr>
+<tr><th id="436">436</th><td><u>#<span data-ppcond="436">ifdef</span> <span class="macro" data-ref="_M/CONFIG_RCU_NOCB_CPU">CONFIG_RCU_NOCB_CPU</span></u></td></tr>
+<tr><th id="437">437</th><td><em>static</em> <em>void</em> __init rcu_organize_nocb_kthreads(<em>void</em>);</td></tr>
+<tr><th id="438">438</th><td><u>#<span data-ppcond="436">endif</span> /* #ifdef CONFIG_RCU_NOCB_CPU */</u></td></tr>
+<tr><th id="439">439</th><td><em>static</em> <a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <a class="decl fn" href="tree_plugin.h.html#init_nocb_callback_list" title='init_nocb_callback_list' data-ref="init_nocb_callback_list" data-ref-filename="init_nocb_callback_list" id="init_nocb_callback_list">init_nocb_callback_list</a>(<b>struct</b> <a class="type" href="#rcu_data" title='rcu_data' data-ref="rcu_data" data-ref-filename="rcu_data">rcu_data</a> *<dfn class="local col9 decl" id="89rdp" title='rdp' data-type='struct rcu_data *' data-ref="89rdp" data-ref-filename="89rdp">rdp</dfn>);</td></tr>
+<tr><th id="440">440</th><td><em>static</em> <em>unsigned</em> <em>long</em> <a class="decl fn" href="tree_plugin.h.html#rcu_get_n_cbs_nocb_cpu" title='rcu_get_n_cbs_nocb_cpu' data-ref="rcu_get_n_cbs_nocb_cpu" data-ref-filename="rcu_get_n_cbs_nocb_cpu" id="rcu_get_n_cbs_nocb_cpu">rcu_get_n_cbs_nocb_cpu</a>(<b>struct</b> <a class="type" href="#rcu_data" title='rcu_data' data-ref="rcu_data" data-ref-filename="rcu_data">rcu_data</a> *<dfn class="local col0 decl" id="90rdp" title='rdp' data-type='struct rcu_data *' data-ref="90rdp" data-ref-filename="90rdp">rdp</dfn>);</td></tr>
+<tr><th id="441">441</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_plugin.h.html#rcu_bind_gp_kthread" title='rcu_bind_gp_kthread' data-ref="rcu_bind_gp_kthread" data-ref-filename="rcu_bind_gp_kthread" id="rcu_bind_gp_kthread">rcu_bind_gp_kthread</a>(<em>void</em>);</td></tr>
+<tr><th id="442">442</th><td><em>static</em> <a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <a class="decl fn" href="tree_plugin.h.html#rcu_nohz_full_cpu" title='rcu_nohz_full_cpu' data-ref="rcu_nohz_full_cpu" data-ref-filename="rcu_nohz_full_cpu" id="rcu_nohz_full_cpu">rcu_nohz_full_cpu</a>(<em>void</em>);</td></tr>
+<tr><th id="443">443</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_plugin.h.html#rcu_dynticks_task_enter" title='rcu_dynticks_task_enter' data-ref="rcu_dynticks_task_enter" data-ref-filename="rcu_dynticks_task_enter" id="rcu_dynticks_task_enter">rcu_dynticks_task_enter</a>(<em>void</em>);</td></tr>
+<tr><th id="444">444</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_plugin.h.html#rcu_dynticks_task_exit" title='rcu_dynticks_task_exit' data-ref="rcu_dynticks_task_exit" data-ref-filename="rcu_dynticks_task_exit" id="rcu_dynticks_task_exit">rcu_dynticks_task_exit</a>(<em>void</em>);</td></tr>
+<tr><th id="445">445</th><td></td></tr>
+<tr><th id="446">446</th><td><i>/* Forward declarations for tree_stall.h */</i></td></tr>
+<tr><th id="447">447</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_stall.h.html#record_gp_stall_check_time" title='record_gp_stall_check_time' data-ref="record_gp_stall_check_time" data-ref-filename="record_gp_stall_check_time" id="record_gp_stall_check_time">record_gp_stall_check_time</a>(<em>void</em>);</td></tr>
+<tr><th id="448">448</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_stall.h.html#rcu_iw_handler" title='rcu_iw_handler' data-ref="rcu_iw_handler" data-ref-filename="rcu_iw_handler" id="rcu_iw_handler">rcu_iw_handler</a>(<b>struct</b> <a class="type" href="../../include/linux/irq_work.h.html#irq_work" title='irq_work' data-ref="irq_work" data-ref-filename="irq_work">irq_work</a> *<dfn class="local col1 decl" id="91iwp" title='iwp' data-type='struct irq_work *' data-ref="91iwp" data-ref-filename="91iwp">iwp</dfn>);</td></tr>
+<tr><th id="449">449</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_stall.h.html#check_cpu_stall" title='check_cpu_stall' data-ref="check_cpu_stall" data-ref-filename="check_cpu_stall" id="check_cpu_stall">check_cpu_stall</a>(<b>struct</b> <a class="type" href="#rcu_data" title='rcu_data' data-ref="rcu_data" data-ref-filename="rcu_data">rcu_data</a> *<dfn class="local col2 decl" id="92rdp" title='rdp' data-type='struct rcu_data *' data-ref="92rdp" data-ref-filename="92rdp">rdp</dfn>);</td></tr>
+<tr><th id="450">450</th><td><em>static</em> <em>void</em> <a class="decl fn" href="tree_stall.h.html#rcu_check_gp_start_stall" title='rcu_check_gp_start_stall' data-ref="rcu_check_gp_start_stall" data-ref-filename="rcu_check_gp_start_stall" id="rcu_check_gp_start_stall">rcu_check_gp_start_stall</a>(<b>struct</b> <a class="type" href="#rcu_node" title='rcu_node' data-ref="rcu_node" data-ref-filename="rcu_node">rcu_node</a> *<dfn class="local col3 decl" id="93rnp" title='rnp' data-type='struct rcu_node *' data-ref="93rnp" data-ref-filename="93rnp">rnp</dfn>, <b>struct</b> <a class="type" href="#rcu_data" title='rcu_data' data-ref="rcu_data" data-ref-filename="rcu_data">rcu_data</a> *<dfn class="local col4 decl" id="94rdp" title='rdp' data-type='struct rcu_data *' data-ref="94rdp" data-ref-filename="94rdp">rdp</dfn>,</td></tr>
+<tr><th id="451">451</th><td>				     <em>const</em> <em>unsigned</em> <em>long</em> <dfn class="local col5 decl" id="95gpssdelay" title='gpssdelay' data-type='const unsigned long' data-ref="95gpssdelay" data-ref-filename="95gpssdelay">gpssdelay</dfn>);</td></tr>
+<tr><th id="452">452</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='tree.c.html'>linux-5.3.1/kernel/rcu/tree.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

@@ -1,0 +1,465 @@
+<def f='linux-5.3.1/include/net/cfg80211.h' l='3526' ll='3843'/>
+<use f='linux-5.3.1/include/net/cfg80211.h' l='4660' c='wiphy_new_nm'/>
+<use f='linux-5.3.1/include/net/cfg80211.h' l='4675' c='wiphy_new'/>
+<size>864</size>
+<doc f='linux-5.3.1/include/net/cfg80211.h' l='3181'>/**
+ * struct cfg80211_ops - backend description for wireless configuration
+ *
+ * This struct is registered by fullmac card drivers and/or wireless stacks
+ * in order to handle configuration requests on their interfaces.
+ *
+ * All callbacks except where otherwise noted should return 0
+ * on success or a negative error code.
+ *
+ * All operations are currently invoked under rtnl for consistency with the
+ * wireless extensions but this is subject to reevaluation as soon as this
+ * code is used more widely and we have a first user without wext.
+ *
+ * @suspend: wiphy device needs to be suspended. The variable @wow will
+ *	be %NULL or contain the enabled Wake-on-Wireless triggers that are
+ *	configured for the device.
+ * @resume: wiphy device needs to be resumed
+ * @set_wakeup: Called when WoWLAN is enabled/disabled, use this callback
+ *	to call device_set_wakeup_enable() to enable/disable wakeup from
+ *	the device.
+ *
+ * @add_virtual_intf: create a new virtual interface with the given name,
+ *	must set the struct wireless_dev&apos;s iftype. Beware: You must create
+ *	the new netdev in the wiphy&apos;s network namespace! Returns the struct
+ *	wireless_dev, or an ERR_PTR. For P2P device wdevs, the driver must
+ *	also set the address member in the wdev.
+ *
+ * @del_virtual_intf: remove the virtual interface
+ *
+ * @change_virtual_intf: change type/configuration of virtual interface,
+ *	keep the struct wireless_dev&apos;s iftype updated.
+ *
+ * @add_key: add a key with the given parameters. @mac_addr will be %NULL
+ *	when adding a group key.
+ *
+ * @get_key: get information about the key with the given parameters.
+ *	@mac_addr will be %NULL when requesting information for a group
+ *	key. All pointers given to the @callback function need not be valid
+ *	after it returns. This function should return an error if it is
+ *	not possible to retrieve the key, -ENOENT if it doesn&apos;t exist.
+ *
+ * @del_key: remove a key given the @mac_addr (%NULL for a group key)
+ *	and @key_index, return -ENOENT if the key doesn&apos;t exist.
+ *
+ * @set_default_key: set the default key on an interface
+ *
+ * @set_default_mgmt_key: set the default management frame key on an interface
+ *
+ * @set_rekey_data: give the data necessary for GTK rekeying to the driver
+ *
+ * @start_ap: Start acting in AP mode defined by the parameters.
+ * @change_beacon: Change the beacon parameters for an access point mode
+ *	interface. This should reject the call when AP mode wasn&apos;t started.
+ * @stop_ap: Stop being an AP, including stopping beaconing.
+ *
+ * @add_station: Add a new station.
+ * @del_station: Remove a station
+ * @change_station: Modify a given station. Note that flags changes are not much
+ *	validated in cfg80211, in particular the auth/assoc/authorized flags
+ *	might come to the driver in invalid combinations -- make sure to check
+ *	them, also against the existing state! Drivers must call
+ *	cfg80211_check_station_change() to validate the information.
+ * @get_station: get station information for the station identified by @mac
+ * @dump_station: dump station callback -- resume dump at index @idx
+ *
+ * @add_mpath: add a fixed mesh path
+ * @del_mpath: delete a given mesh path
+ * @change_mpath: change a given mesh path
+ * @get_mpath: get a mesh path for the given parameters
+ * @dump_mpath: dump mesh path callback -- resume dump at index @idx
+ * @get_mpp: get a mesh proxy path for the given parameters
+ * @dump_mpp: dump mesh proxy path callback -- resume dump at index @idx
+ * @join_mesh: join the mesh network with the specified parameters
+ *	(invoked with the wireless_dev mutex held)
+ * @leave_mesh: leave the current mesh network
+ *	(invoked with the wireless_dev mutex held)
+ *
+ * @get_mesh_config: Get the current mesh configuration
+ *
+ * @update_mesh_config: Update mesh parameters on a running mesh.
+ *	The mask is a bitfield which tells us which parameters to
+ *	set, and which to leave alone.
+ *
+ * @change_bss: Modify parameters for a given BSS.
+ *
+ * @set_txq_params: Set TX queue parameters
+ *
+ * @libertas_set_mesh_channel: Only for backward compatibility for libertas,
+ *	as it doesn&apos;t implement join_mesh and needs to set the channel to
+ *	join the mesh instead.
+ *
+ * @set_monitor_channel: Set the monitor mode channel for the device. If other
+ *	interfaces are active this callback should reject the configuration.
+ *	If no interfaces are active or the device is down, the channel should
+ *	be stored for when a monitor interface becomes active.
+ *
+ * @scan: Request to do a scan. If returning zero, the scan request is given
+ *	the driver, and will be valid until passed to cfg80211_scan_done().
+ *	For scan results, call cfg80211_inform_bss(); you can call this outside
+ *	the scan/scan_done bracket too.
+ * @abort_scan: Tell the driver to abort an ongoing scan. The driver shall
+ *	indicate the status of the scan through cfg80211_scan_done().
+ *
+ * @auth: Request to authenticate with the specified peer
+ *	(invoked with the wireless_dev mutex held)
+ * @assoc: Request to (re)associate with the specified peer
+ *	(invoked with the wireless_dev mutex held)
+ * @deauth: Request to deauthenticate from the specified peer
+ *	(invoked with the wireless_dev mutex held)
+ * @disassoc: Request to disassociate from the specified peer
+ *	(invoked with the wireless_dev mutex held)
+ *
+ * @connect: Connect to the ESS with the specified parameters. When connected,
+ *	call cfg80211_connect_result()/cfg80211_connect_bss() with status code
+ *	%WLAN_STATUS_SUCCESS. If the connection fails for some reason, call
+ *	cfg80211_connect_result()/cfg80211_connect_bss() with the status code
+ *	from the AP or cfg80211_connect_timeout() if no frame with status code
+ *	was received.
+ *	The driver is allowed to roam to other BSSes within the ESS when the
+ *	other BSS matches the connect parameters. When such roaming is initiated
+ *	by the driver, the driver is expected to verify that the target matches
+ *	the configured security parameters and to use Reassociation Request
+ *	frame instead of Association Request frame.
+ *	The connect function can also be used to request the driver to perform a
+ *	specific roam when connected to an ESS. In that case, the prev_bssid
+ *	parameter is set to the BSSID of the currently associated BSS as an
+ *	indication of requesting reassociation.
+ *	In both the driver-initiated and new connect() call initiated roaming
+ *	cases, the result of roaming is indicated with a call to
+ *	cfg80211_roamed(). (invoked with the wireless_dev mutex held)
+ * @update_connect_params: Update the connect parameters while connected to a
+ *	BSS. The updated parameters can be used by driver/firmware for
+ *	subsequent BSS selection (roaming) decisions and to form the
+ *	Authentication/(Re)Association Request frames. This call does not
+ *	request an immediate disassociation or reassociation with the current
+ *	BSS, i.e., this impacts only subsequent (re)associations. The bits in
+ *	changed are defined in &amp;enum cfg80211_connect_params_changed.
+ *	(invoked with the wireless_dev mutex held)
+ * @disconnect: Disconnect from the BSS/ESS or stop connection attempts if
+ *      connection is in progress. Once done, call cfg80211_disconnected() in
+ *      case connection was already established (invoked with the
+ *      wireless_dev mutex held), otherwise call cfg80211_connect_timeout().
+ *
+ * @join_ibss: Join the specified IBSS (or create if necessary). Once done, call
+ *	cfg80211_ibss_joined(), also call that function when changing BSSID due
+ *	to a merge.
+ *	(invoked with the wireless_dev mutex held)
+ * @leave_ibss: Leave the IBSS.
+ *	(invoked with the wireless_dev mutex held)
+ *
+ * @set_mcast_rate: Set the specified multicast rate (only if vif is in ADHOC or
+ *	MESH mode)
+ *
+ * @set_wiphy_params: Notify that wiphy parameters have changed;
+ *	@changed bitfield (see &amp;enum wiphy_params_flags) describes which values
+ *	have changed. The actual parameter values are available in
+ *	struct wiphy. If returning an error, no value should be changed.
+ *
+ * @set_tx_power: set the transmit power according to the parameters,
+ *	the power passed is in mBm, to get dBm use MBM_TO_DBM(). The
+ *	wdev may be %NULL if power was set for the wiphy, and will
+ *	always be %NULL unless the driver supports per-vif TX power
+ *	(as advertised by the nl80211 feature flag.)
+ * @get_tx_power: store the current TX power into the dbm variable;
+ *	return 0 if successful
+ *
+ * @set_wds_peer: set the WDS peer for a WDS interface
+ *
+ * @rfkill_poll: polls the hw rfkill line, use cfg80211 reporting
+ *	functions to adjust rfkill hw state
+ *
+ * @dump_survey: get site survey information.
+ *
+ * @remain_on_channel: Request the driver to remain awake on the specified
+ *	channel for the specified duration to complete an off-channel
+ *	operation (e.g., public action frame exchange). When the driver is
+ *	ready on the requested channel, it must indicate this with an event
+ *	notification by calling cfg80211_ready_on_channel().
+ * @cancel_remain_on_channel: Cancel an on-going remain-on-channel operation.
+ *	This allows the operation to be terminated prior to timeout based on
+ *	the duration value.
+ * @mgmt_tx: Transmit a management frame.
+ * @mgmt_tx_cancel_wait: Cancel the wait time from transmitting a management
+ *	frame on another channel
+ *
+ * @testmode_cmd: run a test mode command; @wdev may be %NULL
+ * @testmode_dump: Implement a test mode dump. The cb-&gt;args[2] and up may be
+ *	used by the function, but 0 and 1 must not be touched. Additionally,
+ *	return error codes other than -ENOBUFS and -ENOENT will terminate the
+ *	dump and return to userspace with an error, so be careful. If any data
+ *	was passed in from userspace then the data/len arguments will be present
+ *	and point to the data contained in %NL80211_ATTR_TESTDATA.
+ *
+ * @set_bitrate_mask: set the bitrate mask configuration
+ *
+ * @set_pmksa: Cache a PMKID for a BSSID. This is mostly useful for fullmac
+ *	devices running firmwares capable of generating the (re) association
+ *	RSN IE. It allows for faster roaming between WPA2 BSSIDs.
+ * @del_pmksa: Delete a cached PMKID.
+ * @flush_pmksa: Flush all cached PMKIDs.
+ * @set_power_mgmt: Configure WLAN power management. A timeout value of -1
+ *	allows the driver to adjust the dynamic ps timeout value.
+ * @set_cqm_rssi_config: Configure connection quality monitor RSSI threshold.
+ *	After configuration, the driver should (soon) send an event indicating
+ *	the current level is above/below the configured threshold; this may
+ *	need some care when the configuration is changed (without first being
+ *	disabled.)
+ * @set_cqm_rssi_range_config: Configure two RSSI thresholds in the
+ *	connection quality monitor.  An event is to be sent only when the
+ *	signal level is found to be outside the two values.  The driver should
+ *	set %NL80211_EXT_FEATURE_CQM_RSSI_LIST if this method is implemented.
+ *	If it is provided then there&apos;s no point providing @set_cqm_rssi_config.
+ * @set_cqm_txe_config: Configure connection quality monitor TX error
+ *	thresholds.
+ * @sched_scan_start: Tell the driver to start a scheduled scan.
+ * @sched_scan_stop: Tell the driver to stop an ongoing scheduled scan with
+ *	given request id. This call must stop the scheduled scan and be ready
+ *	for starting a new one before it returns, i.e. @sched_scan_start may be
+ *	called immediately after that again and should not fail in that case.
+ *	The driver should not call cfg80211_sched_scan_stopped() for a requested
+ *	stop (when this method returns 0).
+ *
+ * @mgmt_frame_register: Notify driver that a management frame type was
+ *	registered. The callback is allowed to sleep.
+ *
+ * @set_antenna: Set antenna configuration (tx_ant, rx_ant) on the device.
+ *	Parameters are bitmaps of allowed antennas to use for TX/RX. Drivers may
+ *	reject TX/RX mask combinations they cannot support by returning -EINVAL
+ *	(also see nl80211.h @NL80211_ATTR_WIPHY_ANTENNA_TX).
+ *
+ * @get_antenna: Get current antenna configuration from device (tx_ant, rx_ant).
+ *
+ * @tdls_mgmt: Transmit a TDLS management frame.
+ * @tdls_oper: Perform a high-level TDLS operation (e.g. TDLS link setup).
+ *
+ * @probe_client: probe an associated client, must return a cookie that it
+ *	later passes to cfg80211_probe_status().
+ *
+ * @set_noack_map: Set the NoAck Map for the TIDs.
+ *
+ * @get_channel: Get the current operating channel for the virtual interface.
+ *	For monitor interfaces, it should return %NULL unless there&apos;s a single
+ *	current monitoring channel.
+ *
+ * @start_p2p_device: Start the given P2P device.
+ * @stop_p2p_device: Stop the given P2P device.
+ *
+ * @set_mac_acl: Sets MAC address control list in AP and P2P GO mode.
+ *	Parameters include ACL policy, an array of MAC address of stations
+ *	and the number of MAC addresses. If there is already a list in driver
+ *	this new list replaces the existing one. Driver has to clear its ACL
+ *	when number of MAC addresses entries is passed as 0. Drivers which
+ *	advertise the support for MAC based ACL have to implement this callback.
+ *
+ * @start_radar_detection: Start radar detection in the driver.
+ *
+ * @update_ft_ies: Provide updated Fast BSS Transition information to the
+ *	driver. If the SME is in the driver/firmware, this information can be
+ *	used in building Authentication and Reassociation Request frames.
+ *
+ * @crit_proto_start: Indicates a critical protocol needs more link reliability
+ *	for a given duration (milliseconds). The protocol is provided so the
+ *	driver can take the most appropriate actions.
+ * @crit_proto_stop: Indicates critical protocol no longer needs increased link
+ *	reliability. This operation can not fail.
+ * @set_coalesce: Set coalesce parameters.
+ *
+ * @channel_switch: initiate channel-switch procedure (with CSA). Driver is
+ *	responsible for veryfing if the switch is possible. Since this is
+ *	inherently tricky driver may decide to disconnect an interface later
+ *	with cfg80211_stop_iface(). This doesn&apos;t mean driver can accept
+ *	everything. It should do it&apos;s best to verify requests and reject them
+ *	as soon as possible.
+ *
+ * @set_qos_map: Set QoS mapping information to the driver
+ *
+ * @set_ap_chanwidth: Set the AP (including P2P GO) mode channel width for the
+ *	given interface This is used e.g. for dynamic HT 20/40 MHz channel width
+ *	changes during the lifetime of the BSS.
+ *
+ * @add_tx_ts: validate (if admitted_time is 0) or add a TX TS to the device
+ *	with the given parameters; action frame exchange has been handled by
+ *	userspace so this just has to modify the TX path to take the TS into
+ *	account.
+ *	If the admitted time is 0 just validate the parameters to make sure
+ *	the session can be created at all; it is valid to just always return
+ *	success for that but that may result in inefficient behaviour (handshake
+ *	with the peer followed by immediate teardown when the addition is later
+ *	rejected)
+ * @del_tx_ts: remove an existing TX TS
+ *
+ * @join_ocb: join the OCB network with the specified parameters
+ *	(invoked with the wireless_dev mutex held)
+ * @leave_ocb: leave the current OCB network
+ *	(invoked with the wireless_dev mutex held)
+ *
+ * @tdls_channel_switch: Start channel-switching with a TDLS peer. The driver
+ *	is responsible for continually initiating channel-switching operations
+ *	and returning to the base channel for communication with the AP.
+ * @tdls_cancel_channel_switch: Stop channel-switching with a TDLS peer. Both
+ *	peers must be on the base channel when the call completes.
+ * @start_nan: Start the NAN interface.
+ * @stop_nan: Stop the NAN interface.
+ * @add_nan_func: Add a NAN function. Returns negative value on failure.
+ *	On success @nan_func ownership is transferred to the driver and
+ *	it may access it outside of the scope of this function. The driver
+ *	should free the @nan_func when no longer needed by calling
+ *	cfg80211_free_nan_func().
+ *	On success the driver should assign an instance_id in the
+ *	provided @nan_func.
+ * @del_nan_func: Delete a NAN function.
+ * @nan_change_conf: changes NAN configuration. The changed parameters must
+ *	be specified in @changes (using &amp;enum cfg80211_nan_conf_changes);
+ *	All other parameters must be ignored.
+ *
+ * @set_multicast_to_unicast: configure multicast to unicast conversion for BSS
+ *
+ * @get_txq_stats: Get TXQ stats for interface or phy. If wdev is %NULL, this
+ *      function should return phy stats, and interface stats otherwise.
+ *
+ * @set_pmk: configure the PMK to be used for offloaded 802.1X 4-Way handshake.
+ *	If not deleted through @del_pmk the PMK remains valid until disconnect
+ *	upon which the driver should clear it.
+ *	(invoked with the wireless_dev mutex held)
+ * @del_pmk: delete the previously configured PMK for the given authenticator.
+ *	(invoked with the wireless_dev mutex held)
+ *
+ * @external_auth: indicates result of offloaded authentication processing from
+ *     user space
+ *
+ * @tx_control_port: TX a control port frame (EAPoL).  The noencrypt parameter
+ *	tells the driver that the frame should not be encrypted.
+ *
+ * @get_ftm_responder_stats: Retrieve FTM responder statistics, if available.
+ *	Statistics should be cumulative, currently no way to reset is provided.
+ * @start_pmsr: start peer measurement (e.g. FTM)
+ * @abort_pmsr: abort peer measurement
+ *
+ * @update_owe_info: Provide updated OWE info to driver. Driver implementing SME
+ *	but offloading OWE processing to the user space will get the updated
+ *	DH IE through this interface.
+ *
+ * @probe_mesh_link: Probe direct Mesh peer&apos;s link quality by sending data frame
+ *	and overrule HWMP path selection algorithm.
+ */</doc>
+<mbr r='cfg80211_ops::suspend' o='0' t='int (*)(struct wiphy *, struct cfg80211_wowlan *)'/>
+<mbr r='cfg80211_ops::resume' o='64' t='int (*)(struct wiphy *)'/>
+<mbr r='cfg80211_ops::set_wakeup' o='128' t='void (*)(struct wiphy *, bool)'/>
+<mbr r='cfg80211_ops::add_virtual_intf' o='192' t='struct wireless_dev *(*)(struct wiphy *, const char *, unsigned char, enum nl80211_iftype, struct vif_params *)'/>
+<mbr r='cfg80211_ops::del_virtual_intf' o='256' t='int (*)(struct wiphy *, struct wireless_dev *)'/>
+<mbr r='cfg80211_ops::change_virtual_intf' o='320' t='int (*)(struct wiphy *, struct net_device *, enum nl80211_iftype, struct vif_params *)'/>
+<mbr r='cfg80211_ops::add_key' o='384' t='int (*)(struct wiphy *, struct net_device *, u8, bool, const u8 *, struct key_params *)'/>
+<mbr r='cfg80211_ops::get_key' o='448' t='int (*)(struct wiphy *, struct net_device *, u8, bool, const u8 *, void *, void (*)(void *, struct key_params *))'/>
+<mbr r='cfg80211_ops::del_key' o='512' t='int (*)(struct wiphy *, struct net_device *, u8, bool, const u8 *)'/>
+<mbr r='cfg80211_ops::set_default_key' o='576' t='int (*)(struct wiphy *, struct net_device *, u8, bool, bool)'/>
+<mbr r='cfg80211_ops::set_default_mgmt_key' o='640' t='int (*)(struct wiphy *, struct net_device *, u8)'/>
+<mbr r='cfg80211_ops::start_ap' o='704' t='int (*)(struct wiphy *, struct net_device *, struct cfg80211_ap_settings *)'/>
+<mbr r='cfg80211_ops::change_beacon' o='768' t='int (*)(struct wiphy *, struct net_device *, struct cfg80211_beacon_data *)'/>
+<mbr r='cfg80211_ops::stop_ap' o='832' t='int (*)(struct wiphy *, struct net_device *)'/>
+<mbr r='cfg80211_ops::add_station' o='896' t='int (*)(struct wiphy *, struct net_device *, const u8 *, struct station_parameters *)'/>
+<mbr r='cfg80211_ops::del_station' o='960' t='int (*)(struct wiphy *, struct net_device *, struct station_del_parameters *)'/>
+<mbr r='cfg80211_ops::change_station' o='1024' t='int (*)(struct wiphy *, struct net_device *, const u8 *, struct station_parameters *)'/>
+<mbr r='cfg80211_ops::get_station' o='1088' t='int (*)(struct wiphy *, struct net_device *, const u8 *, struct station_info *)'/>
+<mbr r='cfg80211_ops::dump_station' o='1152' t='int (*)(struct wiphy *, struct net_device *, int, u8 *, struct station_info *)'/>
+<mbr r='cfg80211_ops::add_mpath' o='1216' t='int (*)(struct wiphy *, struct net_device *, const u8 *, const u8 *)'/>
+<mbr r='cfg80211_ops::del_mpath' o='1280' t='int (*)(struct wiphy *, struct net_device *, const u8 *)'/>
+<mbr r='cfg80211_ops::change_mpath' o='1344' t='int (*)(struct wiphy *, struct net_device *, const u8 *, const u8 *)'/>
+<mbr r='cfg80211_ops::get_mpath' o='1408' t='int (*)(struct wiphy *, struct net_device *, u8 *, u8 *, struct mpath_info *)'/>
+<mbr r='cfg80211_ops::dump_mpath' o='1472' t='int (*)(struct wiphy *, struct net_device *, int, u8 *, u8 *, struct mpath_info *)'/>
+<mbr r='cfg80211_ops::get_mpp' o='1536' t='int (*)(struct wiphy *, struct net_device *, u8 *, u8 *, struct mpath_info *)'/>
+<mbr r='cfg80211_ops::dump_mpp' o='1600' t='int (*)(struct wiphy *, struct net_device *, int, u8 *, u8 *, struct mpath_info *)'/>
+<mbr r='cfg80211_ops::get_mesh_config' o='1664' t='int (*)(struct wiphy *, struct net_device *, struct mesh_config *)'/>
+<mbr r='cfg80211_ops::update_mesh_config' o='1728' t='int (*)(struct wiphy *, struct net_device *, u32, const struct mesh_config *)'/>
+<mbr r='cfg80211_ops::join_mesh' o='1792' t='int (*)(struct wiphy *, struct net_device *, const struct mesh_config *, const struct mesh_setup *)'/>
+<mbr r='cfg80211_ops::leave_mesh' o='1856' t='int (*)(struct wiphy *, struct net_device *)'/>
+<mbr r='cfg80211_ops::join_ocb' o='1920' t='int (*)(struct wiphy *, struct net_device *, struct ocb_setup *)'/>
+<mbr r='cfg80211_ops::leave_ocb' o='1984' t='int (*)(struct wiphy *, struct net_device *)'/>
+<mbr r='cfg80211_ops::change_bss' o='2048' t='int (*)(struct wiphy *, struct net_device *, struct bss_parameters *)'/>
+<mbr r='cfg80211_ops::set_txq_params' o='2112' t='int (*)(struct wiphy *, struct net_device *, struct ieee80211_txq_params *)'/>
+<mbr r='cfg80211_ops::libertas_set_mesh_channel' o='2176' t='int (*)(struct wiphy *, struct net_device *, struct ieee80211_channel *)'/>
+<mbr r='cfg80211_ops::set_monitor_channel' o='2240' t='int (*)(struct wiphy *, struct cfg80211_chan_def *)'/>
+<mbr r='cfg80211_ops::scan' o='2304' t='int (*)(struct wiphy *, struct cfg80211_scan_request *)'/>
+<mbr r='cfg80211_ops::abort_scan' o='2368' t='void (*)(struct wiphy *, struct wireless_dev *)'/>
+<mbr r='cfg80211_ops::auth' o='2432' t='int (*)(struct wiphy *, struct net_device *, struct cfg80211_auth_request *)'/>
+<mbr r='cfg80211_ops::assoc' o='2496' t='int (*)(struct wiphy *, struct net_device *, struct cfg80211_assoc_request *)'/>
+<mbr r='cfg80211_ops::deauth' o='2560' t='int (*)(struct wiphy *, struct net_device *, struct cfg80211_deauth_request *)'/>
+<mbr r='cfg80211_ops::disassoc' o='2624' t='int (*)(struct wiphy *, struct net_device *, struct cfg80211_disassoc_request *)'/>
+<mbr r='cfg80211_ops::connect' o='2688' t='int (*)(struct wiphy *, struct net_device *, struct cfg80211_connect_params *)'/>
+<mbr r='cfg80211_ops::update_connect_params' o='2752' t='int (*)(struct wiphy *, struct net_device *, struct cfg80211_connect_params *, u32)'/>
+<mbr r='cfg80211_ops::disconnect' o='2816' t='int (*)(struct wiphy *, struct net_device *, u16)'/>
+<mbr r='cfg80211_ops::join_ibss' o='2880' t='int (*)(struct wiphy *, struct net_device *, struct cfg80211_ibss_params *)'/>
+<mbr r='cfg80211_ops::leave_ibss' o='2944' t='int (*)(struct wiphy *, struct net_device *)'/>
+<mbr r='cfg80211_ops::set_mcast_rate' o='3008' t='int (*)(struct wiphy *, struct net_device *, int *)'/>
+<mbr r='cfg80211_ops::set_wiphy_params' o='3072' t='int (*)(struct wiphy *, u32)'/>
+<mbr r='cfg80211_ops::set_tx_power' o='3136' t='int (*)(struct wiphy *, struct wireless_dev *, enum nl80211_tx_power_setting, int)'/>
+<mbr r='cfg80211_ops::get_tx_power' o='3200' t='int (*)(struct wiphy *, struct wireless_dev *, int *)'/>
+<mbr r='cfg80211_ops::set_wds_peer' o='3264' t='int (*)(struct wiphy *, struct net_device *, const u8 *)'/>
+<mbr r='cfg80211_ops::rfkill_poll' o='3328' t='void (*)(struct wiphy *)'/>
+<mbr r='cfg80211_ops::set_bitrate_mask' o='3392' t='int (*)(struct wiphy *, struct net_device *, const u8 *, const struct cfg80211_bitrate_mask *)'/>
+<mbr r='cfg80211_ops::dump_survey' o='3456' t='int (*)(struct wiphy *, struct net_device *, int, struct survey_info *)'/>
+<mbr r='cfg80211_ops::set_pmksa' o='3520' t='int (*)(struct wiphy *, struct net_device *, struct cfg80211_pmksa *)'/>
+<mbr r='cfg80211_ops::del_pmksa' o='3584' t='int (*)(struct wiphy *, struct net_device *, struct cfg80211_pmksa *)'/>
+<mbr r='cfg80211_ops::flush_pmksa' o='3648' t='int (*)(struct wiphy *, struct net_device *)'/>
+<mbr r='cfg80211_ops::remain_on_channel' o='3712' t='int (*)(struct wiphy *, struct wireless_dev *, struct ieee80211_channel *, unsigned int, u64 *)'/>
+<mbr r='cfg80211_ops::cancel_remain_on_channel' o='3776' t='int (*)(struct wiphy *, struct wireless_dev *, u64)'/>
+<mbr r='cfg80211_ops::mgmt_tx' o='3840' t='int (*)(struct wiphy *, struct wireless_dev *, struct cfg80211_mgmt_tx_params *, u64 *)'/>
+<mbr r='cfg80211_ops::mgmt_tx_cancel_wait' o='3904' t='int (*)(struct wiphy *, struct wireless_dev *, u64)'/>
+<mbr r='cfg80211_ops::set_power_mgmt' o='3968' t='int (*)(struct wiphy *, struct net_device *, bool, int)'/>
+<mbr r='cfg80211_ops::set_cqm_rssi_config' o='4032' t='int (*)(struct wiphy *, struct net_device *, s32, u32)'/>
+<mbr r='cfg80211_ops::set_cqm_rssi_range_config' o='4096' t='int (*)(struct wiphy *, struct net_device *, s32, s32)'/>
+<mbr r='cfg80211_ops::set_cqm_txe_config' o='4160' t='int (*)(struct wiphy *, struct net_device *, u32, u32, u32)'/>
+<mbr r='cfg80211_ops::mgmt_frame_register' o='4224' t='void (*)(struct wiphy *, struct wireless_dev *, u16, bool)'/>
+<mbr r='cfg80211_ops::set_antenna' o='4288' t='int (*)(struct wiphy *, u32, u32)'/>
+<mbr r='cfg80211_ops::get_antenna' o='4352' t='int (*)(struct wiphy *, u32 *, u32 *)'/>
+<mbr r='cfg80211_ops::sched_scan_start' o='4416' t='int (*)(struct wiphy *, struct net_device *, struct cfg80211_sched_scan_request *)'/>
+<mbr r='cfg80211_ops::sched_scan_stop' o='4480' t='int (*)(struct wiphy *, struct net_device *, u64)'/>
+<mbr r='cfg80211_ops::set_rekey_data' o='4544' t='int (*)(struct wiphy *, struct net_device *, struct cfg80211_gtk_rekey_data *)'/>
+<mbr r='cfg80211_ops::tdls_mgmt' o='4608' t='int (*)(struct wiphy *, struct net_device *, const u8 *, u8, u8, u16, u32, bool, const u8 *, size_t)'/>
+<mbr r='cfg80211_ops::tdls_oper' o='4672' t='int (*)(struct wiphy *, struct net_device *, const u8 *, enum nl80211_tdls_operation)'/>
+<mbr r='cfg80211_ops::probe_client' o='4736' t='int (*)(struct wiphy *, struct net_device *, const u8 *, u64 *)'/>
+<mbr r='cfg80211_ops::set_noack_map' o='4800' t='int (*)(struct wiphy *, struct net_device *, u16)'/>
+<mbr r='cfg80211_ops::get_channel' o='4864' t='int (*)(struct wiphy *, struct wireless_dev *, struct cfg80211_chan_def *)'/>
+<mbr r='cfg80211_ops::start_p2p_device' o='4928' t='int (*)(struct wiphy *, struct wireless_dev *)'/>
+<mbr r='cfg80211_ops::stop_p2p_device' o='4992' t='void (*)(struct wiphy *, struct wireless_dev *)'/>
+<mbr r='cfg80211_ops::set_mac_acl' o='5056' t='int (*)(struct wiphy *, struct net_device *, const struct cfg80211_acl_data *)'/>
+<mbr r='cfg80211_ops::start_radar_detection' o='5120' t='int (*)(struct wiphy *, struct net_device *, struct cfg80211_chan_def *, u32)'/>
+<mbr r='cfg80211_ops::update_ft_ies' o='5184' t='int (*)(struct wiphy *, struct net_device *, struct cfg80211_update_ft_ies_params *)'/>
+<mbr r='cfg80211_ops::crit_proto_start' o='5248' t='int (*)(struct wiphy *, struct wireless_dev *, enum nl80211_crit_proto_id, u16)'/>
+<mbr r='cfg80211_ops::crit_proto_stop' o='5312' t='void (*)(struct wiphy *, struct wireless_dev *)'/>
+<mbr r='cfg80211_ops::set_coalesce' o='5376' t='int (*)(struct wiphy *, struct cfg80211_coalesce *)'/>
+<mbr r='cfg80211_ops::channel_switch' o='5440' t='int (*)(struct wiphy *, struct net_device *, struct cfg80211_csa_settings *)'/>
+<mbr r='cfg80211_ops::set_qos_map' o='5504' t='int (*)(struct wiphy *, struct net_device *, struct cfg80211_qos_map *)'/>
+<mbr r='cfg80211_ops::set_ap_chanwidth' o='5568' t='int (*)(struct wiphy *, struct net_device *, struct cfg80211_chan_def *)'/>
+<mbr r='cfg80211_ops::add_tx_ts' o='5632' t='int (*)(struct wiphy *, struct net_device *, u8, const u8 *, u8, u16)'/>
+<mbr r='cfg80211_ops::del_tx_ts' o='5696' t='int (*)(struct wiphy *, struct net_device *, u8, const u8 *)'/>
+<mbr r='cfg80211_ops::tdls_channel_switch' o='5760' t='int (*)(struct wiphy *, struct net_device *, const u8 *, u8, struct cfg80211_chan_def *)'/>
+<mbr r='cfg80211_ops::tdls_cancel_channel_switch' o='5824' t='void (*)(struct wiphy *, struct net_device *, const u8 *)'/>
+<mbr r='cfg80211_ops::start_nan' o='5888' t='int (*)(struct wiphy *, struct wireless_dev *, struct cfg80211_nan_conf *)'/>
+<mbr r='cfg80211_ops::stop_nan' o='5952' t='void (*)(struct wiphy *, struct wireless_dev *)'/>
+<mbr r='cfg80211_ops::add_nan_func' o='6016' t='int (*)(struct wiphy *, struct wireless_dev *, struct cfg80211_nan_func *)'/>
+<mbr r='cfg80211_ops::del_nan_func' o='6080' t='void (*)(struct wiphy *, struct wireless_dev *, u64)'/>
+<mbr r='cfg80211_ops::nan_change_conf' o='6144' t='int (*)(struct wiphy *, struct wireless_dev *, struct cfg80211_nan_conf *, u32)'/>
+<mbr r='cfg80211_ops::set_multicast_to_unicast' o='6208' t='int (*)(struct wiphy *, struct net_device *, const bool)'/>
+<mbr r='cfg80211_ops::get_txq_stats' o='6272' t='int (*)(struct wiphy *, struct wireless_dev *, struct cfg80211_txq_stats *)'/>
+<mbr r='cfg80211_ops::set_pmk' o='6336' t='int (*)(struct wiphy *, struct net_device *, const struct cfg80211_pmk_conf *)'/>
+<mbr r='cfg80211_ops::del_pmk' o='6400' t='int (*)(struct wiphy *, struct net_device *, const u8 *)'/>
+<mbr r='cfg80211_ops::external_auth' o='6464' t='int (*)(struct wiphy *, struct net_device *, struct cfg80211_external_auth_params *)'/>
+<mbr r='cfg80211_ops::tx_control_port' o='6528' t='int (*)(struct wiphy *, struct net_device *, const u8 *, size_t, const u8 *, const __be16, const bool)'/>
+<mbr r='cfg80211_ops::get_ftm_responder_stats' o='6592' t='int (*)(struct wiphy *, struct net_device *, struct cfg80211_ftm_responder_stats *)'/>
+<mbr r='cfg80211_ops::start_pmsr' o='6656' t='int (*)(struct wiphy *, struct wireless_dev *, struct cfg80211_pmsr_request *)'/>
+<mbr r='cfg80211_ops::abort_pmsr' o='6720' t='void (*)(struct wiphy *, struct wireless_dev *, struct cfg80211_pmsr_request *)'/>
+<mbr r='cfg80211_ops::update_owe_info' o='6784' t='int (*)(struct wiphy *, struct net_device *, struct cfg80211_update_owe_info *)'/>
+<mbr r='cfg80211_ops::probe_mesh_link' o='6848' t='int (*)(struct wiphy *, struct net_device *, const u8 *, size_t)'/>
+<use f='linux-5.3.1/net/mac80211/ieee80211_i.h' l='36'/>
+<size>864</size>
+<use f='linux-5.3.1/net/mac80211/cfg.c' l='3942'/>
+<size>864</size>
+<use f='linux-5.3.1/net/wireless/core.h' l='25'/>
+<size>864</size>
+<use f='linux-5.3.1/net/wireless/core.c' l='399' c='wiphy_new_nm'/>
+<size>864</size>

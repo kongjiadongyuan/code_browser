@@ -1,0 +1,32 @@
+<dec f='linux-5.3.1/include/uapi/linux/tcp.h' l='37' type='__u16'/>
+<offset>108</offset>
+<use f='linux-5.3.1/net/core/filter.c' l='5803' u='r' c='____bpf_tcp_check_syncookie'/>
+<use f='linux-5.3.1/net/ipv4/netfilter/nf_reject_ipv4.c' l='81' u='r' c='nf_reject_ip_tcphdr_put'/>
+<use f='linux-5.3.1/net/ipv4/netfilter/nf_reject_ipv4.c' l='87' u='w' c='nf_reject_ip_tcphdr_put'/>
+<use f='linux-5.3.1/net/ipv4/syncookies.c' l='300' u='r' c='cookie_v4_check'/>
+<use f='linux-5.3.1/net/ipv4/tcp_input.c' l='4018' u='r' c='tcp_disordered_ack'/>
+<use f='linux-5.3.1/net/ipv4/tcp_input.c' l='5641' u='r' c='tcp_rcv_established'/>
+<use f='linux-5.3.1/net/ipv4/tcp_input.c' l='5831' u='r' c='tcp_rcv_synsent_state_process'/>
+<use f='linux-5.3.1/net/ipv4/tcp_input.c' l='6089' u='r' c='tcp_rcv_state_process'/>
+<use f='linux-5.3.1/net/ipv4/tcp_input.c' l='6141' u='r' c='tcp_rcv_state_process'/>
+<use f='linux-5.3.1/net/ipv4/tcp_ipv4.c' l='686' u='r' c='tcp_v4_send_reset'/>
+<use f='linux-5.3.1/net/ipv4/tcp_ipv4.c' l='689' u='w' c='tcp_v4_send_reset'/>
+<use f='linux-5.3.1/net/ipv4/tcp_ipv4.c' l='837' u='w' c='tcp_v4_send_ack'/>
+<use f='linux-5.3.1/net/ipv4/tcp_minisocks.c' l='130' u='r' c='tcp_timewait_state_process'/>
+<use f='linux-5.3.1/net/ipv4/tcp_minisocks.c' l='218' u='r' c='tcp_timewait_state_process'/>
+<use f='linux-5.3.1/net/ipv4/tcp_minisocks.c' l='239' u='r' c='tcp_timewait_state_process'/>
+<use f='linux-5.3.1/net/ipv4/tcp_output.c' l='3305' u='w' c='tcp_make_synack'/>
+<use f='linux-5.3.1/net/ipv6/netfilter/nf_reject_ipv6.c' l='101' u='r' c='nf_reject_ip6_tcphdr_put'/>
+<use f='linux-5.3.1/net/ipv6/netfilter/nf_reject_ipv6.c' l='115' u='w' c='nf_reject_ip6_tcphdr_put'/>
+<use f='linux-5.3.1/net/ipv6/syncookies.c' l='144' u='r' c='cookie_v6_check'/>
+<use f='linux-5.3.1/net/ipv6/tcp_ipv6.c' l='843' u='w' c='tcp_v6_send_response'/>
+<use f='linux-5.3.1/net/ipv6/tcp_ipv6.c' l='843' u='r' c='tcp_v6_send_response'/>
+<use f='linux-5.3.1/net/ipv6/tcp_ipv6.c' l='979' u='r' c='tcp_v6_send_reset'/>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_proto_tcp.c' l='286' u='r' c='get_conntrack_index'/>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_proto_tcp.c' l='288' u='r' c='get_conntrack_index'/>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_proto_tcp.c' l='531' u='r' c='tcp_in_window'/>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_proto_tcp.c' l='569' u='r' c='tcp_in_window'/>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_proto_tcp.c' l='631' u='r' c='tcp_in_window'/>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_proto_tcp.c' l='1104' u='r' c='nf_conntrack_tcp_packet'/>
+<use f='linux-5.3.1/net/netfilter/nf_conntrack_seqadj.c' l='195' u='r' c='nf_ct_seq_adjust'/>
+<use f='linux-5.3.1/net/netfilter/nf_log_common.c' l='94' u='r' c='nf_log_dump_tcp_header'/>

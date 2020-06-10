@@ -1,0 +1,131 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>system.c source code [linux-5.3.1/drivers/pnp/system.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/drivers/pnp/system.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>drivers</a>/<a href='./'>pnp</a>/<a href='system.c.html'>system.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * system.c - a driver for reserving pnp system resources</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * Some code is based on pnpbios_core.c</i></td></tr>
+<tr><th id="6">6</th><td><i> * Copyright 2002 Adam Belay &lt;ambx1@neo.rr.com&gt;</i></td></tr>
+<tr><th id="7">7</th><td><i> * (c) Copyright 2007 Hewlett-Packard Development Company, L.P.</i></td></tr>
+<tr><th id="8">8</th><td><i> *	Bjorn Helgaas &lt;bjorn.helgaas@hp.com&gt;</i></td></tr>
+<tr><th id="9">9</th><td><i> */</i></td></tr>
+<tr><th id="10">10</th><td></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../../include/linux/pnp.h.html">&lt;linux/pnp.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="../../include/linux/device.h.html">&lt;linux/device.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="../../include/linux/init.h.html">&lt;linux/init.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="../../include/linux/slab.h.html">&lt;linux/slab.h&gt;</a></u></td></tr>
+<tr><th id="15">15</th><td><u>#include <a href="../../include/linux/kernel.h.html">&lt;linux/kernel.h&gt;</a></u></td></tr>
+<tr><th id="16">16</th><td><u>#include <a href="../../include/linux/ioport.h.html">&lt;linux/ioport.h&gt;</a></u></td></tr>
+<tr><th id="17">17</th><td></td></tr>
+<tr><th id="18">18</th><td><em>static</em> <em>const</em> <b>struct</b> <a class="type" href="../../include/linux/mod_devicetable.h.html#pnp_device_id" title='pnp_device_id' data-ref="pnp_device_id" data-ref-filename="pnp_device_id">pnp_device_id</a> <dfn class="tu decl def" id="pnp_dev_table" title='pnp_dev_table' data-type='const struct pnp_device_id [3]' data-ref="pnp_dev_table" data-ref-filename="pnp_dev_table">pnp_dev_table</dfn>[] = {</td></tr>
+<tr><th id="19">19</th><td>	<i>/* General ID for reserving resources */</i></td></tr>
+<tr><th id="20">20</th><td>	{<q>"PNP0c02"</q>, <var>0</var>},</td></tr>
+<tr><th id="21">21</th><td>	<i>/* memory controller */</i></td></tr>
+<tr><th id="22">22</th><td>	{<q>"PNP0c01"</q>, <var>0</var>},</td></tr>
+<tr><th id="23">23</th><td>	{<q>""</q>, <var>0</var>}</td></tr>
+<tr><th id="24">24</th><td>};</td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="reserve_range" title='reserve_range' data-type='void reserve_range(struct pnp_dev * dev, struct resource * r, int port)' data-ref="reserve_range" data-ref-filename="reserve_range">reserve_range</dfn>(<b>struct</b> <a class="type" href="../../include/linux/pnp.h.html#pnp_dev" title='pnp_dev' data-ref="pnp_dev" data-ref-filename="pnp_dev">pnp_dev</a> *<dfn class="local col1 decl" id="1dev" title='dev' data-type='struct pnp_dev *' data-ref="1dev" data-ref-filename="1dev">dev</dfn>, <b>struct</b> <a class="type" href="../../include/linux/ioport.h.html#resource" title='resource' data-ref="resource" data-ref-filename="resource">resource</a> *<dfn class="local col2 decl" id="2r" title='r' data-type='struct resource *' data-ref="2r" data-ref-filename="2r">r</dfn>, <em>int</em> <dfn class="local col3 decl" id="3port" title='port' data-type='int' data-ref="3port" data-ref-filename="3port">port</dfn>)</td></tr>
+<tr><th id="27">27</th><td>{</td></tr>
+<tr><th id="28">28</th><td>	<em>char</em> *<dfn class="local col4 decl" id="4regionid" title='regionid' data-type='char *' data-ref="4regionid" data-ref-filename="4regionid">regionid</dfn>;</td></tr>
+<tr><th id="29">29</th><td>	<em>const</em> <em>char</em> *<dfn class="local col5 decl" id="5pnpid" title='pnpid' data-type='const char *' data-ref="5pnpid" data-ref-filename="5pnpid">pnpid</dfn> = <a class="ref fn" href="../../include/linux/device.h.html#dev_name" title='dev_name' data-ref="dev_name" data-ref-filename="dev_name">dev_name</a>(&amp;<a class="local col1 ref" href="#1dev" title='dev' data-ref="1dev" data-ref-filename="1dev">dev</a>-&gt;<a class="ref field" href="../../include/linux/pnp.h.html#pnp_dev::dev" title='pnp_dev::dev' data-ref="pnp_dev::dev" data-ref-filename="pnp_dev..dev">dev</a>);</td></tr>
+<tr><th id="30">30</th><td>	<a class="typedef" href="../../include/linux/types.h.html#resource_size_t" title='resource_size_t' data-type='phys_addr_t' data-ref="resource_size_t" data-ref-filename="resource_size_t">resource_size_t</a> <dfn class="local col6 decl" id="6start" title='start' data-type='resource_size_t' data-ref="6start" data-ref-filename="6start">start</dfn> = <a class="local col2 ref" href="#2r" title='r' data-ref="2r" data-ref-filename="2r">r</a>-&gt;<a class="ref field" href="../../include/linux/ioport.h.html#resource::start" title='resource::start' data-ref="resource::start" data-ref-filename="resource..start">start</a>, <dfn class="local col7 decl" id="7end" title='end' data-type='resource_size_t' data-ref="7end" data-ref-filename="7end">end</dfn> = <a class="local col2 ref" href="#2r" title='r' data-ref="2r" data-ref-filename="2r">r</a>-&gt;<a class="ref field" href="../../include/linux/ioport.h.html#resource::end" title='resource::end' data-ref="resource::end" data-ref-filename="resource..end">end</a>;</td></tr>
+<tr><th id="31">31</th><td>	<b>struct</b> <a class="type" href="../../include/linux/ioport.h.html#resource" title='resource' data-ref="resource" data-ref-filename="resource">resource</a> *<dfn class="local col8 decl" id="8res" title='res' data-type='struct resource *' data-ref="8res" data-ref-filename="8res">res</dfn>;</td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td>	<a class="local col4 ref" href="#4regionid" title='regionid' data-ref="4regionid" data-ref-filename="4regionid">regionid</a> = <a class="ref fn" href="../../include/linux/slab.h.html#kmalloc" title='kmalloc' data-ref="kmalloc" data-ref-filename="kmalloc">kmalloc</a>(<var>16</var>, <a class="macro" href="../../include/linux/gfp.h.html#290" title="((( gfp_t)(0x400u|0x800u)) | (( gfp_t)0x40u) | (( gfp_t)0x80u))" data-ref="_M/GFP_KERNEL">GFP_KERNEL</a>);</td></tr>
+<tr><th id="34">34</th><td>	<b>if</b> (!<a class="local col4 ref" href="#4regionid" title='regionid' data-ref="4regionid" data-ref-filename="4regionid">regionid</a>)</td></tr>
+<tr><th id="35">35</th><td>		<b>return</b>;</td></tr>
+<tr><th id="36">36</th><td></td></tr>
+<tr><th id="37">37</th><td>	<a class="ref fn" href="../../include/linux/kernel.h.html#snprintf" title='snprintf' data-ref="snprintf" data-ref-filename="snprintf">snprintf</a>(<a class="local col4 ref" href="#4regionid" title='regionid' data-ref="4regionid" data-ref-filename="4regionid">regionid</a>, <var>16</var>, <q>"pnp %s"</q>, <a class="local col5 ref" href="#5pnpid" title='pnpid' data-ref="5pnpid" data-ref-filename="5pnpid">pnpid</a>);</td></tr>
+<tr><th id="38">38</th><td>	<b>if</b> (<a class="local col3 ref" href="#3port" title='port' data-ref="3port" data-ref-filename="3port">port</a>)</td></tr>
+<tr><th id="39">39</th><td>		<a class="local col8 ref" href="#8res" title='res' data-ref="8res" data-ref-filename="8res">res</a> = <a class="macro" href="../../include/linux/ioport.h.html#229" title="__request_region(&amp;ioport_resource, (start), (end - start + 1), (regionid), 0)" data-ref="_M/request_region">request_region</a>(<a class="local col6 ref" href="#6start" title='start' data-ref="6start" data-ref-filename="6start">start</a>, <a class="local col7 ref" href="#7end" title='end' data-ref="7end" data-ref-filename="7end">end</a> - <a class="local col6 ref" href="#6start" title='start' data-ref="6start" data-ref-filename="6start">start</a> + <var>1</var>, <a class="local col4 ref" href="#4regionid" title='regionid' data-ref="4regionid" data-ref-filename="4regionid">regionid</a>);</td></tr>
+<tr><th id="40">40</th><td>	<b>else</b></td></tr>
+<tr><th id="41">41</th><td>		<a class="local col8 ref" href="#8res" title='res' data-ref="8res" data-ref-filename="8res">res</a> = <a class="macro" href="../../include/linux/ioport.h.html#232" title="__request_region(&amp;iomem_resource, (start), (end - start + 1), (regionid), 0)" data-ref="_M/request_mem_region">request_mem_region</a>(<a class="local col6 ref" href="#6start" title='start' data-ref="6start" data-ref-filename="6start">start</a>, <a class="local col7 ref" href="#7end" title='end' data-ref="7end" data-ref-filename="7end">end</a> - <a class="local col6 ref" href="#6start" title='start' data-ref="6start" data-ref-filename="6start">start</a> + <var>1</var>, <a class="local col4 ref" href="#4regionid" title='regionid' data-ref="4regionid" data-ref-filename="4regionid">regionid</a>);</td></tr>
+<tr><th id="42">42</th><td>	<b>if</b> (<a class="local col8 ref" href="#8res" title='res' data-ref="8res" data-ref-filename="8res">res</a>)</td></tr>
+<tr><th id="43">43</th><td>		<a class="local col8 ref" href="#8res" title='res' data-ref="8res" data-ref-filename="8res">res</a>-&gt;<a class="ref field" href="../../include/linux/ioport.h.html#resource::flags" title='resource::flags' data-ref="resource::flags" data-ref-filename="resource..flags">flags</a> &amp;= ~<a class="macro" href="../../include/linux/ioport.h.html#66" title="0x80000000" data-ref="_M/IORESOURCE_BUSY">IORESOURCE_BUSY</a>;</td></tr>
+<tr><th id="44">44</th><td>	<b>else</b></td></tr>
+<tr><th id="45">45</th><td>		<a class="ref fn" href="../../include/linux/slab.h.html#kfree" title='kfree' data-ref="kfree" data-ref-filename="kfree">kfree</a>(<a class="local col4 ref" href="#4regionid" title='regionid' data-ref="4regionid" data-ref-filename="4regionid">regionid</a>);</td></tr>
+<tr><th id="46">46</th><td></td></tr>
+<tr><th id="47">47</th><td>	<i>/*</i></td></tr>
+<tr><th id="48">48</th><td><i>	 * Failures at this point are usually harmless. pci quirks for</i></td></tr>
+<tr><th id="49">49</th><td><i>	 * example do reserve stuff they know about too, so we may well</i></td></tr>
+<tr><th id="50">50</th><td><i>	 * have double reservations.</i></td></tr>
+<tr><th id="51">51</th><td><i>	 */</i></td></tr>
+<tr><th id="52">52</th><td>	<a class="macro" href="../../include/linux/device.h.html#1504" title="_dev_info(&amp;dev-&gt;dev, &quot;%pR %s reserved\n&quot;, r, res ? &quot;has been&quot; : &quot;could not be&quot;)" data-ref="_M/dev_info">dev_info</a>(&amp;<a class="local col1 ref" href="#1dev" title='dev' data-ref="1dev" data-ref-filename="1dev">dev</a>-&gt;<a class="ref field" href="../../include/linux/pnp.h.html#pnp_dev::dev" title='pnp_dev::dev' data-ref="pnp_dev::dev" data-ref-filename="pnp_dev..dev">dev</a>, <q>"%pR %s reserved\n"</q>, <a class="local col2 ref" href="#2r" title='r' data-ref="2r" data-ref-filename="2r">r</a>,</td></tr>
+<tr><th id="53">53</th><td>		 <a class="local col8 ref" href="#8res" title='res' data-ref="8res" data-ref-filename="8res">res</a> ? <q>"has been"</q> : <q>"could not be"</q>);</td></tr>
+<tr><th id="54">54</th><td>}</td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="reserve_resources_of_dev" title='reserve_resources_of_dev' data-type='void reserve_resources_of_dev(struct pnp_dev * dev)' data-ref="reserve_resources_of_dev" data-ref-filename="reserve_resources_of_dev">reserve_resources_of_dev</dfn>(<b>struct</b> <a class="type" href="../../include/linux/pnp.h.html#pnp_dev" title='pnp_dev' data-ref="pnp_dev" data-ref-filename="pnp_dev">pnp_dev</a> *<dfn class="local col9 decl" id="9dev" title='dev' data-type='struct pnp_dev *' data-ref="9dev" data-ref-filename="9dev">dev</dfn>)</td></tr>
+<tr><th id="57">57</th><td>{</td></tr>
+<tr><th id="58">58</th><td>	<b>struct</b> <a class="type" href="../../include/linux/ioport.h.html#resource" title='resource' data-ref="resource" data-ref-filename="resource">resource</a> *<dfn class="local col0 decl" id="10res" title='res' data-type='struct resource *' data-ref="10res" data-ref-filename="10res">res</dfn>;</td></tr>
+<tr><th id="59">59</th><td>	<em>int</em> <dfn class="local col1 decl" id="11i" title='i' data-type='int' data-ref="11i" data-ref-filename="11i">i</dfn>;</td></tr>
+<tr><th id="60">60</th><td></td></tr>
+<tr><th id="61">61</th><td>	<b>for</b> (<a class="local col1 ref" href="#11i" title='i' data-ref="11i" data-ref-filename="11i">i</a> = <var>0</var>; (<a class="local col0 ref" href="#10res" title='res' data-ref="10res" data-ref-filename="10res">res</a> = <a class="ref fn" href="../../include/linux/pnp.h.html#pnp_get_resource" title='pnp_get_resource' data-ref="pnp_get_resource" data-ref-filename="pnp_get_resource">pnp_get_resource</a>(<a class="local col9 ref" href="#9dev" title='dev' data-ref="9dev" data-ref-filename="9dev">dev</a>, <a class="macro" href="../../include/linux/ioport.h.html#38" title="0x00000100" data-ref="_M/IORESOURCE_IO">IORESOURCE_IO</a>, <a class="local col1 ref" href="#11i" title='i' data-ref="11i" data-ref-filename="11i">i</a>)); <a class="local col1 ref" href="#11i" title='i' data-ref="11i" data-ref-filename="11i">i</a>++) {</td></tr>
+<tr><th id="62">62</th><td>		<b>if</b> (<a class="local col0 ref" href="#10res" title='res' data-ref="10res" data-ref-filename="10res">res</a>-&gt;<a class="ref field" href="../../include/linux/ioport.h.html#resource::flags" title='resource::flags' data-ref="resource::flags" data-ref-filename="resource..flags">flags</a> &amp; <a class="macro" href="../../include/linux/ioport.h.html#63" title="0x10000000" data-ref="_M/IORESOURCE_DISABLED">IORESOURCE_DISABLED</a>)</td></tr>
+<tr><th id="63">63</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="64">64</th><td>		<b>if</b> (<a class="local col0 ref" href="#10res" title='res' data-ref="10res" data-ref-filename="10res">res</a>-&gt;<a class="ref field" href="../../include/linux/ioport.h.html#resource::start" title='resource::start' data-ref="resource::start" data-ref-filename="resource..start">start</a> == <var>0</var>)</td></tr>
+<tr><th id="65">65</th><td>			<b>continue</b>;	<i>/* disabled */</i></td></tr>
+<tr><th id="66">66</th><td>		<b>if</b> (<a class="local col0 ref" href="#10res" title='res' data-ref="10res" data-ref-filename="10res">res</a>-&gt;<a class="ref field" href="../../include/linux/ioport.h.html#resource::start" title='resource::start' data-ref="resource::start" data-ref-filename="resource..start">start</a> &lt; <var>0x100</var>)</td></tr>
+<tr><th id="67">67</th><td>			<i>/*</i></td></tr>
+<tr><th id="68">68</th><td><i>			 * Below 0x100 is only standard PC hardware</i></td></tr>
+<tr><th id="69">69</th><td><i>			 * (pics, kbd, timer, dma, ...)</i></td></tr>
+<tr><th id="70">70</th><td><i>			 * We should not get resource conflicts there,</i></td></tr>
+<tr><th id="71">71</th><td><i>			 * and the kernel reserves these anyway</i></td></tr>
+<tr><th id="72">72</th><td><i>			 * (see arch/i386/kernel/setup.c).</i></td></tr>
+<tr><th id="73">73</th><td><i>			 * So, do nothing</i></td></tr>
+<tr><th id="74">74</th><td><i>			 */</i></td></tr>
+<tr><th id="75">75</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="76">76</th><td>		<b>if</b> (<a class="local col0 ref" href="#10res" title='res' data-ref="10res" data-ref-filename="10res">res</a>-&gt;<a class="ref field" href="../../include/linux/ioport.h.html#resource::end" title='resource::end' data-ref="resource::end" data-ref-filename="resource..end">end</a> &lt; <a class="local col0 ref" href="#10res" title='res' data-ref="10res" data-ref-filename="10res">res</a>-&gt;<a class="ref field" href="../../include/linux/ioport.h.html#resource::start" title='resource::start' data-ref="resource::start" data-ref-filename="resource..start">start</a>)</td></tr>
+<tr><th id="77">77</th><td>			<b>continue</b>;	<i>/* invalid */</i></td></tr>
+<tr><th id="78">78</th><td></td></tr>
+<tr><th id="79">79</th><td>		<a class="tu ref fn" href="#reserve_range" title='reserve_range' data-use='c' data-ref="reserve_range" data-ref-filename="reserve_range">reserve_range</a>(<a class="local col9 ref" href="#9dev" title='dev' data-ref="9dev" data-ref-filename="9dev">dev</a>, <a class="local col0 ref" href="#10res" title='res' data-ref="10res" data-ref-filename="10res">res</a>, <var>1</var>);</td></tr>
+<tr><th id="80">80</th><td>	}</td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td>	<b>for</b> (<a class="local col1 ref" href="#11i" title='i' data-ref="11i" data-ref-filename="11i">i</a> = <var>0</var>; (<a class="local col0 ref" href="#10res" title='res' data-ref="10res" data-ref-filename="10res">res</a> = <a class="ref fn" href="../../include/linux/pnp.h.html#pnp_get_resource" title='pnp_get_resource' data-ref="pnp_get_resource" data-ref-filename="pnp_get_resource">pnp_get_resource</a>(<a class="local col9 ref" href="#9dev" title='dev' data-ref="9dev" data-ref-filename="9dev">dev</a>, <a class="macro" href="../../include/linux/ioport.h.html#39" title="0x00000200" data-ref="_M/IORESOURCE_MEM">IORESOURCE_MEM</a>, <a class="local col1 ref" href="#11i" title='i' data-ref="11i" data-ref-filename="11i">i</a>)); <a class="local col1 ref" href="#11i" title='i' data-ref="11i" data-ref-filename="11i">i</a>++) {</td></tr>
+<tr><th id="83">83</th><td>		<b>if</b> (<a class="local col0 ref" href="#10res" title='res' data-ref="10res" data-ref-filename="10res">res</a>-&gt;<a class="ref field" href="../../include/linux/ioport.h.html#resource::flags" title='resource::flags' data-ref="resource::flags" data-ref-filename="resource..flags">flags</a> &amp; <a class="macro" href="../../include/linux/ioport.h.html#63" title="0x10000000" data-ref="_M/IORESOURCE_DISABLED">IORESOURCE_DISABLED</a>)</td></tr>
+<tr><th id="84">84</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td>		<a class="tu ref fn" href="#reserve_range" title='reserve_range' data-use='c' data-ref="reserve_range" data-ref-filename="reserve_range">reserve_range</a>(<a class="local col9 ref" href="#9dev" title='dev' data-ref="9dev" data-ref-filename="9dev">dev</a>, <a class="local col0 ref" href="#10res" title='res' data-ref="10res" data-ref-filename="10res">res</a>, <var>0</var>);</td></tr>
+<tr><th id="87">87</th><td>	}</td></tr>
+<tr><th id="88">88</th><td>}</td></tr>
+<tr><th id="89">89</th><td></td></tr>
+<tr><th id="90">90</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="system_pnp_probe" title='system_pnp_probe' data-type='int system_pnp_probe(struct pnp_dev * dev, const struct pnp_device_id * dev_id)' data-ref="system_pnp_probe" data-ref-filename="system_pnp_probe">system_pnp_probe</dfn>(<b>struct</b> <a class="type" href="../../include/linux/pnp.h.html#pnp_dev" title='pnp_dev' data-ref="pnp_dev" data-ref-filename="pnp_dev">pnp_dev</a> *<dfn class="local col2 decl" id="12dev" title='dev' data-type='struct pnp_dev *' data-ref="12dev" data-ref-filename="12dev">dev</dfn>,</td></tr>
+<tr><th id="91">91</th><td>			    <em>const</em> <b>struct</b> <a class="type" href="../../include/linux/mod_devicetable.h.html#pnp_device_id" title='pnp_device_id' data-ref="pnp_device_id" data-ref-filename="pnp_device_id">pnp_device_id</a> *<dfn class="local col3 decl" id="13dev_id" title='dev_id' data-type='const struct pnp_device_id *' data-ref="13dev_id" data-ref-filename="13dev_id">dev_id</dfn>)</td></tr>
+<tr><th id="92">92</th><td>{</td></tr>
+<tr><th id="93">93</th><td>	<a class="tu ref fn" href="#reserve_resources_of_dev" title='reserve_resources_of_dev' data-use='c' data-ref="reserve_resources_of_dev" data-ref-filename="reserve_resources_of_dev">reserve_resources_of_dev</a>(<a class="local col2 ref" href="#12dev" title='dev' data-ref="12dev" data-ref-filename="12dev">dev</a>);</td></tr>
+<tr><th id="94">94</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="95">95</th><td>}</td></tr>
+<tr><th id="96">96</th><td></td></tr>
+<tr><th id="97">97</th><td><em>static</em> <b>struct</b> <a class="type" href="../../include/linux/pnp.h.html#pnp_driver" title='pnp_driver' data-ref="pnp_driver" data-ref-filename="pnp_driver">pnp_driver</a> <dfn class="tu decl def" id="system_pnp_driver" title='system_pnp_driver' data-type='struct pnp_driver' data-ref="system_pnp_driver" data-ref-filename="system_pnp_driver">system_pnp_driver</dfn> = {</td></tr>
+<tr><th id="98">98</th><td>	.<a class="ref field" href="../../include/linux/pnp.h.html#pnp_driver::name" title='pnp_driver::name' data-ref="pnp_driver::name" data-ref-filename="pnp_driver..name">name</a>     = <q>"system"</q>,</td></tr>
+<tr><th id="99">99</th><td>	.<a class="ref field" href="../../include/linux/pnp.h.html#pnp_driver::id_table" title='pnp_driver::id_table' data-ref="pnp_driver::id_table" data-ref-filename="pnp_driver..id_table">id_table</a> = <a class="tu ref" href="#pnp_dev_table" title='pnp_dev_table' data-ref="pnp_dev_table" data-ref-filename="pnp_dev_table">pnp_dev_table</a>,</td></tr>
+<tr><th id="100">100</th><td>	.<a class="ref field" href="../../include/linux/pnp.h.html#pnp_driver::flags" title='pnp_driver::flags' data-ref="pnp_driver::flags" data-ref-filename="pnp_driver..flags">flags</a>    = <a class="macro" href="../../include/linux/pnp.h.html#411" title="0x0001" data-ref="_M/PNP_DRIVER_RES_DO_NOT_CHANGE">PNP_DRIVER_RES_DO_NOT_CHANGE</a>,</td></tr>
+<tr><th id="101">101</th><td>	.<a class="ref field" href="../../include/linux/pnp.h.html#pnp_driver::probe" title='pnp_driver::probe' data-ref="pnp_driver::probe" data-ref-filename="pnp_driver..probe">probe</a>    = <a class="tu ref fn" href="#system_pnp_probe" title='system_pnp_probe' data-ref="system_pnp_probe" data-ref-filename="system_pnp_probe">system_pnp_probe</a>,</td></tr>
+<tr><th id="102">102</th><td>};</td></tr>
+<tr><th id="103">103</th><td></td></tr>
+<tr><th id="104">104</th><td><em>static</em> <em>int</em> <a class="macro" href="../../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="tu decl def fn" id="pnp_system_init" title='pnp_system_init' data-type='int pnp_system_init()' data-ref="pnp_system_init" data-ref-filename="pnp_system_init">pnp_system_init</dfn>(<em>void</em>)</td></tr>
+<tr><th id="105">105</th><td>{</td></tr>
+<tr><th id="106">106</th><td>	<b>return</b> <a class="ref fn" href="../../include/linux/pnp.h.html#pnp_register_driver" title='pnp_register_driver' data-ref="pnp_register_driver" data-ref-filename="pnp_register_driver">pnp_register_driver</a>(&amp;<a class="tu ref" href="#system_pnp_driver" title='system_pnp_driver' data-use='a' data-ref="system_pnp_driver" data-ref-filename="system_pnp_driver">system_pnp_driver</a>);</td></tr>
+<tr><th id="107">107</th><td>}</td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="110">110</th><td><i class="doc"> * Reserve motherboard resources after PCI claim BARs,</i></td></tr>
+<tr><th id="111">111</th><td><i class="doc"> * but before PCI assign resources for uninitialized PCI devices</i></td></tr>
+<tr><th id="112">112</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="113">113</th><td><a class="macro" href="../../include/linux/init.h.html#226" title="static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_pnp_system_init113 = (void *)&amp;pnp_system_init; asm(&quot;.section	\&quot;&quot; &quot;.initcall5&quot; &quot;.init\&quot;, \&quot;a\&quot;	\n&quot; &quot;__initcall_&quot; &quot;pnp_system_init&quot; &quot;5&quot; &quot;:			\n&quot; &quot;.long	&quot; &quot;pnp_system_init&quot; &quot; - .			\n&quot; &quot;.previous					\n&quot;);" data-ref="_M/fs_initcall">fs_initcall</a>(<a class="tu ref fn" href="#pnp_system_init" title='pnp_system_init' data-use='a' data-ref="pnp_system_init" data-ref-filename="pnp_system_init">pnp_system_init</a>);</td></tr>
+<tr><th id="114">114</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

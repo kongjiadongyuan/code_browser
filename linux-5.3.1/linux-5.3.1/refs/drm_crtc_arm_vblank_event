@@ -1,0 +1,44 @@
+<dec f='linux-5.3.1/include/drm/drm_vblank.h' l='204' type='void drm_crtc_arm_vblank_event(struct drm_crtc * crtc, struct drm_pending_vblank_event * e)'/>
+<def f='linux-5.3.1/drivers/gpu/drm/drm_vblank.c' l='897' ll='908' type='void drm_crtc_arm_vblank_event(struct drm_crtc * crtc, struct drm_pending_vblank_event * e)'/>
+<dec f='linux-5.3.1/drivers/gpu/drm/drm_vblank.c' l='909' type='void drm_crtc_arm_vblank_event(struct drm_crtc * , struct drm_pending_vblank_event * )'/>
+<use f='linux-5.3.1/drivers/gpu/drm/drm_vblank.c' l='909' c='drm_crtc_arm_vblank_event'/>
+<use f='linux-5.3.1/drivers/gpu/drm/drm_vblank.c' l='909' u='a'/>
+<doc f='linux-5.3.1/drivers/gpu/drm/drm_vblank.c' l='859'>/**
+ * drm_crtc_arm_vblank_event - arm vblank event after pageflip
+ * @crtc: the source CRTC of the vblank event
+ * @e: the event to send
+ *
+ * A lot of drivers need to generate vblank events for the very next vblank
+ * interrupt. For example when the page flip interrupt happens when the page
+ * flip gets armed, but not when it actually executes within the next vblank
+ * period. This helper function implements exactly the required vblank arming
+ * behaviour.
+ *
+ * NOTE: Drivers using this to send out the &amp;drm_crtc_state.event as part of an
+ * atomic commit must ensure that the next vblank happens at exactly the same
+ * time as the atomic commit is committed to the hardware. This function itself
+ * does **not** protect against the next vblank interrupt racing with either this
+ * function call or the atomic commit operation. A possible sequence could be:
+ *
+ * 1. Driver commits new hardware state into vblank-synchronized registers.
+ * 2. A vblank happens, committing the hardware state. Also the corresponding
+ *    vblank interrupt is fired off and fully processed by the interrupt
+ *    handler.
+ * 3. The atomic commit operation proceeds to call drm_crtc_arm_vblank_event().
+ * 4. The event is only send out for the next vblank, which is wrong.
+ *
+ * An equivalent race can happen when the driver calls
+ * drm_crtc_arm_vblank_event() before writing out the new hardware state.
+ *
+ * The only way to make this work safely is to prevent the vblank from firing
+ * (and the hardware from committing anything else) until the entire atomic
+ * commit sequence has run to completion. If the hardware does not have such a
+ * feature (e.g. using a &quot;go&quot; bit), then it is unsafe to use this functions.
+ * Instead drivers need to manually send out the event from their interrupt
+ * handler by calling drm_crtc_send_vblank_event() and make sure that there&apos;s no
+ * possible race with the hardware committing the atomic update.
+ *
+ * Caller must hold a vblank reference for the event @e acquired by a
+ * drm_crtc_vblank_get(), which will be dropped when the next vblank arrives.
+ */</doc>
+<use f='linux-5.3.1/drivers/gpu/drm/i915/display/intel_sprite.c' l='222' u='c' c='intel_pipe_update_end'/>

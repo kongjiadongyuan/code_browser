@@ -1,0 +1,578 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>nsrepair.c source code [linux-5.3.1/drivers/acpi/acpica/nsrepair.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/drivers/acpi/acpica/nsrepair.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>linux-5.3.1</a>/<a href='../..'>drivers</a>/<a href='..'>acpi</a>/<a href='./'>acpica</a>/<a href='nsrepair.c.html'>nsrepair.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: BSD-3-Clause OR GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><i>/******************************************************************************</i></td></tr>
+<tr><th id="3">3</th><td><i> *</i></td></tr>
+<tr><th id="4">4</th><td><i> * Module Name: nsrepair - Repair for objects returned by predefined methods</i></td></tr>
+<tr><th id="5">5</th><td><i> *</i></td></tr>
+<tr><th id="6">6</th><td><i> * Copyright (C) 2000 - 2019, Intel Corp.</i></td></tr>
+<tr><th id="7">7</th><td><i> *</i></td></tr>
+<tr><th id="8">8</th><td><i> *****************************************************************************/</i></td></tr>
+<tr><th id="9">9</th><td></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="../../../include/acpi/acpi.h.html">&lt;acpi/acpi.h&gt;</a></u></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="accommon.h.html">"accommon.h"</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="acnamesp.h.html">"acnamesp.h"</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="acinterp.h.html">"acinterp.h"</a></u></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="acpredef.h.html">"acpredef.h"</a></u></td></tr>
+<tr><th id="15">15</th><td><u>#include <a href="amlresrc.h.html">"amlresrc.h"</a></u></td></tr>
+<tr><th id="16">16</th><td></td></tr>
+<tr><th id="17">17</th><td><u>#define <dfn class="macro" id="_M/_COMPONENT" data-ref="_M/_COMPONENT">_COMPONENT</dfn>          ACPI_NAMESPACE</u></td></tr>
+<tr><th id="18">18</th><td><a class="macro" href="../../../include/acpi/acoutput.h.html#181" title="static const char __attribute__ ((unused)) _acpi_module_name[] = &quot;nsrepair&quot;;" data-ref="_M/ACPI_MODULE_NAME">ACPI_MODULE_NAME</a>(<q>"nsrepair"</q>)</td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><i>/*******************************************************************************</i></td></tr>
+<tr><th id="21">21</th><td><i> *</i></td></tr>
+<tr><th id="22">22</th><td><i> * This module attempts to repair or convert objects returned by the</i></td></tr>
+<tr><th id="23">23</th><td><i> * predefined methods to an object type that is expected, as per the ACPI</i></td></tr>
+<tr><th id="24">24</th><td><i> * specification. The need for this code is dictated by the many machines that</i></td></tr>
+<tr><th id="25">25</th><td><i> * return incorrect types for the standard predefined methods. Performing these</i></td></tr>
+<tr><th id="26">26</th><td><i> * conversions here, in one place, eliminates the need for individual ACPI</i></td></tr>
+<tr><th id="27">27</th><td><i> * device drivers to do the same. Note: Most of these conversions are different</i></td></tr>
+<tr><th id="28">28</th><td><i> * than the internal object conversion routines used for implicit object</i></td></tr>
+<tr><th id="29">29</th><td><i> * conversion.</i></td></tr>
+<tr><th id="30">30</th><td><i> *</i></td></tr>
+<tr><th id="31">31</th><td><i> * The following conversions can be performed as necessary:</i></td></tr>
+<tr><th id="32">32</th><td><i> *</i></td></tr>
+<tr><th id="33">33</th><td><i> * Integer -&gt; String</i></td></tr>
+<tr><th id="34">34</th><td><i> * Integer -&gt; Buffer</i></td></tr>
+<tr><th id="35">35</th><td><i> * String  -&gt; Integer</i></td></tr>
+<tr><th id="36">36</th><td><i> * String  -&gt; Buffer</i></td></tr>
+<tr><th id="37">37</th><td><i> * Buffer  -&gt; Integer</i></td></tr>
+<tr><th id="38">38</th><td><i> * Buffer  -&gt; String</i></td></tr>
+<tr><th id="39">39</th><td><i> * Buffer  -&gt; Package of Integers</i></td></tr>
+<tr><th id="40">40</th><td><i> * Package -&gt; Package of one Package</i></td></tr>
+<tr><th id="41">41</th><td><i> *</i></td></tr>
+<tr><th id="42">42</th><td><i> * Additional conversions that are available:</i></td></tr>
+<tr><th id="43">43</th><td><i> *  Convert a null return or zero return value to an end_tag descriptor</i></td></tr>
+<tr><th id="44">44</th><td><i> *  Convert an ASCII string to a Unicode buffer</i></td></tr>
+<tr><th id="45">45</th><td><i> *</i></td></tr>
+<tr><th id="46">46</th><td><i> * An incorrect standalone object is wrapped with required outer package</i></td></tr>
+<tr><th id="47">47</th><td><i> *</i></td></tr>
+<tr><th id="48">48</th><td><i> * Additional possible repairs:</i></td></tr>
+<tr><th id="49">49</th><td><i> * Required package elements that are NULL replaced by Integer/String/Buffer</i></td></tr>
+<tr><th id="50">50</th><td><i> *</i></td></tr>
+<tr><th id="51">51</th><td><i> ******************************************************************************/</i></td></tr>
+<tr><th id="52">52</th><td><i  data-doc="acpi_ns_match_simple_repair">/* Local prototypes */</i></td></tr>
+<tr><th id="53">53</th><td><em>static</em> <em>const</em> <b>struct</b> <a class="type" href="aclocal.h.html#acpi_simple_repair_info" title='acpi_simple_repair_info' data-ref="acpi_simple_repair_info" data-ref-filename="acpi_simple_repair_info">acpi_simple_repair_info</a> *<a class="tu decl fn" href="#acpi_ns_match_simple_repair" title='acpi_ns_match_simple_repair' data-type='const struct acpi_simple_repair_info * acpi_ns_match_simple_repair(struct acpi_namespace_node * node, u32 return_btype, u32 package_index)' data-ref="acpi_ns_match_simple_repair" data-ref-filename="acpi_ns_match_simple_repair">acpi_ns_match_simple_repair</a>(<b>struct</b></td></tr>
+<tr><th id="54">54</th><td>									 <a class="type" href="aclocal.h.html#acpi_namespace_node" title='acpi_namespace_node' data-ref="acpi_namespace_node" data-ref-filename="acpi_namespace_node">acpi_namespace_node</a></td></tr>
+<tr><th id="55">55</th><td>									 *<dfn class="local col1 decl" id="1node" title='node' data-type='struct acpi_namespace_node *' data-ref="1node" data-ref-filename="1node">node</dfn>,</td></tr>
+<tr><th id="56">56</th><td>									 <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a></td></tr>
+<tr><th id="57">57</th><td>									 <dfn class="local col2 decl" id="2return_btype" title='return_btype' data-type='u32' data-ref="2return_btype" data-ref-filename="2return_btype">return_btype</dfn>,</td></tr>
+<tr><th id="58">58</th><td>									 <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a></td></tr>
+<tr><th id="59">59</th><td>									 <dfn class="local col3 decl" id="3package_index" title='package_index' data-type='u32' data-ref="3package_index" data-ref-filename="3package_index">package_index</dfn>);</td></tr>
+<tr><th id="60">60</th><td></td></tr>
+<tr><th id="61">61</th><td><i  data-doc="acpi_object_repair_info">/*</i></td></tr>
+<tr><th id="62">62</th><td><i  data-doc="acpi_object_repair_info"> * Special but simple repairs for some names.</i></td></tr>
+<tr><th id="63">63</th><td><i  data-doc="acpi_object_repair_info"> *</i></td></tr>
+<tr><th id="64">64</th><td><i  data-doc="acpi_object_repair_info"> * 2nd argument: Unexpected types that can be repaired</i></td></tr>
+<tr><th id="65">65</th><td><i  data-doc="acpi_object_repair_info"> */</i></td></tr>
+<tr><th id="66">66</th><td><em>static</em> <em>const</em> <b>struct</b> <a class="type" href="aclocal.h.html#acpi_simple_repair_info" title='acpi_simple_repair_info' data-ref="acpi_simple_repair_info" data-ref-filename="acpi_simple_repair_info">acpi_simple_repair_info</a> <dfn class="tu decl def" id="acpi_object_repair_info" title='acpi_object_repair_info' data-type='const struct acpi_simple_repair_info [7]' data-ref="acpi_object_repair_info" data-ref-filename="acpi_object_repair_info">acpi_object_repair_info</dfn>[] = {</td></tr>
+<tr><th id="67">67</th><td>	<i>/* Resource descriptor conversions */</i></td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td>	{<q>"_CRS"</q>,</td></tr>
+<tr><th id="70">70</th><td>	 <a class="macro" href="aclocal.h.html#386" title="0x02" data-ref="_M/ACPI_RTYPE_INTEGER">ACPI_RTYPE_INTEGER</a> | <a class="macro" href="aclocal.h.html#387" title="0x04" data-ref="_M/ACPI_RTYPE_STRING">ACPI_RTYPE_STRING</a> | <a class="macro" href="aclocal.h.html#388" title="0x08" data-ref="_M/ACPI_RTYPE_BUFFER">ACPI_RTYPE_BUFFER</a> |</td></tr>
+<tr><th id="71">71</th><td>	 <a class="macro" href="aclocal.h.html#385" title="0x01" data-ref="_M/ACPI_RTYPE_NONE">ACPI_RTYPE_NONE</a>,</td></tr>
+<tr><th id="72">72</th><td>	 <a class="macro" href="acnamesp.h.html#47" title="(u32)(~((u32) 0))" data-ref="_M/ACPI_NOT_PACKAGE_ELEMENT">ACPI_NOT_PACKAGE_ELEMENT</a>,</td></tr>
+<tr><th id="73">73</th><td>	 <a class="ref fn" href="acnamesp.h.html#acpi_ns_convert_to_resource" title='acpi_ns_convert_to_resource' data-ref="acpi_ns_convert_to_resource" data-ref-filename="acpi_ns_convert_to_resource">acpi_ns_convert_to_resource</a>},</td></tr>
+<tr><th id="74">74</th><td>	{<q>"_DMA"</q>,</td></tr>
+<tr><th id="75">75</th><td>	 <a class="macro" href="aclocal.h.html#386" title="0x02" data-ref="_M/ACPI_RTYPE_INTEGER">ACPI_RTYPE_INTEGER</a> | <a class="macro" href="aclocal.h.html#387" title="0x04" data-ref="_M/ACPI_RTYPE_STRING">ACPI_RTYPE_STRING</a> | <a class="macro" href="aclocal.h.html#388" title="0x08" data-ref="_M/ACPI_RTYPE_BUFFER">ACPI_RTYPE_BUFFER</a> |</td></tr>
+<tr><th id="76">76</th><td>	 <a class="macro" href="aclocal.h.html#385" title="0x01" data-ref="_M/ACPI_RTYPE_NONE">ACPI_RTYPE_NONE</a>,</td></tr>
+<tr><th id="77">77</th><td>	 <a class="macro" href="acnamesp.h.html#47" title="(u32)(~((u32) 0))" data-ref="_M/ACPI_NOT_PACKAGE_ELEMENT">ACPI_NOT_PACKAGE_ELEMENT</a>,</td></tr>
+<tr><th id="78">78</th><td>	 <a class="ref fn" href="acnamesp.h.html#acpi_ns_convert_to_resource" title='acpi_ns_convert_to_resource' data-ref="acpi_ns_convert_to_resource" data-ref-filename="acpi_ns_convert_to_resource">acpi_ns_convert_to_resource</a>},</td></tr>
+<tr><th id="79">79</th><td>	{<q>"_PRS"</q>,</td></tr>
+<tr><th id="80">80</th><td>	 <a class="macro" href="aclocal.h.html#386" title="0x02" data-ref="_M/ACPI_RTYPE_INTEGER">ACPI_RTYPE_INTEGER</a> | <a class="macro" href="aclocal.h.html#387" title="0x04" data-ref="_M/ACPI_RTYPE_STRING">ACPI_RTYPE_STRING</a> | <a class="macro" href="aclocal.h.html#388" title="0x08" data-ref="_M/ACPI_RTYPE_BUFFER">ACPI_RTYPE_BUFFER</a> |</td></tr>
+<tr><th id="81">81</th><td>	 <a class="macro" href="aclocal.h.html#385" title="0x01" data-ref="_M/ACPI_RTYPE_NONE">ACPI_RTYPE_NONE</a>,</td></tr>
+<tr><th id="82">82</th><td>	 <a class="macro" href="acnamesp.h.html#47" title="(u32)(~((u32) 0))" data-ref="_M/ACPI_NOT_PACKAGE_ELEMENT">ACPI_NOT_PACKAGE_ELEMENT</a>,</td></tr>
+<tr><th id="83">83</th><td>	 <a class="ref fn" href="acnamesp.h.html#acpi_ns_convert_to_resource" title='acpi_ns_convert_to_resource' data-ref="acpi_ns_convert_to_resource" data-ref-filename="acpi_ns_convert_to_resource">acpi_ns_convert_to_resource</a>},</td></tr>
+<tr><th id="84">84</th><td></td></tr>
+<tr><th id="85">85</th><td>	<i>/* Object reference conversions */</i></td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td>	{<q>"_DEP"</q>, <a class="macro" href="aclocal.h.html#387" title="0x04" data-ref="_M/ACPI_RTYPE_STRING">ACPI_RTYPE_STRING</a>, <a class="macro" href="acnamesp.h.html#48" title="((u32)(~((u32) 0))-1)" data-ref="_M/ACPI_ALL_PACKAGE_ELEMENTS">ACPI_ALL_PACKAGE_ELEMENTS</a>,</td></tr>
+<tr><th id="88">88</th><td>	 <a class="ref fn" href="acnamesp.h.html#acpi_ns_convert_to_reference" title='acpi_ns_convert_to_reference' data-ref="acpi_ns_convert_to_reference" data-ref-filename="acpi_ns_convert_to_reference">acpi_ns_convert_to_reference</a>},</td></tr>
+<tr><th id="89">89</th><td></td></tr>
+<tr><th id="90">90</th><td>	<i>/* Unicode conversions */</i></td></tr>
+<tr><th id="91">91</th><td></td></tr>
+<tr><th id="92">92</th><td>	{<q>"_MLS"</q>, <a class="macro" href="aclocal.h.html#387" title="0x04" data-ref="_M/ACPI_RTYPE_STRING">ACPI_RTYPE_STRING</a>, <var>1</var>,</td></tr>
+<tr><th id="93">93</th><td>	 <a class="ref fn" href="acnamesp.h.html#acpi_ns_convert_to_unicode" title='acpi_ns_convert_to_unicode' data-ref="acpi_ns_convert_to_unicode" data-ref-filename="acpi_ns_convert_to_unicode">acpi_ns_convert_to_unicode</a>},</td></tr>
+<tr><th id="94">94</th><td>	{<q>"_STR"</q>, <a class="macro" href="aclocal.h.html#387" title="0x04" data-ref="_M/ACPI_RTYPE_STRING">ACPI_RTYPE_STRING</a> | <a class="macro" href="aclocal.h.html#388" title="0x08" data-ref="_M/ACPI_RTYPE_BUFFER">ACPI_RTYPE_BUFFER</a>,</td></tr>
+<tr><th id="95">95</th><td>	 <a class="macro" href="acnamesp.h.html#47" title="(u32)(~((u32) 0))" data-ref="_M/ACPI_NOT_PACKAGE_ELEMENT">ACPI_NOT_PACKAGE_ELEMENT</a>,</td></tr>
+<tr><th id="96">96</th><td>	 <a class="ref fn" href="acnamesp.h.html#acpi_ns_convert_to_unicode" title='acpi_ns_convert_to_unicode' data-ref="acpi_ns_convert_to_unicode" data-ref-filename="acpi_ns_convert_to_unicode">acpi_ns_convert_to_unicode</a>},</td></tr>
+<tr><th id="97">97</th><td>	{{<var>0</var>, <var>0</var>, <var>0</var>, <var>0</var>}, <var>0</var>, <var>0</var>, <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>}	<i>/* Table terminator */</i></td></tr>
+<tr><th id="98">98</th><td>};</td></tr>
+<tr><th id="99">99</th><td></td></tr>
+<tr><th id="100">100</th><td><i>/*******************************************************************************</i></td></tr>
+<tr><th id="101">101</th><td><i> *</i></td></tr>
+<tr><th id="102">102</th><td><i> * FUNCTION:    acpi_ns_simple_repair</i></td></tr>
+<tr><th id="103">103</th><td><i> *</i></td></tr>
+<tr><th id="104">104</th><td><i> * PARAMETERS:  info                - Method execution information block</i></td></tr>
+<tr><th id="105">105</th><td><i> *              expected_btypes     - Object types expected</i></td></tr>
+<tr><th id="106">106</th><td><i> *              package_index       - Index of object within parent package (if</i></td></tr>
+<tr><th id="107">107</th><td><i> *                                    applicable - ACPI_NOT_PACKAGE_ELEMENT</i></td></tr>
+<tr><th id="108">108</th><td><i> *                                    otherwise)</i></td></tr>
+<tr><th id="109">109</th><td><i> *              return_object_ptr   - Pointer to the object returned from the</i></td></tr>
+<tr><th id="110">110</th><td><i> *                                    evaluation of a method or object</i></td></tr>
+<tr><th id="111">111</th><td><i> *</i></td></tr>
+<tr><th id="112">112</th><td><i> * RETURN:      Status. AE_OK if repair was successful.</i></td></tr>
+<tr><th id="113">113</th><td><i> *</i></td></tr>
+<tr><th id="114">114</th><td><i> * DESCRIPTION: Attempt to repair/convert a return object of a type that was</i></td></tr>
+<tr><th id="115">115</th><td><i> *              not expected.</i></td></tr>
+<tr><th id="116">116</th><td><i> *</i></td></tr>
+<tr><th id="117">117</th><td><i> ******************************************************************************/</i></td></tr>
+<tr><th id="118">118</th><td></td></tr>
+<tr><th id="119">119</th><td><a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_status" title='acpi_status' data-type='u32' data-ref="acpi_status" data-ref-filename="acpi_status">acpi_status</a></td></tr>
+<tr><th id="120">120</th><td><dfn class="decl def fn" id="acpi_ns_simple_repair" title='acpi_ns_simple_repair' data-ref="acpi_ns_simple_repair" data-ref-filename="acpi_ns_simple_repair">acpi_ns_simple_repair</dfn>(<b>struct</b> <a class="type" href="acstruct.h.html#acpi_evaluate_info" title='acpi_evaluate_info' data-ref="acpi_evaluate_info" data-ref-filename="acpi_evaluate_info">acpi_evaluate_info</a> *<dfn class="local col4 decl" id="4info" title='info' data-type='struct acpi_evaluate_info *' data-ref="4info" data-ref-filename="4info">info</dfn>,</td></tr>
+<tr><th id="121">121</th><td>		      <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col5 decl" id="5expected_btypes" title='expected_btypes' data-type='u32' data-ref="5expected_btypes" data-ref-filename="5expected_btypes">expected_btypes</dfn>,</td></tr>
+<tr><th id="122">122</th><td>		      <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col6 decl" id="6package_index" title='package_index' data-type='u32' data-ref="6package_index" data-ref-filename="6package_index">package_index</dfn>,</td></tr>
+<tr><th id="123">123</th><td>		      <b>union</b> <a class="type" href="acobject.h.html#acpi_operand_object" title='acpi_operand_object' data-ref="acpi_operand_object" data-ref-filename="acpi_operand_object">acpi_operand_object</a> **<dfn class="local col7 decl" id="7return_object_ptr" title='return_object_ptr' data-type='union acpi_operand_object **' data-ref="7return_object_ptr" data-ref-filename="7return_object_ptr">return_object_ptr</dfn>)</td></tr>
+<tr><th id="124">124</th><td>{</td></tr>
+<tr><th id="125">125</th><td>	<b>union</b> <a class="type" href="acobject.h.html#acpi_operand_object" title='acpi_operand_object' data-ref="acpi_operand_object" data-ref-filename="acpi_operand_object">acpi_operand_object</a> *<dfn class="local col8 decl" id="8return_object" title='return_object' data-type='union acpi_operand_object *' data-ref="8return_object" data-ref-filename="8return_object">return_object</dfn> = *<a class="local col7 ref" href="#7return_object_ptr" title='return_object_ptr' data-ref="7return_object_ptr" data-ref-filename="7return_object_ptr">return_object_ptr</a>;</td></tr>
+<tr><th id="126">126</th><td>	<b>union</b> <a class="type" href="acobject.h.html#acpi_operand_object" title='acpi_operand_object' data-ref="acpi_operand_object" data-ref-filename="acpi_operand_object">acpi_operand_object</a> *<dfn class="local col9 decl" id="9new_object" title='new_object' data-type='union acpi_operand_object *' data-ref="9new_object" data-ref-filename="9new_object">new_object</dfn> = <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="127">127</th><td>	<a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_status" title='acpi_status' data-type='u32' data-ref="acpi_status" data-ref-filename="acpi_status">acpi_status</a> <dfn class="local col0 decl" id="10status" title='status' data-type='acpi_status' data-ref="10status" data-ref-filename="10status">status</dfn>;</td></tr>
+<tr><th id="128">128</th><td>	<em>const</em> <b>struct</b> <a class="type" href="aclocal.h.html#acpi_simple_repair_info" title='acpi_simple_repair_info' data-ref="acpi_simple_repair_info" data-ref-filename="acpi_simple_repair_info">acpi_simple_repair_info</a> *<dfn class="local col1 decl" id="11predefined" title='predefined' data-type='const struct acpi_simple_repair_info *' data-ref="11predefined" data-ref-filename="11predefined">predefined</dfn>;</td></tr>
+<tr><th id="129">129</th><td></td></tr>
+<tr><th id="130">130</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#440" title="" data-ref="_M/ACPI_FUNCTION_NAME">ACPI_FUNCTION_NAME</a>(ns_simple_repair);</td></tr>
+<tr><th id="131">131</th><td></td></tr>
+<tr><th id="132">132</th><td>	<i>/*</i></td></tr>
+<tr><th id="133">133</th><td><i>	 * Special repairs for certain names that are in the repair table.</i></td></tr>
+<tr><th id="134">134</th><td><i>	 * Check if this name is in the list of repairable names.</i></td></tr>
+<tr><th id="135">135</th><td><i>	 */</i></td></tr>
+<tr><th id="136">136</th><td>	<a class="local col1 ref" href="#11predefined" title='predefined' data-ref="11predefined" data-ref-filename="11predefined">predefined</a> = <a class="tu ref fn" href="#acpi_ns_match_simple_repair" title='acpi_ns_match_simple_repair' data-use='c' data-ref="acpi_ns_match_simple_repair" data-ref-filename="acpi_ns_match_simple_repair">acpi_ns_match_simple_repair</a>(<a class="local col4 ref" href="#4info" title='info' data-ref="4info" data-ref-filename="4info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::node" title='acpi_evaluate_info::node' data-ref="acpi_evaluate_info::node" data-ref-filename="acpi_evaluate_info..node">node</a>,</td></tr>
+<tr><th id="137">137</th><td>						 <a class="local col4 ref" href="#4info" title='info' data-ref="4info" data-ref-filename="4info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::return_btype" title='acpi_evaluate_info::return_btype' data-ref="acpi_evaluate_info::return_btype" data-ref-filename="acpi_evaluate_info..return_btype">return_btype</a>,</td></tr>
+<tr><th id="138">138</th><td>						 <a class="local col6 ref" href="#6package_index" title='package_index' data-ref="6package_index" data-ref-filename="6package_index">package_index</a>);</td></tr>
+<tr><th id="139">139</th><td>	<b>if</b> (<a class="local col1 ref" href="#11predefined" title='predefined' data-ref="11predefined" data-ref-filename="11predefined">predefined</a>) {</td></tr>
+<tr><th id="140">140</th><td>		<b>if</b> (!<a class="local col8 ref" href="#8return_object" title='return_object' data-ref="8return_object" data-ref-filename="8return_object">return_object</a>) {</td></tr>
+<tr><th id="141">141</th><td>			<a class="macro" href="acmacros.h.html#426" title="acpi_ut_predefined_warning (_acpi_module_name, 141, info-&gt;full_pathname, 0, &quot;Missing expected return value&quot;)" data-ref="_M/ACPI_WARN_PREDEFINED">ACPI_WARN_PREDEFINED</a>((<a class="macro" href="../../../include/acpi/acoutput.h.html#195" title="_acpi_module_name, 141" data-ref="_M/AE_INFO">AE_INFO</a>, <a class="local col4 ref" href="#4info" title='info' data-ref="4info" data-ref-filename="4info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::full_pathname" title='acpi_evaluate_info::full_pathname' data-ref="acpi_evaluate_info::full_pathname" data-ref-filename="acpi_evaluate_info..full_pathname">full_pathname</a>,</td></tr>
+<tr><th id="142">142</th><td>					      <a class="macro" href="acnamesp.h.html#52" title="0" data-ref="_M/ACPI_WARN_ALWAYS">ACPI_WARN_ALWAYS</a>,</td></tr>
+<tr><th id="143">143</th><td>					      <q>"Missing expected return value"</q>));</td></tr>
+<tr><th id="144">144</th><td>		}</td></tr>
+<tr><th id="145">145</th><td></td></tr>
+<tr><th id="146">146</th><td>		<a class="local col0 ref" href="#10status" title='status' data-ref="10status" data-ref-filename="10status">status</a> = <a class="local col1 ref" href="#11predefined" title='predefined' data-ref="11predefined" data-ref-filename="11predefined">predefined</a>-&gt;<a class="ref field" href="aclocal.h.html#acpi_simple_repair_info::object_converter" title='acpi_simple_repair_info::object_converter' data-ref="acpi_simple_repair_info::object_converter" data-ref-filename="acpi_simple_repair_info..object_converter">object_converter</a>(<a class="local col4 ref" href="#4info" title='info' data-ref="4info" data-ref-filename="4info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::node" title='acpi_evaluate_info::node' data-ref="acpi_evaluate_info::node" data-ref-filename="acpi_evaluate_info..node">node</a>, <a class="local col8 ref" href="#8return_object" title='return_object' data-ref="8return_object" data-ref-filename="8return_object">return_object</a>,</td></tr>
+<tr><th id="147">147</th><td>						      &amp;<a class="local col9 ref" href="#9new_object" title='new_object' data-ref="9new_object" data-ref-filename="9new_object">new_object</a>);</td></tr>
+<tr><th id="148">148</th><td>		<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#58" title="(status)" data-ref="_M/ACPI_FAILURE">ACPI_FAILURE</a>(<a class="local col0 ref" href="#10status" title='status' data-ref="10status" data-ref-filename="10status">status</a>)) {</td></tr>
+<tr><th id="149">149</th><td></td></tr>
+<tr><th id="150">150</th><td>			<i>/* A fatal error occurred during a conversion */</i></td></tr>
+<tr><th id="151">151</th><td></td></tr>
+<tr><th id="152">152</th><td>			<a class="macro" href="../../../include/acpi/acoutput.h.html#204" title="acpi_exception (_acpi_module_name, 152, status, &quot;During return object analysis&quot;)" data-ref="_M/ACPI_EXCEPTION">ACPI_EXCEPTION</a>((<a class="macro" href="../../../include/acpi/acoutput.h.html#195" title="_acpi_module_name, 152" data-ref="_M/AE_INFO">AE_INFO</a>, <a class="local col0 ref" href="#10status" title='status' data-ref="10status" data-ref-filename="10status">status</a>,</td></tr>
+<tr><th id="153">153</th><td>					<q>"During return object analysis"</q>));</td></tr>
+<tr><th id="154">154</th><td>			<b>return</b> (<a class="local col0 ref" href="#10status" title='status' data-ref="10status" data-ref-filename="10status">status</a>);</td></tr>
+<tr><th id="155">155</th><td>		}</td></tr>
+<tr><th id="156">156</th><td>		<b>if</b> (<a class="local col9 ref" href="#9new_object" title='new_object' data-ref="9new_object" data-ref-filename="9new_object">new_object</a>) {</td></tr>
+<tr><th id="157">157</th><td>			<b>goto</b> <a class="lbl" href="#12object_repaired" data-ref="12object_repaired" data-ref-filename="12object_repaired">object_repaired</a>;</td></tr>
+<tr><th id="158">158</th><td>		}</td></tr>
+<tr><th id="159">159</th><td>	}</td></tr>
+<tr><th id="160">160</th><td></td></tr>
+<tr><th id="161">161</th><td>	<i>/*</i></td></tr>
+<tr><th id="162">162</th><td><i>	 * Do not perform simple object repair unless the return type is not</i></td></tr>
+<tr><th id="163">163</th><td><i>	 * expected.</i></td></tr>
+<tr><th id="164">164</th><td><i>	 */</i></td></tr>
+<tr><th id="165">165</th><td>	<b>if</b> (<a class="local col4 ref" href="#4info" title='info' data-ref="4info" data-ref-filename="4info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::return_btype" title='acpi_evaluate_info::return_btype' data-ref="acpi_evaluate_info::return_btype" data-ref-filename="acpi_evaluate_info..return_btype">return_btype</a> &amp; <a class="local col5 ref" href="#5expected_btypes" title='expected_btypes' data-ref="5expected_btypes" data-ref-filename="5expected_btypes">expected_btypes</a>) {</td></tr>
+<tr><th id="166">166</th><td>		<b>return</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#60" title="(acpi_status) 0x0000" data-ref="_M/AE_OK">AE_OK</a>);</td></tr>
+<tr><th id="167">167</th><td>	}</td></tr>
+<tr><th id="168">168</th><td></td></tr>
+<tr><th id="169">169</th><td>	<i>/*</i></td></tr>
+<tr><th id="170">170</th><td><i>	 * At this point, we know that the type of the returned object was not</i></td></tr>
+<tr><th id="171">171</th><td><i>	 * one of the expected types for this predefined name. Attempt to</i></td></tr>
+<tr><th id="172">172</th><td><i>	 * repair the object by converting it to one of the expected object</i></td></tr>
+<tr><th id="173">173</th><td><i>	 * types for this predefined name.</i></td></tr>
+<tr><th id="174">174</th><td><i>	 */</i></td></tr>
+<tr><th id="175">175</th><td></td></tr>
+<tr><th id="176">176</th><td>	<i>/*</i></td></tr>
+<tr><th id="177">177</th><td><i>	 * If there is no return value, check if we require a return value for</i></td></tr>
+<tr><th id="178">178</th><td><i>	 * this predefined name. Either one return value is expected, or none,</i></td></tr>
+<tr><th id="179">179</th><td><i>	 * for both methods and other objects.</i></td></tr>
+<tr><th id="180">180</th><td><i>	 *</i></td></tr>
+<tr><th id="181">181</th><td><i>	 * Try to fix if there was no return object. Warning if failed to fix.</i></td></tr>
+<tr><th id="182">182</th><td><i>	 */</i></td></tr>
+<tr><th id="183">183</th><td>	<b>if</b> (!<a class="local col8 ref" href="#8return_object" title='return_object' data-ref="8return_object" data-ref-filename="8return_object">return_object</a>) {</td></tr>
+<tr><th id="184">184</th><td>		<b>if</b> (<a class="local col5 ref" href="#5expected_btypes" title='expected_btypes' data-ref="5expected_btypes" data-ref-filename="5expected_btypes">expected_btypes</a> &amp;&amp; (!(<a class="local col5 ref" href="#5expected_btypes" title='expected_btypes' data-ref="5expected_btypes" data-ref-filename="5expected_btypes">expected_btypes</a> &amp; <a class="macro" href="aclocal.h.html#385" title="0x01" data-ref="_M/ACPI_RTYPE_NONE">ACPI_RTYPE_NONE</a>))) {</td></tr>
+<tr><th id="185">185</th><td>			<b>if</b> (<a class="local col6 ref" href="#6package_index" title='package_index' data-ref="6package_index" data-ref-filename="6package_index">package_index</a> != <a class="macro" href="acnamesp.h.html#47" title="(u32)(~((u32) 0))" data-ref="_M/ACPI_NOT_PACKAGE_ELEMENT">ACPI_NOT_PACKAGE_ELEMENT</a>) {</td></tr>
+<tr><th id="186">186</th><td>				<a class="macro" href="acmacros.h.html#426" title="acpi_ut_predefined_warning (_acpi_module_name, 186, info-&gt;full_pathname, 0, &quot;Found unexpected NULL package element&quot;)" data-ref="_M/ACPI_WARN_PREDEFINED">ACPI_WARN_PREDEFINED</a>((<a class="macro" href="../../../include/acpi/acoutput.h.html#195" title="_acpi_module_name, 186" data-ref="_M/AE_INFO">AE_INFO</a>,</td></tr>
+<tr><th id="187">187</th><td>						      <a class="local col4 ref" href="#4info" title='info' data-ref="4info" data-ref-filename="4info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::full_pathname" title='acpi_evaluate_info::full_pathname' data-ref="acpi_evaluate_info::full_pathname" data-ref-filename="acpi_evaluate_info..full_pathname">full_pathname</a>,</td></tr>
+<tr><th id="188">188</th><td>						      <a class="macro" href="acnamesp.h.html#52" title="0" data-ref="_M/ACPI_WARN_ALWAYS">ACPI_WARN_ALWAYS</a>,</td></tr>
+<tr><th id="189">189</th><td>						      <q>"Found unexpected NULL package element"</q>));</td></tr>
+<tr><th id="190">190</th><td></td></tr>
+<tr><th id="191">191</th><td>				<a class="local col0 ref" href="#10status" title='status' data-ref="10status" data-ref-filename="10status">status</a> =</td></tr>
+<tr><th id="192">192</th><td>				    <a class="ref fn" href="#acpi_ns_repair_null_element" title='acpi_ns_repair_null_element' data-ref="acpi_ns_repair_null_element" data-ref-filename="acpi_ns_repair_null_element">acpi_ns_repair_null_element</a>(<a class="local col4 ref" href="#4info" title='info' data-ref="4info" data-ref-filename="4info">info</a>,</td></tr>
+<tr><th id="193">193</th><td>								<a class="local col5 ref" href="#5expected_btypes" title='expected_btypes' data-ref="5expected_btypes" data-ref-filename="5expected_btypes">expected_btypes</a>,</td></tr>
+<tr><th id="194">194</th><td>								<a class="local col6 ref" href="#6package_index" title='package_index' data-ref="6package_index" data-ref-filename="6package_index">package_index</a>,</td></tr>
+<tr><th id="195">195</th><td>								<a class="local col7 ref" href="#7return_object_ptr" title='return_object_ptr' data-ref="7return_object_ptr" data-ref-filename="7return_object_ptr">return_object_ptr</a>);</td></tr>
+<tr><th id="196">196</th><td>				<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#57" title="(!(status))" data-ref="_M/ACPI_SUCCESS">ACPI_SUCCESS</a>(<a class="local col0 ref" href="#10status" title='status' data-ref="10status" data-ref-filename="10status">status</a>)) {</td></tr>
+<tr><th id="197">197</th><td>					<b>return</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#60" title="(acpi_status) 0x0000" data-ref="_M/AE_OK">AE_OK</a>);	<i>/* Repair was successful */</i></td></tr>
+<tr><th id="198">198</th><td>				}</td></tr>
+<tr><th id="199">199</th><td>			} <b>else</b> {</td></tr>
+<tr><th id="200">200</th><td>				<a class="macro" href="acmacros.h.html#426" title="acpi_ut_predefined_warning (_acpi_module_name, 200, info-&gt;full_pathname, 0, &quot;Missing expected return value&quot;)" data-ref="_M/ACPI_WARN_PREDEFINED">ACPI_WARN_PREDEFINED</a>((<a class="macro" href="../../../include/acpi/acoutput.h.html#195" title="_acpi_module_name, 200" data-ref="_M/AE_INFO">AE_INFO</a>,</td></tr>
+<tr><th id="201">201</th><td>						      <a class="local col4 ref" href="#4info" title='info' data-ref="4info" data-ref-filename="4info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::full_pathname" title='acpi_evaluate_info::full_pathname' data-ref="acpi_evaluate_info::full_pathname" data-ref-filename="acpi_evaluate_info..full_pathname">full_pathname</a>,</td></tr>
+<tr><th id="202">202</th><td>						      <a class="macro" href="acnamesp.h.html#52" title="0" data-ref="_M/ACPI_WARN_ALWAYS">ACPI_WARN_ALWAYS</a>,</td></tr>
+<tr><th id="203">203</th><td>						      <q>"Missing expected return value"</q>));</td></tr>
+<tr><th id="204">204</th><td>			}</td></tr>
+<tr><th id="205">205</th><td></td></tr>
+<tr><th id="206">206</th><td>			<b>return</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#156" title="((acpi_status) (0x0012 | 0x3000))" data-ref="_M/AE_AML_NO_RETURN_VALUE">AE_AML_NO_RETURN_VALUE</a>);</td></tr>
+<tr><th id="207">207</th><td>		}</td></tr>
+<tr><th id="208">208</th><td>	}</td></tr>
+<tr><th id="209">209</th><td></td></tr>
+<tr><th id="210">210</th><td>	<b>if</b> (<a class="local col5 ref" href="#5expected_btypes" title='expected_btypes' data-ref="5expected_btypes" data-ref-filename="5expected_btypes">expected_btypes</a> &amp; <a class="macro" href="aclocal.h.html#386" title="0x02" data-ref="_M/ACPI_RTYPE_INTEGER">ACPI_RTYPE_INTEGER</a>) {</td></tr>
+<tr><th id="211">211</th><td>		<a class="local col0 ref" href="#10status" title='status' data-ref="10status" data-ref-filename="10status">status</a> = <a class="ref fn" href="acnamesp.h.html#acpi_ns_convert_to_integer" title='acpi_ns_convert_to_integer' data-ref="acpi_ns_convert_to_integer" data-ref-filename="acpi_ns_convert_to_integer">acpi_ns_convert_to_integer</a>(<a class="local col8 ref" href="#8return_object" title='return_object' data-ref="8return_object" data-ref-filename="8return_object">return_object</a>, &amp;<a class="local col9 ref" href="#9new_object" title='new_object' data-ref="9new_object" data-ref-filename="9new_object">new_object</a>);</td></tr>
+<tr><th id="212">212</th><td>		<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#57" title="(!(status))" data-ref="_M/ACPI_SUCCESS">ACPI_SUCCESS</a>(<a class="local col0 ref" href="#10status" title='status' data-ref="10status" data-ref-filename="10status">status</a>)) {</td></tr>
+<tr><th id="213">213</th><td>			<b>goto</b> <a class="lbl" href="#12object_repaired" data-ref="12object_repaired" data-ref-filename="12object_repaired">object_repaired</a>;</td></tr>
+<tr><th id="214">214</th><td>		}</td></tr>
+<tr><th id="215">215</th><td>	}</td></tr>
+<tr><th id="216">216</th><td>	<b>if</b> (<a class="local col5 ref" href="#5expected_btypes" title='expected_btypes' data-ref="5expected_btypes" data-ref-filename="5expected_btypes">expected_btypes</a> &amp; <a class="macro" href="aclocal.h.html#387" title="0x04" data-ref="_M/ACPI_RTYPE_STRING">ACPI_RTYPE_STRING</a>) {</td></tr>
+<tr><th id="217">217</th><td>		<a class="local col0 ref" href="#10status" title='status' data-ref="10status" data-ref-filename="10status">status</a> = <a class="ref fn" href="acnamesp.h.html#acpi_ns_convert_to_string" title='acpi_ns_convert_to_string' data-ref="acpi_ns_convert_to_string" data-ref-filename="acpi_ns_convert_to_string">acpi_ns_convert_to_string</a>(<a class="local col8 ref" href="#8return_object" title='return_object' data-ref="8return_object" data-ref-filename="8return_object">return_object</a>, &amp;<a class="local col9 ref" href="#9new_object" title='new_object' data-ref="9new_object" data-ref-filename="9new_object">new_object</a>);</td></tr>
+<tr><th id="218">218</th><td>		<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#57" title="(!(status))" data-ref="_M/ACPI_SUCCESS">ACPI_SUCCESS</a>(<a class="local col0 ref" href="#10status" title='status' data-ref="10status" data-ref-filename="10status">status</a>)) {</td></tr>
+<tr><th id="219">219</th><td>			<b>goto</b> <a class="lbl" href="#12object_repaired" data-ref="12object_repaired" data-ref-filename="12object_repaired">object_repaired</a>;</td></tr>
+<tr><th id="220">220</th><td>		}</td></tr>
+<tr><th id="221">221</th><td>	}</td></tr>
+<tr><th id="222">222</th><td>	<b>if</b> (<a class="local col5 ref" href="#5expected_btypes" title='expected_btypes' data-ref="5expected_btypes" data-ref-filename="5expected_btypes">expected_btypes</a> &amp; <a class="macro" href="aclocal.h.html#388" title="0x08" data-ref="_M/ACPI_RTYPE_BUFFER">ACPI_RTYPE_BUFFER</a>) {</td></tr>
+<tr><th id="223">223</th><td>		<a class="local col0 ref" href="#10status" title='status' data-ref="10status" data-ref-filename="10status">status</a> = <a class="ref fn" href="acnamesp.h.html#acpi_ns_convert_to_buffer" title='acpi_ns_convert_to_buffer' data-ref="acpi_ns_convert_to_buffer" data-ref-filename="acpi_ns_convert_to_buffer">acpi_ns_convert_to_buffer</a>(<a class="local col8 ref" href="#8return_object" title='return_object' data-ref="8return_object" data-ref-filename="8return_object">return_object</a>, &amp;<a class="local col9 ref" href="#9new_object" title='new_object' data-ref="9new_object" data-ref-filename="9new_object">new_object</a>);</td></tr>
+<tr><th id="224">224</th><td>		<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#57" title="(!(status))" data-ref="_M/ACPI_SUCCESS">ACPI_SUCCESS</a>(<a class="local col0 ref" href="#10status" title='status' data-ref="10status" data-ref-filename="10status">status</a>)) {</td></tr>
+<tr><th id="225">225</th><td>			<b>goto</b> <a class="lbl" href="#12object_repaired" data-ref="12object_repaired" data-ref-filename="12object_repaired">object_repaired</a>;</td></tr>
+<tr><th id="226">226</th><td>		}</td></tr>
+<tr><th id="227">227</th><td>	}</td></tr>
+<tr><th id="228">228</th><td>	<b>if</b> (<a class="local col5 ref" href="#5expected_btypes" title='expected_btypes' data-ref="5expected_btypes" data-ref-filename="5expected_btypes">expected_btypes</a> &amp; <a class="macro" href="aclocal.h.html#389" title="0x10" data-ref="_M/ACPI_RTYPE_PACKAGE">ACPI_RTYPE_PACKAGE</a>) {</td></tr>
+<tr><th id="229">229</th><td>		<i>/*</i></td></tr>
+<tr><th id="230">230</th><td><i>		 * A package is expected. We will wrap the existing object with a</i></td></tr>
+<tr><th id="231">231</th><td><i>		 * new package object. It is often the case that if a variable-length</i></td></tr>
+<tr><th id="232">232</th><td><i>		 * package is required, but there is only a single object needed, the</i></td></tr>
+<tr><th id="233">233</th><td><i>		 * BIOS will return that object instead of wrapping it with a Package</i></td></tr>
+<tr><th id="234">234</th><td><i>		 * object. Note: after the wrapping, the package will be validated</i></td></tr>
+<tr><th id="235">235</th><td><i>		 * for correct contents (expected object type or types).</i></td></tr>
+<tr><th id="236">236</th><td><i>		 */</i></td></tr>
+<tr><th id="237">237</th><td>		<a class="local col0 ref" href="#10status" title='status' data-ref="10status" data-ref-filename="10status">status</a> =</td></tr>
+<tr><th id="238">238</th><td>		    <a class="ref fn" href="#acpi_ns_wrap_with_package" title='acpi_ns_wrap_with_package' data-ref="acpi_ns_wrap_with_package" data-ref-filename="acpi_ns_wrap_with_package">acpi_ns_wrap_with_package</a>(<a class="local col4 ref" href="#4info" title='info' data-ref="4info" data-ref-filename="4info">info</a>, <a class="local col8 ref" href="#8return_object" title='return_object' data-ref="8return_object" data-ref-filename="8return_object">return_object</a>, &amp;<a class="local col9 ref" href="#9new_object" title='new_object' data-ref="9new_object" data-ref-filename="9new_object">new_object</a>);</td></tr>
+<tr><th id="239">239</th><td>		<b>if</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#57" title="(!(status))" data-ref="_M/ACPI_SUCCESS">ACPI_SUCCESS</a>(<a class="local col0 ref" href="#10status" title='status' data-ref="10status" data-ref-filename="10status">status</a>)) {</td></tr>
+<tr><th id="240">240</th><td>			<i>/*</i></td></tr>
+<tr><th id="241">241</th><td><i>			 * The original object just had its reference count</i></td></tr>
+<tr><th id="242">242</th><td><i>			 * incremented for being inserted into the new package.</i></td></tr>
+<tr><th id="243">243</th><td><i>			 */</i></td></tr>
+<tr><th id="244">244</th><td>			*<a class="local col7 ref" href="#7return_object_ptr" title='return_object_ptr' data-ref="7return_object_ptr" data-ref-filename="7return_object_ptr">return_object_ptr</a> = <a class="local col9 ref" href="#9new_object" title='new_object' data-ref="9new_object" data-ref-filename="9new_object">new_object</a>;	<i>/* New Package object */</i></td></tr>
+<tr><th id="245">245</th><td>			<a class="local col4 ref" href="#4info" title='info' data-ref="4info" data-ref-filename="4info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::return_flags" title='acpi_evaluate_info::return_flags' data-ref="acpi_evaluate_info::return_flags" data-ref-filename="acpi_evaluate_info..return_flags">return_flags</a> |= <a class="macro" href="acstruct.h.html#182" title="1" data-ref="_M/ACPI_OBJECT_REPAIRED">ACPI_OBJECT_REPAIRED</a>;</td></tr>
+<tr><th id="246">246</th><td>			<b>return</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#60" title="(acpi_status) 0x0000" data-ref="_M/AE_OK">AE_OK</a>);</td></tr>
+<tr><th id="247">247</th><td>		}</td></tr>
+<tr><th id="248">248</th><td>	}</td></tr>
+<tr><th id="249">249</th><td></td></tr>
+<tr><th id="250">250</th><td>	<i>/* We cannot repair this object */</i></td></tr>
+<tr><th id="251">251</th><td></td></tr>
+<tr><th id="252">252</th><td>	<b>return</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#141" title="((acpi_status) (0x0003 | 0x3000))" data-ref="_M/AE_AML_OPERAND_TYPE">AE_AML_OPERAND_TYPE</a>);</td></tr>
+<tr><th id="253">253</th><td></td></tr>
+<tr><th id="254">254</th><td><dfn class="lbl" id="12object_repaired" data-ref="12object_repaired" data-ref-filename="12object_repaired">object_repaired</dfn>:</td></tr>
+<tr><th id="255">255</th><td></td></tr>
+<tr><th id="256">256</th><td>	<i>/* Object was successfully repaired */</i></td></tr>
+<tr><th id="257">257</th><td></td></tr>
+<tr><th id="258">258</th><td>	<b>if</b> (<a class="local col6 ref" href="#6package_index" title='package_index' data-ref="6package_index" data-ref-filename="6package_index">package_index</a> != <a class="macro" href="acnamesp.h.html#47" title="(u32)(~((u32) 0))" data-ref="_M/ACPI_NOT_PACKAGE_ELEMENT">ACPI_NOT_PACKAGE_ELEMENT</a>) {</td></tr>
+<tr><th id="259">259</th><td></td></tr>
+<tr><th id="260">260</th><td>		<i>/* Update reference count of new object */</i></td></tr>
+<tr><th id="261">261</th><td></td></tr>
+<tr><th id="262">262</th><td>		<b>if</b> (!(<a class="local col4 ref" href="#4info" title='info' data-ref="4info" data-ref-filename="4info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::return_flags" title='acpi_evaluate_info::return_flags' data-ref="acpi_evaluate_info::return_flags" data-ref-filename="acpi_evaluate_info..return_flags">return_flags</a> &amp; <a class="macro" href="acstruct.h.html#183" title="2" data-ref="_M/ACPI_OBJECT_WRAPPED">ACPI_OBJECT_WRAPPED</a>)) {</td></tr>
+<tr><th id="263">263</th><td>			<a class="local col9 ref" href="#9new_object" title='new_object' data-ref="9new_object" data-ref-filename="9new_object">new_object</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::common" title='acpi_operand_object::common' data-ref="acpi_operand_object::common" data-ref-filename="acpi_operand_object..common">common</a>.<a class="ref field" href="acobject.h.html#74" title='acpi_object_common::reference_count' data-ref="acpi_object_common::reference_count" data-ref-filename="acpi_object_common..reference_count">reference_count</a> =</td></tr>
+<tr><th id="264">264</th><td>			    <a class="local col8 ref" href="#8return_object" title='return_object' data-ref="8return_object" data-ref-filename="8return_object">return_object</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::common" title='acpi_operand_object::common' data-ref="acpi_operand_object::common" data-ref-filename="acpi_operand_object..common">common</a>.<a class="ref field" href="acobject.h.html#74" title='acpi_object_common::reference_count' data-ref="acpi_object_common::reference_count" data-ref-filename="acpi_object_common..reference_count">reference_count</a>;</td></tr>
+<tr><th id="265">265</th><td>		}</td></tr>
+<tr><th id="266">266</th><td></td></tr>
+<tr><th id="267">267</th><td>		<a class="macro" href="../../../include/acpi/acoutput.h.html#436" title="" data-ref="_M/ACPI_DEBUG_PRINT">ACPI_DEBUG_PRINT</a>((ACPI_DB_REPAIR,</td></tr>
+<tr><th id="268">268</th><td>				  <q>"%s: Converted %s to expected %s at Package index %u\n"</q>,</td></tr>
+<tr><th id="269">269</th><td>				  info-&gt;full_pathname,</td></tr>
+<tr><th id="270">270</th><td>				  acpi_ut_get_object_type_name(return_object),</td></tr>
+<tr><th id="271">271</th><td>				  acpi_ut_get_object_type_name(new_object),</td></tr>
+<tr><th id="272">272</th><td>				  package_index));</td></tr>
+<tr><th id="273">273</th><td>	} <b>else</b> {</td></tr>
+<tr><th id="274">274</th><td>		<a class="macro" href="../../../include/acpi/acoutput.h.html#436" title="" data-ref="_M/ACPI_DEBUG_PRINT">ACPI_DEBUG_PRINT</a>((ACPI_DB_REPAIR,</td></tr>
+<tr><th id="275">275</th><td>				  <q>"%s: Converted %s to expected %s\n"</q>,</td></tr>
+<tr><th id="276">276</th><td>				  info-&gt;full_pathname,</td></tr>
+<tr><th id="277">277</th><td>				  acpi_ut_get_object_type_name(return_object),</td></tr>
+<tr><th id="278">278</th><td>				  acpi_ut_get_object_type_name(new_object)));</td></tr>
+<tr><th id="279">279</th><td>	}</td></tr>
+<tr><th id="280">280</th><td></td></tr>
+<tr><th id="281">281</th><td>	<i>/* Delete old object, install the new return object */</i></td></tr>
+<tr><th id="282">282</th><td></td></tr>
+<tr><th id="283">283</th><td>	<a class="ref fn" href="acutils.h.html#acpi_ut_remove_reference" title='acpi_ut_remove_reference' data-ref="acpi_ut_remove_reference" data-ref-filename="acpi_ut_remove_reference">acpi_ut_remove_reference</a>(<a class="local col8 ref" href="#8return_object" title='return_object' data-ref="8return_object" data-ref-filename="8return_object">return_object</a>);</td></tr>
+<tr><th id="284">284</th><td>	*<a class="local col7 ref" href="#7return_object_ptr" title='return_object_ptr' data-ref="7return_object_ptr" data-ref-filename="7return_object_ptr">return_object_ptr</a> = <a class="local col9 ref" href="#9new_object" title='new_object' data-ref="9new_object" data-ref-filename="9new_object">new_object</a>;</td></tr>
+<tr><th id="285">285</th><td>	<a class="local col4 ref" href="#4info" title='info' data-ref="4info" data-ref-filename="4info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::return_flags" title='acpi_evaluate_info::return_flags' data-ref="acpi_evaluate_info::return_flags" data-ref-filename="acpi_evaluate_info..return_flags">return_flags</a> |= <a class="macro" href="acstruct.h.html#182" title="1" data-ref="_M/ACPI_OBJECT_REPAIRED">ACPI_OBJECT_REPAIRED</a>;</td></tr>
+<tr><th id="286">286</th><td>	<b>return</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#60" title="(acpi_status) 0x0000" data-ref="_M/AE_OK">AE_OK</a>);</td></tr>
+<tr><th id="287">287</th><td>}</td></tr>
+<tr><th id="288">288</th><td></td></tr>
+<tr><th id="289">289</th><td><i  data-doc="acpi_ns_match_simple_repair">/******************************************************************************</i></td></tr>
+<tr><th id="290">290</th><td><i  data-doc="acpi_ns_match_simple_repair"> *</i></td></tr>
+<tr><th id="291">291</th><td><i  data-doc="acpi_ns_match_simple_repair"> * FUNCTION:    acpi_ns_match_simple_repair</i></td></tr>
+<tr><th id="292">292</th><td><i  data-doc="acpi_ns_match_simple_repair"> *</i></td></tr>
+<tr><th id="293">293</th><td><i  data-doc="acpi_ns_match_simple_repair"> * PARAMETERS:  node                - Namespace node for the method/object</i></td></tr>
+<tr><th id="294">294</th><td><i  data-doc="acpi_ns_match_simple_repair"> *              return_btype        - Object type that was returned</i></td></tr>
+<tr><th id="295">295</th><td><i  data-doc="acpi_ns_match_simple_repair"> *              package_index       - Index of object within parent package (if</i></td></tr>
+<tr><th id="296">296</th><td><i  data-doc="acpi_ns_match_simple_repair"> *                                    applicable - ACPI_NOT_PACKAGE_ELEMENT</i></td></tr>
+<tr><th id="297">297</th><td><i  data-doc="acpi_ns_match_simple_repair"> *                                    otherwise)</i></td></tr>
+<tr><th id="298">298</th><td><i  data-doc="acpi_ns_match_simple_repair"> *</i></td></tr>
+<tr><th id="299">299</th><td><i  data-doc="acpi_ns_match_simple_repair"> * RETURN:      Pointer to entry in repair table. NULL indicates not found.</i></td></tr>
+<tr><th id="300">300</th><td><i  data-doc="acpi_ns_match_simple_repair"> *</i></td></tr>
+<tr><th id="301">301</th><td><i  data-doc="acpi_ns_match_simple_repair"> * DESCRIPTION: Check an object name against the repairable object list.</i></td></tr>
+<tr><th id="302">302</th><td><i  data-doc="acpi_ns_match_simple_repair"> *</i></td></tr>
+<tr><th id="303">303</th><td><i  data-doc="acpi_ns_match_simple_repair"> *****************************************************************************/</i></td></tr>
+<tr><th id="304">304</th><td></td></tr>
+<tr><th id="305">305</th><td><em>static</em> <em>const</em> <b>struct</b> <a class="type" href="aclocal.h.html#acpi_simple_repair_info" title='acpi_simple_repair_info' data-ref="acpi_simple_repair_info" data-ref-filename="acpi_simple_repair_info">acpi_simple_repair_info</a> *<dfn class="tu decl def fn" id="acpi_ns_match_simple_repair" title='acpi_ns_match_simple_repair' data-type='const struct acpi_simple_repair_info * acpi_ns_match_simple_repair(struct acpi_namespace_node * node, u32 return_btype, u32 package_index)' data-ref="acpi_ns_match_simple_repair" data-ref-filename="acpi_ns_match_simple_repair">acpi_ns_match_simple_repair</dfn>(<b>struct</b></td></tr>
+<tr><th id="306">306</th><td>									 <a class="type" href="aclocal.h.html#acpi_namespace_node" title='acpi_namespace_node' data-ref="acpi_namespace_node" data-ref-filename="acpi_namespace_node">acpi_namespace_node</a></td></tr>
+<tr><th id="307">307</th><td>									 *<dfn class="local col3 decl" id="13node" title='node' data-type='struct acpi_namespace_node *' data-ref="13node" data-ref-filename="13node">node</dfn>,</td></tr>
+<tr><th id="308">308</th><td>									 <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a></td></tr>
+<tr><th id="309">309</th><td>									 <dfn class="local col4 decl" id="14return_btype" title='return_btype' data-type='u32' data-ref="14return_btype" data-ref-filename="14return_btype">return_btype</dfn>,</td></tr>
+<tr><th id="310">310</th><td>									 <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a></td></tr>
+<tr><th id="311">311</th><td>									 <dfn class="local col5 decl" id="15package_index" title='package_index' data-type='u32' data-ref="15package_index" data-ref-filename="15package_index">package_index</dfn>)</td></tr>
+<tr><th id="312">312</th><td>{</td></tr>
+<tr><th id="313">313</th><td>	<em>const</em> <b>struct</b> <a class="type" href="aclocal.h.html#acpi_simple_repair_info" title='acpi_simple_repair_info' data-ref="acpi_simple_repair_info" data-ref-filename="acpi_simple_repair_info">acpi_simple_repair_info</a> *<dfn class="local col6 decl" id="16this_name" title='this_name' data-type='const struct acpi_simple_repair_info *' data-ref="16this_name" data-ref-filename="16this_name">this_name</dfn>;</td></tr>
+<tr><th id="314">314</th><td></td></tr>
+<tr><th id="315">315</th><td>	<i>/* Search info table for a repairable predefined method/object name */</i></td></tr>
+<tr><th id="316">316</th><td></td></tr>
+<tr><th id="317">317</th><td>	<a class="local col6 ref" href="#16this_name" title='this_name' data-ref="16this_name" data-ref-filename="16this_name">this_name</a> = <a class="tu ref" href="#acpi_object_repair_info" title='acpi_object_repair_info' data-use='r' data-ref="acpi_object_repair_info" data-ref-filename="acpi_object_repair_info">acpi_object_repair_info</a>;</td></tr>
+<tr><th id="318">318</th><td>	<b>while</b> (<a class="local col6 ref" href="#16this_name" title='this_name' data-ref="16this_name" data-ref-filename="16this_name">this_name</a>-&gt;<a class="ref field" href="aclocal.h.html#acpi_simple_repair_info::object_converter" title='acpi_simple_repair_info::object_converter' data-ref="acpi_simple_repair_info::object_converter" data-ref-filename="acpi_simple_repair_info..object_converter">object_converter</a>) {</td></tr>
+<tr><th id="319">319</th><td>		<b>if</b> (<a class="macro" href="../../../include/acpi/actypes.h.html#518" title="(*((u32 *) (void *) ((node-&gt;name.ascii))) == *((u32 *) (void *) ((this_name-&gt;name))))" data-ref="_M/ACPI_COMPARE_NAMESEG">ACPI_COMPARE_NAMESEG</a>(<a class="local col3 ref" href="#13node" title='node' data-ref="13node" data-ref-filename="13node">node</a>-&gt;<a class="ref field" href="aclocal.h.html#acpi_namespace_node::name" title='acpi_namespace_node::name' data-ref="acpi_namespace_node::name" data-ref-filename="acpi_namespace_node..name">name</a>.<a class="ref field" href="../../../include/acpi/actbl.h.html#acpi_name_union::ascii" title='acpi_name_union::ascii' data-ref="acpi_name_union::ascii" data-ref-filename="acpi_name_union..ascii">ascii</a>, <a class="local col6 ref" href="#16this_name" title='this_name' data-ref="16this_name" data-ref-filename="16this_name">this_name</a>-&gt;<a class="ref field" href="aclocal.h.html#acpi_simple_repair_info::name" title='acpi_simple_repair_info::name' data-ref="acpi_simple_repair_info::name" data-ref-filename="acpi_simple_repair_info..name">name</a>)) {</td></tr>
+<tr><th id="320">320</th><td></td></tr>
+<tr><th id="321">321</th><td>			<i>/* Check if we can actually repair this name/type combination */</i></td></tr>
+<tr><th id="322">322</th><td></td></tr>
+<tr><th id="323">323</th><td>			<b>if</b> ((<a class="local col4 ref" href="#14return_btype" title='return_btype' data-ref="14return_btype" data-ref-filename="14return_btype">return_btype</a> &amp; <a class="local col6 ref" href="#16this_name" title='this_name' data-ref="16this_name" data-ref-filename="16this_name">this_name</a>-&gt;<a class="ref field" href="aclocal.h.html#acpi_simple_repair_info::unexpected_btypes" title='acpi_simple_repair_info::unexpected_btypes' data-ref="acpi_simple_repair_info::unexpected_btypes" data-ref-filename="acpi_simple_repair_info..unexpected_btypes">unexpected_btypes</a>) &amp;&amp;</td></tr>
+<tr><th id="324">324</th><td>			    (<a class="local col6 ref" href="#16this_name" title='this_name' data-ref="16this_name" data-ref-filename="16this_name">this_name</a>-&gt;<a class="ref field" href="aclocal.h.html#acpi_simple_repair_info::package_index" title='acpi_simple_repair_info::package_index' data-ref="acpi_simple_repair_info::package_index" data-ref-filename="acpi_simple_repair_info..package_index">package_index</a> ==</td></tr>
+<tr><th id="325">325</th><td>			     <a class="macro" href="acnamesp.h.html#48" title="((u32)(~((u32) 0))-1)" data-ref="_M/ACPI_ALL_PACKAGE_ELEMENTS">ACPI_ALL_PACKAGE_ELEMENTS</a></td></tr>
+<tr><th id="326">326</th><td>			     || <a class="local col5 ref" href="#15package_index" title='package_index' data-ref="15package_index" data-ref-filename="15package_index">package_index</a> == <a class="local col6 ref" href="#16this_name" title='this_name' data-ref="16this_name" data-ref-filename="16this_name">this_name</a>-&gt;<a class="ref field" href="aclocal.h.html#acpi_simple_repair_info::package_index" title='acpi_simple_repair_info::package_index' data-ref="acpi_simple_repair_info::package_index" data-ref-filename="acpi_simple_repair_info..package_index">package_index</a>)) {</td></tr>
+<tr><th id="327">327</th><td>				<b>return</b> (<a class="local col6 ref" href="#16this_name" title='this_name' data-ref="16this_name" data-ref-filename="16this_name">this_name</a>);</td></tr>
+<tr><th id="328">328</th><td>			}</td></tr>
+<tr><th id="329">329</th><td></td></tr>
+<tr><th id="330">330</th><td>			<b>return</b> (<a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>);</td></tr>
+<tr><th id="331">331</th><td>		}</td></tr>
+<tr><th id="332">332</th><td></td></tr>
+<tr><th id="333">333</th><td>		<a class="local col6 ref" href="#16this_name" title='this_name' data-ref="16this_name" data-ref-filename="16this_name">this_name</a>++;</td></tr>
+<tr><th id="334">334</th><td>	}</td></tr>
+<tr><th id="335">335</th><td></td></tr>
+<tr><th id="336">336</th><td>	<b>return</b> (<a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>);		<i>/* Name was not found in the repair table */</i></td></tr>
+<tr><th id="337">337</th><td>}</td></tr>
+<tr><th id="338">338</th><td></td></tr>
+<tr><th id="339">339</th><td><i>/*******************************************************************************</i></td></tr>
+<tr><th id="340">340</th><td><i> *</i></td></tr>
+<tr><th id="341">341</th><td><i> * FUNCTION:    acpi_ns_repair_null_element</i></td></tr>
+<tr><th id="342">342</th><td><i> *</i></td></tr>
+<tr><th id="343">343</th><td><i> * PARAMETERS:  info                - Method execution information block</i></td></tr>
+<tr><th id="344">344</th><td><i> *              expected_btypes     - Object types expected</i></td></tr>
+<tr><th id="345">345</th><td><i> *              package_index       - Index of object within parent package (if</i></td></tr>
+<tr><th id="346">346</th><td><i> *                                    applicable - ACPI_NOT_PACKAGE_ELEMENT</i></td></tr>
+<tr><th id="347">347</th><td><i> *                                    otherwise)</i></td></tr>
+<tr><th id="348">348</th><td><i> *              return_object_ptr   - Pointer to the object returned from the</i></td></tr>
+<tr><th id="349">349</th><td><i> *                                    evaluation of a method or object</i></td></tr>
+<tr><th id="350">350</th><td><i> *</i></td></tr>
+<tr><th id="351">351</th><td><i> * RETURN:      Status. AE_OK if repair was successful.</i></td></tr>
+<tr><th id="352">352</th><td><i> *</i></td></tr>
+<tr><th id="353">353</th><td><i> * DESCRIPTION: Attempt to repair a NULL element of a returned Package object.</i></td></tr>
+<tr><th id="354">354</th><td><i> *</i></td></tr>
+<tr><th id="355">355</th><td><i> ******************************************************************************/</i></td></tr>
+<tr><th id="356">356</th><td></td></tr>
+<tr><th id="357">357</th><td><a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_status" title='acpi_status' data-type='u32' data-ref="acpi_status" data-ref-filename="acpi_status">acpi_status</a></td></tr>
+<tr><th id="358">358</th><td><dfn class="decl def fn" id="acpi_ns_repair_null_element" title='acpi_ns_repair_null_element' data-ref="acpi_ns_repair_null_element" data-ref-filename="acpi_ns_repair_null_element">acpi_ns_repair_null_element</dfn>(<b>struct</b> <a class="type" href="acstruct.h.html#acpi_evaluate_info" title='acpi_evaluate_info' data-ref="acpi_evaluate_info" data-ref-filename="acpi_evaluate_info">acpi_evaluate_info</a> *<dfn class="local col7 decl" id="17info" title='info' data-type='struct acpi_evaluate_info *' data-ref="17info" data-ref-filename="17info">info</dfn>,</td></tr>
+<tr><th id="359">359</th><td>			    <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col8 decl" id="18expected_btypes" title='expected_btypes' data-type='u32' data-ref="18expected_btypes" data-ref-filename="18expected_btypes">expected_btypes</dfn>,</td></tr>
+<tr><th id="360">360</th><td>			    <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col9 decl" id="19package_index" title='package_index' data-type='u32' data-ref="19package_index" data-ref-filename="19package_index">package_index</dfn>,</td></tr>
+<tr><th id="361">361</th><td>			    <b>union</b> <a class="type" href="acobject.h.html#acpi_operand_object" title='acpi_operand_object' data-ref="acpi_operand_object" data-ref-filename="acpi_operand_object">acpi_operand_object</a> **<dfn class="local col0 decl" id="20return_object_ptr" title='return_object_ptr' data-type='union acpi_operand_object **' data-ref="20return_object_ptr" data-ref-filename="20return_object_ptr">return_object_ptr</dfn>)</td></tr>
+<tr><th id="362">362</th><td>{</td></tr>
+<tr><th id="363">363</th><td>	<b>union</b> <a class="type" href="acobject.h.html#acpi_operand_object" title='acpi_operand_object' data-ref="acpi_operand_object" data-ref-filename="acpi_operand_object">acpi_operand_object</a> *<dfn class="local col1 decl" id="21return_object" title='return_object' data-type='union acpi_operand_object *' data-ref="21return_object" data-ref-filename="21return_object">return_object</dfn> = *<a class="local col0 ref" href="#20return_object_ptr" title='return_object_ptr' data-ref="20return_object_ptr" data-ref-filename="20return_object_ptr">return_object_ptr</a>;</td></tr>
+<tr><th id="364">364</th><td>	<b>union</b> <a class="type" href="acobject.h.html#acpi_operand_object" title='acpi_operand_object' data-ref="acpi_operand_object" data-ref-filename="acpi_operand_object">acpi_operand_object</a> *<dfn class="local col2 decl" id="22new_object" title='new_object' data-type='union acpi_operand_object *' data-ref="22new_object" data-ref-filename="22new_object">new_object</dfn>;</td></tr>
+<tr><th id="365">365</th><td></td></tr>
+<tr><th id="366">366</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#440" title="" data-ref="_M/ACPI_FUNCTION_NAME">ACPI_FUNCTION_NAME</a>(ns_repair_null_element);</td></tr>
+<tr><th id="367">367</th><td></td></tr>
+<tr><th id="368">368</th><td>	<i>/* No repair needed if return object is non-NULL */</i></td></tr>
+<tr><th id="369">369</th><td></td></tr>
+<tr><th id="370">370</th><td>	<b>if</b> (<a class="local col1 ref" href="#21return_object" title='return_object' data-ref="21return_object" data-ref-filename="21return_object">return_object</a>) {</td></tr>
+<tr><th id="371">371</th><td>		<b>return</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#60" title="(acpi_status) 0x0000" data-ref="_M/AE_OK">AE_OK</a>);</td></tr>
+<tr><th id="372">372</th><td>	}</td></tr>
+<tr><th id="373">373</th><td></td></tr>
+<tr><th id="374">374</th><td>	<i>/*</i></td></tr>
+<tr><th id="375">375</th><td><i>	 * Attempt to repair a NULL element of a Package object. This applies to</i></td></tr>
+<tr><th id="376">376</th><td><i>	 * predefined names that return a fixed-length package and each element</i></td></tr>
+<tr><th id="377">377</th><td><i>	 * is required. It does not apply to variable-length packages where NULL</i></td></tr>
+<tr><th id="378">378</th><td><i>	 * elements are allowed, especially at the end of the package.</i></td></tr>
+<tr><th id="379">379</th><td><i>	 */</i></td></tr>
+<tr><th id="380">380</th><td>	<b>if</b> (<a class="local col8 ref" href="#18expected_btypes" title='expected_btypes' data-ref="18expected_btypes" data-ref-filename="18expected_btypes">expected_btypes</a> &amp; <a class="macro" href="aclocal.h.html#386" title="0x02" data-ref="_M/ACPI_RTYPE_INTEGER">ACPI_RTYPE_INTEGER</a>) {</td></tr>
+<tr><th id="381">381</th><td></td></tr>
+<tr><th id="382">382</th><td>		<i>/* Need an integer - create a zero-value integer */</i></td></tr>
+<tr><th id="383">383</th><td></td></tr>
+<tr><th id="384">384</th><td>		<a class="local col2 ref" href="#22new_object" title='new_object' data-ref="22new_object" data-ref-filename="22new_object">new_object</a> = <a class="ref fn" href="acutils.h.html#acpi_ut_create_integer_object" title='acpi_ut_create_integer_object' data-ref="acpi_ut_create_integer_object" data-ref-filename="acpi_ut_create_integer_object">acpi_ut_create_integer_object</a>((<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a>)<var>0</var>);</td></tr>
+<tr><th id="385">385</th><td>	} <b>else</b> <b>if</b> (<a class="local col8 ref" href="#18expected_btypes" title='expected_btypes' data-ref="18expected_btypes" data-ref-filename="18expected_btypes">expected_btypes</a> &amp; <a class="macro" href="aclocal.h.html#387" title="0x04" data-ref="_M/ACPI_RTYPE_STRING">ACPI_RTYPE_STRING</a>) {</td></tr>
+<tr><th id="386">386</th><td></td></tr>
+<tr><th id="387">387</th><td>		<i>/* Need a string - create a NULL string */</i></td></tr>
+<tr><th id="388">388</th><td></td></tr>
+<tr><th id="389">389</th><td>		<a class="local col2 ref" href="#22new_object" title='new_object' data-ref="22new_object" data-ref-filename="22new_object">new_object</a> = <a class="ref fn" href="acutils.h.html#acpi_ut_create_string_object" title='acpi_ut_create_string_object' data-ref="acpi_ut_create_string_object" data-ref-filename="acpi_ut_create_string_object">acpi_ut_create_string_object</a>(<var>0</var>);</td></tr>
+<tr><th id="390">390</th><td>	} <b>else</b> <b>if</b> (<a class="local col8 ref" href="#18expected_btypes" title='expected_btypes' data-ref="18expected_btypes" data-ref-filename="18expected_btypes">expected_btypes</a> &amp; <a class="macro" href="aclocal.h.html#388" title="0x08" data-ref="_M/ACPI_RTYPE_BUFFER">ACPI_RTYPE_BUFFER</a>) {</td></tr>
+<tr><th id="391">391</th><td></td></tr>
+<tr><th id="392">392</th><td>		<i>/* Need a buffer - create a zero-length buffer */</i></td></tr>
+<tr><th id="393">393</th><td></td></tr>
+<tr><th id="394">394</th><td>		<a class="local col2 ref" href="#22new_object" title='new_object' data-ref="22new_object" data-ref-filename="22new_object">new_object</a> = <a class="ref fn" href="acutils.h.html#acpi_ut_create_buffer_object" title='acpi_ut_create_buffer_object' data-ref="acpi_ut_create_buffer_object" data-ref-filename="acpi_ut_create_buffer_object">acpi_ut_create_buffer_object</a>(<var>0</var>);</td></tr>
+<tr><th id="395">395</th><td>	} <b>else</b> {</td></tr>
+<tr><th id="396">396</th><td>		<i>/* Error for all other expected types */</i></td></tr>
+<tr><th id="397">397</th><td></td></tr>
+<tr><th id="398">398</th><td>		<b>return</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#141" title="((acpi_status) (0x0003 | 0x3000))" data-ref="_M/AE_AML_OPERAND_TYPE">AE_AML_OPERAND_TYPE</a>);</td></tr>
+<tr><th id="399">399</th><td>	}</td></tr>
+<tr><th id="400">400</th><td></td></tr>
+<tr><th id="401">401</th><td>	<b>if</b> (!<a class="local col2 ref" href="#22new_object" title='new_object' data-ref="22new_object" data-ref-filename="22new_object">new_object</a>) {</td></tr>
+<tr><th id="402">402</th><td>		<b>return</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#74" title="((acpi_status) (0x0004 | 0x0000))" data-ref="_M/AE_NO_MEMORY">AE_NO_MEMORY</a>);</td></tr>
+<tr><th id="403">403</th><td>	}</td></tr>
+<tr><th id="404">404</th><td></td></tr>
+<tr><th id="405">405</th><td>	<i>/* Set the reference count according to the parent Package object */</i></td></tr>
+<tr><th id="406">406</th><td></td></tr>
+<tr><th id="407">407</th><td>	<a class="local col2 ref" href="#22new_object" title='new_object' data-ref="22new_object" data-ref-filename="22new_object">new_object</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::common" title='acpi_operand_object::common' data-ref="acpi_operand_object::common" data-ref-filename="acpi_operand_object..common">common</a>.<a class="ref field" href="acobject.h.html#74" title='acpi_object_common::reference_count' data-ref="acpi_object_common::reference_count" data-ref-filename="acpi_object_common..reference_count">reference_count</a> =</td></tr>
+<tr><th id="408">408</th><td>	    <a class="local col7 ref" href="#17info" title='info' data-ref="17info" data-ref-filename="17info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::parent_package" title='acpi_evaluate_info::parent_package' data-ref="acpi_evaluate_info::parent_package" data-ref-filename="acpi_evaluate_info..parent_package">parent_package</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::common" title='acpi_operand_object::common' data-ref="acpi_operand_object::common" data-ref-filename="acpi_operand_object..common">common</a>.<a class="ref field" href="acobject.h.html#74" title='acpi_object_common::reference_count' data-ref="acpi_object_common::reference_count" data-ref-filename="acpi_object_common..reference_count">reference_count</a>;</td></tr>
+<tr><th id="409">409</th><td></td></tr>
+<tr><th id="410">410</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#436" title="" data-ref="_M/ACPI_DEBUG_PRINT">ACPI_DEBUG_PRINT</a>((ACPI_DB_REPAIR,</td></tr>
+<tr><th id="411">411</th><td>			  <q>"%s: Converted NULL package element to expected %s at index %u\n"</q>,</td></tr>
+<tr><th id="412">412</th><td>			  info-&gt;full_pathname,</td></tr>
+<tr><th id="413">413</th><td>			  acpi_ut_get_object_type_name(new_object),</td></tr>
+<tr><th id="414">414</th><td>			  package_index));</td></tr>
+<tr><th id="415">415</th><td></td></tr>
+<tr><th id="416">416</th><td>	*<a class="local col0 ref" href="#20return_object_ptr" title='return_object_ptr' data-ref="20return_object_ptr" data-ref-filename="20return_object_ptr">return_object_ptr</a> = <a class="local col2 ref" href="#22new_object" title='new_object' data-ref="22new_object" data-ref-filename="22new_object">new_object</a>;</td></tr>
+<tr><th id="417">417</th><td>	<a class="local col7 ref" href="#17info" title='info' data-ref="17info" data-ref-filename="17info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::return_flags" title='acpi_evaluate_info::return_flags' data-ref="acpi_evaluate_info::return_flags" data-ref-filename="acpi_evaluate_info..return_flags">return_flags</a> |= <a class="macro" href="acstruct.h.html#182" title="1" data-ref="_M/ACPI_OBJECT_REPAIRED">ACPI_OBJECT_REPAIRED</a>;</td></tr>
+<tr><th id="418">418</th><td>	<b>return</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#60" title="(acpi_status) 0x0000" data-ref="_M/AE_OK">AE_OK</a>);</td></tr>
+<tr><th id="419">419</th><td>}</td></tr>
+<tr><th id="420">420</th><td></td></tr>
+<tr><th id="421">421</th><td><i>/******************************************************************************</i></td></tr>
+<tr><th id="422">422</th><td><i> *</i></td></tr>
+<tr><th id="423">423</th><td><i> * FUNCTION:    acpi_ns_remove_null_elements</i></td></tr>
+<tr><th id="424">424</th><td><i> *</i></td></tr>
+<tr><th id="425">425</th><td><i> * PARAMETERS:  info                - Method execution information block</i></td></tr>
+<tr><th id="426">426</th><td><i> *              package_type        - An acpi_return_package_types value</i></td></tr>
+<tr><th id="427">427</th><td><i> *              obj_desc            - A Package object</i></td></tr>
+<tr><th id="428">428</th><td><i> *</i></td></tr>
+<tr><th id="429">429</th><td><i> * RETURN:      None.</i></td></tr>
+<tr><th id="430">430</th><td><i> *</i></td></tr>
+<tr><th id="431">431</th><td><i> * DESCRIPTION: Remove all NULL package elements from packages that contain</i></td></tr>
+<tr><th id="432">432</th><td><i> *              a variable number of subpackages. For these types of</i></td></tr>
+<tr><th id="433">433</th><td><i> *              packages, NULL elements can be safely removed.</i></td></tr>
+<tr><th id="434">434</th><td><i> *</i></td></tr>
+<tr><th id="435">435</th><td><i> *****************************************************************************/</i></td></tr>
+<tr><th id="436">436</th><td></td></tr>
+<tr><th id="437">437</th><td><em>void</em></td></tr>
+<tr><th id="438">438</th><td><dfn class="decl def fn" id="acpi_ns_remove_null_elements" title='acpi_ns_remove_null_elements' data-ref="acpi_ns_remove_null_elements" data-ref-filename="acpi_ns_remove_null_elements">acpi_ns_remove_null_elements</dfn>(<b>struct</b> <a class="type" href="acstruct.h.html#acpi_evaluate_info" title='acpi_evaluate_info' data-ref="acpi_evaluate_info" data-ref-filename="acpi_evaluate_info">acpi_evaluate_info</a> *<dfn class="local col3 decl" id="23info" title='info' data-type='struct acpi_evaluate_info *' data-ref="23info" data-ref-filename="23info">info</dfn>,</td></tr>
+<tr><th id="439">439</th><td>			     <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="local col4 decl" id="24package_type" title='package_type' data-type='u8' data-ref="24package_type" data-ref-filename="24package_type">package_type</dfn>,</td></tr>
+<tr><th id="440">440</th><td>			     <b>union</b> <a class="type" href="acobject.h.html#acpi_operand_object" title='acpi_operand_object' data-ref="acpi_operand_object" data-ref-filename="acpi_operand_object">acpi_operand_object</a> *<dfn class="local col5 decl" id="25obj_desc" title='obj_desc' data-type='union acpi_operand_object *' data-ref="25obj_desc" data-ref-filename="25obj_desc">obj_desc</dfn>)</td></tr>
+<tr><th id="441">441</th><td>{</td></tr>
+<tr><th id="442">442</th><td>	<b>union</b> <a class="type" href="acobject.h.html#acpi_operand_object" title='acpi_operand_object' data-ref="acpi_operand_object" data-ref-filename="acpi_operand_object">acpi_operand_object</a> **<dfn class="local col6 decl" id="26source" title='source' data-type='union acpi_operand_object **' data-ref="26source" data-ref-filename="26source">source</dfn>;</td></tr>
+<tr><th id="443">443</th><td>	<b>union</b> <a class="type" href="acobject.h.html#acpi_operand_object" title='acpi_operand_object' data-ref="acpi_operand_object" data-ref-filename="acpi_operand_object">acpi_operand_object</a> **<dfn class="local col7 decl" id="27dest" title='dest' data-type='union acpi_operand_object **' data-ref="27dest" data-ref-filename="27dest">dest</dfn>;</td></tr>
+<tr><th id="444">444</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col8 decl" id="28count" title='count' data-type='u32' data-ref="28count" data-ref-filename="28count">count</dfn>;</td></tr>
+<tr><th id="445">445</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col9 decl" id="29new_count" title='new_count' data-type='u32' data-ref="29new_count" data-ref-filename="29new_count">new_count</dfn>;</td></tr>
+<tr><th id="446">446</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col0 decl" id="30i" title='i' data-type='u32' data-ref="30i" data-ref-filename="30i">i</dfn>;</td></tr>
+<tr><th id="447">447</th><td></td></tr>
+<tr><th id="448">448</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#440" title="" data-ref="_M/ACPI_FUNCTION_NAME">ACPI_FUNCTION_NAME</a>(ns_remove_null_elements);</td></tr>
+<tr><th id="449">449</th><td></td></tr>
+<tr><th id="450">450</th><td>	<i>/*</i></td></tr>
+<tr><th id="451">451</th><td><i>	 * We can safely remove all NULL elements from these package types:</i></td></tr>
+<tr><th id="452">452</th><td><i>	 * PTYPE1_VAR packages contain a variable number of simple data types.</i></td></tr>
+<tr><th id="453">453</th><td><i>	 * PTYPE2 packages contain a variable number of subpackages.</i></td></tr>
+<tr><th id="454">454</th><td><i>	 */</i></td></tr>
+<tr><th id="455">455</th><td>	<b>switch</b> (<a class="local col4 ref" href="#24package_type" title='package_type' data-ref="24package_type" data-ref-filename="24package_type">package_type</a>) {</td></tr>
+<tr><th id="456">456</th><td>	<b>case</b> <a class="enum" href="acpredef.h.html#ACPI_PTYPE1_VAR" title='ACPI_PTYPE1_VAR' data-ref="ACPI_PTYPE1_VAR" data-ref-filename="ACPI_PTYPE1_VAR">ACPI_PTYPE1_VAR</a>:</td></tr>
+<tr><th id="457">457</th><td>	<b>case</b> <a class="enum" href="acpredef.h.html#ACPI_PTYPE2" title='ACPI_PTYPE2' data-ref="ACPI_PTYPE2" data-ref-filename="ACPI_PTYPE2">ACPI_PTYPE2</a>:</td></tr>
+<tr><th id="458">458</th><td>	<b>case</b> <a class="enum" href="acpredef.h.html#ACPI_PTYPE2_COUNT" title='ACPI_PTYPE2_COUNT' data-ref="ACPI_PTYPE2_COUNT" data-ref-filename="ACPI_PTYPE2_COUNT">ACPI_PTYPE2_COUNT</a>:</td></tr>
+<tr><th id="459">459</th><td>	<b>case</b> <a class="enum" href="acpredef.h.html#ACPI_PTYPE2_PKG_COUNT" title='ACPI_PTYPE2_PKG_COUNT' data-ref="ACPI_PTYPE2_PKG_COUNT" data-ref-filename="ACPI_PTYPE2_PKG_COUNT">ACPI_PTYPE2_PKG_COUNT</a>:</td></tr>
+<tr><th id="460">460</th><td>	<b>case</b> <a class="enum" href="acpredef.h.html#ACPI_PTYPE2_FIXED" title='ACPI_PTYPE2_FIXED' data-ref="ACPI_PTYPE2_FIXED" data-ref-filename="ACPI_PTYPE2_FIXED">ACPI_PTYPE2_FIXED</a>:</td></tr>
+<tr><th id="461">461</th><td>	<b>case</b> <a class="enum" href="acpredef.h.html#ACPI_PTYPE2_MIN" title='ACPI_PTYPE2_MIN' data-ref="ACPI_PTYPE2_MIN" data-ref-filename="ACPI_PTYPE2_MIN">ACPI_PTYPE2_MIN</a>:</td></tr>
+<tr><th id="462">462</th><td>	<b>case</b> <a class="enum" href="acpredef.h.html#ACPI_PTYPE2_REV_FIXED" title='ACPI_PTYPE2_REV_FIXED' data-ref="ACPI_PTYPE2_REV_FIXED" data-ref-filename="ACPI_PTYPE2_REV_FIXED">ACPI_PTYPE2_REV_FIXED</a>:</td></tr>
+<tr><th id="463">463</th><td>	<b>case</b> <a class="enum" href="acpredef.h.html#ACPI_PTYPE2_FIX_VAR" title='ACPI_PTYPE2_FIX_VAR' data-ref="ACPI_PTYPE2_FIX_VAR" data-ref-filename="ACPI_PTYPE2_FIX_VAR">ACPI_PTYPE2_FIX_VAR</a>:</td></tr>
+<tr><th id="464">464</th><td>		<b>break</b>;</td></tr>
+<tr><th id="465">465</th><td></td></tr>
+<tr><th id="466">466</th><td>	<b>default</b>:</td></tr>
+<tr><th id="467">467</th><td>	<b>case</b> <a class="enum" href="acpredef.h.html#ACPI_PTYPE2_VAR_VAR" title='ACPI_PTYPE2_VAR_VAR' data-ref="ACPI_PTYPE2_VAR_VAR" data-ref-filename="ACPI_PTYPE2_VAR_VAR">ACPI_PTYPE2_VAR_VAR</a>:</td></tr>
+<tr><th id="468">468</th><td>	<b>case</b> <a class="enum" href="acpredef.h.html#ACPI_PTYPE1_FIXED" title='ACPI_PTYPE1_FIXED' data-ref="ACPI_PTYPE1_FIXED" data-ref-filename="ACPI_PTYPE1_FIXED">ACPI_PTYPE1_FIXED</a>:</td></tr>
+<tr><th id="469">469</th><td>	<b>case</b> <a class="enum" href="acpredef.h.html#ACPI_PTYPE1_OPTION" title='ACPI_PTYPE1_OPTION' data-ref="ACPI_PTYPE1_OPTION" data-ref-filename="ACPI_PTYPE1_OPTION">ACPI_PTYPE1_OPTION</a>:</td></tr>
+<tr><th id="470">470</th><td>		<b>return</b>;</td></tr>
+<tr><th id="471">471</th><td>	}</td></tr>
+<tr><th id="472">472</th><td></td></tr>
+<tr><th id="473">473</th><td>	<a class="local col8 ref" href="#28count" title='count' data-ref="28count" data-ref-filename="28count">count</a> = <a class="local col5 ref" href="#25obj_desc" title='obj_desc' data-ref="25obj_desc" data-ref-filename="25obj_desc">obj_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::package" title='acpi_operand_object::package' data-ref="acpi_operand_object::package" data-ref-filename="acpi_operand_object..package">package</a>.<a class="ref field" href="acobject.h.html#acpi_object_package::count" title='acpi_object_package::count' data-ref="acpi_object_package::count" data-ref-filename="acpi_object_package..count">count</a>;</td></tr>
+<tr><th id="474">474</th><td>	<a class="local col9 ref" href="#29new_count" title='new_count' data-ref="29new_count" data-ref-filename="29new_count">new_count</a> = <a class="local col8 ref" href="#28count" title='count' data-ref="28count" data-ref-filename="28count">count</a>;</td></tr>
+<tr><th id="475">475</th><td></td></tr>
+<tr><th id="476">476</th><td>	<a class="local col6 ref" href="#26source" title='source' data-ref="26source" data-ref-filename="26source">source</a> = <a class="local col5 ref" href="#25obj_desc" title='obj_desc' data-ref="25obj_desc" data-ref-filename="25obj_desc">obj_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::package" title='acpi_operand_object::package' data-ref="acpi_operand_object::package" data-ref-filename="acpi_operand_object..package">package</a>.<a class="ref field" href="acobject.h.html#acpi_object_package::elements" title='acpi_object_package::elements' data-ref="acpi_object_package::elements" data-ref-filename="acpi_object_package..elements">elements</a>;</td></tr>
+<tr><th id="477">477</th><td>	<a class="local col7 ref" href="#27dest" title='dest' data-ref="27dest" data-ref-filename="27dest">dest</a> = <a class="local col6 ref" href="#26source" title='source' data-ref="26source" data-ref-filename="26source">source</a>;</td></tr>
+<tr><th id="478">478</th><td></td></tr>
+<tr><th id="479">479</th><td>	<i>/* Examine all elements of the package object, remove nulls */</i></td></tr>
+<tr><th id="480">480</th><td></td></tr>
+<tr><th id="481">481</th><td>	<b>for</b> (<a class="local col0 ref" href="#30i" title='i' data-ref="30i" data-ref-filename="30i">i</a> = <var>0</var>; <a class="local col0 ref" href="#30i" title='i' data-ref="30i" data-ref-filename="30i">i</a> &lt; <a class="local col8 ref" href="#28count" title='count' data-ref="28count" data-ref-filename="28count">count</a>; <a class="local col0 ref" href="#30i" title='i' data-ref="30i" data-ref-filename="30i">i</a>++) {</td></tr>
+<tr><th id="482">482</th><td>		<b>if</b> (!*<a class="local col6 ref" href="#26source" title='source' data-ref="26source" data-ref-filename="26source">source</a>) {</td></tr>
+<tr><th id="483">483</th><td>			<a class="local col9 ref" href="#29new_count" title='new_count' data-ref="29new_count" data-ref-filename="29new_count">new_count</a>--;</td></tr>
+<tr><th id="484">484</th><td>		} <b>else</b> {</td></tr>
+<tr><th id="485">485</th><td>			*<a class="local col7 ref" href="#27dest" title='dest' data-ref="27dest" data-ref-filename="27dest">dest</a> = *<a class="local col6 ref" href="#26source" title='source' data-ref="26source" data-ref-filename="26source">source</a>;</td></tr>
+<tr><th id="486">486</th><td>			<a class="local col7 ref" href="#27dest" title='dest' data-ref="27dest" data-ref-filename="27dest">dest</a>++;</td></tr>
+<tr><th id="487">487</th><td>		}</td></tr>
+<tr><th id="488">488</th><td></td></tr>
+<tr><th id="489">489</th><td>		<a class="local col6 ref" href="#26source" title='source' data-ref="26source" data-ref-filename="26source">source</a>++;</td></tr>
+<tr><th id="490">490</th><td>	}</td></tr>
+<tr><th id="491">491</th><td></td></tr>
+<tr><th id="492">492</th><td>	<i>/* Update parent package if any null elements were removed */</i></td></tr>
+<tr><th id="493">493</th><td></td></tr>
+<tr><th id="494">494</th><td>	<b>if</b> (<a class="local col9 ref" href="#29new_count" title='new_count' data-ref="29new_count" data-ref-filename="29new_count">new_count</a> &lt; <a class="local col8 ref" href="#28count" title='count' data-ref="28count" data-ref-filename="28count">count</a>) {</td></tr>
+<tr><th id="495">495</th><td>		<a class="macro" href="../../../include/acpi/acoutput.h.html#436" title="" data-ref="_M/ACPI_DEBUG_PRINT">ACPI_DEBUG_PRINT</a>((ACPI_DB_REPAIR,</td></tr>
+<tr><th id="496">496</th><td>				  <q>"%s: Found and removed %u NULL elements\n"</q>,</td></tr>
+<tr><th id="497">497</th><td>				  info-&gt;full_pathname, (count - new_count)));</td></tr>
+<tr><th id="498">498</th><td></td></tr>
+<tr><th id="499">499</th><td>		<i>/* NULL terminate list and update the package count */</i></td></tr>
+<tr><th id="500">500</th><td></td></tr>
+<tr><th id="501">501</th><td>		*<a class="local col7 ref" href="#27dest" title='dest' data-ref="27dest" data-ref-filename="27dest">dest</a> = <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="502">502</th><td>		<a class="local col5 ref" href="#25obj_desc" title='obj_desc' data-ref="25obj_desc" data-ref-filename="25obj_desc">obj_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::package" title='acpi_operand_object::package' data-ref="acpi_operand_object::package" data-ref-filename="acpi_operand_object..package">package</a>.<a class="ref field" href="acobject.h.html#acpi_object_package::count" title='acpi_object_package::count' data-ref="acpi_object_package::count" data-ref-filename="acpi_object_package..count">count</a> = <a class="local col9 ref" href="#29new_count" title='new_count' data-ref="29new_count" data-ref-filename="29new_count">new_count</a>;</td></tr>
+<tr><th id="503">503</th><td>	}</td></tr>
+<tr><th id="504">504</th><td>}</td></tr>
+<tr><th id="505">505</th><td></td></tr>
+<tr><th id="506">506</th><td><i>/*******************************************************************************</i></td></tr>
+<tr><th id="507">507</th><td><i> *</i></td></tr>
+<tr><th id="508">508</th><td><i> * FUNCTION:    acpi_ns_wrap_with_package</i></td></tr>
+<tr><th id="509">509</th><td><i> *</i></td></tr>
+<tr><th id="510">510</th><td><i> * PARAMETERS:  info                - Method execution information block</i></td></tr>
+<tr><th id="511">511</th><td><i> *              original_object     - Pointer to the object to repair.</i></td></tr>
+<tr><th id="512">512</th><td><i> *              obj_desc_ptr        - The new package object is returned here</i></td></tr>
+<tr><th id="513">513</th><td><i> *</i></td></tr>
+<tr><th id="514">514</th><td><i> * RETURN:      Status, new object in *obj_desc_ptr</i></td></tr>
+<tr><th id="515">515</th><td><i> *</i></td></tr>
+<tr><th id="516">516</th><td><i> * DESCRIPTION: Repair a common problem with objects that are defined to</i></td></tr>
+<tr><th id="517">517</th><td><i> *              return a variable-length Package of sub-objects. If there is</i></td></tr>
+<tr><th id="518">518</th><td><i> *              only one sub-object, some BIOS code mistakenly simply declares</i></td></tr>
+<tr><th id="519">519</th><td><i> *              the single object instead of a Package with one sub-object.</i></td></tr>
+<tr><th id="520">520</th><td><i> *              This function attempts to repair this error by wrapping a</i></td></tr>
+<tr><th id="521">521</th><td><i> *              Package object around the original object, creating the</i></td></tr>
+<tr><th id="522">522</th><td><i> *              correct and expected Package with one sub-object.</i></td></tr>
+<tr><th id="523">523</th><td><i> *</i></td></tr>
+<tr><th id="524">524</th><td><i> *              Names that can be repaired in this manner include:</i></td></tr>
+<tr><th id="525">525</th><td><i> *              _ALR, _CSD, _HPX, _MLS, _PLD, _PRT, _PSS, _TRT, _TSS,</i></td></tr>
+<tr><th id="526">526</th><td><i> *              _BCL, _DOD, _FIX, _Sx</i></td></tr>
+<tr><th id="527">527</th><td><i> *</i></td></tr>
+<tr><th id="528">528</th><td><i> ******************************************************************************/</i></td></tr>
+<tr><th id="529">529</th><td></td></tr>
+<tr><th id="530">530</th><td><a class="typedef" href="../../../include/acpi/actypes.h.html#acpi_status" title='acpi_status' data-type='u32' data-ref="acpi_status" data-ref-filename="acpi_status">acpi_status</a></td></tr>
+<tr><th id="531">531</th><td><dfn class="decl def fn" id="acpi_ns_wrap_with_package" title='acpi_ns_wrap_with_package' data-ref="acpi_ns_wrap_with_package" data-ref-filename="acpi_ns_wrap_with_package">acpi_ns_wrap_with_package</dfn>(<b>struct</b> <a class="type" href="acstruct.h.html#acpi_evaluate_info" title='acpi_evaluate_info' data-ref="acpi_evaluate_info" data-ref-filename="acpi_evaluate_info">acpi_evaluate_info</a> *<dfn class="local col1 decl" id="31info" title='info' data-type='struct acpi_evaluate_info *' data-ref="31info" data-ref-filename="31info">info</dfn>,</td></tr>
+<tr><th id="532">532</th><td>			  <b>union</b> <a class="type" href="acobject.h.html#acpi_operand_object" title='acpi_operand_object' data-ref="acpi_operand_object" data-ref-filename="acpi_operand_object">acpi_operand_object</a> *<dfn class="local col2 decl" id="32original_object" title='original_object' data-type='union acpi_operand_object *' data-ref="32original_object" data-ref-filename="32original_object">original_object</dfn>,</td></tr>
+<tr><th id="533">533</th><td>			  <b>union</b> <a class="type" href="acobject.h.html#acpi_operand_object" title='acpi_operand_object' data-ref="acpi_operand_object" data-ref-filename="acpi_operand_object">acpi_operand_object</a> **<dfn class="local col3 decl" id="33obj_desc_ptr" title='obj_desc_ptr' data-type='union acpi_operand_object **' data-ref="33obj_desc_ptr" data-ref-filename="33obj_desc_ptr">obj_desc_ptr</dfn>)</td></tr>
+<tr><th id="534">534</th><td>{</td></tr>
+<tr><th id="535">535</th><td>	<b>union</b> <a class="type" href="acobject.h.html#acpi_operand_object" title='acpi_operand_object' data-ref="acpi_operand_object" data-ref-filename="acpi_operand_object">acpi_operand_object</a> *<dfn class="local col4 decl" id="34pkg_obj_desc" title='pkg_obj_desc' data-type='union acpi_operand_object *' data-ref="34pkg_obj_desc" data-ref-filename="34pkg_obj_desc">pkg_obj_desc</dfn>;</td></tr>
+<tr><th id="536">536</th><td></td></tr>
+<tr><th id="537">537</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#440" title="" data-ref="_M/ACPI_FUNCTION_NAME">ACPI_FUNCTION_NAME</a>(ns_wrap_with_package);</td></tr>
+<tr><th id="538">538</th><td></td></tr>
+<tr><th id="539">539</th><td>	<i>/*</i></td></tr>
+<tr><th id="540">540</th><td><i>	 * Create the new outer package and populate it. The new</i></td></tr>
+<tr><th id="541">541</th><td><i>	 * package will have a single element, the lone sub-object.</i></td></tr>
+<tr><th id="542">542</th><td><i>	 */</i></td></tr>
+<tr><th id="543">543</th><td>	<a class="local col4 ref" href="#34pkg_obj_desc" title='pkg_obj_desc' data-ref="34pkg_obj_desc" data-ref-filename="34pkg_obj_desc">pkg_obj_desc</a> = <a class="ref fn" href="acutils.h.html#acpi_ut_create_package_object" title='acpi_ut_create_package_object' data-ref="acpi_ut_create_package_object" data-ref-filename="acpi_ut_create_package_object">acpi_ut_create_package_object</a>(<var>1</var>);</td></tr>
+<tr><th id="544">544</th><td>	<b>if</b> (!<a class="local col4 ref" href="#34pkg_obj_desc" title='pkg_obj_desc' data-ref="34pkg_obj_desc" data-ref-filename="34pkg_obj_desc">pkg_obj_desc</a>) {</td></tr>
+<tr><th id="545">545</th><td>		<b>return</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#74" title="((acpi_status) (0x0004 | 0x0000))" data-ref="_M/AE_NO_MEMORY">AE_NO_MEMORY</a>);</td></tr>
+<tr><th id="546">546</th><td>	}</td></tr>
+<tr><th id="547">547</th><td></td></tr>
+<tr><th id="548">548</th><td>	<a class="local col4 ref" href="#34pkg_obj_desc" title='pkg_obj_desc' data-ref="34pkg_obj_desc" data-ref-filename="34pkg_obj_desc">pkg_obj_desc</a>-&gt;<a class="ref field" href="acobject.h.html#acpi_operand_object::package" title='acpi_operand_object::package' data-ref="acpi_operand_object::package" data-ref-filename="acpi_operand_object..package">package</a>.<a class="ref field" href="acobject.h.html#acpi_object_package::elements" title='acpi_object_package::elements' data-ref="acpi_object_package::elements" data-ref-filename="acpi_object_package..elements">elements</a>[<var>0</var>] = <a class="local col2 ref" href="#32original_object" title='original_object' data-ref="32original_object" data-ref-filename="32original_object">original_object</a>;</td></tr>
+<tr><th id="549">549</th><td></td></tr>
+<tr><th id="550">550</th><td>	<a class="macro" href="../../../include/acpi/acoutput.h.html#436" title="" data-ref="_M/ACPI_DEBUG_PRINT">ACPI_DEBUG_PRINT</a>((ACPI_DB_REPAIR,</td></tr>
+<tr><th id="551">551</th><td>			  <q>"%s: Wrapped %s with expected Package object\n"</q>,</td></tr>
+<tr><th id="552">552</th><td>			  info-&gt;full_pathname,</td></tr>
+<tr><th id="553">553</th><td>			  acpi_ut_get_object_type_name(original_object)));</td></tr>
+<tr><th id="554">554</th><td></td></tr>
+<tr><th id="555">555</th><td>	<i>/* Return the new object in the object pointer */</i></td></tr>
+<tr><th id="556">556</th><td></td></tr>
+<tr><th id="557">557</th><td>	*<a class="local col3 ref" href="#33obj_desc_ptr" title='obj_desc_ptr' data-ref="33obj_desc_ptr" data-ref-filename="33obj_desc_ptr">obj_desc_ptr</a> = <a class="local col4 ref" href="#34pkg_obj_desc" title='pkg_obj_desc' data-ref="34pkg_obj_desc" data-ref-filename="34pkg_obj_desc">pkg_obj_desc</a>;</td></tr>
+<tr><th id="558">558</th><td>	<a class="local col1 ref" href="#31info" title='info' data-ref="31info" data-ref-filename="31info">info</a>-&gt;<a class="ref field" href="acstruct.h.html#acpi_evaluate_info::return_flags" title='acpi_evaluate_info::return_flags' data-ref="acpi_evaluate_info::return_flags" data-ref-filename="acpi_evaluate_info..return_flags">return_flags</a> |= <a class="macro" href="acstruct.h.html#182" title="1" data-ref="_M/ACPI_OBJECT_REPAIRED">ACPI_OBJECT_REPAIRED</a> | <a class="macro" href="acstruct.h.html#183" title="2" data-ref="_M/ACPI_OBJECT_WRAPPED">ACPI_OBJECT_WRAPPED</a>;</td></tr>
+<tr><th id="559">559</th><td>	<b>return</b> (<a class="macro" href="../../../include/acpi/acexcep.h.html#60" title="(acpi_status) 0x0000" data-ref="_M/AE_OK">AE_OK</a>);</td></tr>
+<tr><th id="560">560</th><td>}</td></tr>
+<tr><th id="561">561</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

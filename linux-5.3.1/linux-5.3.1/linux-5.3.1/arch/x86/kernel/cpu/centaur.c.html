@@ -1,0 +1,306 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>centaur.c source code [linux-5.3.1/arch/x86/kernel/cpu/centaur.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/arch/x86/kernel/cpu/centaur.c'; var root_path = '../../../../..'; var data_path = '../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../..'>linux-5.3.1</a>/<a href='../../..'>arch</a>/<a href='../..'>x86</a>/<a href='..'>kernel</a>/<a href='./'>cpu</a>/<a href='centaur.c.html'>centaur.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td></td></tr>
+<tr><th id="3">3</th><td><u>#include <a href="../../../../include/linux/sched.h.html">&lt;linux/sched.h&gt;</a></u></td></tr>
+<tr><th id="4">4</th><td><u>#include <a href="../../../../include/linux/sched/clock.h.html">&lt;linux/sched/clock.h&gt;</a></u></td></tr>
+<tr><th id="5">5</th><td></td></tr>
+<tr><th id="6">6</th><td><u>#include <a href="../../include/asm/cpufeature.h.html">&lt;asm/cpufeature.h&gt;</a></u></td></tr>
+<tr><th id="7">7</th><td><u>#include <a href="../../include/asm/e820/api.h.html">&lt;asm/e820/api.h&gt;</a></u></td></tr>
+<tr><th id="8">8</th><td><u>#include <a href="../../include/asm/mtrr.h.html">&lt;asm/mtrr.h&gt;</a></u></td></tr>
+<tr><th id="9">9</th><td><u>#include <a href="../../include/asm/msr.h.html">&lt;asm/msr.h&gt;</a></u></td></tr>
+<tr><th id="10">10</th><td></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="cpu.h.html">"cpu.h"</a></u></td></tr>
+<tr><th id="12">12</th><td></td></tr>
+<tr><th id="13">13</th><td><u>#define <dfn class="macro" id="_M/ACE_PRESENT" data-ref="_M/ACE_PRESENT">ACE_PRESENT</dfn>	(1 &lt;&lt; 6)</u></td></tr>
+<tr><th id="14">14</th><td><u>#define <dfn class="macro" id="_M/ACE_ENABLED" data-ref="_M/ACE_ENABLED">ACE_ENABLED</dfn>	(1 &lt;&lt; 7)</u></td></tr>
+<tr><th id="15">15</th><td><u>#define <dfn class="macro" id="_M/ACE_FCR" data-ref="_M/ACE_FCR">ACE_FCR</dfn>		(1 &lt;&lt; 28)	/* MSR_VIA_FCR */</u></td></tr>
+<tr><th id="16">16</th><td></td></tr>
+<tr><th id="17">17</th><td><u>#define <dfn class="macro" id="_M/RNG_PRESENT" data-ref="_M/RNG_PRESENT">RNG_PRESENT</dfn>	(1 &lt;&lt; 2)</u></td></tr>
+<tr><th id="18">18</th><td><u>#define <dfn class="macro" id="_M/RNG_ENABLED" data-ref="_M/RNG_ENABLED">RNG_ENABLED</dfn>	(1 &lt;&lt; 3)</u></td></tr>
+<tr><th id="19">19</th><td><u>#define <dfn class="macro" id="_M/RNG_ENABLE" data-ref="_M/RNG_ENABLE">RNG_ENABLE</dfn>	(1 &lt;&lt; 6)	/* MSR_VIA_RNG */</u></td></tr>
+<tr><th id="20">20</th><td></td></tr>
+<tr><th id="21">21</th><td><u>#define <dfn class="macro" id="_M/X86_VMX_FEATURE_PROC_CTLS_TPR_SHADOW" data-ref="_M/X86_VMX_FEATURE_PROC_CTLS_TPR_SHADOW">X86_VMX_FEATURE_PROC_CTLS_TPR_SHADOW</dfn>	0x00200000</u></td></tr>
+<tr><th id="22">22</th><td><u>#define <dfn class="macro" id="_M/X86_VMX_FEATURE_PROC_CTLS_VNMI" data-ref="_M/X86_VMX_FEATURE_PROC_CTLS_VNMI">X86_VMX_FEATURE_PROC_CTLS_VNMI</dfn>		0x00400000</u></td></tr>
+<tr><th id="23">23</th><td><u>#define <dfn class="macro" id="_M/X86_VMX_FEATURE_PROC_CTLS_2ND_CTLS" data-ref="_M/X86_VMX_FEATURE_PROC_CTLS_2ND_CTLS">X86_VMX_FEATURE_PROC_CTLS_2ND_CTLS</dfn>	0x80000000</u></td></tr>
+<tr><th id="24">24</th><td><u>#define <dfn class="macro" id="_M/X86_VMX_FEATURE_PROC_CTLS2_VIRT_APIC" data-ref="_M/X86_VMX_FEATURE_PROC_CTLS2_VIRT_APIC">X86_VMX_FEATURE_PROC_CTLS2_VIRT_APIC</dfn>	0x00000001</u></td></tr>
+<tr><th id="25">25</th><td><u>#define <dfn class="macro" id="_M/X86_VMX_FEATURE_PROC_CTLS2_EPT" data-ref="_M/X86_VMX_FEATURE_PROC_CTLS2_EPT">X86_VMX_FEATURE_PROC_CTLS2_EPT</dfn>		0x00000002</u></td></tr>
+<tr><th id="26">26</th><td><u>#define <dfn class="macro" id="_M/X86_VMX_FEATURE_PROC_CTLS2_VPID" data-ref="_M/X86_VMX_FEATURE_PROC_CTLS2_VPID">X86_VMX_FEATURE_PROC_CTLS2_VPID</dfn>		0x00000020</u></td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="init_c3" title='init_c3' data-type='void init_c3(struct cpuinfo_x86 * c)' data-ref="init_c3" data-ref-filename="init_c3">init_c3</dfn>(<b>struct</b> <a class="type" href="../../include/asm/processor.h.html#cpuinfo_x86" title='cpuinfo_x86' data-ref="cpuinfo_x86" data-ref-filename="cpuinfo_x86">cpuinfo_x86</a> *<dfn class="local col1 decl" id="1c" title='c' data-type='struct cpuinfo_x86 *' data-ref="1c" data-ref-filename="1c">c</dfn>)</td></tr>
+<tr><th id="29">29</th><td>{</td></tr>
+<tr><th id="30">30</th><td>	<a class="typedef" href="../../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>  <dfn class="local col2 decl" id="2lo" title='lo' data-type='u32' data-ref="2lo" data-ref-filename="2lo">lo</dfn>, <dfn class="local col3 decl" id="3hi" title='hi' data-type='u32' data-ref="3hi" data-ref-filename="3hi">hi</dfn>;</td></tr>
+<tr><th id="31">31</th><td></td></tr>
+<tr><th id="32">32</th><td>	<i>/* Test for Centaur Extended Feature Flags presence */</i></td></tr>
+<tr><th id="33">33</th><td>	<b>if</b> (<a class="ref fn" href="../../include/asm/processor.h.html#cpuid_eax" title='cpuid_eax' data-ref="cpuid_eax" data-ref-filename="cpuid_eax">cpuid_eax</a>(<var>0xC0000000</var>) &gt;= <var>0xC0000001</var>) {</td></tr>
+<tr><th id="34">34</th><td>		<a class="typedef" href="../../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col4 decl" id="4tmp" title='tmp' data-type='u32' data-ref="4tmp" data-ref-filename="4tmp">tmp</dfn> = <a class="ref fn" href="../../include/asm/processor.h.html#cpuid_edx" title='cpuid_edx' data-ref="cpuid_edx" data-ref-filename="cpuid_edx">cpuid_edx</a>(<var>0xC0000001</var>);</td></tr>
+<tr><th id="35">35</th><td></td></tr>
+<tr><th id="36">36</th><td>		<i>/* enable ACE unit, if present and disabled */</i></td></tr>
+<tr><th id="37">37</th><td>		<b>if</b> ((<a class="local col4 ref" href="#4tmp" title='tmp' data-ref="4tmp" data-ref-filename="4tmp">tmp</a> &amp; (<a class="macro" href="#13" title="(1 &lt;&lt; 6)" data-ref="_M/ACE_PRESENT">ACE_PRESENT</a> | <a class="macro" href="#14" title="(1 &lt;&lt; 7)" data-ref="_M/ACE_ENABLED">ACE_ENABLED</a>)) == <a class="macro" href="#13" title="(1 &lt;&lt; 6)" data-ref="_M/ACE_PRESENT">ACE_PRESENT</a>) {</td></tr>
+<tr><th id="38">38</th><td>			<a class="macro" href="../../include/asm/msr.h.html#267" title="do { u64 __val = native_read_msr((0x00001107)); (void)((lo) = (u32)__val); (void)((hi) = (u32)(__val &gt;&gt; 32)); } while (0)" data-ref="_M/rdmsr">rdmsr</a>(<a class="macro" href="../../include/asm/msr-index.h.html#516" title="0x00001107" data-ref="_M/MSR_VIA_FCR">MSR_VIA_FCR</a>, <a class="local col2 ref" href="#2lo" title='lo' data-ref="2lo" data-ref-filename="2lo">lo</a>, <a class="local col3 ref" href="#3hi" title='hi' data-ref="3hi" data-ref-filename="3hi">hi</a>);</td></tr>
+<tr><th id="39">39</th><td>			<a class="local col2 ref" href="#2lo" title='lo' data-ref="2lo" data-ref-filename="2lo">lo</a> |= <a class="macro" href="#15" title="(1 &lt;&lt; 28)" data-ref="_M/ACE_FCR">ACE_FCR</a>;		<i>/* enable ACE unit */</i></td></tr>
+<tr><th id="40">40</th><td>			<a class="ref fn" href="../../include/asm/msr.h.html#wrmsr" title='wrmsr' data-ref="wrmsr" data-ref-filename="wrmsr">wrmsr</a>(<a class="macro" href="../../include/asm/msr-index.h.html#516" title="0x00001107" data-ref="_M/MSR_VIA_FCR">MSR_VIA_FCR</a>, <a class="local col2 ref" href="#2lo" title='lo' data-ref="2lo" data-ref-filename="2lo">lo</a>, <a class="local col3 ref" href="#3hi" title='hi' data-ref="3hi" data-ref-filename="3hi">hi</a>);</td></tr>
+<tr><th id="41">41</th><td>			<a class="macro" href="../../../../include/linux/printk.h.html#310" title="printk(&quot;\001&quot; &quot;6&quot; &quot;CPU: Enabled ACE h/w crypto\n&quot;)" data-ref="_M/pr_info">pr_info</a>(<q>"CPU: Enabled ACE h/w crypto\n"</q>);</td></tr>
+<tr><th id="42">42</th><td>		}</td></tr>
+<tr><th id="43">43</th><td></td></tr>
+<tr><th id="44">44</th><td>		<i>/* enable RNG unit, if present and disabled */</i></td></tr>
+<tr><th id="45">45</th><td>		<b>if</b> ((<a class="local col4 ref" href="#4tmp" title='tmp' data-ref="4tmp" data-ref-filename="4tmp">tmp</a> &amp; (<a class="macro" href="#17" title="(1 &lt;&lt; 2)" data-ref="_M/RNG_PRESENT">RNG_PRESENT</a> | <a class="macro" href="#18" title="(1 &lt;&lt; 3)" data-ref="_M/RNG_ENABLED">RNG_ENABLED</a>)) == <a class="macro" href="#17" title="(1 &lt;&lt; 2)" data-ref="_M/RNG_PRESENT">RNG_PRESENT</a>) {</td></tr>
+<tr><th id="46">46</th><td>			<a class="macro" href="../../include/asm/msr.h.html#267" title="do { u64 __val = native_read_msr((0x0000110b)); (void)((lo) = (u32)__val); (void)((hi) = (u32)(__val &gt;&gt; 32)); } while (0)" data-ref="_M/rdmsr">rdmsr</a>(<a class="macro" href="../../include/asm/msr-index.h.html#518" title="0x0000110b" data-ref="_M/MSR_VIA_RNG">MSR_VIA_RNG</a>, <a class="local col2 ref" href="#2lo" title='lo' data-ref="2lo" data-ref-filename="2lo">lo</a>, <a class="local col3 ref" href="#3hi" title='hi' data-ref="3hi" data-ref-filename="3hi">hi</a>);</td></tr>
+<tr><th id="47">47</th><td>			<a class="local col2 ref" href="#2lo" title='lo' data-ref="2lo" data-ref-filename="2lo">lo</a> |= <a class="macro" href="#19" title="(1 &lt;&lt; 6)" data-ref="_M/RNG_ENABLE">RNG_ENABLE</a>;	<i>/* enable RNG unit */</i></td></tr>
+<tr><th id="48">48</th><td>			<a class="ref fn" href="../../include/asm/msr.h.html#wrmsr" title='wrmsr' data-ref="wrmsr" data-ref-filename="wrmsr">wrmsr</a>(<a class="macro" href="../../include/asm/msr-index.h.html#518" title="0x0000110b" data-ref="_M/MSR_VIA_RNG">MSR_VIA_RNG</a>, <a class="local col2 ref" href="#2lo" title='lo' data-ref="2lo" data-ref-filename="2lo">lo</a>, <a class="local col3 ref" href="#3hi" title='hi' data-ref="3hi" data-ref-filename="3hi">hi</a>);</td></tr>
+<tr><th id="49">49</th><td>			<a class="macro" href="../../../../include/linux/printk.h.html#310" title="printk(&quot;\001&quot; &quot;6&quot; &quot;CPU: Enabled h/w RNG\n&quot;)" data-ref="_M/pr_info">pr_info</a>(<q>"CPU: Enabled h/w RNG\n"</q>);</td></tr>
+<tr><th id="50">50</th><td>		}</td></tr>
+<tr><th id="51">51</th><td></td></tr>
+<tr><th id="52">52</th><td>		<i>/* store Centaur Extended Feature Flags as</i></td></tr>
+<tr><th id="53">53</th><td><i>		 * word 5 of the CPU capability bit array</i></td></tr>
+<tr><th id="54">54</th><td><i>		 */</i></td></tr>
+<tr><th id="55">55</th><td>		<a class="local col1 ref" href="#1c" title='c' data-ref="1c" data-ref-filename="1c">c</a>-&gt;<a class="ref field" href="../../include/asm/processor.h.html#cpuinfo_x86::x86_capability" title='cpuinfo_x86::x86_capability' data-ref="cpuinfo_x86::x86_capability" data-ref-filename="cpuinfo_x86..x86_capability">x86_capability</a>[<a class="enum" href="../../include/asm/cpufeature.h.html#CPUID_C000_0001_EDX" title='CPUID_C000_0001_EDX' data-ref="CPUID_C000_0001_EDX" data-ref-filename="CPUID_C000_0001_EDX">CPUID_C000_0001_EDX</a>] = <a class="ref fn" href="../../include/asm/processor.h.html#cpuid_edx" title='cpuid_edx' data-ref="cpuid_edx" data-ref-filename="cpuid_edx">cpuid_edx</a>(<var>0xC0000001</var>);</td></tr>
+<tr><th id="56">56</th><td>	}</td></tr>
+<tr><th id="57">57</th><td><u>#<span data-ppcond="57">ifdef</span> <span class="macro" data-ref="_M/CONFIG_X86_32">CONFIG_X86_32</span></u></td></tr>
+<tr><th id="58">58</th><td>	<i>/* Cyrix III family needs CX8 &amp; PGE explicitly enabled. */</i></td></tr>
+<tr><th id="59">59</th><td>	<b>if</b> (c-&gt;x86_model &gt;= <var>6</var> &amp;&amp; c-&gt;x86_model &lt;= <var>13</var>) {</td></tr>
+<tr><th id="60">60</th><td>		rdmsr(MSR_VIA_FCR, lo, hi);</td></tr>
+<tr><th id="61">61</th><td>		lo |= (<var>1</var>&lt;&lt;<var>1</var> | <var>1</var>&lt;&lt;<var>7</var>);</td></tr>
+<tr><th id="62">62</th><td>		wrmsr(MSR_VIA_FCR, lo, hi);</td></tr>
+<tr><th id="63">63</th><td>		set_cpu_cap(c, X86_FEATURE_CX8);</td></tr>
+<tr><th id="64">64</th><td>	}</td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td>	<i>/* Before Nehemiah, the C3's had 3dNOW! */</i></td></tr>
+<tr><th id="67">67</th><td>	<b>if</b> (c-&gt;x86_model &gt;= <var>6</var> &amp;&amp; c-&gt;x86_model &lt; <var>9</var>)</td></tr>
+<tr><th id="68">68</th><td>		set_cpu_cap(c, X86_FEATURE_3DNOW);</td></tr>
+<tr><th id="69">69</th><td><u>#<span data-ppcond="57">endif</span></u></td></tr>
+<tr><th id="70">70</th><td>	<b>if</b> (<a class="local col1 ref" href="#1c" title='c' data-ref="1c" data-ref-filename="1c">c</a>-&gt;<a class="ref field" href="../../include/asm/processor.h.html#cpuinfo_x86::x86" title='cpuinfo_x86::x86' data-ref="cpuinfo_x86::x86" data-ref-filename="cpuinfo_x86..x86">x86</a> == <var>0x6</var> &amp;&amp; <a class="local col1 ref" href="#1c" title='c' data-ref="1c" data-ref-filename="1c">c</a>-&gt;<a class="ref field" href="../../include/asm/processor.h.html#cpuinfo_x86::x86_model" title='cpuinfo_x86::x86_model' data-ref="cpuinfo_x86::x86_model" data-ref-filename="cpuinfo_x86..x86_model">x86_model</a> &gt;= <var>0xf</var>) {</td></tr>
+<tr><th id="71">71</th><td>		<a class="local col1 ref" href="#1c" title='c' data-ref="1c" data-ref-filename="1c">c</a>-&gt;<a class="ref field" href="../../include/asm/processor.h.html#cpuinfo_x86::x86_cache_alignment" title='cpuinfo_x86::x86_cache_alignment' data-ref="cpuinfo_x86::x86_cache_alignment" data-ref-filename="cpuinfo_x86..x86_cache_alignment">x86_cache_alignment</a> = <a class="local col1 ref" href="#1c" title='c' data-ref="1c" data-ref-filename="1c">c</a>-&gt;<a class="ref field" href="../../include/asm/processor.h.html#cpuinfo_x86::x86_clflush_size" title='cpuinfo_x86::x86_clflush_size' data-ref="cpuinfo_x86::x86_clflush_size" data-ref-filename="cpuinfo_x86..x86_clflush_size">x86_clflush_size</a> * <var>2</var>;</td></tr>
+<tr><th id="72">72</th><td>		<a class="macro" href="../../include/asm/cpufeature.h.html#132" title="set_bit(( 3*32+16), (unsigned long *)((c)-&gt;x86_capability))" data-ref="_M/set_cpu_cap">set_cpu_cap</a>(<a class="local col1 ref" href="#1c" title='c' data-ref="1c" data-ref-filename="1c">c</a>, <a class="macro" href="../../include/asm/cpufeatures.h.html#98" title="( 3*32+16)" data-ref="_M/X86_FEATURE_REP_GOOD">X86_FEATURE_REP_GOOD</a>);</td></tr>
+<tr><th id="73">73</th><td>	}</td></tr>
+<tr><th id="74">74</th><td></td></tr>
+<tr><th id="75">75</th><td>	<a class="ref fn" href="cpu.h.html#cpu_detect_cache_sizes" title='cpu_detect_cache_sizes' data-ref="cpu_detect_cache_sizes" data-ref-filename="cpu_detect_cache_sizes">cpu_detect_cache_sizes</a>(<a class="local col1 ref" href="#1c" title='c' data-ref="1c" data-ref-filename="1c">c</a>);</td></tr>
+<tr><th id="76">76</th><td>}</td></tr>
+<tr><th id="77">77</th><td></td></tr>
+<tr><th id="78">78</th><td><b>enum</b> {</td></tr>
+<tr><th id="79">79</th><td>		<dfn class="enum" id="ECX8" title='ECX8' data-ref="ECX8" data-ref-filename="ECX8">ECX8</dfn>		= <var>1</var>&lt;&lt;<var>1</var>,</td></tr>
+<tr><th id="80">80</th><td>		<dfn class="enum" id="EIERRINT" title='EIERRINT' data-ref="EIERRINT" data-ref-filename="EIERRINT">EIERRINT</dfn>	= <var>1</var>&lt;&lt;<var>2</var>,</td></tr>
+<tr><th id="81">81</th><td>		<dfn class="enum" id="DPM" title='DPM' data-ref="DPM" data-ref-filename="DPM">DPM</dfn>		= <var>1</var>&lt;&lt;<var>3</var>,</td></tr>
+<tr><th id="82">82</th><td>		<dfn class="enum" id="DMCE" title='DMCE' data-ref="DMCE" data-ref-filename="DMCE">DMCE</dfn>		= <var>1</var>&lt;&lt;<var>4</var>,</td></tr>
+<tr><th id="83">83</th><td>		<dfn class="enum" id="DSTPCLK" title='DSTPCLK' data-ref="DSTPCLK" data-ref-filename="DSTPCLK">DSTPCLK</dfn>		= <var>1</var>&lt;&lt;<var>5</var>,</td></tr>
+<tr><th id="84">84</th><td>		<dfn class="enum" id="ELINEAR" title='ELINEAR' data-ref="ELINEAR" data-ref-filename="ELINEAR">ELINEAR</dfn>		= <var>1</var>&lt;&lt;<var>6</var>,</td></tr>
+<tr><th id="85">85</th><td>		<dfn class="enum" id="DSMC" title='DSMC' data-ref="DSMC" data-ref-filename="DSMC">DSMC</dfn>		= <var>1</var>&lt;&lt;<var>7</var>,</td></tr>
+<tr><th id="86">86</th><td>		<dfn class="enum" id="DTLOCK" title='DTLOCK' data-ref="DTLOCK" data-ref-filename="DTLOCK">DTLOCK</dfn>		= <var>1</var>&lt;&lt;<var>8</var>,</td></tr>
+<tr><th id="87">87</th><td>		<dfn class="enum" id="EDCTLB" title='EDCTLB' data-ref="EDCTLB" data-ref-filename="EDCTLB">EDCTLB</dfn>		= <var>1</var>&lt;&lt;<var>8</var>,</td></tr>
+<tr><th id="88">88</th><td>		<dfn class="enum" id="EMMX" title='EMMX' data-ref="EMMX" data-ref-filename="EMMX">EMMX</dfn>		= <var>1</var>&lt;&lt;<var>9</var>,</td></tr>
+<tr><th id="89">89</th><td>		<dfn class="enum" id="DPDC" title='DPDC' data-ref="DPDC" data-ref-filename="DPDC">DPDC</dfn>		= <var>1</var>&lt;&lt;<var>11</var>,</td></tr>
+<tr><th id="90">90</th><td>		<dfn class="enum" id="EBRPRED" title='EBRPRED' data-ref="EBRPRED" data-ref-filename="EBRPRED">EBRPRED</dfn>		= <var>1</var>&lt;&lt;<var>12</var>,</td></tr>
+<tr><th id="91">91</th><td>		<dfn class="enum" id="DIC" title='DIC' data-ref="DIC" data-ref-filename="DIC">DIC</dfn>		= <var>1</var>&lt;&lt;<var>13</var>,</td></tr>
+<tr><th id="92">92</th><td>		<dfn class="enum" id="DDC" title='DDC' data-ref="DDC" data-ref-filename="DDC">DDC</dfn>		= <var>1</var>&lt;&lt;<var>14</var>,</td></tr>
+<tr><th id="93">93</th><td>		<dfn class="enum" id="DNA" title='DNA' data-ref="DNA" data-ref-filename="DNA">DNA</dfn>		= <var>1</var>&lt;&lt;<var>15</var>,</td></tr>
+<tr><th id="94">94</th><td>		<dfn class="enum" id="ERETSTK" title='ERETSTK' data-ref="ERETSTK" data-ref-filename="ERETSTK">ERETSTK</dfn>		= <var>1</var>&lt;&lt;<var>16</var>,</td></tr>
+<tr><th id="95">95</th><td>		<dfn class="enum" id="E2MMX" title='E2MMX' data-ref="E2MMX" data-ref-filename="E2MMX">E2MMX</dfn>		= <var>1</var>&lt;&lt;<var>19</var>,</td></tr>
+<tr><th id="96">96</th><td>		<dfn class="enum" id="EAMD3D" title='EAMD3D' data-ref="EAMD3D" data-ref-filename="EAMD3D">EAMD3D</dfn>		= <var>1</var>&lt;&lt;<var>20</var>,</td></tr>
+<tr><th id="97">97</th><td>};</td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="early_init_centaur" title='early_init_centaur' data-type='void early_init_centaur(struct cpuinfo_x86 * c)' data-ref="early_init_centaur" data-ref-filename="early_init_centaur">early_init_centaur</dfn>(<b>struct</b> <a class="type" href="../../include/asm/processor.h.html#cpuinfo_x86" title='cpuinfo_x86' data-ref="cpuinfo_x86" data-ref-filename="cpuinfo_x86">cpuinfo_x86</a> *<dfn class="local col5 decl" id="5c" title='c' data-type='struct cpuinfo_x86 *' data-ref="5c" data-ref-filename="5c">c</dfn>)</td></tr>
+<tr><th id="100">100</th><td>{</td></tr>
+<tr><th id="101">101</th><td>	<b>switch</b> (<a class="local col5 ref" href="#5c" title='c' data-ref="5c" data-ref-filename="5c">c</a>-&gt;<a class="ref field" href="../../include/asm/processor.h.html#cpuinfo_x86::x86" title='cpuinfo_x86::x86' data-ref="cpuinfo_x86::x86" data-ref-filename="cpuinfo_x86..x86">x86</a>) {</td></tr>
+<tr><th id="102">102</th><td><u>#<span data-ppcond="102">ifdef</span> <span class="macro" data-ref="_M/CONFIG_X86_32">CONFIG_X86_32</span></u></td></tr>
+<tr><th id="103">103</th><td>	<b>case</b> <var>5</var>:</td></tr>
+<tr><th id="104">104</th><td>		<i>/* Emulate MTRRs using Centaur's MCR. */</i></td></tr>
+<tr><th id="105">105</th><td>		set_cpu_cap(c, X86_FEATURE_CENTAUR_MCR);</td></tr>
+<tr><th id="106">106</th><td>		<b>break</b>;</td></tr>
+<tr><th id="107">107</th><td><u>#<span data-ppcond="102">endif</span></u></td></tr>
+<tr><th id="108">108</th><td>	<b>case</b> <var>6</var>:</td></tr>
+<tr><th id="109">109</th><td>		<b>if</b> (<a class="local col5 ref" href="#5c" title='c' data-ref="5c" data-ref-filename="5c">c</a>-&gt;<a class="ref field" href="../../include/asm/processor.h.html#cpuinfo_x86::x86_model" title='cpuinfo_x86::x86_model' data-ref="cpuinfo_x86::x86_model" data-ref-filename="cpuinfo_x86..x86_model">x86_model</a> &gt;= <var>0xf</var>)</td></tr>
+<tr><th id="110">110</th><td>			<a class="macro" href="../../include/asm/cpufeature.h.html#132" title="set_bit(( 3*32+ 8), (unsigned long *)((c)-&gt;x86_capability))" data-ref="_M/set_cpu_cap">set_cpu_cap</a>(<a class="local col5 ref" href="#5c" title='c' data-ref="5c" data-ref-filename="5c">c</a>, <a class="macro" href="../../include/asm/cpufeatures.h.html#90" title="( 3*32+ 8)" data-ref="_M/X86_FEATURE_CONSTANT_TSC">X86_FEATURE_CONSTANT_TSC</a>);</td></tr>
+<tr><th id="111">111</th><td>		<b>break</b>;</td></tr>
+<tr><th id="112">112</th><td>	}</td></tr>
+<tr><th id="113">113</th><td><u>#<span data-ppcond="113">ifdef</span> <a class="macro" href="../../../../include/generated/autoconf.h.html#961" data-ref="_M/CONFIG_X86_64">CONFIG_X86_64</a></u></td></tr>
+<tr><th id="114">114</th><td>	<a class="macro" href="../../include/asm/cpufeature.h.html#132" title="set_bit(( 3*32+15), (unsigned long *)((c)-&gt;x86_capability))" data-ref="_M/set_cpu_cap">set_cpu_cap</a>(<a class="local col5 ref" href="#5c" title='c' data-ref="5c" data-ref-filename="5c">c</a>, <a class="macro" href="../../include/asm/cpufeatures.h.html#97" title="( 3*32+15)" data-ref="_M/X86_FEATURE_SYSENTER32">X86_FEATURE_SYSENTER32</a>);</td></tr>
+<tr><th id="115">115</th><td><u>#<span data-ppcond="113">endif</span></u></td></tr>
+<tr><th id="116">116</th><td>	<b>if</b> (<a class="local col5 ref" href="#5c" title='c' data-ref="5c" data-ref-filename="5c">c</a>-&gt;<a class="ref field" href="../../include/asm/processor.h.html#cpuinfo_x86::x86_power" title='cpuinfo_x86::x86_power' data-ref="cpuinfo_x86::x86_power" data-ref-filename="cpuinfo_x86..x86_power">x86_power</a> &amp; (<var>1</var> &lt;&lt; <var>8</var>)) {</td></tr>
+<tr><th id="117">117</th><td>		<a class="macro" href="../../include/asm/cpufeature.h.html#132" title="set_bit(( 3*32+ 8), (unsigned long *)((c)-&gt;x86_capability))" data-ref="_M/set_cpu_cap">set_cpu_cap</a>(<a class="local col5 ref" href="#5c" title='c' data-ref="5c" data-ref-filename="5c">c</a>, <a class="macro" href="../../include/asm/cpufeatures.h.html#90" title="( 3*32+ 8)" data-ref="_M/X86_FEATURE_CONSTANT_TSC">X86_FEATURE_CONSTANT_TSC</a>);</td></tr>
+<tr><th id="118">118</th><td>		<a class="macro" href="../../include/asm/cpufeature.h.html#132" title="set_bit(( 3*32+24), (unsigned long *)((c)-&gt;x86_capability))" data-ref="_M/set_cpu_cap">set_cpu_cap</a>(<a class="local col5 ref" href="#5c" title='c' data-ref="5c" data-ref-filename="5c">c</a>, <a class="macro" href="../../include/asm/cpufeatures.h.html#106" title="( 3*32+24)" data-ref="_M/X86_FEATURE_NONSTOP_TSC">X86_FEATURE_NONSTOP_TSC</a>);</td></tr>
+<tr><th id="119">119</th><td>	}</td></tr>
+<tr><th id="120">120</th><td>}</td></tr>
+<tr><th id="121">121</th><td></td></tr>
+<tr><th id="122">122</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="centaur_detect_vmx_virtcap" title='centaur_detect_vmx_virtcap' data-type='void centaur_detect_vmx_virtcap(struct cpuinfo_x86 * c)' data-ref="centaur_detect_vmx_virtcap" data-ref-filename="centaur_detect_vmx_virtcap">centaur_detect_vmx_virtcap</dfn>(<b>struct</b> <a class="type" href="../../include/asm/processor.h.html#cpuinfo_x86" title='cpuinfo_x86' data-ref="cpuinfo_x86" data-ref-filename="cpuinfo_x86">cpuinfo_x86</a> *<dfn class="local col6 decl" id="6c" title='c' data-type='struct cpuinfo_x86 *' data-ref="6c" data-ref-filename="6c">c</dfn>)</td></tr>
+<tr><th id="123">123</th><td>{</td></tr>
+<tr><th id="124">124</th><td>	<a class="typedef" href="../../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col7 decl" id="7vmx_msr_low" title='vmx_msr_low' data-type='u32' data-ref="7vmx_msr_low" data-ref-filename="7vmx_msr_low">vmx_msr_low</dfn>, <dfn class="local col8 decl" id="8vmx_msr_high" title='vmx_msr_high' data-type='u32' data-ref="8vmx_msr_high" data-ref-filename="8vmx_msr_high">vmx_msr_high</dfn>, <dfn class="local col9 decl" id="9msr_ctl" title='msr_ctl' data-type='u32' data-ref="9msr_ctl" data-ref-filename="9msr_ctl">msr_ctl</dfn>, <dfn class="local col0 decl" id="10msr_ctl2" title='msr_ctl2' data-type='u32' data-ref="10msr_ctl2" data-ref-filename="10msr_ctl2">msr_ctl2</dfn>;</td></tr>
+<tr><th id="125">125</th><td></td></tr>
+<tr><th id="126">126</th><td>	<a class="macro" href="../../include/asm/msr.h.html#267" title="do { u64 __val = native_read_msr((0x00000482)); (void)((vmx_msr_low) = (u32)__val); (void)((vmx_msr_high) = (u32)(__val &gt;&gt; 32)); } while (0)" data-ref="_M/rdmsr">rdmsr</a>(<a class="macro" href="../../include/asm/msr-index.h.html#816" title="0x00000482" data-ref="_M/MSR_IA32_VMX_PROCBASED_CTLS">MSR_IA32_VMX_PROCBASED_CTLS</a>, <a class="local col7 ref" href="#7vmx_msr_low" title='vmx_msr_low' data-ref="7vmx_msr_low" data-ref-filename="7vmx_msr_low">vmx_msr_low</a>, <a class="local col8 ref" href="#8vmx_msr_high" title='vmx_msr_high' data-ref="8vmx_msr_high" data-ref-filename="8vmx_msr_high">vmx_msr_high</a>);</td></tr>
+<tr><th id="127">127</th><td>	<a class="local col9 ref" href="#9msr_ctl" title='msr_ctl' data-ref="9msr_ctl" data-ref-filename="9msr_ctl">msr_ctl</a> = <a class="local col8 ref" href="#8vmx_msr_high" title='vmx_msr_high' data-ref="8vmx_msr_high" data-ref-filename="8vmx_msr_high">vmx_msr_high</a> | <a class="local col7 ref" href="#7vmx_msr_low" title='vmx_msr_low' data-ref="7vmx_msr_low" data-ref-filename="7vmx_msr_low">vmx_msr_low</a>;</td></tr>
+<tr><th id="128">128</th><td></td></tr>
+<tr><th id="129">129</th><td>	<b>if</b> (<a class="local col9 ref" href="#9msr_ctl" title='msr_ctl' data-ref="9msr_ctl" data-ref-filename="9msr_ctl">msr_ctl</a> &amp; <a class="macro" href="#21" title="0x00200000" data-ref="_M/X86_VMX_FEATURE_PROC_CTLS_TPR_SHADOW">X86_VMX_FEATURE_PROC_CTLS_TPR_SHADOW</a>)</td></tr>
+<tr><th id="130">130</th><td>		<a class="macro" href="../../include/asm/cpufeature.h.html#132" title="set_bit(( 8*32+ 0), (unsigned long *)((c)-&gt;x86_capability))" data-ref="_M/set_cpu_cap">set_cpu_cap</a>(<a class="local col6 ref" href="#6c" title='c' data-ref="6c" data-ref-filename="6c">c</a>, <a class="macro" href="../../include/asm/cpufeatures.h.html#226" title="( 8*32+ 0)" data-ref="_M/X86_FEATURE_TPR_SHADOW">X86_FEATURE_TPR_SHADOW</a>);</td></tr>
+<tr><th id="131">131</th><td>	<b>if</b> (<a class="local col9 ref" href="#9msr_ctl" title='msr_ctl' data-ref="9msr_ctl" data-ref-filename="9msr_ctl">msr_ctl</a> &amp; <a class="macro" href="#22" title="0x00400000" data-ref="_M/X86_VMX_FEATURE_PROC_CTLS_VNMI">X86_VMX_FEATURE_PROC_CTLS_VNMI</a>)</td></tr>
+<tr><th id="132">132</th><td>		<a class="macro" href="../../include/asm/cpufeature.h.html#132" title="set_bit(( 8*32+ 1), (unsigned long *)((c)-&gt;x86_capability))" data-ref="_M/set_cpu_cap">set_cpu_cap</a>(<a class="local col6 ref" href="#6c" title='c' data-ref="6c" data-ref-filename="6c">c</a>, <a class="macro" href="../../include/asm/cpufeatures.h.html#227" title="( 8*32+ 1)" data-ref="_M/X86_FEATURE_VNMI">X86_FEATURE_VNMI</a>);</td></tr>
+<tr><th id="133">133</th><td>	<b>if</b> (<a class="local col9 ref" href="#9msr_ctl" title='msr_ctl' data-ref="9msr_ctl" data-ref-filename="9msr_ctl">msr_ctl</a> &amp; <a class="macro" href="#23" title="0x80000000" data-ref="_M/X86_VMX_FEATURE_PROC_CTLS_2ND_CTLS">X86_VMX_FEATURE_PROC_CTLS_2ND_CTLS</a>) {</td></tr>
+<tr><th id="134">134</th><td>		<a class="macro" href="../../include/asm/msr.h.html#267" title="do { u64 __val = native_read_msr((0x0000048b)); (void)((vmx_msr_low) = (u32)__val); (void)((vmx_msr_high) = (u32)(__val &gt;&gt; 32)); } while (0)" data-ref="_M/rdmsr">rdmsr</a>(<a class="macro" href="../../include/asm/msr-index.h.html#825" title="0x0000048b" data-ref="_M/MSR_IA32_VMX_PROCBASED_CTLS2">MSR_IA32_VMX_PROCBASED_CTLS2</a>,</td></tr>
+<tr><th id="135">135</th><td>		      <a class="local col7 ref" href="#7vmx_msr_low" title='vmx_msr_low' data-ref="7vmx_msr_low" data-ref-filename="7vmx_msr_low">vmx_msr_low</a>, <a class="local col8 ref" href="#8vmx_msr_high" title='vmx_msr_high' data-ref="8vmx_msr_high" data-ref-filename="8vmx_msr_high">vmx_msr_high</a>);</td></tr>
+<tr><th id="136">136</th><td>		<a class="local col0 ref" href="#10msr_ctl2" title='msr_ctl2' data-ref="10msr_ctl2" data-ref-filename="10msr_ctl2">msr_ctl2</a> = <a class="local col8 ref" href="#8vmx_msr_high" title='vmx_msr_high' data-ref="8vmx_msr_high" data-ref-filename="8vmx_msr_high">vmx_msr_high</a> | <a class="local col7 ref" href="#7vmx_msr_low" title='vmx_msr_low' data-ref="7vmx_msr_low" data-ref-filename="7vmx_msr_low">vmx_msr_low</a>;</td></tr>
+<tr><th id="137">137</th><td>		<b>if</b> ((<a class="local col0 ref" href="#10msr_ctl2" title='msr_ctl2' data-ref="10msr_ctl2" data-ref-filename="10msr_ctl2">msr_ctl2</a> &amp; <a class="macro" href="#24" title="0x00000001" data-ref="_M/X86_VMX_FEATURE_PROC_CTLS2_VIRT_APIC">X86_VMX_FEATURE_PROC_CTLS2_VIRT_APIC</a>) &amp;&amp;</td></tr>
+<tr><th id="138">138</th><td>		    (<a class="local col9 ref" href="#9msr_ctl" title='msr_ctl' data-ref="9msr_ctl" data-ref-filename="9msr_ctl">msr_ctl</a> &amp; <a class="macro" href="#21" title="0x00200000" data-ref="_M/X86_VMX_FEATURE_PROC_CTLS_TPR_SHADOW">X86_VMX_FEATURE_PROC_CTLS_TPR_SHADOW</a>))</td></tr>
+<tr><th id="139">139</th><td>			<a class="macro" href="../../include/asm/cpufeature.h.html#132" title="set_bit(( 8*32+ 2), (unsigned long *)((c)-&gt;x86_capability))" data-ref="_M/set_cpu_cap">set_cpu_cap</a>(<a class="local col6 ref" href="#6c" title='c' data-ref="6c" data-ref-filename="6c">c</a>, <a class="macro" href="../../include/asm/cpufeatures.h.html#228" title="( 8*32+ 2)" data-ref="_M/X86_FEATURE_FLEXPRIORITY">X86_FEATURE_FLEXPRIORITY</a>);</td></tr>
+<tr><th id="140">140</th><td>		<b>if</b> (<a class="local col0 ref" href="#10msr_ctl2" title='msr_ctl2' data-ref="10msr_ctl2" data-ref-filename="10msr_ctl2">msr_ctl2</a> &amp; <a class="macro" href="#25" title="0x00000002" data-ref="_M/X86_VMX_FEATURE_PROC_CTLS2_EPT">X86_VMX_FEATURE_PROC_CTLS2_EPT</a>)</td></tr>
+<tr><th id="141">141</th><td>			<a class="macro" href="../../include/asm/cpufeature.h.html#132" title="set_bit(( 8*32+ 3), (unsigned long *)((c)-&gt;x86_capability))" data-ref="_M/set_cpu_cap">set_cpu_cap</a>(<a class="local col6 ref" href="#6c" title='c' data-ref="6c" data-ref-filename="6c">c</a>, <a class="macro" href="../../include/asm/cpufeatures.h.html#229" title="( 8*32+ 3)" data-ref="_M/X86_FEATURE_EPT">X86_FEATURE_EPT</a>);</td></tr>
+<tr><th id="142">142</th><td>		<b>if</b> (<a class="local col0 ref" href="#10msr_ctl2" title='msr_ctl2' data-ref="10msr_ctl2" data-ref-filename="10msr_ctl2">msr_ctl2</a> &amp; <a class="macro" href="#26" title="0x00000020" data-ref="_M/X86_VMX_FEATURE_PROC_CTLS2_VPID">X86_VMX_FEATURE_PROC_CTLS2_VPID</a>)</td></tr>
+<tr><th id="143">143</th><td>			<a class="macro" href="../../include/asm/cpufeature.h.html#132" title="set_bit(( 8*32+ 4), (unsigned long *)((c)-&gt;x86_capability))" data-ref="_M/set_cpu_cap">set_cpu_cap</a>(<a class="local col6 ref" href="#6c" title='c' data-ref="6c" data-ref-filename="6c">c</a>, <a class="macro" href="../../include/asm/cpufeatures.h.html#230" title="( 8*32+ 4)" data-ref="_M/X86_FEATURE_VPID">X86_FEATURE_VPID</a>);</td></tr>
+<tr><th id="144">144</th><td>	}</td></tr>
+<tr><th id="145">145</th><td>}</td></tr>
+<tr><th id="146">146</th><td></td></tr>
+<tr><th id="147">147</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="init_centaur" title='init_centaur' data-type='void init_centaur(struct cpuinfo_x86 * c)' data-ref="init_centaur" data-ref-filename="init_centaur">init_centaur</dfn>(<b>struct</b> <a class="type" href="../../include/asm/processor.h.html#cpuinfo_x86" title='cpuinfo_x86' data-ref="cpuinfo_x86" data-ref-filename="cpuinfo_x86">cpuinfo_x86</a> *<dfn class="local col1 decl" id="11c" title='c' data-type='struct cpuinfo_x86 *' data-ref="11c" data-ref-filename="11c">c</dfn>)</td></tr>
+<tr><th id="148">148</th><td>{</td></tr>
+<tr><th id="149">149</th><td><u>#<span data-ppcond="149">ifdef</span> <span class="macro" data-ref="_M/CONFIG_X86_32">CONFIG_X86_32</span></u></td></tr>
+<tr><th id="150">150</th><td>	<em>char</em> *name;</td></tr>
+<tr><th id="151">151</th><td>	u32  fcr_set = <var>0</var>;</td></tr>
+<tr><th id="152">152</th><td>	u32  fcr_clr = <var>0</var>;</td></tr>
+<tr><th id="153">153</th><td>	u32  lo, hi, newlo;</td></tr>
+<tr><th id="154">154</th><td>	u32  aa, bb, cc, dd;</td></tr>
+<tr><th id="155">155</th><td></td></tr>
+<tr><th id="156">156</th><td>	<i>/*</i></td></tr>
+<tr><th id="157">157</th><td><i>	 * Bit 31 in normal CPUID used for nonstandard 3DNow ID;</i></td></tr>
+<tr><th id="158">158</th><td><i>	 * 3DNow is IDd by bit 31 in extended CPUID (1*32+31) anyway</i></td></tr>
+<tr><th id="159">159</th><td><i>	 */</i></td></tr>
+<tr><th id="160">160</th><td>	clear_cpu_cap(c, <var>0</var>*<var>32</var>+<var>31</var>);</td></tr>
+<tr><th id="161">161</th><td><u>#<span data-ppcond="149">endif</span></u></td></tr>
+<tr><th id="162">162</th><td>	<a class="tu ref fn" href="#early_init_centaur" title='early_init_centaur' data-use='c' data-ref="early_init_centaur" data-ref-filename="early_init_centaur">early_init_centaur</a>(<a class="local col1 ref" href="#11c" title='c' data-ref="11c" data-ref-filename="11c">c</a>);</td></tr>
+<tr><th id="163">163</th><td>	<a class="ref fn" href="cpu.h.html#init_intel_cacheinfo" title='init_intel_cacheinfo' data-ref="init_intel_cacheinfo" data-ref-filename="init_intel_cacheinfo">init_intel_cacheinfo</a>(<a class="local col1 ref" href="#11c" title='c' data-ref="11c" data-ref-filename="11c">c</a>);</td></tr>
+<tr><th id="164">164</th><td>	<a class="ref fn" href="cpu.h.html#detect_num_cpu_cores" title='detect_num_cpu_cores' data-ref="detect_num_cpu_cores" data-ref-filename="detect_num_cpu_cores">detect_num_cpu_cores</a>(<a class="local col1 ref" href="#11c" title='c' data-ref="11c" data-ref-filename="11c">c</a>);</td></tr>
+<tr><th id="165">165</th><td><u>#<span data-ppcond="165">ifdef</span> <span class="macro" data-ref="_M/CONFIG_X86_32">CONFIG_X86_32</span></u></td></tr>
+<tr><th id="166">166</th><td>	detect_ht(c);</td></tr>
+<tr><th id="167">167</th><td><u>#<span data-ppcond="165">endif</span></u></td></tr>
+<tr><th id="168">168</th><td></td></tr>
+<tr><th id="169">169</th><td>	<b>if</b> (<a class="local col1 ref" href="#11c" title='c' data-ref="11c" data-ref-filename="11c">c</a>-&gt;<a class="ref field" href="../../include/asm/processor.h.html#cpuinfo_x86::cpuid_level" title='cpuinfo_x86::cpuid_level' data-ref="cpuinfo_x86::cpuid_level" data-ref-filename="cpuinfo_x86..cpuid_level">cpuid_level</a> &gt; <var>9</var>) {</td></tr>
+<tr><th id="170">170</th><td>		<em>unsigned</em> <em>int</em> <dfn class="local col2 decl" id="12eax" title='eax' data-type='unsigned int' data-ref="12eax" data-ref-filename="12eax">eax</dfn> = <a class="ref fn" href="../../include/asm/processor.h.html#cpuid_eax" title='cpuid_eax' data-ref="cpuid_eax" data-ref-filename="cpuid_eax">cpuid_eax</a>(<var>10</var>);</td></tr>
+<tr><th id="171">171</th><td></td></tr>
+<tr><th id="172">172</th><td>		<i>/*</i></td></tr>
+<tr><th id="173">173</th><td><i>		 * Check for version and the number of counters</i></td></tr>
+<tr><th id="174">174</th><td><i>		 * Version(eax[7:0]) can't be 0;</i></td></tr>
+<tr><th id="175">175</th><td><i>		 * Counters(eax[15:8]) should be greater than 1;</i></td></tr>
+<tr><th id="176">176</th><td><i>		 */</i></td></tr>
+<tr><th id="177">177</th><td>		<b>if</b> ((<a class="local col2 ref" href="#12eax" title='eax' data-ref="12eax" data-ref-filename="12eax">eax</a> &amp; <var>0xff</var>) &amp;&amp; (((<a class="local col2 ref" href="#12eax" title='eax' data-ref="12eax" data-ref-filename="12eax">eax</a> &gt;&gt; <var>8</var>) &amp; <var>0xff</var>) &gt; <var>1</var>))</td></tr>
+<tr><th id="178">178</th><td>			<a class="macro" href="../../include/asm/cpufeature.h.html#132" title="set_bit(( 3*32+11), (unsigned long *)((c)-&gt;x86_capability))" data-ref="_M/set_cpu_cap">set_cpu_cap</a>(<a class="local col1 ref" href="#11c" title='c' data-ref="11c" data-ref-filename="11c">c</a>, <a class="macro" href="../../include/asm/cpufeatures.h.html#93" title="( 3*32+11)" data-ref="_M/X86_FEATURE_ARCH_PERFMON">X86_FEATURE_ARCH_PERFMON</a>);</td></tr>
+<tr><th id="179">179</th><td>	}</td></tr>
+<tr><th id="180">180</th><td></td></tr>
+<tr><th id="181">181</th><td>	<b>switch</b> (<a class="local col1 ref" href="#11c" title='c' data-ref="11c" data-ref-filename="11c">c</a>-&gt;<a class="ref field" href="../../include/asm/processor.h.html#cpuinfo_x86::x86" title='cpuinfo_x86::x86' data-ref="cpuinfo_x86::x86" data-ref-filename="cpuinfo_x86..x86">x86</a>) {</td></tr>
+<tr><th id="182">182</th><td><u>#<span data-ppcond="182">ifdef</span> <span class="macro" data-ref="_M/CONFIG_X86_32">CONFIG_X86_32</span></u></td></tr>
+<tr><th id="183">183</th><td>	<b>case</b> <var>5</var>:</td></tr>
+<tr><th id="184">184</th><td>		<b>switch</b> (c-&gt;x86_model) {</td></tr>
+<tr><th id="185">185</th><td>		<b>case</b> <var>4</var>:</td></tr>
+<tr><th id="186">186</th><td>			name = <q>"C6"</q>;</td></tr>
+<tr><th id="187">187</th><td>			fcr_set = ECX8|DSMC|EDCTLB|EMMX|ERETSTK;</td></tr>
+<tr><th id="188">188</th><td>			fcr_clr = DPDC;</td></tr>
+<tr><th id="189">189</th><td>			pr_notice(<q>"Disabling bugged TSC.\n"</q>);</td></tr>
+<tr><th id="190">190</th><td>			clear_cpu_cap(c, X86_FEATURE_TSC);</td></tr>
+<tr><th id="191">191</th><td>			<b>break</b>;</td></tr>
+<tr><th id="192">192</th><td>		<b>case</b> <var>8</var>:</td></tr>
+<tr><th id="193">193</th><td>			<b>switch</b> (c-&gt;x86_stepping) {</td></tr>
+<tr><th id="194">194</th><td>			<b>default</b>:</td></tr>
+<tr><th id="195">195</th><td>			name = <q>"2"</q>;</td></tr>
+<tr><th id="196">196</th><td>				<b>break</b>;</td></tr>
+<tr><th id="197">197</th><td>			<b>case</b> <var>7</var> ... <var>9</var>:</td></tr>
+<tr><th id="198">198</th><td>				name = <q>"2A"</q>;</td></tr>
+<tr><th id="199">199</th><td>				<b>break</b>;</td></tr>
+<tr><th id="200">200</th><td>			<b>case</b> <var>10</var> ... <var>15</var>:</td></tr>
+<tr><th id="201">201</th><td>				name = <q>"2B"</q>;</td></tr>
+<tr><th id="202">202</th><td>				<b>break</b>;</td></tr>
+<tr><th id="203">203</th><td>			}</td></tr>
+<tr><th id="204">204</th><td>			fcr_set = ECX8|DSMC|DTLOCK|EMMX|EBRPRED|ERETSTK|</td></tr>
+<tr><th id="205">205</th><td>				  E2MMX|EAMD3D;</td></tr>
+<tr><th id="206">206</th><td>			fcr_clr = DPDC;</td></tr>
+<tr><th id="207">207</th><td>			<b>break</b>;</td></tr>
+<tr><th id="208">208</th><td>		<b>case</b> <var>9</var>:</td></tr>
+<tr><th id="209">209</th><td>			name = <q>"3"</q>;</td></tr>
+<tr><th id="210">210</th><td>			fcr_set = ECX8|DSMC|DTLOCK|EMMX|EBRPRED|ERETSTK|</td></tr>
+<tr><th id="211">211</th><td>				  E2MMX|EAMD3D;</td></tr>
+<tr><th id="212">212</th><td>			fcr_clr = DPDC;</td></tr>
+<tr><th id="213">213</th><td>			<b>break</b>;</td></tr>
+<tr><th id="214">214</th><td>		<b>default</b>:</td></tr>
+<tr><th id="215">215</th><td>			name = <q>"??"</q>;</td></tr>
+<tr><th id="216">216</th><td>		}</td></tr>
+<tr><th id="217">217</th><td></td></tr>
+<tr><th id="218">218</th><td>		rdmsr(MSR_IDT_FCR1, lo, hi);</td></tr>
+<tr><th id="219">219</th><td>		newlo = (lo|fcr_set) &amp; (~fcr_clr);</td></tr>
+<tr><th id="220">220</th><td></td></tr>
+<tr><th id="221">221</th><td>		<b>if</b> (newlo != lo) {</td></tr>
+<tr><th id="222">222</th><td>			pr_info(<q>"Centaur FCR was 0x%X now 0x%X\n"</q>,</td></tr>
+<tr><th id="223">223</th><td>				lo, newlo);</td></tr>
+<tr><th id="224">224</th><td>			wrmsr(MSR_IDT_FCR1, newlo, hi);</td></tr>
+<tr><th id="225">225</th><td>		} <b>else</b> {</td></tr>
+<tr><th id="226">226</th><td>			pr_info(<q>"Centaur FCR is 0x%X\n"</q>, lo);</td></tr>
+<tr><th id="227">227</th><td>		}</td></tr>
+<tr><th id="228">228</th><td>		<i>/* Emulate MTRRs using Centaur's MCR. */</i></td></tr>
+<tr><th id="229">229</th><td>		set_cpu_cap(c, X86_FEATURE_CENTAUR_MCR);</td></tr>
+<tr><th id="230">230</th><td>		<i>/* Report CX8 */</i></td></tr>
+<tr><th id="231">231</th><td>		set_cpu_cap(c, X86_FEATURE_CX8);</td></tr>
+<tr><th id="232">232</th><td>		<i>/* Set 3DNow! on Winchip 2 and above. */</i></td></tr>
+<tr><th id="233">233</th><td>		<b>if</b> (c-&gt;x86_model &gt;= <var>8</var>)</td></tr>
+<tr><th id="234">234</th><td>			set_cpu_cap(c, X86_FEATURE_3DNOW);</td></tr>
+<tr><th id="235">235</th><td>		<i>/* See if we can find out some more. */</i></td></tr>
+<tr><th id="236">236</th><td>		<b>if</b> (cpuid_eax(<var>0x80000000</var>) &gt;= <var>0x80000005</var>) {</td></tr>
+<tr><th id="237">237</th><td>			<i>/* Yes, we can. */</i></td></tr>
+<tr><th id="238">238</th><td>			cpuid(<var>0x80000005</var>, &amp;aa, &amp;bb, &amp;cc, &amp;dd);</td></tr>
+<tr><th id="239">239</th><td>			<i>/* Add L1 data and code cache sizes. */</i></td></tr>
+<tr><th id="240">240</th><td>			c-&gt;x86_cache_size = (cc&gt;&gt;<var>24</var>)+(dd&gt;&gt;<var>24</var>);</td></tr>
+<tr><th id="241">241</th><td>		}</td></tr>
+<tr><th id="242">242</th><td>		sprintf(c-&gt;x86_model_id, <q>"WinChip %s"</q>, name);</td></tr>
+<tr><th id="243">243</th><td>		<b>break</b>;</td></tr>
+<tr><th id="244">244</th><td><u>#<span data-ppcond="182">endif</span></u></td></tr>
+<tr><th id="245">245</th><td>	<b>case</b> <var>6</var>:</td></tr>
+<tr><th id="246">246</th><td>		<a class="tu ref fn" href="#init_c3" title='init_c3' data-use='c' data-ref="init_c3" data-ref-filename="init_c3">init_c3</a>(<a class="local col1 ref" href="#11c" title='c' data-ref="11c" data-ref-filename="11c">c</a>);</td></tr>
+<tr><th id="247">247</th><td>		<b>break</b>;</td></tr>
+<tr><th id="248">248</th><td>	}</td></tr>
+<tr><th id="249">249</th><td><u>#<span data-ppcond="249">ifdef</span> <a class="macro" href="../../../../include/generated/autoconf.h.html#961" data-ref="_M/CONFIG_X86_64">CONFIG_X86_64</a></u></td></tr>
+<tr><th id="250">250</th><td>	<a class="macro" href="../../include/asm/cpufeature.h.html#132" title="set_bit(( 3*32+18), (unsigned long *)((c)-&gt;x86_capability))" data-ref="_M/set_cpu_cap">set_cpu_cap</a>(<a class="local col1 ref" href="#11c" title='c' data-ref="11c" data-ref-filename="11c">c</a>, <a class="macro" href="../../include/asm/cpufeatures.h.html#100" title="( 3*32+18)" data-ref="_M/X86_FEATURE_LFENCE_RDTSC">X86_FEATURE_LFENCE_RDTSC</a>);</td></tr>
+<tr><th id="251">251</th><td><u>#<span data-ppcond="249">endif</span></u></td></tr>
+<tr><th id="252">252</th><td></td></tr>
+<tr><th id="253">253</th><td>	<b>if</b> (<a class="macro" href="../../include/asm/cpufeature.h.html#110" title="(__builtin_constant_p(( 4*32+ 5)) &amp;&amp; ( (((( 4*32+ 5))&gt;&gt;5)==(0) &amp;&amp; (1UL&lt;&lt;((( 4*32+ 5))&amp;31) &amp; ((1&lt;&lt;(( 0*32+ 0) &amp; 31))|(1&lt;&lt;(( 0*32+ 3)) &amp; 31)|(1&lt;&lt;(( 0*32+ 5) &amp; 31))|(1&lt;&lt;(( 0*32+ 6) &amp; 31))| (1&lt;&lt;(( 0*32+ 8) &amp; 31))|(1&lt;&lt;(( 0*32+13)) &amp; 31)|(1&lt;&lt;(( 0*32+24) &amp; 31))|(1&lt;&lt;(( 0*32+15) &amp; 31))| (1&lt;&lt;(( 0*32+25) &amp; 31))|(1&lt;&lt;(( 0*32+26) &amp; 31))) )) || (((( 4*32+ 5))&gt;&gt;5)==(1) &amp;&amp; (1UL&lt;&lt;((( 4*32+ 5))&amp;31) &amp; ((1&lt;&lt;(( 1*32+29) &amp; 31))|0) )) || (((( 4*32+ 5))&gt;&gt;5)==(2) &amp;&amp; (1UL&lt;&lt;((( 4*32+ 5))&amp;31) &amp; 0 )) || (((( 4*32+ 5))&gt;&gt;5)==(3) &amp;&amp; (1UL&lt;&lt;((( 4*32+ 5))&amp;31) &amp; ((1&lt;&lt;(( 3*32+20) &amp; 31))) )) || (((( 4*32+ 5))&gt;&gt;5)==(4) &amp;&amp; (1UL&lt;&lt;((( 4*32+ 5))&amp;31) &amp; (0) )) || (((( 4*32+ 5))&gt;&gt;5)==(5) &amp;&amp; (1UL&lt;&lt;((( 4*32+ 5))&amp;31) &amp; 0 )) || (((( 4*32+ 5))&gt;&gt;5)==(6) &amp;&amp; (1UL&lt;&lt;((( 4*32+ 5))&amp;31) &amp; 0 )) || (((( 4*32+ 5))&gt;&gt;5)==(7) &amp;&amp; (1UL&lt;&lt;((( 4*32+ 5))&amp;31) &amp; 0 )) || (((( 4*32+ 5))&gt;&gt;5)==(8) &amp;&amp; (1UL&lt;&lt;((( 4*32+ 5))&amp;31) &amp; 0 )) || (((( 4*32+ 5))&gt;&gt;5)==(9) &amp;&amp; (1UL&lt;&lt;((( 4*32+ 5))&amp;31) &amp; 0 )) || (((( 4*32+ 5))&gt;&gt;5)==(10) &amp;&amp; (1UL&lt;&lt;((( 4*32+ 5))&amp;31) &amp; 0 )) || (((( 4*32+ 5))&gt;&gt;5)==(11) &amp;&amp; (1UL&lt;&lt;((( 4*32+ 5))&amp;31) &amp; 0 )) || (((( 4*32+ 5))&gt;&gt;5)==(12) &amp;&amp; (1UL&lt;&lt;((( 4*32+ 5))&amp;31) &amp; 0 )) || (((( 4*32+ 5))&gt;&gt;5)==(13) &amp;&amp; (1UL&lt;&lt;((( 4*32+ 5))&amp;31) &amp; 0 )) || (((( 4*32+ 5))&gt;&gt;5)==(14) &amp;&amp; (1UL&lt;&lt;((( 4*32+ 5))&amp;31) &amp; 0 )) || (((( 4*32+ 5))&gt;&gt;5)==(15) &amp;&amp; (1UL&lt;&lt;((( 4*32+ 5))&amp;31) &amp; 0 )) || (((( 4*32+ 5))&gt;&gt;5)==(16) &amp;&amp; (1UL&lt;&lt;((( 4*32+ 5))&amp;31) &amp; 0 )) || (((( 4*32+ 5))&gt;&gt;5)==(17) &amp;&amp; (1UL&lt;&lt;((( 4*32+ 5))&amp;31) &amp; 0 )) || (((( 4*32+ 5))&gt;&gt;5)==(18) &amp;&amp; (1UL&lt;&lt;((( 4*32+ 5))&amp;31) &amp; 0 )) || (sizeof(struct { int:(-!!(19 != 19)); })) || (sizeof(struct { int:(-!!(19 != 19)); }))) ? 1 : test_bit(( 4*32+ 5), (unsigned long *)((c)-&gt;x86_capability)))" data-ref="_M/cpu_has">cpu_has</a>(<a class="local col1 ref" href="#11c" title='c' data-ref="11c" data-ref-filename="11c">c</a>, <a class="macro" href="../../include/asm/cpufeatures.h.html#120" title="( 4*32+ 5)" data-ref="_M/X86_FEATURE_VMX">X86_FEATURE_VMX</a>))</td></tr>
+<tr><th id="254">254</th><td>		<a class="tu ref fn" href="#centaur_detect_vmx_virtcap" title='centaur_detect_vmx_virtcap' data-use='c' data-ref="centaur_detect_vmx_virtcap" data-ref-filename="centaur_detect_vmx_virtcap">centaur_detect_vmx_virtcap</a>(<a class="local col1 ref" href="#11c" title='c' data-ref="11c" data-ref-filename="11c">c</a>);</td></tr>
+<tr><th id="255">255</th><td>}</td></tr>
+<tr><th id="256">256</th><td></td></tr>
+<tr><th id="257">257</th><td><u>#<span data-ppcond="257">ifdef</span> <span class="macro" data-ref="_M/CONFIG_X86_32">CONFIG_X86_32</span></u></td></tr>
+<tr><th id="258">258</th><td><em>static</em> <em>unsigned</em> <em>int</em></td></tr>
+<tr><th id="259">259</th><td>centaur_size_cache(<b>struct</b> cpuinfo_x86 *c, <em>unsigned</em> <em>int</em> size)</td></tr>
+<tr><th id="260">260</th><td>{</td></tr>
+<tr><th id="261">261</th><td>	<i>/* VIA C3 CPUs (670-68F) need further shifting. */</i></td></tr>
+<tr><th id="262">262</th><td>	<b>if</b> ((c-&gt;x86 == <var>6</var>) &amp;&amp; ((c-&gt;x86_model == <var>7</var>) || (c-&gt;x86_model == <var>8</var>)))</td></tr>
+<tr><th id="263">263</th><td>		size &gt;&gt;= <var>8</var>;</td></tr>
+<tr><th id="264">264</th><td></td></tr>
+<tr><th id="265">265</th><td>	<i>/*</i></td></tr>
+<tr><th id="266">266</th><td><i>	 * There's also an erratum in Nehemiah stepping 1, which</i></td></tr>
+<tr><th id="267">267</th><td><i>	 * returns '65KB' instead of '64KB'</i></td></tr>
+<tr><th id="268">268</th><td><i>	 *  - Note, it seems this may only be in engineering samples.</i></td></tr>
+<tr><th id="269">269</th><td><i>	 */</i></td></tr>
+<tr><th id="270">270</th><td>	<b>if</b> ((c-&gt;x86 == <var>6</var>) &amp;&amp; (c-&gt;x86_model == <var>9</var>) &amp;&amp;</td></tr>
+<tr><th id="271">271</th><td>				(c-&gt;x86_stepping == <var>1</var>) &amp;&amp; (size == <var>65</var>))</td></tr>
+<tr><th id="272">272</th><td>		size -= <var>1</var>;</td></tr>
+<tr><th id="273">273</th><td>	<b>return</b> size;</td></tr>
+<tr><th id="274">274</th><td>}</td></tr>
+<tr><th id="275">275</th><td><u>#<span data-ppcond="257">endif</span></u></td></tr>
+<tr><th id="276">276</th><td></td></tr>
+<tr><th id="277">277</th><td><em>static</em> <em>const</em> <b>struct</b> <a class="type" href="cpu.h.html#cpu_dev" title='cpu_dev' data-ref="cpu_dev" data-ref-filename="cpu_dev">cpu_dev</a> <dfn class="tu decl def" id="centaur_cpu_dev" title='centaur_cpu_dev' data-type='const struct cpu_dev' data-ref="centaur_cpu_dev" data-ref-filename="centaur_cpu_dev">centaur_cpu_dev</dfn> = {</td></tr>
+<tr><th id="278">278</th><td>	.<a class="ref field" href="cpu.h.html#cpu_dev::c_vendor" title='cpu_dev::c_vendor' data-ref="cpu_dev::c_vendor" data-ref-filename="cpu_dev..c_vendor">c_vendor</a>	= <q>"Centaur"</q>,</td></tr>
+<tr><th id="279">279</th><td>	.<a class="ref field" href="cpu.h.html#cpu_dev::c_ident" title='cpu_dev::c_ident' data-ref="cpu_dev::c_ident" data-ref-filename="cpu_dev..c_ident">c_ident</a>	= { <q>"CentaurHauls"</q> },</td></tr>
+<tr><th id="280">280</th><td>	.<a class="ref field" href="cpu.h.html#cpu_dev::c_early_init" title='cpu_dev::c_early_init' data-ref="cpu_dev::c_early_init" data-ref-filename="cpu_dev..c_early_init">c_early_init</a>	= <a class="tu ref fn" href="#early_init_centaur" title='early_init_centaur' data-ref="early_init_centaur" data-ref-filename="early_init_centaur">early_init_centaur</a>,</td></tr>
+<tr><th id="281">281</th><td>	.<a class="ref field" href="cpu.h.html#cpu_dev::c_init" title='cpu_dev::c_init' data-ref="cpu_dev::c_init" data-ref-filename="cpu_dev..c_init">c_init</a>		= <a class="tu ref fn" href="#init_centaur" title='init_centaur' data-ref="init_centaur" data-ref-filename="init_centaur">init_centaur</a>,</td></tr>
+<tr><th id="282">282</th><td><u>#<span data-ppcond="282">ifdef</span> <span class="macro" data-ref="_M/CONFIG_X86_32">CONFIG_X86_32</span></u></td></tr>
+<tr><th id="283">283</th><td>	.legacy_cache_size = centaur_size_cache,</td></tr>
+<tr><th id="284">284</th><td><u>#<span data-ppcond="282">endif</span></u></td></tr>
+<tr><th id="285">285</th><td>	.<a class="ref field" href="cpu.h.html#cpu_dev::c_x86_vendor" title='cpu_dev::c_x86_vendor' data-ref="cpu_dev::c_x86_vendor" data-ref-filename="cpu_dev..c_x86_vendor">c_x86_vendor</a>	= <a class="macro" href="../../include/asm/processor.h.html#145" title="5" data-ref="_M/X86_VENDOR_CENTAUR">X86_VENDOR_CENTAUR</a>,</td></tr>
+<tr><th id="286">286</th><td>};</td></tr>
+<tr><th id="287">287</th><td></td></tr>
+<tr><th id="288">288</th><td><a class="macro" href="cpu.h.html#39" title="static const struct cpu_dev *const __cpu_dev_centaur_cpu_dev __attribute__((__used__)) __attribute__((__section__(&quot;.x86_cpu_dev.init&quot;))) = &amp;centaur_cpu_dev;" data-ref="_M/cpu_dev_register">cpu_dev_register</a>(<a class="tu ref" href="#centaur_cpu_dev" title='centaur_cpu_dev' data-use='a' data-ref="centaur_cpu_dev" data-ref-filename="centaur_cpu_dev">centaur_cpu_dev</a>);</td></tr>
+<tr><th id="289">289</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

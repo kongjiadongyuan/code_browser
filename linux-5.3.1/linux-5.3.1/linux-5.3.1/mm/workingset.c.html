@@ -1,0 +1,589 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>workingset.c source code [linux-5.3.1/mm/workingset.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/mm/workingset.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>linux-5.3.1</a>/<a href='./'>mm</a>/<a href='workingset.c.html'>workingset.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * Workingset detection</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * Copyright (C) 2013 Red Hat, Inc., Johannes Weiner</i></td></tr>
+<tr><th id="6">6</th><td><i> */</i></td></tr>
+<tr><th id="7">7</th><td></td></tr>
+<tr><th id="8">8</th><td><u>#include <a href="../include/linux/memcontrol.h.html">&lt;linux/memcontrol.h&gt;</a></u></td></tr>
+<tr><th id="9">9</th><td><u>#include <a href="../include/linux/writeback.h.html">&lt;linux/writeback.h&gt;</a></u></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="../include/linux/shmem_fs.h.html">&lt;linux/shmem_fs.h&gt;</a></u></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../include/linux/pagemap.h.html">&lt;linux/pagemap.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="../include/linux/atomic.h.html">&lt;linux/atomic.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="../include/linux/module.h.html">&lt;linux/module.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="../include/linux/swap.h.html">&lt;linux/swap.h&gt;</a></u></td></tr>
+<tr><th id="15">15</th><td><u>#include <a href="../include/linux/dax.h.html">&lt;linux/dax.h&gt;</a></u></td></tr>
+<tr><th id="16">16</th><td><u>#include <a href="../include/linux/fs.h.html">&lt;linux/fs.h&gt;</a></u></td></tr>
+<tr><th id="17">17</th><td><u>#include <a href="../include/linux/mm.h.html">&lt;linux/mm.h&gt;</a></u></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><i>/*</i></td></tr>
+<tr><th id="20">20</th><td><i> *		Double CLOCK lists</i></td></tr>
+<tr><th id="21">21</th><td><i> *</i></td></tr>
+<tr><th id="22">22</th><td><i> * Per node, two clock lists are maintained for file pages: the</i></td></tr>
+<tr><th id="23">23</th><td><i> * inactive and the active list.  Freshly faulted pages start out at</i></td></tr>
+<tr><th id="24">24</th><td><i> * the head of the inactive list and page reclaim scans pages from the</i></td></tr>
+<tr><th id="25">25</th><td><i> * tail.  Pages that are accessed multiple times on the inactive list</i></td></tr>
+<tr><th id="26">26</th><td><i> * are promoted to the active list, to protect them from reclaim,</i></td></tr>
+<tr><th id="27">27</th><td><i> * whereas active pages are demoted to the inactive list when the</i></td></tr>
+<tr><th id="28">28</th><td><i> * active list grows too big.</i></td></tr>
+<tr><th id="29">29</th><td><i> *</i></td></tr>
+<tr><th id="30">30</th><td><i> *   fault ------------------------+</i></td></tr>
+<tr><th id="31">31</th><td><i> *                                 |</i></td></tr>
+<tr><th id="32">32</th><td><i> *              +--------------+   |            +-------------+</i></td></tr>
+<tr><th id="33">33</th><td><i> *   reclaim &lt;- |   inactive   | &lt;-+-- demotion |    active   | &lt;--+</i></td></tr>
+<tr><th id="34">34</th><td><i> *              +--------------+                +-------------+    |</i></td></tr>
+<tr><th id="35">35</th><td><i> *                     |                                           |</i></td></tr>
+<tr><th id="36">36</th><td><i> *                     +-------------- promotion ------------------+</i></td></tr>
+<tr><th id="37">37</th><td><i> *</i></td></tr>
+<tr><th id="38">38</th><td><i> *</i></td></tr>
+<tr><th id="39">39</th><td><i> *		Access frequency and refault distance</i></td></tr>
+<tr><th id="40">40</th><td><i> *</i></td></tr>
+<tr><th id="41">41</th><td><i> * A workload is thrashing when its pages are frequently used but they</i></td></tr>
+<tr><th id="42">42</th><td><i> * are evicted from the inactive list every time before another access</i></td></tr>
+<tr><th id="43">43</th><td><i> * would have promoted them to the active list.</i></td></tr>
+<tr><th id="44">44</th><td><i> *</i></td></tr>
+<tr><th id="45">45</th><td><i> * In cases where the average access distance between thrashing pages</i></td></tr>
+<tr><th id="46">46</th><td><i> * is bigger than the size of memory there is nothing that can be</i></td></tr>
+<tr><th id="47">47</th><td><i> * done - the thrashing set could never fit into memory under any</i></td></tr>
+<tr><th id="48">48</th><td><i> * circumstance.</i></td></tr>
+<tr><th id="49">49</th><td><i> *</i></td></tr>
+<tr><th id="50">50</th><td><i> * However, the average access distance could be bigger than the</i></td></tr>
+<tr><th id="51">51</th><td><i> * inactive list, yet smaller than the size of memory.  In this case,</i></td></tr>
+<tr><th id="52">52</th><td><i> * the set could fit into memory if it weren't for the currently</i></td></tr>
+<tr><th id="53">53</th><td><i> * active pages - which may be used more, hopefully less frequently:</i></td></tr>
+<tr><th id="54">54</th><td><i> *</i></td></tr>
+<tr><th id="55">55</th><td><i> *      +-memory available to cache-+</i></td></tr>
+<tr><th id="56">56</th><td><i> *      |                           |</i></td></tr>
+<tr><th id="57">57</th><td><i> *      +-inactive------+-active----+</i></td></tr>
+<tr><th id="58">58</th><td><i> *  a b | c d e f g h i | J K L M N |</i></td></tr>
+<tr><th id="59">59</th><td><i> *      +---------------+-----------+</i></td></tr>
+<tr><th id="60">60</th><td><i> *</i></td></tr>
+<tr><th id="61">61</th><td><i> * It is prohibitively expensive to accurately track access frequency</i></td></tr>
+<tr><th id="62">62</th><td><i> * of pages.  But a reasonable approximation can be made to measure</i></td></tr>
+<tr><th id="63">63</th><td><i> * thrashing on the inactive list, after which refaulting pages can be</i></td></tr>
+<tr><th id="64">64</th><td><i> * activated optimistically to compete with the existing active pages.</i></td></tr>
+<tr><th id="65">65</th><td><i> *</i></td></tr>
+<tr><th id="66">66</th><td><i> * Approximating inactive page access frequency - Observations:</i></td></tr>
+<tr><th id="67">67</th><td><i> *</i></td></tr>
+<tr><th id="68">68</th><td><i> * 1. When a page is accessed for the first time, it is added to the</i></td></tr>
+<tr><th id="69">69</th><td><i> *    head of the inactive list, slides every existing inactive page</i></td></tr>
+<tr><th id="70">70</th><td><i> *    towards the tail by one slot, and pushes the current tail page</i></td></tr>
+<tr><th id="71">71</th><td><i> *    out of memory.</i></td></tr>
+<tr><th id="72">72</th><td><i> *</i></td></tr>
+<tr><th id="73">73</th><td><i> * 2. When a page is accessed for the second time, it is promoted to</i></td></tr>
+<tr><th id="74">74</th><td><i> *    the active list, shrinking the inactive list by one slot.  This</i></td></tr>
+<tr><th id="75">75</th><td><i> *    also slides all inactive pages that were faulted into the cache</i></td></tr>
+<tr><th id="76">76</th><td><i> *    more recently than the activated page towards the tail of the</i></td></tr>
+<tr><th id="77">77</th><td><i> *    inactive list.</i></td></tr>
+<tr><th id="78">78</th><td><i> *</i></td></tr>
+<tr><th id="79">79</th><td><i> * Thus:</i></td></tr>
+<tr><th id="80">80</th><td><i> *</i></td></tr>
+<tr><th id="81">81</th><td><i> * 1. The sum of evictions and activations between any two points in</i></td></tr>
+<tr><th id="82">82</th><td><i> *    time indicate the minimum number of inactive pages accessed in</i></td></tr>
+<tr><th id="83">83</th><td><i> *    between.</i></td></tr>
+<tr><th id="84">84</th><td><i> *</i></td></tr>
+<tr><th id="85">85</th><td><i> * 2. Moving one inactive page N page slots towards the tail of the</i></td></tr>
+<tr><th id="86">86</th><td><i> *    list requires at least N inactive page accesses.</i></td></tr>
+<tr><th id="87">87</th><td><i> *</i></td></tr>
+<tr><th id="88">88</th><td><i> * Combining these:</i></td></tr>
+<tr><th id="89">89</th><td><i> *</i></td></tr>
+<tr><th id="90">90</th><td><i> * 1. When a page is finally evicted from memory, the number of</i></td></tr>
+<tr><th id="91">91</th><td><i> *    inactive pages accessed while the page was in cache is at least</i></td></tr>
+<tr><th id="92">92</th><td><i> *    the number of page slots on the inactive list.</i></td></tr>
+<tr><th id="93">93</th><td><i> *</i></td></tr>
+<tr><th id="94">94</th><td><i> * 2. In addition, measuring the sum of evictions and activations (E)</i></td></tr>
+<tr><th id="95">95</th><td><i> *    at the time of a page's eviction, and comparing it to another</i></td></tr>
+<tr><th id="96">96</th><td><i> *    reading (R) at the time the page faults back into memory tells</i></td></tr>
+<tr><th id="97">97</th><td><i> *    the minimum number of accesses while the page was not cached.</i></td></tr>
+<tr><th id="98">98</th><td><i> *    This is called the refault distance.</i></td></tr>
+<tr><th id="99">99</th><td><i> *</i></td></tr>
+<tr><th id="100">100</th><td><i> * Because the first access of the page was the fault and the second</i></td></tr>
+<tr><th id="101">101</th><td><i> * access the refault, we combine the in-cache distance with the</i></td></tr>
+<tr><th id="102">102</th><td><i> * out-of-cache distance to get the complete minimum access distance</i></td></tr>
+<tr><th id="103">103</th><td><i> * of this page:</i></td></tr>
+<tr><th id="104">104</th><td><i> *</i></td></tr>
+<tr><th id="105">105</th><td><i> *      NR_inactive + (R - E)</i></td></tr>
+<tr><th id="106">106</th><td><i> *</i></td></tr>
+<tr><th id="107">107</th><td><i> * And knowing the minimum access distance of a page, we can easily</i></td></tr>
+<tr><th id="108">108</th><td><i> * tell if the page would be able to stay in cache assuming all page</i></td></tr>
+<tr><th id="109">109</th><td><i> * slots in the cache were available:</i></td></tr>
+<tr><th id="110">110</th><td><i> *</i></td></tr>
+<tr><th id="111">111</th><td><i> *   NR_inactive + (R - E) &lt;= NR_inactive + NR_active</i></td></tr>
+<tr><th id="112">112</th><td><i> *</i></td></tr>
+<tr><th id="113">113</th><td><i> * which can be further simplified to</i></td></tr>
+<tr><th id="114">114</th><td><i> *</i></td></tr>
+<tr><th id="115">115</th><td><i> *   (R - E) &lt;= NR_active</i></td></tr>
+<tr><th id="116">116</th><td><i> *</i></td></tr>
+<tr><th id="117">117</th><td><i> * Put into words, the refault distance (out-of-cache) can be seen as</i></td></tr>
+<tr><th id="118">118</th><td><i> * a deficit in inactive list space (in-cache).  If the inactive list</i></td></tr>
+<tr><th id="119">119</th><td><i> * had (R - E) more page slots, the page would not have been evicted</i></td></tr>
+<tr><th id="120">120</th><td><i> * in between accesses, but activated instead.  And on a full system,</i></td></tr>
+<tr><th id="121">121</th><td><i> * the only thing eating into inactive list space is active pages.</i></td></tr>
+<tr><th id="122">122</th><td><i> *</i></td></tr>
+<tr><th id="123">123</th><td><i> *</i></td></tr>
+<tr><th id="124">124</th><td><i> *		Refaulting inactive pages</i></td></tr>
+<tr><th id="125">125</th><td><i> *</i></td></tr>
+<tr><th id="126">126</th><td><i> * All that is known about the active list is that the pages have been</i></td></tr>
+<tr><th id="127">127</th><td><i> * accessed more than once in the past.  This means that at any given</i></td></tr>
+<tr><th id="128">128</th><td><i> * time there is actually a good chance that pages on the active list</i></td></tr>
+<tr><th id="129">129</th><td><i> * are no longer in active use.</i></td></tr>
+<tr><th id="130">130</th><td><i> *</i></td></tr>
+<tr><th id="131">131</th><td><i> * So when a refault distance of (R - E) is observed and there are at</i></td></tr>
+<tr><th id="132">132</th><td><i> * least (R - E) active pages, the refaulting page is activated</i></td></tr>
+<tr><th id="133">133</th><td><i> * optimistically in the hope that (R - E) active pages are actually</i></td></tr>
+<tr><th id="134">134</th><td><i> * used less frequently than the refaulting page - or even not used at</i></td></tr>
+<tr><th id="135">135</th><td><i> * all anymore.</i></td></tr>
+<tr><th id="136">136</th><td><i> *</i></td></tr>
+<tr><th id="137">137</th><td><i> * That means if inactive cache is refaulting with a suitable refault</i></td></tr>
+<tr><th id="138">138</th><td><i> * distance, we assume the cache workingset is transitioning and put</i></td></tr>
+<tr><th id="139">139</th><td><i> * pressure on the current active list.</i></td></tr>
+<tr><th id="140">140</th><td><i> *</i></td></tr>
+<tr><th id="141">141</th><td><i> * If this is wrong and demotion kicks in, the pages which are truly</i></td></tr>
+<tr><th id="142">142</th><td><i> * used more frequently will be reactivated while the less frequently</i></td></tr>
+<tr><th id="143">143</th><td><i> * used once will be evicted from memory.</i></td></tr>
+<tr><th id="144">144</th><td><i> *</i></td></tr>
+<tr><th id="145">145</th><td><i> * But if this is right, the stale pages will be pushed out of memory</i></td></tr>
+<tr><th id="146">146</th><td><i> * and the used pages get to stay in cache.</i></td></tr>
+<tr><th id="147">147</th><td><i> *</i></td></tr>
+<tr><th id="148">148</th><td><i> *		Refaulting active pages</i></td></tr>
+<tr><th id="149">149</th><td><i> *</i></td></tr>
+<tr><th id="150">150</th><td><i> * If on the other hand the refaulting pages have recently been</i></td></tr>
+<tr><th id="151">151</th><td><i> * deactivated, it means that the active list is no longer protecting</i></td></tr>
+<tr><th id="152">152</th><td><i> * actively used cache from reclaim. The cache is NOT transitioning to</i></td></tr>
+<tr><th id="153">153</th><td><i> * a different workingset; the existing workingset is thrashing in the</i></td></tr>
+<tr><th id="154">154</th><td><i> * space allocated to the page cache.</i></td></tr>
+<tr><th id="155">155</th><td><i> *</i></td></tr>
+<tr><th id="156">156</th><td><i> *</i></td></tr>
+<tr><th id="157">157</th><td><i> *		Implementation</i></td></tr>
+<tr><th id="158">158</th><td><i> *</i></td></tr>
+<tr><th id="159">159</th><td><i> * For each node's file LRU lists, a counter for inactive evictions</i></td></tr>
+<tr><th id="160">160</th><td><i> * and activations is maintained (node-&gt;inactive_age).</i></td></tr>
+<tr><th id="161">161</th><td><i> *</i></td></tr>
+<tr><th id="162">162</th><td><i> * On eviction, a snapshot of this counter (along with some bits to</i></td></tr>
+<tr><th id="163">163</th><td><i> * identify the node) is stored in the now empty page cache</i></td></tr>
+<tr><th id="164">164</th><td><i> * slot of the evicted page.  This is called a shadow entry.</i></td></tr>
+<tr><th id="165">165</th><td><i> *</i></td></tr>
+<tr><th id="166">166</th><td><i> * On cache misses for which there are shadow entries, an eligible</i></td></tr>
+<tr><th id="167">167</th><td><i> * refault distance will immediately activate the refaulting page.</i></td></tr>
+<tr><th id="168">168</th><td><i> */</i></td></tr>
+<tr><th id="169">169</th><td></td></tr>
+<tr><th id="170">170</th><td><u>#define <dfn class="macro" id="_M/EVICTION_SHIFT" data-ref="_M/EVICTION_SHIFT">EVICTION_SHIFT</dfn>	((BITS_PER_LONG - BITS_PER_XA_VALUE) +	\</u></td></tr>
+<tr><th id="171">171</th><td><u>			 1 + NODES_SHIFT + MEM_CGROUP_ID_SHIFT)</u></td></tr>
+<tr><th id="172">172</th><td><u>#define <dfn class="macro" id="_M/EVICTION_MASK" data-ref="_M/EVICTION_MASK">EVICTION_MASK</dfn>	(~0UL &gt;&gt; EVICTION_SHIFT)</u></td></tr>
+<tr><th id="173">173</th><td></td></tr>
+<tr><th id="174">174</th><td><i  data-doc="bucket_order">/*</i></td></tr>
+<tr><th id="175">175</th><td><i  data-doc="bucket_order"> * Eviction timestamps need to be able to cover the full range of</i></td></tr>
+<tr><th id="176">176</th><td><i  data-doc="bucket_order"> * actionable refaults. However, bits are tight in the xarray</i></td></tr>
+<tr><th id="177">177</th><td><i  data-doc="bucket_order"> * entry, and after storing the identifier for the lruvec there might</i></td></tr>
+<tr><th id="178">178</th><td><i  data-doc="bucket_order"> * not be enough left to represent every single actionable refault. In</i></td></tr>
+<tr><th id="179">179</th><td><i  data-doc="bucket_order"> * that case, we have to sacrifice granularity for distance, and group</i></td></tr>
+<tr><th id="180">180</th><td><i  data-doc="bucket_order"> * evictions into coarser buckets by shaving off lower timestamp bits.</i></td></tr>
+<tr><th id="181">181</th><td><i  data-doc="bucket_order"> */</i></td></tr>
+<tr><th id="182">182</th><td><em>static</em> <em>unsigned</em> <em>int</em> <dfn class="tu decl def" id="bucket_order" title='bucket_order' data-type='unsigned int' data-ref="bucket_order" data-ref-filename="bucket_order">bucket_order</dfn> <a class="macro" href="../arch/x86/include/asm/cache.h.html#11" title="__attribute__((__section__(&quot;.data..read_mostly&quot;)))" data-ref="_M/__read_mostly">__read_mostly</a>;</td></tr>
+<tr><th id="183">183</th><td></td></tr>
+<tr><th id="184">184</th><td><em>static</em> <em>void</em> *<dfn class="tu decl def fn" id="pack_shadow" title='pack_shadow' data-type='void * pack_shadow(int memcgid, pg_data_t * pgdat, unsigned long eviction, bool workingset)' data-ref="pack_shadow" data-ref-filename="pack_shadow">pack_shadow</dfn>(<em>int</em> <dfn class="local col1 decl" id="1memcgid" title='memcgid' data-type='int' data-ref="1memcgid" data-ref-filename="1memcgid">memcgid</dfn>, <a class="typedef" href="../include/linux/mmzone.h.html#pg_data_t" title='pg_data_t' data-type='struct pglist_data' data-ref="pg_data_t" data-ref-filename="pg_data_t">pg_data_t</a> *<dfn class="local col2 decl" id="2pgdat" title='pgdat' data-type='pg_data_t *' data-ref="2pgdat" data-ref-filename="2pgdat">pgdat</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col3 decl" id="3eviction" title='eviction' data-type='unsigned long' data-ref="3eviction" data-ref-filename="3eviction">eviction</dfn>,</td></tr>
+<tr><th id="185">185</th><td>			 <a class="typedef" href="../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col4 decl" id="4workingset" title='workingset' data-type='bool' data-ref="4workingset" data-ref-filename="4workingset">workingset</dfn>)</td></tr>
+<tr><th id="186">186</th><td>{</td></tr>
+<tr><th id="187">187</th><td>	<a class="local col3 ref" href="#3eviction" title='eviction' data-ref="3eviction" data-ref-filename="3eviction">eviction</a> &gt;&gt;= <a class="tu ref" href="#bucket_order" title='bucket_order' data-use='r' data-ref="bucket_order" data-ref-filename="bucket_order">bucket_order</a>;</td></tr>
+<tr><th id="188">188</th><td>	<a class="local col3 ref" href="#3eviction" title='eviction' data-ref="3eviction" data-ref-filename="3eviction">eviction</a> &amp;= <a class="macro" href="#172" title="(~0UL &gt;&gt; ((64 - (64 - 1)) + 1 + 6 + 0))" data-ref="_M/EVICTION_MASK">EVICTION_MASK</a>;</td></tr>
+<tr><th id="189">189</th><td>	<a class="local col3 ref" href="#3eviction" title='eviction' data-ref="3eviction" data-ref-filename="3eviction">eviction</a> = (<a class="local col3 ref" href="#3eviction" title='eviction' data-ref="3eviction" data-ref-filename="3eviction">eviction</a> &lt;&lt; <a class="macro" href="../include/linux/memcontrol.h.html#786" title="0" data-ref="_M/MEM_CGROUP_ID_SHIFT">MEM_CGROUP_ID_SHIFT</a>) | <a class="local col1 ref" href="#1memcgid" title='memcgid' data-ref="1memcgid" data-ref-filename="1memcgid">memcgid</a>;</td></tr>
+<tr><th id="190">190</th><td>	<a class="local col3 ref" href="#3eviction" title='eviction' data-ref="3eviction" data-ref-filename="3eviction">eviction</a> = (<a class="local col3 ref" href="#3eviction" title='eviction' data-ref="3eviction" data-ref-filename="3eviction">eviction</a> &lt;&lt; <a class="macro" href="../include/linux/numa.h.html#7" title="6" data-ref="_M/NODES_SHIFT">NODES_SHIFT</a>) | <a class="local col2 ref" href="#2pgdat" title='pgdat' data-ref="2pgdat" data-ref-filename="2pgdat">pgdat</a>-&gt;<a class="ref field" href="../include/linux/mmzone.h.html#pglist_data::node_id" title='pglist_data::node_id' data-ref="pglist_data::node_id" data-ref-filename="pglist_data..node_id">node_id</a>;</td></tr>
+<tr><th id="191">191</th><td>	<a class="local col3 ref" href="#3eviction" title='eviction' data-ref="3eviction" data-ref-filename="3eviction">eviction</a> = (<a class="local col3 ref" href="#3eviction" title='eviction' data-ref="3eviction" data-ref-filename="3eviction">eviction</a> &lt;&lt; <var>1</var>) | <a class="local col4 ref" href="#4workingset" title='workingset' data-ref="4workingset" data-ref-filename="4workingset">workingset</a>;</td></tr>
+<tr><th id="192">192</th><td></td></tr>
+<tr><th id="193">193</th><td>	<b>return</b> <a class="ref fn" href="../include/linux/xarray.h.html#xa_mk_value" title='xa_mk_value' data-ref="xa_mk_value" data-ref-filename="xa_mk_value">xa_mk_value</a>(<a class="local col3 ref" href="#3eviction" title='eviction' data-ref="3eviction" data-ref-filename="3eviction">eviction</a>);</td></tr>
+<tr><th id="194">194</th><td>}</td></tr>
+<tr><th id="195">195</th><td></td></tr>
+<tr><th id="196">196</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="unpack_shadow" title='unpack_shadow' data-type='void unpack_shadow(void * shadow, int * memcgidp, pg_data_t ** pgdat, unsigned long * evictionp, bool * workingsetp)' data-ref="unpack_shadow" data-ref-filename="unpack_shadow">unpack_shadow</dfn>(<em>void</em> *<dfn class="local col5 decl" id="5shadow" title='shadow' data-type='void *' data-ref="5shadow" data-ref-filename="5shadow">shadow</dfn>, <em>int</em> *<dfn class="local col6 decl" id="6memcgidp" title='memcgidp' data-type='int *' data-ref="6memcgidp" data-ref-filename="6memcgidp">memcgidp</dfn>, <a class="typedef" href="../include/linux/mmzone.h.html#pg_data_t" title='pg_data_t' data-type='struct pglist_data' data-ref="pg_data_t" data-ref-filename="pg_data_t">pg_data_t</a> **<dfn class="local col7 decl" id="7pgdat" title='pgdat' data-type='pg_data_t **' data-ref="7pgdat" data-ref-filename="7pgdat">pgdat</dfn>,</td></tr>
+<tr><th id="197">197</th><td>			  <em>unsigned</em> <em>long</em> *<dfn class="local col8 decl" id="8evictionp" title='evictionp' data-type='unsigned long *' data-ref="8evictionp" data-ref-filename="8evictionp">evictionp</dfn>, <a class="typedef" href="../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> *<dfn class="local col9 decl" id="9workingsetp" title='workingsetp' data-type='bool *' data-ref="9workingsetp" data-ref-filename="9workingsetp">workingsetp</dfn>)</td></tr>
+<tr><th id="198">198</th><td>{</td></tr>
+<tr><th id="199">199</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col0 decl" id="10entry" title='entry' data-type='unsigned long' data-ref="10entry" data-ref-filename="10entry">entry</dfn> = <a class="ref fn" href="../include/linux/xarray.h.html#xa_to_value" title='xa_to_value' data-ref="xa_to_value" data-ref-filename="xa_to_value">xa_to_value</a>(<a class="local col5 ref" href="#5shadow" title='shadow' data-ref="5shadow" data-ref-filename="5shadow">shadow</a>);</td></tr>
+<tr><th id="200">200</th><td>	<em>int</em> <dfn class="local col1 decl" id="11memcgid" title='memcgid' data-type='int' data-ref="11memcgid" data-ref-filename="11memcgid">memcgid</dfn>, <dfn class="local col2 decl" id="12nid" title='nid' data-type='int' data-ref="12nid" data-ref-filename="12nid">nid</dfn>;</td></tr>
+<tr><th id="201">201</th><td>	<a class="typedef" href="../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col3 decl" id="13workingset" title='workingset' data-type='bool' data-ref="13workingset" data-ref-filename="13workingset">workingset</dfn>;</td></tr>
+<tr><th id="202">202</th><td></td></tr>
+<tr><th id="203">203</th><td>	<a class="local col3 ref" href="#13workingset" title='workingset' data-ref="13workingset" data-ref-filename="13workingset">workingset</a> = <a class="local col0 ref" href="#10entry" title='entry' data-ref="10entry" data-ref-filename="10entry">entry</a> &amp; <var>1</var>;</td></tr>
+<tr><th id="204">204</th><td>	<a class="local col0 ref" href="#10entry" title='entry' data-ref="10entry" data-ref-filename="10entry">entry</a> &gt;&gt;= <var>1</var>;</td></tr>
+<tr><th id="205">205</th><td>	<a class="local col2 ref" href="#12nid" title='nid' data-ref="12nid" data-ref-filename="12nid">nid</a> = <a class="local col0 ref" href="#10entry" title='entry' data-ref="10entry" data-ref-filename="10entry">entry</a> &amp; ((<var>1UL</var> &lt;&lt; <a class="macro" href="../include/linux/numa.h.html#7" title="6" data-ref="_M/NODES_SHIFT">NODES_SHIFT</a>) - <var>1</var>);</td></tr>
+<tr><th id="206">206</th><td>	<a class="local col0 ref" href="#10entry" title='entry' data-ref="10entry" data-ref-filename="10entry">entry</a> &gt;&gt;= <a class="macro" href="../include/linux/numa.h.html#7" title="6" data-ref="_M/NODES_SHIFT">NODES_SHIFT</a>;</td></tr>
+<tr><th id="207">207</th><td>	<a class="local col1 ref" href="#11memcgid" title='memcgid' data-ref="11memcgid" data-ref-filename="11memcgid">memcgid</a> = <a class="local col0 ref" href="#10entry" title='entry' data-ref="10entry" data-ref-filename="10entry">entry</a> &amp; ((<var>1UL</var> &lt;&lt; <a class="macro" href="../include/linux/memcontrol.h.html#786" title="0" data-ref="_M/MEM_CGROUP_ID_SHIFT">MEM_CGROUP_ID_SHIFT</a>) - <var>1</var>);</td></tr>
+<tr><th id="208">208</th><td>	<a class="local col0 ref" href="#10entry" title='entry' data-ref="10entry" data-ref-filename="10entry">entry</a> &gt;&gt;= <a class="macro" href="../include/linux/memcontrol.h.html#786" title="0" data-ref="_M/MEM_CGROUP_ID_SHIFT">MEM_CGROUP_ID_SHIFT</a>;</td></tr>
+<tr><th id="209">209</th><td></td></tr>
+<tr><th id="210">210</th><td>	*<a class="local col6 ref" href="#6memcgidp" title='memcgidp' data-ref="6memcgidp" data-ref-filename="6memcgidp">memcgidp</a> = <a class="local col1 ref" href="#11memcgid" title='memcgid' data-ref="11memcgid" data-ref-filename="11memcgid">memcgid</a>;</td></tr>
+<tr><th id="211">211</th><td>	*<a class="local col7 ref" href="#7pgdat" title='pgdat' data-ref="7pgdat" data-ref-filename="7pgdat">pgdat</a> = <a class="macro" href="../arch/x86/include/asm/mmzone_64.h.html#15" title="(node_data[nid])" data-ref="_M/NODE_DATA">NODE_DATA</a>(<a class="local col2 ref" href="#12nid" title='nid' data-ref="12nid" data-ref-filename="12nid">nid</a>);</td></tr>
+<tr><th id="212">212</th><td>	*<a class="local col8 ref" href="#8evictionp" title='evictionp' data-ref="8evictionp" data-ref-filename="8evictionp">evictionp</a> = <a class="local col0 ref" href="#10entry" title='entry' data-ref="10entry" data-ref-filename="10entry">entry</a> &lt;&lt; <a class="tu ref" href="#bucket_order" title='bucket_order' data-use='r' data-ref="bucket_order" data-ref-filename="bucket_order">bucket_order</a>;</td></tr>
+<tr><th id="213">213</th><td>	*<a class="local col9 ref" href="#9workingsetp" title='workingsetp' data-ref="9workingsetp" data-ref-filename="9workingsetp">workingsetp</a> = <a class="local col3 ref" href="#13workingset" title='workingset' data-ref="13workingset" data-ref-filename="13workingset">workingset</a>;</td></tr>
+<tr><th id="214">214</th><td>}</td></tr>
+<tr><th id="215">215</th><td></td></tr>
+<tr><th id="216">216</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="217">217</th><td><i class="doc"> * workingset_eviction - note the eviction of a page from memory</i></td></tr>
+<tr><th id="218">218</th><td><i class="doc"> *<span class="command"> @page</span>: the page being evicted</i></td></tr>
+<tr><th id="219">219</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="220">220</th><td><i class="doc"> * Returns a shadow entry to be stored in<span class="command"> @page</span>-&gt;mapping-&gt;i_pages in place</i></td></tr>
+<tr><th id="221">221</th><td><i class="doc"> * of the evicted<span class="command"> @page</span> so that a later refault can be detected.</i></td></tr>
+<tr><th id="222">222</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="223">223</th><td><em>void</em> *<dfn class="decl def fn" id="workingset_eviction" title='workingset_eviction' data-ref="workingset_eviction" data-ref-filename="workingset_eviction">workingset_eviction</dfn>(<b>struct</b> <a class="type" href="../include/linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="local col4 decl" id="14page" title='page' data-type='struct page *' data-ref="14page" data-ref-filename="14page">page</dfn>)</td></tr>
+<tr><th id="224">224</th><td>{</td></tr>
+<tr><th id="225">225</th><td>	<b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#pglist_data" title='pglist_data' data-ref="pglist_data" data-ref-filename="pglist_data">pglist_data</a> *<dfn class="local col5 decl" id="15pgdat" title='pgdat' data-type='struct pglist_data *' data-ref="15pgdat" data-ref-filename="15pgdat">pgdat</dfn> = <a class="ref fn" href="../include/linux/mm.h.html#page_pgdat" title='page_pgdat' data-ref="page_pgdat" data-ref-filename="page_pgdat">page_pgdat</a>(<a class="local col4 ref" href="#14page" title='page' data-ref="14page" data-ref-filename="14page">page</a>);</td></tr>
+<tr><th id="226">226</th><td>	<b>struct</b> <a class="type" href="../include/linux/mm_types.h.html#mem_cgroup" title='mem_cgroup' data-ref="mem_cgroup" data-ref-filename="mem_cgroup">mem_cgroup</a> *<dfn class="local col6 decl" id="16memcg" title='memcg' data-type='struct mem_cgroup *' data-ref="16memcg" data-ref-filename="16memcg">memcg</dfn> = <a class="ref fn" href="../include/linux/mm.h.html#page_memcg" title='page_memcg' data-ref="page_memcg" data-ref-filename="page_memcg">page_memcg</a>(<a class="local col4 ref" href="#14page" title='page' data-ref="14page" data-ref-filename="14page">page</a>);</td></tr>
+<tr><th id="227">227</th><td>	<em>int</em> <dfn class="local col7 decl" id="17memcgid" title='memcgid' data-type='int' data-ref="17memcgid" data-ref-filename="17memcgid">memcgid</dfn> = <a class="ref fn" href="../include/linux/memcontrol.h.html#mem_cgroup_id" title='mem_cgroup_id' data-ref="mem_cgroup_id" data-ref-filename="mem_cgroup_id">mem_cgroup_id</a>(<a class="local col6 ref" href="#16memcg" title='memcg' data-ref="16memcg" data-ref-filename="16memcg">memcg</a>);</td></tr>
+<tr><th id="228">228</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col8 decl" id="18eviction" title='eviction' data-type='unsigned long' data-ref="18eviction" data-ref-filename="18eviction">eviction</dfn>;</td></tr>
+<tr><th id="229">229</th><td>	<b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#lruvec" title='lruvec' data-ref="lruvec" data-ref-filename="lruvec">lruvec</a> *<dfn class="local col9 decl" id="19lruvec" title='lruvec' data-type='struct lruvec *' data-ref="19lruvec" data-ref-filename="19lruvec">lruvec</dfn>;</td></tr>
+<tr><th id="230">230</th><td></td></tr>
+<tr><th id="231">231</th><td>	<i>/* Page is fully exclusive and pins page-&gt;mem_cgroup */</i></td></tr>
+<tr><th id="232">232</th><td>	<a class="macro" href="../include/linux/mmdebug.h.html#46" title="((void)(sizeof(( long)(PageLRU(page)))))" data-ref="_M/VM_BUG_ON_PAGE">VM_BUG_ON_PAGE</a>(<a class="ref fn" href="../include/linux/page-flags.h.html#320" title='PageLRU' data-ref="PageLRU" data-ref-filename="PageLRU">PageLRU</a>(<a class="local col4 ref" href="#14page" title='page' data-ref="14page" data-ref-filename="14page">page</a>), page);</td></tr>
+<tr><th id="233">233</th><td>	<a class="macro" href="../include/linux/mmdebug.h.html#46" title="((void)(sizeof(( long)(page_count(page)))))" data-ref="_M/VM_BUG_ON_PAGE">VM_BUG_ON_PAGE</a>(<a class="ref fn" href="../include/linux/page_ref.h.html#page_count" title='page_count' data-ref="page_count" data-ref-filename="page_count">page_count</a>(<a class="local col4 ref" href="#14page" title='page' data-ref="14page" data-ref-filename="14page">page</a>), page);</td></tr>
+<tr><th id="234">234</th><td>	<a class="macro" href="../include/linux/mmdebug.h.html#46" title="((void)(sizeof(( long)(!PageLocked(page)))))" data-ref="_M/VM_BUG_ON_PAGE">VM_BUG_ON_PAGE</a>(!<a class="ref fn" href="../include/linux/page-flags.h.html#312" title='PageLocked' data-ref="PageLocked" data-ref-filename="PageLocked">PageLocked</a>(<a class="local col4 ref" href="#14page" title='page' data-ref="14page" data-ref-filename="14page">page</a>), page);</td></tr>
+<tr><th id="235">235</th><td></td></tr>
+<tr><th id="236">236</th><td>	<a class="local col9 ref" href="#19lruvec" title='lruvec' data-ref="19lruvec" data-ref-filename="19lruvec">lruvec</a> = <a class="ref fn" href="../include/linux/memcontrol.h.html#mem_cgroup_lruvec" title='mem_cgroup_lruvec' data-ref="mem_cgroup_lruvec" data-ref-filename="mem_cgroup_lruvec">mem_cgroup_lruvec</a>(<a class="local col5 ref" href="#15pgdat" title='pgdat' data-ref="15pgdat" data-ref-filename="15pgdat">pgdat</a>, <a class="local col6 ref" href="#16memcg" title='memcg' data-ref="16memcg" data-ref-filename="16memcg">memcg</a>);</td></tr>
+<tr><th id="237">237</th><td>	<a class="local col8 ref" href="#18eviction" title='eviction' data-ref="18eviction" data-ref-filename="18eviction">eviction</a> = <a class="ref fn" href="../include/asm-generic/atomic-long.h.html#atomic_long_inc_return" title='atomic_long_inc_return' data-ref="atomic_long_inc_return" data-ref-filename="atomic_long_inc_return">atomic_long_inc_return</a>(&amp;<a class="local col9 ref" href="#19lruvec" title='lruvec' data-ref="19lruvec" data-ref-filename="19lruvec">lruvec</a>-&gt;<a class="ref field" href="../include/linux/mmzone.h.html#lruvec::inactive_age" title='lruvec::inactive_age' data-ref="lruvec::inactive_age" data-ref-filename="lruvec..inactive_age">inactive_age</a>);</td></tr>
+<tr><th id="238">238</th><td>	<b>return</b> <a class="tu ref fn" href="#pack_shadow" title='pack_shadow' data-use='c' data-ref="pack_shadow" data-ref-filename="pack_shadow">pack_shadow</a>(<a class="local col7 ref" href="#17memcgid" title='memcgid' data-ref="17memcgid" data-ref-filename="17memcgid">memcgid</a>, <a class="local col5 ref" href="#15pgdat" title='pgdat' data-ref="15pgdat" data-ref-filename="15pgdat">pgdat</a>, <a class="local col8 ref" href="#18eviction" title='eviction' data-ref="18eviction" data-ref-filename="18eviction">eviction</a>, <a class="ref fn" href="../include/linux/page-flags.h.html#323" title='PageWorkingset' data-ref="PageWorkingset" data-ref-filename="PageWorkingset">PageWorkingset</a>(<a class="local col4 ref" href="#14page" title='page' data-ref="14page" data-ref-filename="14page">page</a>));</td></tr>
+<tr><th id="239">239</th><td>}</td></tr>
+<tr><th id="240">240</th><td></td></tr>
+<tr><th id="241">241</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="242">242</th><td><i class="doc"> * workingset_refault - evaluate the refault of a previously evicted page</i></td></tr>
+<tr><th id="243">243</th><td><i class="doc"> *<span class="command"> @page</span>: the freshly allocated replacement page</i></td></tr>
+<tr><th id="244">244</th><td><i class="doc"> *<span class="command"> @shadow</span>: shadow entry of the evicted page</i></td></tr>
+<tr><th id="245">245</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="246">246</th><td><i class="doc"> * Calculates and evaluates the refault distance of the previously</i></td></tr>
+<tr><th id="247">247</th><td><i class="doc"> * evicted page in the context of the node it was allocated in.</i></td></tr>
+<tr><th id="248">248</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="249">249</th><td><em>void</em> <dfn class="decl def fn" id="workingset_refault" title='workingset_refault' data-ref="workingset_refault" data-ref-filename="workingset_refault">workingset_refault</dfn>(<b>struct</b> <a class="type" href="../include/linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="local col0 decl" id="20page" title='page' data-type='struct page *' data-ref="20page" data-ref-filename="20page">page</dfn>, <em>void</em> *<dfn class="local col1 decl" id="21shadow" title='shadow' data-type='void *' data-ref="21shadow" data-ref-filename="21shadow">shadow</dfn>)</td></tr>
+<tr><th id="250">250</th><td>{</td></tr>
+<tr><th id="251">251</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col2 decl" id="22refault_distance" title='refault_distance' data-type='unsigned long' data-ref="22refault_distance" data-ref-filename="22refault_distance">refault_distance</dfn>;</td></tr>
+<tr><th id="252">252</th><td>	<b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#pglist_data" title='pglist_data' data-ref="pglist_data" data-ref-filename="pglist_data">pglist_data</a> *<dfn class="local col3 decl" id="23pgdat" title='pgdat' data-type='struct pglist_data *' data-ref="23pgdat" data-ref-filename="23pgdat">pgdat</dfn>;</td></tr>
+<tr><th id="253">253</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col4 decl" id="24active_file" title='active_file' data-type='unsigned long' data-ref="24active_file" data-ref-filename="24active_file">active_file</dfn>;</td></tr>
+<tr><th id="254">254</th><td>	<b>struct</b> <a class="type" href="../include/linux/mm_types.h.html#mem_cgroup" title='mem_cgroup' data-ref="mem_cgroup" data-ref-filename="mem_cgroup">mem_cgroup</a> *<dfn class="local col5 decl" id="25memcg" title='memcg' data-type='struct mem_cgroup *' data-ref="25memcg" data-ref-filename="25memcg">memcg</dfn>;</td></tr>
+<tr><th id="255">255</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col6 decl" id="26eviction" title='eviction' data-type='unsigned long' data-ref="26eviction" data-ref-filename="26eviction">eviction</dfn>;</td></tr>
+<tr><th id="256">256</th><td>	<b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#lruvec" title='lruvec' data-ref="lruvec" data-ref-filename="lruvec">lruvec</a> *<dfn class="local col7 decl" id="27lruvec" title='lruvec' data-type='struct lruvec *' data-ref="27lruvec" data-ref-filename="27lruvec">lruvec</dfn>;</td></tr>
+<tr><th id="257">257</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col8 decl" id="28refault" title='refault' data-type='unsigned long' data-ref="28refault" data-ref-filename="28refault">refault</dfn>;</td></tr>
+<tr><th id="258">258</th><td>	<a class="typedef" href="../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col9 decl" id="29workingset" title='workingset' data-type='bool' data-ref="29workingset" data-ref-filename="29workingset">workingset</dfn>;</td></tr>
+<tr><th id="259">259</th><td>	<em>int</em> <dfn class="local col0 decl" id="30memcgid" title='memcgid' data-type='int' data-ref="30memcgid" data-ref-filename="30memcgid">memcgid</dfn>;</td></tr>
+<tr><th id="260">260</th><td></td></tr>
+<tr><th id="261">261</th><td>	<a class="tu ref fn" href="#unpack_shadow" title='unpack_shadow' data-use='c' data-ref="unpack_shadow" data-ref-filename="unpack_shadow">unpack_shadow</a>(<a class="local col1 ref" href="#21shadow" title='shadow' data-ref="21shadow" data-ref-filename="21shadow">shadow</a>, &amp;<a class="local col0 ref" href="#30memcgid" title='memcgid' data-ref="30memcgid" data-ref-filename="30memcgid">memcgid</a>, &amp;<a class="local col3 ref" href="#23pgdat" title='pgdat' data-ref="23pgdat" data-ref-filename="23pgdat">pgdat</a>, &amp;<a class="local col6 ref" href="#26eviction" title='eviction' data-ref="26eviction" data-ref-filename="26eviction">eviction</a>, &amp;<a class="local col9 ref" href="#29workingset" title='workingset' data-ref="29workingset" data-ref-filename="29workingset">workingset</a>);</td></tr>
+<tr><th id="262">262</th><td></td></tr>
+<tr><th id="263">263</th><td>	<a class="ref fn" href="../include/linux/rcupdate.h.html#rcu_read_lock" title='rcu_read_lock' data-ref="rcu_read_lock" data-ref-filename="rcu_read_lock">rcu_read_lock</a>();</td></tr>
+<tr><th id="264">264</th><td>	<i>/*</i></td></tr>
+<tr><th id="265">265</th><td><i>	 * Look up the memcg associated with the stored ID. It might</i></td></tr>
+<tr><th id="266">266</th><td><i>	 * have been deleted since the page's eviction.</i></td></tr>
+<tr><th id="267">267</th><td><i>	 *</i></td></tr>
+<tr><th id="268">268</th><td><i>	 * Note that in rare events the ID could have been recycled</i></td></tr>
+<tr><th id="269">269</th><td><i>	 * for a new cgroup that refaults a shared page. This is</i></td></tr>
+<tr><th id="270">270</th><td><i>	 * impossible to tell from the available data. However, this</i></td></tr>
+<tr><th id="271">271</th><td><i>	 * should be a rare and limited disturbance, and activations</i></td></tr>
+<tr><th id="272">272</th><td><i>	 * are always speculative anyway. Ultimately, it's the aging</i></td></tr>
+<tr><th id="273">273</th><td><i>	 * algorithm's job to shake out the minimum access frequency</i></td></tr>
+<tr><th id="274">274</th><td><i>	 * for the active cache.</i></td></tr>
+<tr><th id="275">275</th><td><i>	 *</i></td></tr>
+<tr><th id="276">276</th><td><i>	 * XXX: On !CONFIG_MEMCG, this will always return NULL; it</i></td></tr>
+<tr><th id="277">277</th><td><i>	 * would be better if the root_mem_cgroup existed in all</i></td></tr>
+<tr><th id="278">278</th><td><i>	 * configurations instead.</i></td></tr>
+<tr><th id="279">279</th><td><i>	 */</i></td></tr>
+<tr><th id="280">280</th><td>	<a class="local col5 ref" href="#25memcg" title='memcg' data-ref="25memcg" data-ref-filename="25memcg">memcg</a> = <a class="ref fn" href="../include/linux/memcontrol.h.html#mem_cgroup_from_id" title='mem_cgroup_from_id' data-ref="mem_cgroup_from_id" data-ref-filename="mem_cgroup_from_id">mem_cgroup_from_id</a>(<a class="local col0 ref" href="#30memcgid" title='memcgid' data-ref="30memcgid" data-ref-filename="30memcgid">memcgid</a>);</td></tr>
+<tr><th id="281">281</th><td>	<b>if</b> (!<a class="ref fn" href="../include/linux/memcontrol.h.html#mem_cgroup_disabled" title='mem_cgroup_disabled' data-ref="mem_cgroup_disabled" data-ref-filename="mem_cgroup_disabled">mem_cgroup_disabled</a>() &amp;&amp; !<a class="local col5 ref" href="#25memcg" title='memcg' data-ref="25memcg" data-ref-filename="25memcg">memcg</a>)</td></tr>
+<tr><th id="282">282</th><td>		<b>goto</b> <a class="lbl" href="#31out" data-ref="31out" data-ref-filename="31out">out</a>;</td></tr>
+<tr><th id="283">283</th><td>	<a class="local col7 ref" href="#27lruvec" title='lruvec' data-ref="27lruvec" data-ref-filename="27lruvec">lruvec</a> = <a class="ref fn" href="../include/linux/memcontrol.h.html#mem_cgroup_lruvec" title='mem_cgroup_lruvec' data-ref="mem_cgroup_lruvec" data-ref-filename="mem_cgroup_lruvec">mem_cgroup_lruvec</a>(<a class="local col3 ref" href="#23pgdat" title='pgdat' data-ref="23pgdat" data-ref-filename="23pgdat">pgdat</a>, <a class="local col5 ref" href="#25memcg" title='memcg' data-ref="25memcg" data-ref-filename="25memcg">memcg</a>);</td></tr>
+<tr><th id="284">284</th><td>	<a class="local col8 ref" href="#28refault" title='refault' data-ref="28refault" data-ref-filename="28refault">refault</a> = <a class="ref fn" href="../include/asm-generic/atomic-long.h.html#atomic_long_read" title='atomic_long_read' data-ref="atomic_long_read" data-ref-filename="atomic_long_read">atomic_long_read</a>(&amp;<a class="local col7 ref" href="#27lruvec" title='lruvec' data-ref="27lruvec" data-ref-filename="27lruvec">lruvec</a>-&gt;<a class="ref field" href="../include/linux/mmzone.h.html#lruvec::inactive_age" title='lruvec::inactive_age' data-ref="lruvec::inactive_age" data-ref-filename="lruvec..inactive_age">inactive_age</a>);</td></tr>
+<tr><th id="285">285</th><td>	<a class="local col4 ref" href="#24active_file" title='active_file' data-ref="24active_file" data-ref-filename="24active_file">active_file</a> = <a class="ref fn" href="../include/linux/mmzone.h.html#lruvec_lru_size" title='lruvec_lru_size' data-ref="lruvec_lru_size" data-ref-filename="lruvec_lru_size">lruvec_lru_size</a>(<a class="local col7 ref" href="#27lruvec" title='lruvec' data-ref="27lruvec" data-ref-filename="27lruvec">lruvec</a>, <a class="enum" href="../include/linux/mmzone.h.html#LRU_ACTIVE_FILE" title='LRU_ACTIVE_FILE' data-ref="LRU_ACTIVE_FILE" data-ref-filename="LRU_ACTIVE_FILE">LRU_ACTIVE_FILE</a>, <a class="macro" href="../include/generated/bounds.h.html#10" title="4" data-ref="_M/MAX_NR_ZONES">MAX_NR_ZONES</a>);</td></tr>
+<tr><th id="286">286</th><td></td></tr>
+<tr><th id="287">287</th><td>	<i>/*</i></td></tr>
+<tr><th id="288">288</th><td><i>	 * Calculate the refault distance</i></td></tr>
+<tr><th id="289">289</th><td><i>	 *</i></td></tr>
+<tr><th id="290">290</th><td><i>	 * The unsigned subtraction here gives an accurate distance</i></td></tr>
+<tr><th id="291">291</th><td><i>	 * across inactive_age overflows in most cases. There is a</i></td></tr>
+<tr><th id="292">292</th><td><i>	 * special case: usually, shadow entries have a short lifetime</i></td></tr>
+<tr><th id="293">293</th><td><i>	 * and are either refaulted or reclaimed along with the inode</i></td></tr>
+<tr><th id="294">294</th><td><i>	 * before they get too old.  But it is not impossible for the</i></td></tr>
+<tr><th id="295">295</th><td><i>	 * inactive_age to lap a shadow entry in the field, which can</i></td></tr>
+<tr><th id="296">296</th><td><i>	 * then result in a false small refault distance, leading to a</i></td></tr>
+<tr><th id="297">297</th><td><i>	 * false activation should this old entry actually refault</i></td></tr>
+<tr><th id="298">298</th><td><i>	 * again.  However, earlier kernels used to deactivate</i></td></tr>
+<tr><th id="299">299</th><td><i>	 * unconditionally with *every* reclaim invocation for the</i></td></tr>
+<tr><th id="300">300</th><td><i>	 * longest time, so the occasional inappropriate activation</i></td></tr>
+<tr><th id="301">301</th><td><i>	 * leading to pressure on the active list is not a problem.</i></td></tr>
+<tr><th id="302">302</th><td><i>	 */</i></td></tr>
+<tr><th id="303">303</th><td>	<a class="local col2 ref" href="#22refault_distance" title='refault_distance' data-ref="22refault_distance" data-ref-filename="22refault_distance">refault_distance</a> = (<a class="local col8 ref" href="#28refault" title='refault' data-ref="28refault" data-ref-filename="28refault">refault</a> - <a class="local col6 ref" href="#26eviction" title='eviction' data-ref="26eviction" data-ref-filename="26eviction">eviction</a>) &amp; <a class="macro" href="#172" title="(~0UL &gt;&gt; ((64 - (64 - 1)) + 1 + 6 + 0))" data-ref="_M/EVICTION_MASK">EVICTION_MASK</a>;</td></tr>
+<tr><th id="304">304</th><td></td></tr>
+<tr><th id="305">305</th><td>	<a class="ref fn" href="../include/linux/memcontrol.h.html#inc_lruvec_state" title='inc_lruvec_state' data-ref="inc_lruvec_state" data-ref-filename="inc_lruvec_state">inc_lruvec_state</a>(<a class="local col7 ref" href="#27lruvec" title='lruvec' data-ref="27lruvec" data-ref-filename="27lruvec">lruvec</a>, <a class="enum" href="../include/linux/mmzone.h.html#WORKINGSET_REFAULT" title='WORKINGSET_REFAULT' data-ref="WORKINGSET_REFAULT" data-ref-filename="WORKINGSET_REFAULT">WORKINGSET_REFAULT</a>);</td></tr>
+<tr><th id="306">306</th><td></td></tr>
+<tr><th id="307">307</th><td>	<i>/*</i></td></tr>
+<tr><th id="308">308</th><td><i>	 * Compare the distance to the existing workingset size. We</i></td></tr>
+<tr><th id="309">309</th><td><i>	 * don't act on pages that couldn't stay resident even if all</i></td></tr>
+<tr><th id="310">310</th><td><i>	 * the memory was available to the page cache.</i></td></tr>
+<tr><th id="311">311</th><td><i>	 */</i></td></tr>
+<tr><th id="312">312</th><td>	<b>if</b> (<a class="local col2 ref" href="#22refault_distance" title='refault_distance' data-ref="22refault_distance" data-ref-filename="22refault_distance">refault_distance</a> &gt; <a class="local col4 ref" href="#24active_file" title='active_file' data-ref="24active_file" data-ref-filename="24active_file">active_file</a>)</td></tr>
+<tr><th id="313">313</th><td>		<b>goto</b> <a class="lbl" href="#31out" data-ref="31out" data-ref-filename="31out">out</a>;</td></tr>
+<tr><th id="314">314</th><td></td></tr>
+<tr><th id="315">315</th><td>	<a class="ref fn" href="../include/linux/page-flags.h.html#321" title='SetPageActive' data-ref="SetPageActive" data-ref-filename="SetPageActive">SetPageActive</a>(<a class="local col0 ref" href="#20page" title='page' data-ref="20page" data-ref-filename="20page">page</a>);</td></tr>
+<tr><th id="316">316</th><td>	<a class="ref fn" href="../include/asm-generic/atomic-long.h.html#atomic_long_inc" title='atomic_long_inc' data-ref="atomic_long_inc" data-ref-filename="atomic_long_inc">atomic_long_inc</a>(&amp;<a class="local col7 ref" href="#27lruvec" title='lruvec' data-ref="27lruvec" data-ref-filename="27lruvec">lruvec</a>-&gt;<a class="ref field" href="../include/linux/mmzone.h.html#lruvec::inactive_age" title='lruvec::inactive_age' data-ref="lruvec::inactive_age" data-ref-filename="lruvec..inactive_age">inactive_age</a>);</td></tr>
+<tr><th id="317">317</th><td>	<a class="ref fn" href="../include/linux/memcontrol.h.html#inc_lruvec_state" title='inc_lruvec_state' data-ref="inc_lruvec_state" data-ref-filename="inc_lruvec_state">inc_lruvec_state</a>(<a class="local col7 ref" href="#27lruvec" title='lruvec' data-ref="27lruvec" data-ref-filename="27lruvec">lruvec</a>, <a class="enum" href="../include/linux/mmzone.h.html#WORKINGSET_ACTIVATE" title='WORKINGSET_ACTIVATE' data-ref="WORKINGSET_ACTIVATE" data-ref-filename="WORKINGSET_ACTIVATE">WORKINGSET_ACTIVATE</a>);</td></tr>
+<tr><th id="318">318</th><td></td></tr>
+<tr><th id="319">319</th><td>	<i>/* Page was active prior to eviction */</i></td></tr>
+<tr><th id="320">320</th><td>	<b>if</b> (<a class="local col9 ref" href="#29workingset" title='workingset' data-ref="29workingset" data-ref-filename="29workingset">workingset</a>) {</td></tr>
+<tr><th id="321">321</th><td>		<a class="ref fn" href="../include/linux/page-flags.h.html#323" title='SetPageWorkingset' data-ref="SetPageWorkingset" data-ref-filename="SetPageWorkingset">SetPageWorkingset</a>(<a class="local col0 ref" href="#20page" title='page' data-ref="20page" data-ref-filename="20page">page</a>);</td></tr>
+<tr><th id="322">322</th><td>		<a class="ref fn" href="../include/linux/memcontrol.h.html#inc_lruvec_state" title='inc_lruvec_state' data-ref="inc_lruvec_state" data-ref-filename="inc_lruvec_state">inc_lruvec_state</a>(<a class="local col7 ref" href="#27lruvec" title='lruvec' data-ref="27lruvec" data-ref-filename="27lruvec">lruvec</a>, <a class="enum" href="../include/linux/mmzone.h.html#WORKINGSET_RESTORE" title='WORKINGSET_RESTORE' data-ref="WORKINGSET_RESTORE" data-ref-filename="WORKINGSET_RESTORE">WORKINGSET_RESTORE</a>);</td></tr>
+<tr><th id="323">323</th><td>	}</td></tr>
+<tr><th id="324">324</th><td><dfn class="lbl" id="31out" data-ref="31out" data-ref-filename="31out">out</dfn>:</td></tr>
+<tr><th id="325">325</th><td>	<a class="ref fn" href="../include/linux/rcupdate.h.html#rcu_read_unlock" title='rcu_read_unlock' data-ref="rcu_read_unlock" data-ref-filename="rcu_read_unlock">rcu_read_unlock</a>();</td></tr>
+<tr><th id="326">326</th><td>}</td></tr>
+<tr><th id="327">327</th><td></td></tr>
+<tr><th id="328">328</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="329">329</th><td><i class="doc"> * workingset_activation - note a page activation</i></td></tr>
+<tr><th id="330">330</th><td><i class="doc"> *<span class="command"> @page</span>: page that is being activated</i></td></tr>
+<tr><th id="331">331</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="332">332</th><td><em>void</em> <dfn class="decl def fn" id="workingset_activation" title='workingset_activation' data-ref="workingset_activation" data-ref-filename="workingset_activation">workingset_activation</dfn>(<b>struct</b> <a class="type" href="../include/linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="local col2 decl" id="32page" title='page' data-type='struct page *' data-ref="32page" data-ref-filename="32page">page</dfn>)</td></tr>
+<tr><th id="333">333</th><td>{</td></tr>
+<tr><th id="334">334</th><td>	<b>struct</b> <a class="type" href="../include/linux/mm_types.h.html#mem_cgroup" title='mem_cgroup' data-ref="mem_cgroup" data-ref-filename="mem_cgroup">mem_cgroup</a> *<dfn class="local col3 decl" id="33memcg" title='memcg' data-type='struct mem_cgroup *' data-ref="33memcg" data-ref-filename="33memcg">memcg</dfn>;</td></tr>
+<tr><th id="335">335</th><td>	<b>struct</b> <a class="type" href="../include/linux/mmzone.h.html#lruvec" title='lruvec' data-ref="lruvec" data-ref-filename="lruvec">lruvec</a> *<dfn class="local col4 decl" id="34lruvec" title='lruvec' data-type='struct lruvec *' data-ref="34lruvec" data-ref-filename="34lruvec">lruvec</dfn>;</td></tr>
+<tr><th id="336">336</th><td></td></tr>
+<tr><th id="337">337</th><td>	<a class="ref fn" href="../include/linux/rcupdate.h.html#rcu_read_lock" title='rcu_read_lock' data-ref="rcu_read_lock" data-ref-filename="rcu_read_lock">rcu_read_lock</a>();</td></tr>
+<tr><th id="338">338</th><td>	<i>/*</i></td></tr>
+<tr><th id="339">339</th><td><i>	 * Filter non-memcg pages here, e.g. unmap can call</i></td></tr>
+<tr><th id="340">340</th><td><i>	 * mark_page_accessed() on VDSO pages.</i></td></tr>
+<tr><th id="341">341</th><td><i>	 *</i></td></tr>
+<tr><th id="342">342</th><td><i>	 * XXX: See workingset_refault() - this should return</i></td></tr>
+<tr><th id="343">343</th><td><i>	 * root_mem_cgroup even for !CONFIG_MEMCG.</i></td></tr>
+<tr><th id="344">344</th><td><i>	 */</i></td></tr>
+<tr><th id="345">345</th><td>	<a class="local col3 ref" href="#33memcg" title='memcg' data-ref="33memcg" data-ref-filename="33memcg">memcg</a> = <a class="ref fn" href="../include/linux/mm.h.html#page_memcg_rcu" title='page_memcg_rcu' data-ref="page_memcg_rcu" data-ref-filename="page_memcg_rcu">page_memcg_rcu</a>(<a class="local col2 ref" href="#32page" title='page' data-ref="32page" data-ref-filename="32page">page</a>);</td></tr>
+<tr><th id="346">346</th><td>	<b>if</b> (!<a class="ref fn" href="../include/linux/memcontrol.h.html#mem_cgroup_disabled" title='mem_cgroup_disabled' data-ref="mem_cgroup_disabled" data-ref-filename="mem_cgroup_disabled">mem_cgroup_disabled</a>() &amp;&amp; !<a class="local col3 ref" href="#33memcg" title='memcg' data-ref="33memcg" data-ref-filename="33memcg">memcg</a>)</td></tr>
+<tr><th id="347">347</th><td>		<b>goto</b> <a class="lbl" href="#35out" data-ref="35out" data-ref-filename="35out">out</a>;</td></tr>
+<tr><th id="348">348</th><td>	<a class="local col4 ref" href="#34lruvec" title='lruvec' data-ref="34lruvec" data-ref-filename="34lruvec">lruvec</a> = <a class="ref fn" href="../include/linux/memcontrol.h.html#mem_cgroup_lruvec" title='mem_cgroup_lruvec' data-ref="mem_cgroup_lruvec" data-ref-filename="mem_cgroup_lruvec">mem_cgroup_lruvec</a>(<a class="ref fn" href="../include/linux/mm.h.html#page_pgdat" title='page_pgdat' data-ref="page_pgdat" data-ref-filename="page_pgdat">page_pgdat</a>(<a class="local col2 ref" href="#32page" title='page' data-ref="32page" data-ref-filename="32page">page</a>), <a class="local col3 ref" href="#33memcg" title='memcg' data-ref="33memcg" data-ref-filename="33memcg">memcg</a>);</td></tr>
+<tr><th id="349">349</th><td>	<a class="ref fn" href="../include/asm-generic/atomic-long.h.html#atomic_long_inc" title='atomic_long_inc' data-ref="atomic_long_inc" data-ref-filename="atomic_long_inc">atomic_long_inc</a>(&amp;<a class="local col4 ref" href="#34lruvec" title='lruvec' data-ref="34lruvec" data-ref-filename="34lruvec">lruvec</a>-&gt;<a class="ref field" href="../include/linux/mmzone.h.html#lruvec::inactive_age" title='lruvec::inactive_age' data-ref="lruvec::inactive_age" data-ref-filename="lruvec..inactive_age">inactive_age</a>);</td></tr>
+<tr><th id="350">350</th><td><dfn class="lbl" id="35out" data-ref="35out" data-ref-filename="35out">out</dfn>:</td></tr>
+<tr><th id="351">351</th><td>	<a class="ref fn" href="../include/linux/rcupdate.h.html#rcu_read_unlock" title='rcu_read_unlock' data-ref="rcu_read_unlock" data-ref-filename="rcu_read_unlock">rcu_read_unlock</a>();</td></tr>
+<tr><th id="352">352</th><td>}</td></tr>
+<tr><th id="353">353</th><td></td></tr>
+<tr><th id="354">354</th><td><i  data-doc="shadow_nodes">/*</i></td></tr>
+<tr><th id="355">355</th><td><i  data-doc="shadow_nodes"> * Shadow entries reflect the share of the working set that does not</i></td></tr>
+<tr><th id="356">356</th><td><i  data-doc="shadow_nodes"> * fit into memory, so their number depends on the access pattern of</i></td></tr>
+<tr><th id="357">357</th><td><i  data-doc="shadow_nodes"> * the workload.  In most cases, they will refault or get reclaimed</i></td></tr>
+<tr><th id="358">358</th><td><i  data-doc="shadow_nodes"> * along with the inode, but a (malicious) workload that streams</i></td></tr>
+<tr><th id="359">359</th><td><i  data-doc="shadow_nodes"> * through files with a total size several times that of available</i></td></tr>
+<tr><th id="360">360</th><td><i  data-doc="shadow_nodes"> * memory, while preventing the inodes from being reclaimed, can</i></td></tr>
+<tr><th id="361">361</th><td><i  data-doc="shadow_nodes"> * create excessive amounts of shadow nodes.  To keep a lid on this,</i></td></tr>
+<tr><th id="362">362</th><td><i  data-doc="shadow_nodes"> * track shadow nodes and reclaim them when they grow way past the</i></td></tr>
+<tr><th id="363">363</th><td><i  data-doc="shadow_nodes"> * point where they would still be useful.</i></td></tr>
+<tr><th id="364">364</th><td><i  data-doc="shadow_nodes"> */</i></td></tr>
+<tr><th id="365">365</th><td></td></tr>
+<tr><th id="366">366</th><td><em>static</em> <b>struct</b> <a class="type" href="../include/linux/list_lru.h.html#list_lru" title='list_lru' data-ref="list_lru" data-ref-filename="list_lru">list_lru</a> <dfn class="tu decl def" id="shadow_nodes" title='shadow_nodes' data-type='struct list_lru' data-ref="shadow_nodes" data-ref-filename="shadow_nodes">shadow_nodes</dfn>;</td></tr>
+<tr><th id="367">367</th><td></td></tr>
+<tr><th id="368">368</th><td><em>void</em> <dfn class="decl def fn" id="workingset_update_node" title='workingset_update_node' data-ref="workingset_update_node" data-ref-filename="workingset_update_node">workingset_update_node</dfn>(<b>struct</b> <a class="type" href="../include/linux/xarray.h.html#xa_node" title='xa_node' data-ref="xa_node" data-ref-filename="xa_node">xa_node</a> *<dfn class="local col6 decl" id="36node" title='node' data-type='struct xa_node *' data-ref="36node" data-ref-filename="36node">node</dfn>)</td></tr>
+<tr><th id="369">369</th><td>{</td></tr>
+<tr><th id="370">370</th><td>	<i>/*</i></td></tr>
+<tr><th id="371">371</th><td><i>	 * Track non-empty nodes that contain only shadow entries;</i></td></tr>
+<tr><th id="372">372</th><td><i>	 * unlink those that contain pages or are being freed.</i></td></tr>
+<tr><th id="373">373</th><td><i>	 *</i></td></tr>
+<tr><th id="374">374</th><td><i>	 * Avoid acquiring the list_lru lock when the nodes are</i></td></tr>
+<tr><th id="375">375</th><td><i>	 * already where they should be. The list_empty() test is safe</i></td></tr>
+<tr><th id="376">376</th><td><i>	 * as node-&gt;private_list is protected by the i_pages lock.</i></td></tr>
+<tr><th id="377">377</th><td><i>	 */</i></td></tr>
+<tr><th id="378">378</th><td>	<a class="macro" href="../include/linux/mmdebug.h.html#50" title="((void)(sizeof(( long)(!({ unsigned long _flags; do { ({ unsigned long __dummy; typeof(_flags) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }); _flags = arch_local_save_flags(); } while (0); ({ ({ unsigned long __dummy; typeof(_flags) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }); arch_irqs_disabled_flags(_flags); }); })))))" data-ref="_M/VM_WARN_ON_ONCE">VM_WARN_ON_ONCE</a>(!<a class="macro" href="../include/linux/irqflags.h.html#159" title="({ unsigned long _flags; do { ({ unsigned long __dummy; typeof(_flags) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }); _flags = arch_local_save_flags(); } while (0); ({ ({ unsigned long __dummy; typeof(_flags) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }); arch_irqs_disabled_flags(_flags); }); })" data-ref="_M/irqs_disabled">irqs_disabled</a>());  <i>/* For __inc_lruvec_page_state */</i></td></tr>
+<tr><th id="379">379</th><td></td></tr>
+<tr><th id="380">380</th><td>	<b>if</b> (<a class="local col6 ref" href="#36node" title='node' data-ref="36node" data-ref-filename="36node">node</a>-&gt;<a class="ref field" href="../include/linux/xarray.h.html#xa_node::count" title='xa_node::count' data-ref="xa_node::count" data-ref-filename="xa_node..count">count</a> &amp;&amp; <a class="local col6 ref" href="#36node" title='node' data-ref="36node" data-ref-filename="36node">node</a>-&gt;<a class="ref field" href="../include/linux/xarray.h.html#xa_node::count" title='xa_node::count' data-ref="xa_node::count" data-ref-filename="xa_node..count">count</a> == <a class="local col6 ref" href="#36node" title='node' data-ref="36node" data-ref-filename="36node">node</a>-&gt;<a class="ref field" href="../include/linux/xarray.h.html#xa_node::nr_values" title='xa_node::nr_values' data-ref="xa_node::nr_values" data-ref-filename="xa_node..nr_values">nr_values</a>) {</td></tr>
+<tr><th id="381">381</th><td>		<b>if</b> (<a class="ref fn" href="../include/linux/list.h.html#list_empty" title='list_empty' data-ref="list_empty" data-ref-filename="list_empty">list_empty</a>(&amp;<a class="local col6 ref" href="#36node" title='node' data-ref="36node" data-ref-filename="36node">node</a>-&gt;<a class="ref field" href="../include/linux/xarray.h.html#xa_node::(anonymous)::private_list" title='xa_node::(anonymous union)::private_list' data-ref="xa_node::(anonymous)::private_list" data-ref-filename="xa_node..(anonymous)..private_list">private_list</a>)) {</td></tr>
+<tr><th id="382">382</th><td>			<a class="ref fn" href="../include/linux/list_lru.h.html#list_lru_add" title='list_lru_add' data-ref="list_lru_add" data-ref-filename="list_lru_add">list_lru_add</a>(&amp;<a class="tu ref" href="#shadow_nodes" title='shadow_nodes' data-use='a' data-ref="shadow_nodes" data-ref-filename="shadow_nodes">shadow_nodes</a>, &amp;<a class="local col6 ref" href="#36node" title='node' data-ref="36node" data-ref-filename="36node">node</a>-&gt;<a class="ref field" href="../include/linux/xarray.h.html#xa_node::(anonymous)::private_list" title='xa_node::(anonymous union)::private_list' data-ref="xa_node::(anonymous)::private_list" data-ref-filename="xa_node..(anonymous)..private_list">private_list</a>);</td></tr>
+<tr><th id="383">383</th><td>			<a class="ref fn" href="../include/linux/memcontrol.h.html#__inc_lruvec_slab_state" title='__inc_lruvec_slab_state' data-ref="__inc_lruvec_slab_state" data-ref-filename="__inc_lruvec_slab_state">__inc_lruvec_slab_state</a>(<a class="local col6 ref" href="#36node" title='node' data-ref="36node" data-ref-filename="36node">node</a>, <a class="enum" href="../include/linux/mmzone.h.html#WORKINGSET_NODES" title='WORKINGSET_NODES' data-ref="WORKINGSET_NODES" data-ref-filename="WORKINGSET_NODES">WORKINGSET_NODES</a>);</td></tr>
+<tr><th id="384">384</th><td>		}</td></tr>
+<tr><th id="385">385</th><td>	} <b>else</b> {</td></tr>
+<tr><th id="386">386</th><td>		<b>if</b> (!<a class="ref fn" href="../include/linux/list.h.html#list_empty" title='list_empty' data-ref="list_empty" data-ref-filename="list_empty">list_empty</a>(&amp;<a class="local col6 ref" href="#36node" title='node' data-ref="36node" data-ref-filename="36node">node</a>-&gt;<a class="ref field" href="../include/linux/xarray.h.html#xa_node::(anonymous)::private_list" title='xa_node::(anonymous union)::private_list' data-ref="xa_node::(anonymous)::private_list" data-ref-filename="xa_node..(anonymous)..private_list">private_list</a>)) {</td></tr>
+<tr><th id="387">387</th><td>			<a class="ref fn" href="../include/linux/list_lru.h.html#list_lru_del" title='list_lru_del' data-ref="list_lru_del" data-ref-filename="list_lru_del">list_lru_del</a>(&amp;<a class="tu ref" href="#shadow_nodes" title='shadow_nodes' data-use='a' data-ref="shadow_nodes" data-ref-filename="shadow_nodes">shadow_nodes</a>, &amp;<a class="local col6 ref" href="#36node" title='node' data-ref="36node" data-ref-filename="36node">node</a>-&gt;<a class="ref field" href="../include/linux/xarray.h.html#xa_node::(anonymous)::private_list" title='xa_node::(anonymous union)::private_list' data-ref="xa_node::(anonymous)::private_list" data-ref-filename="xa_node..(anonymous)..private_list">private_list</a>);</td></tr>
+<tr><th id="388">388</th><td>			<a class="ref fn" href="../include/linux/memcontrol.h.html#__dec_lruvec_slab_state" title='__dec_lruvec_slab_state' data-ref="__dec_lruvec_slab_state" data-ref-filename="__dec_lruvec_slab_state">__dec_lruvec_slab_state</a>(<a class="local col6 ref" href="#36node" title='node' data-ref="36node" data-ref-filename="36node">node</a>, <a class="enum" href="../include/linux/mmzone.h.html#WORKINGSET_NODES" title='WORKINGSET_NODES' data-ref="WORKINGSET_NODES" data-ref-filename="WORKINGSET_NODES">WORKINGSET_NODES</a>);</td></tr>
+<tr><th id="389">389</th><td>		}</td></tr>
+<tr><th id="390">390</th><td>	}</td></tr>
+<tr><th id="391">391</th><td>}</td></tr>
+<tr><th id="392">392</th><td></td></tr>
+<tr><th id="393">393</th><td><em>static</em> <em>unsigned</em> <em>long</em> <dfn class="tu decl def fn" id="count_shadow_nodes" title='count_shadow_nodes' data-type='unsigned long count_shadow_nodes(struct shrinker * shrinker, struct shrink_control * sc)' data-ref="count_shadow_nodes" data-ref-filename="count_shadow_nodes">count_shadow_nodes</dfn>(<b>struct</b> <a class="type" href="../include/linux/shrinker.h.html#shrinker" title='shrinker' data-ref="shrinker" data-ref-filename="shrinker">shrinker</a> *<dfn class="local col7 decl" id="37shrinker" title='shrinker' data-type='struct shrinker *' data-ref="37shrinker" data-ref-filename="37shrinker">shrinker</dfn>,</td></tr>
+<tr><th id="394">394</th><td>					<b>struct</b> <a class="type" href="../include/linux/shrinker.h.html#shrink_control" title='shrink_control' data-ref="shrink_control" data-ref-filename="shrink_control">shrink_control</a> *<dfn class="local col8 decl" id="38sc" title='sc' data-type='struct shrink_control *' data-ref="38sc" data-ref-filename="38sc">sc</dfn>)</td></tr>
+<tr><th id="395">395</th><td>{</td></tr>
+<tr><th id="396">396</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col9 decl" id="39max_nodes" title='max_nodes' data-type='unsigned long' data-ref="39max_nodes" data-ref-filename="39max_nodes">max_nodes</dfn>;</td></tr>
+<tr><th id="397">397</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col0 decl" id="40nodes" title='nodes' data-type='unsigned long' data-ref="40nodes" data-ref-filename="40nodes">nodes</dfn>;</td></tr>
+<tr><th id="398">398</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col1 decl" id="41pages" title='pages' data-type='unsigned long' data-ref="41pages" data-ref-filename="41pages">pages</dfn>;</td></tr>
+<tr><th id="399">399</th><td></td></tr>
+<tr><th id="400">400</th><td>	<a class="local col0 ref" href="#40nodes" title='nodes' data-ref="40nodes" data-ref-filename="40nodes">nodes</a> = <a class="ref fn" href="../include/linux/list_lru.h.html#list_lru_shrink_count" title='list_lru_shrink_count' data-ref="list_lru_shrink_count" data-ref-filename="list_lru_shrink_count">list_lru_shrink_count</a>(&amp;<a class="tu ref" href="#shadow_nodes" title='shadow_nodes' data-use='a' data-ref="shadow_nodes" data-ref-filename="shadow_nodes">shadow_nodes</a>, <a class="local col8 ref" href="#38sc" title='sc' data-ref="38sc" data-ref-filename="38sc">sc</a>);</td></tr>
+<tr><th id="401">401</th><td></td></tr>
+<tr><th id="402">402</th><td>	<i>/*</i></td></tr>
+<tr><th id="403">403</th><td><i>	 * Approximate a reasonable limit for the nodes</i></td></tr>
+<tr><th id="404">404</th><td><i>	 * containing shadow entries. We don't need to keep more</i></td></tr>
+<tr><th id="405">405</th><td><i>	 * shadow entries than possible pages on the active list,</i></td></tr>
+<tr><th id="406">406</th><td><i>	 * since refault distances bigger than that are dismissed.</i></td></tr>
+<tr><th id="407">407</th><td><i>	 *</i></td></tr>
+<tr><th id="408">408</th><td><i>	 * The size of the active list converges toward 100% of</i></td></tr>
+<tr><th id="409">409</th><td><i>	 * overall page cache as memory grows, with only a tiny</i></td></tr>
+<tr><th id="410">410</th><td><i>	 * inactive list. Assume the total cache size for that.</i></td></tr>
+<tr><th id="411">411</th><td><i>	 *</i></td></tr>
+<tr><th id="412">412</th><td><i>	 * Nodes might be sparsely populated, with only one shadow</i></td></tr>
+<tr><th id="413">413</th><td><i>	 * entry in the extreme case. Obviously, we cannot keep one</i></td></tr>
+<tr><th id="414">414</th><td><i>	 * node for every eligible shadow entry, so compromise on a</i></td></tr>
+<tr><th id="415">415</th><td><i>	 * worst-case density of 1/8th. Below that, not all eligible</i></td></tr>
+<tr><th id="416">416</th><td><i>	 * refaults can be detected anymore.</i></td></tr>
+<tr><th id="417">417</th><td><i>	 *</i></td></tr>
+<tr><th id="418">418</th><td><i>	 * On 64-bit with 7 xa_nodes per page and 64 slots</i></td></tr>
+<tr><th id="419">419</th><td><i>	 * each, this will reclaim shadow entries when they consume</i></td></tr>
+<tr><th id="420">420</th><td><i>	 * ~1.8% of available memory:</i></td></tr>
+<tr><th id="421">421</th><td><i>	 *</i></td></tr>
+<tr><th id="422">422</th><td><i>	 * PAGE_SIZE / xa_nodes / node_entries * 8 / PAGE_SIZE</i></td></tr>
+<tr><th id="423">423</th><td><i>	 */</i></td></tr>
+<tr><th id="424">424</th><td><u>#<span data-ppcond="424">ifdef</span> <span class="macro" data-ref="_M/CONFIG_MEMCG">CONFIG_MEMCG</span></u></td></tr>
+<tr><th id="425">425</th><td>	<b>if</b> (sc-&gt;memcg) {</td></tr>
+<tr><th id="426">426</th><td>		<b>struct</b> lruvec *lruvec;</td></tr>
+<tr><th id="427">427</th><td>		<em>int</em> i;</td></tr>
+<tr><th id="428">428</th><td></td></tr>
+<tr><th id="429">429</th><td>		lruvec = mem_cgroup_lruvec(NODE_DATA(sc-&gt;nid), sc-&gt;memcg);</td></tr>
+<tr><th id="430">430</th><td>		<b>for</b> (pages = <var>0</var>, i = <var>0</var>; i &lt; NR_LRU_LISTS; i++)</td></tr>
+<tr><th id="431">431</th><td>			pages += lruvec_page_state_local(lruvec,</td></tr>
+<tr><th id="432">432</th><td>							 NR_LRU_BASE + i);</td></tr>
+<tr><th id="433">433</th><td>		pages += lruvec_page_state_local(lruvec, NR_SLAB_RECLAIMABLE);</td></tr>
+<tr><th id="434">434</th><td>		pages += lruvec_page_state_local(lruvec, NR_SLAB_UNRECLAIMABLE);</td></tr>
+<tr><th id="435">435</th><td>	} <b>else</b></td></tr>
+<tr><th id="436">436</th><td><u>#<span data-ppcond="424">endif</span></u></td></tr>
+<tr><th id="437">437</th><td>		<a class="local col1 ref" href="#41pages" title='pages' data-ref="41pages" data-ref-filename="41pages">pages</a> = <a class="macro" href="../include/linux/mmzone.h.html#776" title="((node_data[sc-&gt;nid])-&gt;node_present_pages)" data-ref="_M/node_present_pages">node_present_pages</a>(<a class="local col8 ref" href="#38sc" title='sc' data-ref="38sc" data-ref-filename="38sc">sc</a>-&gt;<a class="ref field" href="../include/linux/shrinker.h.html#shrink_control::nid" title='shrink_control::nid' data-ref="shrink_control::nid" data-ref-filename="shrink_control..nid">nid</a>);</td></tr>
+<tr><th id="438">438</th><td></td></tr>
+<tr><th id="439">439</th><td>	<a class="local col9 ref" href="#39max_nodes" title='max_nodes' data-ref="39max_nodes" data-ref-filename="39max_nodes">max_nodes</a> = <a class="local col1 ref" href="#41pages" title='pages' data-ref="41pages" data-ref-filename="41pages">pages</a> &gt;&gt; (<a class="macro" href="../include/linux/xarray.h.html#1073" title="(0 ? 4 : 6)" data-ref="_M/XA_CHUNK_SHIFT">XA_CHUNK_SHIFT</a> - <var>3</var>);</td></tr>
+<tr><th id="440">440</th><td></td></tr>
+<tr><th id="441">441</th><td>	<b>if</b> (!<a class="local col0 ref" href="#40nodes" title='nodes' data-ref="40nodes" data-ref-filename="40nodes">nodes</a>)</td></tr>
+<tr><th id="442">442</th><td>		<b>return</b> <a class="macro" href="../include/linux/shrinker.h.html#37" title="(~0UL - 1)" data-ref="_M/SHRINK_EMPTY">SHRINK_EMPTY</a>;</td></tr>
+<tr><th id="443">443</th><td></td></tr>
+<tr><th id="444">444</th><td>	<b>if</b> (<a class="local col0 ref" href="#40nodes" title='nodes' data-ref="40nodes" data-ref-filename="40nodes">nodes</a> &lt;= <a class="local col9 ref" href="#39max_nodes" title='max_nodes' data-ref="39max_nodes" data-ref-filename="39max_nodes">max_nodes</a>)</td></tr>
+<tr><th id="445">445</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="446">446</th><td>	<b>return</b> <a class="local col0 ref" href="#40nodes" title='nodes' data-ref="40nodes" data-ref-filename="40nodes">nodes</a> - <a class="local col9 ref" href="#39max_nodes" title='max_nodes' data-ref="39max_nodes" data-ref-filename="39max_nodes">max_nodes</a>;</td></tr>
+<tr><th id="447">447</th><td>}</td></tr>
+<tr><th id="448">448</th><td></td></tr>
+<tr><th id="449">449</th><td><em>static</em> <b>enum</b> <a class="type" href="../include/linux/list_lru.h.html#lru_status" title='lru_status' data-ref="lru_status" data-ref-filename="lru_status">lru_status</a> <dfn class="tu decl def fn" id="shadow_lru_isolate" title='shadow_lru_isolate' data-type='enum lru_status shadow_lru_isolate(struct list_head * item, struct list_lru_one * lru, spinlock_t * lru_lock, void * arg)' data-ref="shadow_lru_isolate" data-ref-filename="shadow_lru_isolate">shadow_lru_isolate</dfn>(<b>struct</b> <a class="type" href="../include/linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> *<dfn class="local col2 decl" id="42item" title='item' data-type='struct list_head *' data-ref="42item" data-ref-filename="42item">item</dfn>,</td></tr>
+<tr><th id="450">450</th><td>					  <b>struct</b> <a class="type" href="../include/linux/list_lru.h.html#list_lru_one" title='list_lru_one' data-ref="list_lru_one" data-ref-filename="list_lru_one">list_lru_one</a> *<dfn class="local col3 decl" id="43lru" title='lru' data-type='struct list_lru_one *' data-ref="43lru" data-ref-filename="43lru">lru</dfn>,</td></tr>
+<tr><th id="451">451</th><td>					  <a class="typedef" href="../include/linux/spinlock_types.h.html#spinlock_t" title='spinlock_t' data-type='struct spinlock' data-ref="spinlock_t" data-ref-filename="spinlock_t">spinlock_t</a> *<dfn class="local col4 decl" id="44lru_lock" title='lru_lock' data-type='spinlock_t *' data-ref="44lru_lock" data-ref-filename="44lru_lock">lru_lock</dfn>,</td></tr>
+<tr><th id="452">452</th><td>					  <em>void</em> *<dfn class="local col5 decl" id="45arg" title='arg' data-type='void *' data-ref="45arg" data-ref-filename="45arg">arg</dfn>) <a class="macro" href="../include/linux/compiler_types.h.html#40" title="" data-ref="_M/__must_hold">__must_hold</a>(lru_lock)</td></tr>
+<tr><th id="453">453</th><td>{</td></tr>
+<tr><th id="454">454</th><td>	<b>struct</b> <a class="type" href="../include/linux/xarray.h.html#xa_node" title='xa_node' data-ref="xa_node" data-ref-filename="xa_node">xa_node</a> *<dfn class="local col6 decl" id="46node" title='node' data-type='struct xa_node *' data-ref="46node" data-ref-filename="46node">node</dfn> = <a class="macro" href="../include/linux/kernel.h.html#971" title="({ void *__mptr = (void *)(item); do { extern void __compiletime_assert_454(void) ; if (!(!(!__builtin_types_compatible_p(typeof(*(item)), typeof(((struct xa_node *)0)-&gt;private_list)) &amp;&amp; !__builtin_types_compatible_p(typeof(*(item)), typeof(void))))) __compiletime_assert_454(); } while (0); ((struct xa_node *)(__mptr - __builtin_offsetof(struct xa_node, private_list))); })" data-ref="_M/container_of">container_of</a>(<a class="local col2 ref" href="#42item" title='item' data-ref="42item" data-ref-filename="42item">item</a>, <b>struct</b> <a class="type" href="../include/linux/xarray.h.html#xa_node" title='xa_node' data-ref="xa_node" data-ref-filename="xa_node">xa_node</a>, <a class="ref field" href="../include/linux/xarray.h.html#xa_node::(anonymous)::private_list" title='xa_node::(anonymous union)::private_list' data-ref="xa_node::(anonymous)::private_list" data-ref-filename="xa_node..(anonymous)..private_list">private_list</a>);</td></tr>
+<tr><th id="455">455</th><td>	<a class="macro" href="../include/linux/xarray.h.html#1311" title="struct xa_state xas = { .xa = node-&gt;array, .xa_index = 0, .xa_shift = 0, .xa_sibs = 0, .xa_offset = 0, .xa_pad = 0, .xa_node = ((struct xa_node *)3UL), .xa_alloc = ((void *)0), .xa_update = ((void *)0) }" data-ref="_M/XA_STATE">XA_STATE</a>(<dfn class="local col7 decl" id="47xas" title='xas' data-type='struct xa_state' data-ref="47xas" data-ref-filename="47xas">xas</dfn>, <a class="local col6 ref" href="#46node" title='node' data-ref="46node" data-ref-filename="46node">node</a>-&gt;<a class="ref field" href="../include/linux/xarray.h.html#xa_node::array" title='xa_node::array' data-ref="xa_node::array" data-ref-filename="xa_node..array">array</a>, <var>0</var>);</td></tr>
+<tr><th id="456">456</th><td>	<b>struct</b> <a class="type" href="../include/linux/fs.h.html#address_space" title='address_space' data-ref="address_space" data-ref-filename="address_space">address_space</a> *<dfn class="local col8 decl" id="48mapping" title='mapping' data-type='struct address_space *' data-ref="48mapping" data-ref-filename="48mapping">mapping</dfn>;</td></tr>
+<tr><th id="457">457</th><td>	<em>int</em> <dfn class="local col9 decl" id="49ret" title='ret' data-type='int' data-ref="49ret" data-ref-filename="49ret">ret</dfn>;</td></tr>
+<tr><th id="458">458</th><td></td></tr>
+<tr><th id="459">459</th><td>	<i>/*</i></td></tr>
+<tr><th id="460">460</th><td><i>	 * Page cache insertions and deletions synchroneously maintain</i></td></tr>
+<tr><th id="461">461</th><td><i>	 * the shadow node LRU under the i_pages lock and the</i></td></tr>
+<tr><th id="462">462</th><td><i>	 * lru_lock.  Because the page cache tree is emptied before</i></td></tr>
+<tr><th id="463">463</th><td><i>	 * the inode can be destroyed, holding the lru_lock pins any</i></td></tr>
+<tr><th id="464">464</th><td><i>	 * address_space that has nodes on the LRU.</i></td></tr>
+<tr><th id="465">465</th><td><i>	 *</i></td></tr>
+<tr><th id="466">466</th><td><i>	 * We can then safely transition to the i_pages lock to</i></td></tr>
+<tr><th id="467">467</th><td><i>	 * pin only the address_space of the particular node we want</i></td></tr>
+<tr><th id="468">468</th><td><i>	 * to reclaim, take the node off-LRU, and drop the lru_lock.</i></td></tr>
+<tr><th id="469">469</th><td><i>	 */</i></td></tr>
+<tr><th id="470">470</th><td></td></tr>
+<tr><th id="471">471</th><td>	<a class="local col8 ref" href="#48mapping" title='mapping' data-ref="48mapping" data-ref-filename="48mapping">mapping</a> = <a class="macro" href="../include/linux/kernel.h.html#971" title="({ void *__mptr = (void *)(node-&gt;array); do { extern void __compiletime_assert_471(void) ; if (!(!(!__builtin_types_compatible_p(typeof(*(node-&gt;array)), typeof(((struct address_space *)0)-&gt;i_pages)) &amp;&amp; !__builtin_types_compatible_p(typeof(*(node-&gt;array)), typeof(void))))) __compiletime_assert_471(); } while (0); ((struct address_space *)(__mptr - __builtin_offsetof(struct address_space, i_pages))); })" data-ref="_M/container_of">container_of</a>(<a class="local col6 ref" href="#46node" title='node' data-ref="46node" data-ref-filename="46node">node</a>-&gt;<a class="ref field" href="../include/linux/xarray.h.html#xa_node::array" title='xa_node::array' data-ref="xa_node::array" data-ref-filename="xa_node..array">array</a>, <b>struct</b> <a class="type" href="../include/linux/fs.h.html#address_space" title='address_space' data-ref="address_space" data-ref-filename="address_space">address_space</a>, <a class="ref field" href="../include/linux/fs.h.html#address_space::i_pages" title='address_space::i_pages' data-ref="address_space::i_pages" data-ref-filename="address_space..i_pages">i_pages</a>);</td></tr>
+<tr><th id="472">472</th><td></td></tr>
+<tr><th id="473">473</th><td>	<i>/* Coming from the list, invert the lock order */</i></td></tr>
+<tr><th id="474">474</th><td>	<b>if</b> (!<a class="macro" href="../include/linux/xarray.h.html#500" title="spin_trylock(&amp;(&amp;mapping-&gt;i_pages)-&gt;xa_lock)" data-ref="_M/xa_trylock">xa_trylock</a>(&amp;<a class="local col8 ref" href="#48mapping" title='mapping' data-ref="48mapping" data-ref-filename="48mapping">mapping</a>-&gt;<a class="ref field" href="../include/linux/fs.h.html#address_space::i_pages" title='address_space::i_pages' data-ref="address_space::i_pages" data-ref-filename="address_space..i_pages">i_pages</a>)) {</td></tr>
+<tr><th id="475">475</th><td>		<a class="ref fn" href="../include/linux/spinlock.h.html#spin_unlock_irq" title='spin_unlock_irq' data-ref="spin_unlock_irq" data-ref-filename="spin_unlock_irq">spin_unlock_irq</a>(<a class="local col4 ref" href="#44lru_lock" title='lru_lock' data-ref="44lru_lock" data-ref-filename="44lru_lock">lru_lock</a>);</td></tr>
+<tr><th id="476">476</th><td>		<a class="local col9 ref" href="#49ret" title='ret' data-ref="49ret" data-ref-filename="49ret">ret</a> = <a class="enum" href="../include/linux/list_lru.h.html#LRU_RETRY" title='LRU_RETRY' data-ref="LRU_RETRY" data-ref-filename="LRU_RETRY">LRU_RETRY</a>;</td></tr>
+<tr><th id="477">477</th><td>		<b>goto</b> <a class="lbl" href="#50out" data-ref="50out" data-ref-filename="50out">out</a>;</td></tr>
+<tr><th id="478">478</th><td>	}</td></tr>
+<tr><th id="479">479</th><td></td></tr>
+<tr><th id="480">480</th><td>	<a class="ref fn" href="../include/linux/list_lru.h.html#list_lru_isolate" title='list_lru_isolate' data-ref="list_lru_isolate" data-ref-filename="list_lru_isolate">list_lru_isolate</a>(<a class="local col3 ref" href="#43lru" title='lru' data-ref="43lru" data-ref-filename="43lru">lru</a>, <a class="local col2 ref" href="#42item" title='item' data-ref="42item" data-ref-filename="42item">item</a>);</td></tr>
+<tr><th id="481">481</th><td>	<a class="ref fn" href="../include/linux/memcontrol.h.html#__dec_lruvec_slab_state" title='__dec_lruvec_slab_state' data-ref="__dec_lruvec_slab_state" data-ref-filename="__dec_lruvec_slab_state">__dec_lruvec_slab_state</a>(<a class="local col6 ref" href="#46node" title='node' data-ref="46node" data-ref-filename="46node">node</a>, <a class="enum" href="../include/linux/mmzone.h.html#WORKINGSET_NODES" title='WORKINGSET_NODES' data-ref="WORKINGSET_NODES" data-ref-filename="WORKINGSET_NODES">WORKINGSET_NODES</a>);</td></tr>
+<tr><th id="482">482</th><td></td></tr>
+<tr><th id="483">483</th><td>	<a class="ref fn" href="../include/linux/spinlock.h.html#spin_unlock" title='spin_unlock' data-ref="spin_unlock" data-ref-filename="spin_unlock">spin_unlock</a>(<a class="local col4 ref" href="#44lru_lock" title='lru_lock' data-ref="44lru_lock" data-ref-filename="44lru_lock">lru_lock</a>);</td></tr>
+<tr><th id="484">484</th><td></td></tr>
+<tr><th id="485">485</th><td>	<i>/*</i></td></tr>
+<tr><th id="486">486</th><td><i>	 * The nodes should only contain one or more shadow entries,</i></td></tr>
+<tr><th id="487">487</th><td><i>	 * no pages, so we expect to be able to remove them all and</i></td></tr>
+<tr><th id="488">488</th><td><i>	 * delete and free the empty node afterwards.</i></td></tr>
+<tr><th id="489">489</th><td><i>	 */</i></td></tr>
+<tr><th id="490">490</th><td>	<b>if</b> (<a class="macro" href="../include/asm-generic/bug.h.html#68" title="({ int __ret_warn_on = !!(!node-&gt;nr_values); if (__builtin_expect(!!(__ret_warn_on), 0)) do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/mm/workingset.c&quot;), &quot;i&quot; (490), &quot;i&quot; ((1 &lt;&lt; 0)|((1 &lt;&lt; 1)|((9) &lt;&lt; 8))), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.reachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (81)); }); } while (0); __builtin_expect(!!(__ret_warn_on), 0); })" data-ref="_M/WARN_ON_ONCE">WARN_ON_ONCE</a>(!<a class="local col6 ref" href="#46node" title='node' data-ref="46node" data-ref-filename="46node">node</a>-&gt;<a class="ref field" href="../include/linux/xarray.h.html#xa_node::nr_values" title='xa_node::nr_values' data-ref="xa_node::nr_values" data-ref-filename="xa_node..nr_values">nr_values</a>))</td></tr>
+<tr><th id="491">491</th><td>		<b>goto</b> <a class="lbl" href="#51out_invalid" data-ref="51out_invalid" data-ref-filename="51out_invalid">out_invalid</a>;</td></tr>
+<tr><th id="492">492</th><td>	<b>if</b> (<a class="macro" href="../include/asm-generic/bug.h.html#68" title="({ int __ret_warn_on = !!(node-&gt;count != node-&gt;nr_values); if (__builtin_expect(!!(__ret_warn_on), 0)) do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/mm/workingset.c&quot;), &quot;i&quot; (492), &quot;i&quot; ((1 &lt;&lt; 0)|((1 &lt;&lt; 1)|((9) &lt;&lt; 8))), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.reachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (83)); }); } while (0); __builtin_expect(!!(__ret_warn_on), 0); })" data-ref="_M/WARN_ON_ONCE">WARN_ON_ONCE</a>(<a class="local col6 ref" href="#46node" title='node' data-ref="46node" data-ref-filename="46node">node</a>-&gt;<a class="ref field" href="../include/linux/xarray.h.html#xa_node::count" title='xa_node::count' data-ref="xa_node::count" data-ref-filename="xa_node..count">count</a> != <a class="local col6 ref" href="#46node" title='node' data-ref="46node" data-ref-filename="46node">node</a>-&gt;<a class="ref field" href="../include/linux/xarray.h.html#xa_node::nr_values" title='xa_node::nr_values' data-ref="xa_node::nr_values" data-ref-filename="xa_node..nr_values">nr_values</a>))</td></tr>
+<tr><th id="493">493</th><td>		<b>goto</b> <a class="lbl" href="#51out_invalid" data-ref="51out_invalid" data-ref-filename="51out_invalid">out_invalid</a>;</td></tr>
+<tr><th id="494">494</th><td>	<a class="local col8 ref" href="#48mapping" title='mapping' data-ref="48mapping" data-ref-filename="48mapping">mapping</a>-&gt;<a class="ref field" href="../include/linux/fs.h.html#address_space::nrexceptional" title='address_space::nrexceptional' data-ref="address_space::nrexceptional" data-ref-filename="address_space..nrexceptional">nrexceptional</a> -= <a class="local col6 ref" href="#46node" title='node' data-ref="46node" data-ref-filename="46node">node</a>-&gt;<a class="ref field" href="../include/linux/xarray.h.html#xa_node::nr_values" title='xa_node::nr_values' data-ref="xa_node::nr_values" data-ref-filename="xa_node..nr_values">nr_values</a>;</td></tr>
+<tr><th id="495">495</th><td>	<a class="local col7 ref" href="#455" title='xas' data-ref="47xas" data-ref-filename="47xas">xas</a>.<a class="ref field" href="../include/linux/xarray.h.html#xa_state::xa_node" title='xa_state::xa_node' data-ref="xa_state::xa_node" data-ref-filename="xa_state..xa_node">xa_node</a> = <a class="ref fn" href="../include/linux/xarray.h.html#xa_parent_locked" title='xa_parent_locked' data-ref="xa_parent_locked" data-ref-filename="xa_parent_locked">xa_parent_locked</a>(&amp;<a class="local col8 ref" href="#48mapping" title='mapping' data-ref="48mapping" data-ref-filename="48mapping">mapping</a>-&gt;<a class="ref field" href="../include/linux/fs.h.html#address_space::i_pages" title='address_space::i_pages' data-ref="address_space::i_pages" data-ref-filename="address_space..i_pages">i_pages</a>, <a class="local col6 ref" href="#46node" title='node' data-ref="46node" data-ref-filename="46node">node</a>);</td></tr>
+<tr><th id="496">496</th><td>	<a class="local col7 ref" href="#455" title='xas' data-ref="47xas" data-ref-filename="47xas">xas</a>.<a class="ref field" href="../include/linux/xarray.h.html#xa_state::xa_offset" title='xa_state::xa_offset' data-ref="xa_state::xa_offset" data-ref-filename="xa_state..xa_offset">xa_offset</a> = <a class="local col6 ref" href="#46node" title='node' data-ref="46node" data-ref-filename="46node">node</a>-&gt;<a class="ref field" href="../include/linux/xarray.h.html#xa_node::offset" title='xa_node::offset' data-ref="xa_node::offset" data-ref-filename="xa_node..offset">offset</a>;</td></tr>
+<tr><th id="497">497</th><td>	<a class="local col7 ref" href="#455" title='xas' data-ref="47xas" data-ref-filename="47xas">xas</a>.<a class="ref field" href="../include/linux/xarray.h.html#xa_state::xa_shift" title='xa_state::xa_shift' data-ref="xa_state::xa_shift" data-ref-filename="xa_state..xa_shift">xa_shift</a> = <a class="local col6 ref" href="#46node" title='node' data-ref="46node" data-ref-filename="46node">node</a>-&gt;<a class="ref field" href="../include/linux/xarray.h.html#xa_node::shift" title='xa_node::shift' data-ref="xa_node::shift" data-ref-filename="xa_node..shift">shift</a> + <a class="macro" href="../include/linux/xarray.h.html#1073" title="(0 ? 4 : 6)" data-ref="_M/XA_CHUNK_SHIFT">XA_CHUNK_SHIFT</a>;</td></tr>
+<tr><th id="498">498</th><td>	<a class="ref fn" href="../include/linux/xarray.h.html#xas_set_update" title='xas_set_update' data-ref="xas_set_update" data-ref-filename="xas_set_update">xas_set_update</a>(&amp;<a class="local col7 ref" href="#455" title='xas' data-ref="47xas" data-ref-filename="47xas">xas</a>, <a class="ref fn" href="#workingset_update_node" title='workingset_update_node' data-ref="workingset_update_node" data-ref-filename="workingset_update_node">workingset_update_node</a>);</td></tr>
+<tr><th id="499">499</th><td>	<i>/*</i></td></tr>
+<tr><th id="500">500</th><td><i>	 * We could store a shadow entry here which was the minimum of the</i></td></tr>
+<tr><th id="501">501</th><td><i>	 * shadow entries we were tracking ...</i></td></tr>
+<tr><th id="502">502</th><td><i>	 */</i></td></tr>
+<tr><th id="503">503</th><td>	<a class="ref fn" href="../include/linux/xarray.h.html#xas_store" title='xas_store' data-ref="xas_store" data-ref-filename="xas_store">xas_store</a>(&amp;<a class="local col7 ref" href="#455" title='xas' data-ref="47xas" data-ref-filename="47xas">xas</a>, <a class="macro" href="../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>);</td></tr>
+<tr><th id="504">504</th><td>	<a class="ref fn" href="../include/linux/memcontrol.h.html#__inc_lruvec_slab_state" title='__inc_lruvec_slab_state' data-ref="__inc_lruvec_slab_state" data-ref-filename="__inc_lruvec_slab_state">__inc_lruvec_slab_state</a>(<a class="local col6 ref" href="#46node" title='node' data-ref="46node" data-ref-filename="46node">node</a>, <a class="enum" href="../include/linux/mmzone.h.html#WORKINGSET_NODERECLAIM" title='WORKINGSET_NODERECLAIM' data-ref="WORKINGSET_NODERECLAIM" data-ref-filename="WORKINGSET_NODERECLAIM">WORKINGSET_NODERECLAIM</a>);</td></tr>
+<tr><th id="505">505</th><td></td></tr>
+<tr><th id="506">506</th><td><dfn class="lbl" id="51out_invalid" data-ref="51out_invalid" data-ref-filename="51out_invalid">out_invalid</dfn>:</td></tr>
+<tr><th id="507">507</th><td>	<a class="macro" href="../include/linux/xarray.h.html#506" title="spin_unlock_irq(&amp;(&amp;mapping-&gt;i_pages)-&gt;xa_lock)" data-ref="_M/xa_unlock_irq">xa_unlock_irq</a>(&amp;<a class="local col8 ref" href="#48mapping" title='mapping' data-ref="48mapping" data-ref-filename="48mapping">mapping</a>-&gt;<a class="ref field" href="../include/linux/fs.h.html#address_space::i_pages" title='address_space::i_pages' data-ref="address_space::i_pages" data-ref-filename="address_space..i_pages">i_pages</a>);</td></tr>
+<tr><th id="508">508</th><td>	<a class="local col9 ref" href="#49ret" title='ret' data-ref="49ret" data-ref-filename="49ret">ret</a> = <a class="enum" href="../include/linux/list_lru.h.html#LRU_REMOVED_RETRY" title='LRU_REMOVED_RETRY' data-ref="LRU_REMOVED_RETRY" data-ref-filename="LRU_REMOVED_RETRY">LRU_REMOVED_RETRY</a>;</td></tr>
+<tr><th id="509">509</th><td><dfn class="lbl" id="50out" data-ref="50out" data-ref-filename="50out">out</dfn>:</td></tr>
+<tr><th id="510">510</th><td>	<a class="macro" href="../include/linux/sched.h.html#1776" title="({ ___might_sleep(&quot;/home/woboq/linux-5.3.1/mm/workingset.c&quot;, 510, 0); _cond_resched(); })" data-ref="_M/cond_resched">cond_resched</a>();</td></tr>
+<tr><th id="511">511</th><td>	<a class="ref fn" href="../include/linux/spinlock.h.html#spin_lock_irq" title='spin_lock_irq' data-ref="spin_lock_irq" data-ref-filename="spin_lock_irq">spin_lock_irq</a>(<a class="local col4 ref" href="#44lru_lock" title='lru_lock' data-ref="44lru_lock" data-ref-filename="44lru_lock">lru_lock</a>);</td></tr>
+<tr><th id="512">512</th><td>	<b>return</b> <a class="local col9 ref" href="#49ret" title='ret' data-ref="49ret" data-ref-filename="49ret">ret</a>;</td></tr>
+<tr><th id="513">513</th><td>}</td></tr>
+<tr><th id="514">514</th><td></td></tr>
+<tr><th id="515">515</th><td><em>static</em> <em>unsigned</em> <em>long</em> <dfn class="tu decl def fn" id="scan_shadow_nodes" title='scan_shadow_nodes' data-type='unsigned long scan_shadow_nodes(struct shrinker * shrinker, struct shrink_control * sc)' data-ref="scan_shadow_nodes" data-ref-filename="scan_shadow_nodes">scan_shadow_nodes</dfn>(<b>struct</b> <a class="type" href="../include/linux/shrinker.h.html#shrinker" title='shrinker' data-ref="shrinker" data-ref-filename="shrinker">shrinker</a> *<dfn class="local col2 decl" id="52shrinker" title='shrinker' data-type='struct shrinker *' data-ref="52shrinker" data-ref-filename="52shrinker">shrinker</dfn>,</td></tr>
+<tr><th id="516">516</th><td>				       <b>struct</b> <a class="type" href="../include/linux/shrinker.h.html#shrink_control" title='shrink_control' data-ref="shrink_control" data-ref-filename="shrink_control">shrink_control</a> *<dfn class="local col3 decl" id="53sc" title='sc' data-type='struct shrink_control *' data-ref="53sc" data-ref-filename="53sc">sc</dfn>)</td></tr>
+<tr><th id="517">517</th><td>{</td></tr>
+<tr><th id="518">518</th><td>	<i>/* list_lru lock nests inside the IRQ-safe i_pages lock */</i></td></tr>
+<tr><th id="519">519</th><td>	<b>return</b> <a class="ref fn" href="../include/linux/list_lru.h.html#list_lru_shrink_walk_irq" title='list_lru_shrink_walk_irq' data-ref="list_lru_shrink_walk_irq" data-ref-filename="list_lru_shrink_walk_irq">list_lru_shrink_walk_irq</a>(&amp;<a class="tu ref" href="#shadow_nodes" title='shadow_nodes' data-use='a' data-ref="shadow_nodes" data-ref-filename="shadow_nodes">shadow_nodes</a>, <a class="local col3 ref" href="#53sc" title='sc' data-ref="53sc" data-ref-filename="53sc">sc</a>, <a class="tu ref fn" href="#shadow_lru_isolate" title='shadow_lru_isolate' data-use='r' data-ref="shadow_lru_isolate" data-ref-filename="shadow_lru_isolate">shadow_lru_isolate</a>,</td></tr>
+<tr><th id="520">520</th><td>					<a class="macro" href="../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>);</td></tr>
+<tr><th id="521">521</th><td>}</td></tr>
+<tr><th id="522">522</th><td></td></tr>
+<tr><th id="523">523</th><td><em>static</em> <b>struct</b> <a class="type" href="../include/linux/shrinker.h.html#shrinker" title='shrinker' data-ref="shrinker" data-ref-filename="shrinker">shrinker</a> <dfn class="tu decl def" id="workingset_shadow_shrinker" title='workingset_shadow_shrinker' data-type='struct shrinker' data-ref="workingset_shadow_shrinker" data-ref-filename="workingset_shadow_shrinker">workingset_shadow_shrinker</dfn> = {</td></tr>
+<tr><th id="524">524</th><td>	.<a class="ref field" href="../include/linux/shrinker.h.html#shrinker::count_objects" title='shrinker::count_objects' data-ref="shrinker::count_objects" data-ref-filename="shrinker..count_objects">count_objects</a> = <a class="tu ref fn" href="#count_shadow_nodes" title='count_shadow_nodes' data-ref="count_shadow_nodes" data-ref-filename="count_shadow_nodes">count_shadow_nodes</a>,</td></tr>
+<tr><th id="525">525</th><td>	.<a class="ref field" href="../include/linux/shrinker.h.html#shrinker::scan_objects" title='shrinker::scan_objects' data-ref="shrinker::scan_objects" data-ref-filename="shrinker..scan_objects">scan_objects</a> = <a class="tu ref fn" href="#scan_shadow_nodes" title='scan_shadow_nodes' data-ref="scan_shadow_nodes" data-ref-filename="scan_shadow_nodes">scan_shadow_nodes</a>,</td></tr>
+<tr><th id="526">526</th><td>	.<a class="ref field" href="../include/linux/shrinker.h.html#shrinker::seeks" title='shrinker::seeks' data-ref="shrinker::seeks" data-ref-filename="shrinker..seeks">seeks</a> = <var>0</var>, <i>/* -&gt;count reports only fully expendable nodes */</i></td></tr>
+<tr><th id="527">527</th><td>	.<a class="ref field" href="../include/linux/shrinker.h.html#shrinker::flags" title='shrinker::flags' data-ref="shrinker::flags" data-ref-filename="shrinker..flags">flags</a> = <a class="macro" href="../include/linux/shrinker.h.html#82" title="(1 &lt;&lt; 0)" data-ref="_M/SHRINKER_NUMA_AWARE">SHRINKER_NUMA_AWARE</a> | <a class="macro" href="../include/linux/shrinker.h.html#83" title="(1 &lt;&lt; 1)" data-ref="_M/SHRINKER_MEMCG_AWARE">SHRINKER_MEMCG_AWARE</a>,</td></tr>
+<tr><th id="528">528</th><td>};</td></tr>
+<tr><th id="529">529</th><td></td></tr>
+<tr><th id="530">530</th><td><i  data-doc="shadow_nodes_key">/*</i></td></tr>
+<tr><th id="531">531</th><td><i  data-doc="shadow_nodes_key"> * Our list_lru-&gt;lock is IRQ-safe as it nests inside the IRQ-safe</i></td></tr>
+<tr><th id="532">532</th><td><i  data-doc="shadow_nodes_key"> * i_pages lock.</i></td></tr>
+<tr><th id="533">533</th><td><i  data-doc="shadow_nodes_key"> */</i></td></tr>
+<tr><th id="534">534</th><td><em>static</em> <b>struct</b> <a class="type" href="../include/linux/lockdep.h.html#lock_class_key" title='lock_class_key' data-ref="lock_class_key" data-ref-filename="lock_class_key">lock_class_key</a> <dfn class="tu decl def" id="shadow_nodes_key" title='shadow_nodes_key' data-type='struct lock_class_key' data-ref="shadow_nodes_key" data-ref-filename="shadow_nodes_key">shadow_nodes_key</dfn>;</td></tr>
+<tr><th id="535">535</th><td></td></tr>
+<tr><th id="536">536</th><td><em>static</em> <em>int</em> <a class="macro" href="../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="tu decl def fn" id="workingset_init" title='workingset_init' data-type='int workingset_init()' data-ref="workingset_init" data-ref-filename="workingset_init">workingset_init</dfn>(<em>void</em>)</td></tr>
+<tr><th id="537">537</th><td>{</td></tr>
+<tr><th id="538">538</th><td>	<em>unsigned</em> <em>int</em> <dfn class="local col4 decl" id="54timestamp_bits" title='timestamp_bits' data-type='unsigned int' data-ref="54timestamp_bits" data-ref-filename="54timestamp_bits">timestamp_bits</dfn>;</td></tr>
+<tr><th id="539">539</th><td>	<em>unsigned</em> <em>int</em> <dfn class="local col5 decl" id="55max_order" title='max_order' data-type='unsigned int' data-ref="55max_order" data-ref-filename="55max_order">max_order</dfn>;</td></tr>
+<tr><th id="540">540</th><td>	<em>int</em> <dfn class="local col6 decl" id="56ret" title='ret' data-type='int' data-ref="56ret" data-ref-filename="56ret">ret</dfn>;</td></tr>
+<tr><th id="541">541</th><td></td></tr>
+<tr><th id="542">542</th><td>	<a class="macro" href="../include/linux/build_bug.h.html#49" title="do { extern void __compiletime_assert_542(void) ; if (!(!(64 &lt; ((64 - (64 - 1)) + 1 + 6 + 0)))) __compiletime_assert_542(); } while (0)" data-ref="_M/BUILD_BUG_ON">BUILD_BUG_ON</a>(<a class="macro" href="../include/asm-generic/bitsperlong.h.html#9" title="64" data-ref="_M/BITS_PER_LONG">BITS_PER_LONG</a> &lt; <a class="macro" href="#170" title="((64 - (64 - 1)) + 1 + 6 + 0)" data-ref="_M/EVICTION_SHIFT">EVICTION_SHIFT</a>);</td></tr>
+<tr><th id="543">543</th><td>	<i>/*</i></td></tr>
+<tr><th id="544">544</th><td><i>	 * Calculate the eviction bucket size to cover the longest</i></td></tr>
+<tr><th id="545">545</th><td><i>	 * actionable refault distance, which is currently half of</i></td></tr>
+<tr><th id="546">546</th><td><i>	 * memory (totalram_pages/2). However, memory hotplug may add</i></td></tr>
+<tr><th id="547">547</th><td><i>	 * some more pages at runtime, so keep working with up to</i></td></tr>
+<tr><th id="548">548</th><td><i>	 * double the initial memory by using totalram_pages as-is.</i></td></tr>
+<tr><th id="549">549</th><td><i>	 */</i></td></tr>
+<tr><th id="550">550</th><td>	<a class="local col4 ref" href="#54timestamp_bits" title='timestamp_bits' data-ref="54timestamp_bits" data-ref-filename="54timestamp_bits">timestamp_bits</a> = <a class="macro" href="../include/asm-generic/bitsperlong.h.html#9" title="64" data-ref="_M/BITS_PER_LONG">BITS_PER_LONG</a> - <a class="macro" href="#170" title="((64 - (64 - 1)) + 1 + 6 + 0)" data-ref="_M/EVICTION_SHIFT">EVICTION_SHIFT</a>;</td></tr>
+<tr><th id="551">551</th><td>	<a class="local col5 ref" href="#55max_order" title='max_order' data-ref="55max_order" data-ref-filename="55max_order">max_order</a> = <a class="ref fn" href="../include/linux/bitops.h.html#fls_long" title='fls_long' data-ref="fls_long" data-ref-filename="fls_long">fls_long</a>(<a class="ref fn" href="../include/linux/mm.h.html#totalram_pages" title='totalram_pages' data-ref="totalram_pages" data-ref-filename="totalram_pages">totalram_pages</a>() - <var>1</var>);</td></tr>
+<tr><th id="552">552</th><td>	<b>if</b> (<a class="local col5 ref" href="#55max_order" title='max_order' data-ref="55max_order" data-ref-filename="55max_order">max_order</a> &gt; <a class="local col4 ref" href="#54timestamp_bits" title='timestamp_bits' data-ref="54timestamp_bits" data-ref-filename="54timestamp_bits">timestamp_bits</a>)</td></tr>
+<tr><th id="553">553</th><td>		<a class="tu ref" href="#bucket_order" title='bucket_order' data-use='w' data-ref="bucket_order" data-ref-filename="bucket_order">bucket_order</a> = <a class="local col5 ref" href="#55max_order" title='max_order' data-ref="55max_order" data-ref-filename="55max_order">max_order</a> - <a class="local col4 ref" href="#54timestamp_bits" title='timestamp_bits' data-ref="54timestamp_bits" data-ref-filename="54timestamp_bits">timestamp_bits</a>;</td></tr>
+<tr><th id="554">554</th><td>	<a class="macro" href="../include/linux/printk.h.html#310" title="printk(&quot;\001&quot; &quot;6&quot; &quot;workingset: timestamp_bits=%d max_order=%d bucket_order=%u\n&quot;, timestamp_bits, max_order, bucket_order)" data-ref="_M/pr_info">pr_info</a>(<q>"workingset: timestamp_bits=%d max_order=%d bucket_order=%u\n"</q>,</td></tr>
+<tr><th id="555">555</th><td>	       <a class="local col4 ref" href="#54timestamp_bits" title='timestamp_bits' data-ref="54timestamp_bits" data-ref-filename="54timestamp_bits">timestamp_bits</a>, <a class="local col5 ref" href="#55max_order" title='max_order' data-ref="55max_order" data-ref-filename="55max_order">max_order</a>, <a class="tu ref" href="#bucket_order" title='bucket_order' data-use='r' data-ref="bucket_order" data-ref-filename="bucket_order">bucket_order</a>);</td></tr>
+<tr><th id="556">556</th><td></td></tr>
+<tr><th id="557">557</th><td>	<a class="local col6 ref" href="#56ret" title='ret' data-ref="56ret" data-ref-filename="56ret">ret</a> = <a class="ref fn" href="../include/linux/shrinker.h.html#prealloc_shrinker" title='prealloc_shrinker' data-ref="prealloc_shrinker" data-ref-filename="prealloc_shrinker">prealloc_shrinker</a>(&amp;<a class="tu ref" href="#workingset_shadow_shrinker" title='workingset_shadow_shrinker' data-use='a' data-ref="workingset_shadow_shrinker" data-ref-filename="workingset_shadow_shrinker">workingset_shadow_shrinker</a>);</td></tr>
+<tr><th id="558">558</th><td>	<b>if</b> (<a class="local col6 ref" href="#56ret" title='ret' data-ref="56ret" data-ref-filename="56ret">ret</a>)</td></tr>
+<tr><th id="559">559</th><td>		<b>goto</b> <a class="lbl" href="#57err" data-ref="57err" data-ref-filename="57err">err</a>;</td></tr>
+<tr><th id="560">560</th><td>	<a class="local col6 ref" href="#56ret" title='ret' data-ref="56ret" data-ref-filename="56ret">ret</a> = <a class="ref fn" href="../include/linux/list_lru.h.html#__list_lru_init" title='__list_lru_init' data-ref="__list_lru_init" data-ref-filename="__list_lru_init">__list_lru_init</a>(&amp;<a class="tu ref" href="#shadow_nodes" title='shadow_nodes' data-use='a' data-ref="shadow_nodes" data-ref-filename="shadow_nodes">shadow_nodes</a>, <a class="enum" href="../include/linux/stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>, &amp;<a class="tu ref" href="#shadow_nodes_key" title='shadow_nodes_key' data-use='a' data-ref="shadow_nodes_key" data-ref-filename="shadow_nodes_key">shadow_nodes_key</a>,</td></tr>
+<tr><th id="561">561</th><td>			      &amp;<a class="tu ref" href="#workingset_shadow_shrinker" title='workingset_shadow_shrinker' data-use='a' data-ref="workingset_shadow_shrinker" data-ref-filename="workingset_shadow_shrinker">workingset_shadow_shrinker</a>);</td></tr>
+<tr><th id="562">562</th><td>	<b>if</b> (<a class="local col6 ref" href="#56ret" title='ret' data-ref="56ret" data-ref-filename="56ret">ret</a>)</td></tr>
+<tr><th id="563">563</th><td>		<b>goto</b> <a class="lbl" href="#58err_list_lru" data-ref="58err_list_lru" data-ref-filename="58err_list_lru">err_list_lru</a>;</td></tr>
+<tr><th id="564">564</th><td>	<a class="ref fn" href="../include/linux/shrinker.h.html#register_shrinker_prepared" title='register_shrinker_prepared' data-ref="register_shrinker_prepared" data-ref-filename="register_shrinker_prepared">register_shrinker_prepared</a>(&amp;<a class="tu ref" href="#workingset_shadow_shrinker" title='workingset_shadow_shrinker' data-use='a' data-ref="workingset_shadow_shrinker" data-ref-filename="workingset_shadow_shrinker">workingset_shadow_shrinker</a>);</td></tr>
+<tr><th id="565">565</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="566">566</th><td><dfn class="lbl" id="58err_list_lru" data-ref="58err_list_lru" data-ref-filename="58err_list_lru">err_list_lru</dfn>:</td></tr>
+<tr><th id="567">567</th><td>	<a class="ref fn" href="../include/linux/shrinker.h.html#free_prealloced_shrinker" title='free_prealloced_shrinker' data-ref="free_prealloced_shrinker" data-ref-filename="free_prealloced_shrinker">free_prealloced_shrinker</a>(&amp;<a class="tu ref" href="#workingset_shadow_shrinker" title='workingset_shadow_shrinker' data-use='a' data-ref="workingset_shadow_shrinker" data-ref-filename="workingset_shadow_shrinker">workingset_shadow_shrinker</a>);</td></tr>
+<tr><th id="568">568</th><td><dfn class="lbl" id="57err" data-ref="57err" data-ref-filename="57err">err</dfn>:</td></tr>
+<tr><th id="569">569</th><td>	<b>return</b> <a class="local col6 ref" href="#56ret" title='ret' data-ref="56ret" data-ref-filename="56ret">ret</a>;</td></tr>
+<tr><th id="570">570</th><td>}</td></tr>
+<tr><th id="571">571</th><td><a class="macro" href="../include/linux/module.h.html#88" title="static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_workingset_init571 = (void *)&amp;workingset_init; asm(&quot;.section	\&quot;&quot; &quot;.initcall6&quot; &quot;.init\&quot;, \&quot;a\&quot;	\n&quot; &quot;__initcall_&quot; &quot;workingset_init&quot; &quot;6&quot; &quot;:			\n&quot; &quot;.long	&quot; &quot;workingset_init&quot; &quot; - .			\n&quot; &quot;.previous					\n&quot;);;" data-ref="_M/module_init">module_init</a>(<a class="tu ref fn" href="#workingset_init" title='workingset_init' data-use='a' data-ref="workingset_init" data-ref-filename="workingset_init">workingset_init</a>);</td></tr>
+<tr><th id="572">572</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

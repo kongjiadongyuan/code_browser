@@ -1,0 +1,896 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>pgtable.c source code [linux-5.3.1/arch/x86/mm/pgtable.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/arch/x86/mm/pgtable.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>linux-5.3.1</a>/<a href='../..'>arch</a>/<a href='..'>x86</a>/<a href='./'>mm</a>/<a href='pgtable.c.html'>pgtable.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><u>#include <a href="../../../include/linux/mm.h.html">&lt;linux/mm.h&gt;</a></u></td></tr>
+<tr><th id="3">3</th><td><u>#include <a href="../../../include/linux/gfp.h.html">&lt;linux/gfp.h&gt;</a></u></td></tr>
+<tr><th id="4">4</th><td><u>#include <a href="../../../include/linux/hugetlb.h.html">&lt;linux/hugetlb.h&gt;</a></u></td></tr>
+<tr><th id="5">5</th><td><u>#include <a href="../include/asm/pgalloc.h.html">&lt;asm/pgalloc.h&gt;</a></u></td></tr>
+<tr><th id="6">6</th><td><u>#include <a href="../include/asm/pgtable.h.html">&lt;asm/pgtable.h&gt;</a></u></td></tr>
+<tr><th id="7">7</th><td><u>#include <a href="../include/asm/tlb.h.html">&lt;asm/tlb.h&gt;</a></u></td></tr>
+<tr><th id="8">8</th><td><u>#include <a href="../include/asm/fixmap.h.html">&lt;asm/fixmap.h&gt;</a></u></td></tr>
+<tr><th id="9">9</th><td><u>#include <a href="../include/asm/mtrr.h.html">&lt;asm/mtrr.h&gt;</a></u></td></tr>
+<tr><th id="10">10</th><td></td></tr>
+<tr><th id="11">11</th><td><u>#<span data-ppcond="11">ifdef</span> <span class="macro" data-ref="_M/CONFIG_DYNAMIC_PHYSICAL_MASK">CONFIG_DYNAMIC_PHYSICAL_MASK</span></u></td></tr>
+<tr><th id="12">12</th><td>phys_addr_t physical_mask __ro_after_init = (<var>1ULL</var> &lt;&lt; __PHYSICAL_MASK_SHIFT) - <var>1</var>;</td></tr>
+<tr><th id="13">13</th><td>EXPORT_SYMBOL(physical_mask);</td></tr>
+<tr><th id="14">14</th><td><u>#<span data-ppcond="11">endif</span></u></td></tr>
+<tr><th id="15">15</th><td></td></tr>
+<tr><th id="16">16</th><td><u>#<span data-ppcond="16">ifdef</span> <span class="macro" data-ref="_M/CONFIG_HIGHPTE">CONFIG_HIGHPTE</span></u></td></tr>
+<tr><th id="17">17</th><td><u>#define PGTABLE_HIGHMEM __GFP_HIGHMEM</u></td></tr>
+<tr><th id="18">18</th><td><u>#<span data-ppcond="16">else</span></u></td></tr>
+<tr><th id="19">19</th><td><u>#define <dfn class="macro" id="_M/PGTABLE_HIGHMEM" data-ref="_M/PGTABLE_HIGHMEM">PGTABLE_HIGHMEM</dfn> 0</u></td></tr>
+<tr><th id="20">20</th><td><u>#<span data-ppcond="16">endif</span></u></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td><a class="typedef" href="../../../include/linux/types.h.html#gfp_t" title='gfp_t' data-type='unsigned int' data-ref="gfp_t" data-ref-filename="gfp_t">gfp_t</a> <dfn class="decl def" id="__userpte_alloc_gfp" title='__userpte_alloc_gfp' data-ref="__userpte_alloc_gfp" data-ref-filename="__userpte_alloc_gfp">__userpte_alloc_gfp</dfn> = <a class="macro" href="../../../include/asm-generic/pgalloc.h.html#8" title="((((( gfp_t)(0x400u|0x800u)) | (( gfp_t)0x40u) | (( gfp_t)0x80u)) | (( gfp_t)0x100u)) | (( gfp_t)0x400000u))" data-ref="_M/GFP_PGTABLE_USER">GFP_PGTABLE_USER</a> | <a class="macro" href="#19" title="0" data-ref="_M/PGTABLE_HIGHMEM">PGTABLE_HIGHMEM</a>;</td></tr>
+<tr><th id="23">23</th><td></td></tr>
+<tr><th id="24">24</th><td><a class="typedef" href="../include/asm/pgtable_types.h.html#pgtable_t" title='pgtable_t' data-type='struct page *' data-ref="pgtable_t" data-ref-filename="pgtable_t">pgtable_t</a> <dfn class="decl def fn" id="pte_alloc_one" title='pte_alloc_one' data-ref="pte_alloc_one" data-ref-filename="pte_alloc_one">pte_alloc_one</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/mm_types.h.html#mm_struct" title='mm_struct' data-ref="mm_struct" data-ref-filename="mm_struct">mm_struct</a> *<dfn class="local col1 decl" id="1mm" title='mm' data-type='struct mm_struct *' data-ref="1mm" data-ref-filename="1mm">mm</dfn>)</td></tr>
+<tr><th id="25">25</th><td>{</td></tr>
+<tr><th id="26">26</th><td>	<b>return</b> <a class="ref fn" href="../../../include/asm-generic/pgalloc.h.html#__pte_alloc_one" title='__pte_alloc_one' data-ref="__pte_alloc_one" data-ref-filename="__pte_alloc_one">__pte_alloc_one</a>(<a class="local col1 ref" href="#1mm" title='mm' data-ref="1mm" data-ref-filename="1mm">mm</a>, <a class="ref" href="../include/asm/pgalloc.h.html#__userpte_alloc_gfp" title='__userpte_alloc_gfp' data-ref="__userpte_alloc_gfp" data-ref-filename="__userpte_alloc_gfp">__userpte_alloc_gfp</a>);</td></tr>
+<tr><th id="27">27</th><td>}</td></tr>
+<tr><th id="28">28</th><td></td></tr>
+<tr><th id="29">29</th><td><em>static</em> <em>int</em> <a class="macro" href="../../../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="tu decl def fn" id="setup_userpte" title='setup_userpte' data-type='int setup_userpte(char * arg)' data-ref="setup_userpte" data-ref-filename="setup_userpte">setup_userpte</dfn>(<em>char</em> *<dfn class="local col2 decl" id="2arg" title='arg' data-type='char *' data-ref="2arg" data-ref-filename="2arg">arg</dfn>)</td></tr>
+<tr><th id="30">30</th><td>{</td></tr>
+<tr><th id="31">31</th><td>	<b>if</b> (!<a class="local col2 ref" href="#2arg" title='arg' data-ref="2arg" data-ref-filename="2arg">arg</a>)</td></tr>
+<tr><th id="32">32</th><td>		<b>return</b> -<a class="macro" href="../../../include/uapi/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td>	<i>/*</i></td></tr>
+<tr><th id="35">35</th><td><i>	 * "userpte=nohigh" disables allocation of user pagetables in</i></td></tr>
+<tr><th id="36">36</th><td><i>	 * high memory.</i></td></tr>
+<tr><th id="37">37</th><td><i>	 */</i></td></tr>
+<tr><th id="38">38</th><td>	<b>if</b> (<a class="ref fn" href="../include/asm/string_64.h.html#strcmp" title='strcmp' data-ref="strcmp" data-ref-filename="strcmp">strcmp</a>(<a class="local col2 ref" href="#2arg" title='arg' data-ref="2arg" data-ref-filename="2arg">arg</a>, <q>"nohigh"</q>) == <var>0</var>)</td></tr>
+<tr><th id="39">39</th><td>		<a class="ref" href="../include/asm/pgalloc.h.html#__userpte_alloc_gfp" title='__userpte_alloc_gfp' data-ref="__userpte_alloc_gfp" data-ref-filename="__userpte_alloc_gfp">__userpte_alloc_gfp</a> &amp;= ~<a class="macro" href="../../../include/linux/gfp.h.html#57" title="(( gfp_t)0x02u)" data-ref="_M/__GFP_HIGHMEM">__GFP_HIGHMEM</a>;</td></tr>
+<tr><th id="40">40</th><td>	<b>else</b></td></tr>
+<tr><th id="41">41</th><td>		<b>return</b> -<a class="macro" href="../../../include/uapi/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="42">42</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="43">43</th><td>}</td></tr>
+<tr><th id="44">44</th><td><a class="macro" href="../../../include/linux/init.h.html#268" title="static const char __setup_str_setup_userpte[] __attribute__((__section__(&quot;.init.rodata&quot;))) __attribute__((__aligned__(1))) = &quot;userpte&quot;; static struct obs_kernel_param __setup_setup_userpte __attribute__((__used__)) __attribute__((__section__(&quot;.init.setup&quot;))) __attribute__((aligned((sizeof(long))))) = { __setup_str_setup_userpte, setup_userpte, 1 }" data-ref="_M/early_param">early_param</a>(<q>"userpte"</q>, <a class="tu ref fn" href="#setup_userpte" title='setup_userpte' data-ref="setup_userpte" data-ref-filename="setup_userpte">setup_userpte</a>);</td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td><em>void</em> <dfn class="decl def fn" id="___pte_free_tlb" title='___pte_free_tlb' data-ref="___pte_free_tlb" data-ref-filename="___pte_free_tlb">___pte_free_tlb</dfn>(<b>struct</b> <a class="type" href="../../../include/asm-generic/tlb.h.html#mmu_gather" title='mmu_gather' data-ref="mmu_gather" data-ref-filename="mmu_gather">mmu_gather</a> *<dfn class="local col3 decl" id="3tlb" title='tlb' data-type='struct mmu_gather *' data-ref="3tlb" data-ref-filename="3tlb">tlb</dfn>, <b>struct</b> <a class="type" href="../../../include/linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="local col4 decl" id="4pte" title='pte' data-type='struct page *' data-ref="4pte" data-ref-filename="4pte">pte</dfn>)</td></tr>
+<tr><th id="47">47</th><td>{</td></tr>
+<tr><th id="48">48</th><td>	<a class="ref fn" href="../../../include/linux/mm.h.html#pgtable_page_dtor" title='pgtable_page_dtor' data-ref="pgtable_page_dtor" data-ref-filename="pgtable_page_dtor">pgtable_page_dtor</a>(<a class="local col4 ref" href="#4pte" title='pte' data-ref="4pte" data-ref-filename="4pte">pte</a>);</td></tr>
+<tr><th id="49">49</th><td>	<a class="ref fn" href="../include/asm/pgalloc.h.html#paravirt_release_pte" title='paravirt_release_pte' data-ref="paravirt_release_pte" data-ref-filename="paravirt_release_pte">paravirt_release_pte</a>(<a class="macro" href="../../../include/asm-generic/memory_model.h.html#81" title="__page_to_pfn" data-ref="_M/page_to_pfn">page_to_pfn</a>(<a class="local col4 ref" href="#4pte" title='pte' data-ref="4pte" data-ref-filename="4pte">pte</a>));</td></tr>
+<tr><th id="50">50</th><td>	<a class="macro" href="../include/asm/tlbflush.h.html#599" title="tlb_remove_page(tlb, (void *)(pte))" data-ref="_M/paravirt_tlb_remove_table">paravirt_tlb_remove_table</a>(<a class="local col3 ref" href="#3tlb" title='tlb' data-ref="3tlb" data-ref-filename="3tlb">tlb</a>, <a class="local col4 ref" href="#4pte" title='pte' data-ref="4pte" data-ref-filename="4pte">pte</a>);</td></tr>
+<tr><th id="51">51</th><td>}</td></tr>
+<tr><th id="52">52</th><td></td></tr>
+<tr><th id="53">53</th><td><u>#<span data-ppcond="53">if</span> <a class="macro" href="../../../include/generated/autoconf.h.html#392" title="4" data-ref="_M/CONFIG_PGTABLE_LEVELS">CONFIG_PGTABLE_LEVELS</a> &gt; 2</u></td></tr>
+<tr><th id="54">54</th><td><em>void</em> <dfn class="decl def fn" id="___pmd_free_tlb" title='___pmd_free_tlb' data-ref="___pmd_free_tlb" data-ref-filename="___pmd_free_tlb">___pmd_free_tlb</dfn>(<b>struct</b> <a class="type" href="../../../include/asm-generic/tlb.h.html#mmu_gather" title='mmu_gather' data-ref="mmu_gather" data-ref-filename="mmu_gather">mmu_gather</a> *<dfn class="local col5 decl" id="5tlb" title='tlb' data-type='struct mmu_gather *' data-ref="5tlb" data-ref-filename="5tlb">tlb</dfn>, <a class="typedef" href="../include/asm/pgtable_types.h.html#pmd_t" title='pmd_t' data-type='struct pmd_t' data-ref="pmd_t" data-ref-filename="pmd_t">pmd_t</a> *<dfn class="local col6 decl" id="6pmd" title='pmd' data-type='pmd_t *' data-ref="6pmd" data-ref-filename="6pmd">pmd</dfn>)</td></tr>
+<tr><th id="55">55</th><td>{</td></tr>
+<tr><th id="56">56</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="local col7 decl" id="7page" title='page' data-type='struct page *' data-ref="7page" data-ref-filename="7page">page</dfn> = <a class="macro" href="../include/asm/page.h.html#69" title="(((struct page *)vmemmap_base) + (__phys_addr_nodebug((unsigned long)(pmd)) &gt;&gt; 12))" data-ref="_M/virt_to_page">virt_to_page</a>(<a class="local col6 ref" href="#6pmd" title='pmd' data-ref="6pmd" data-ref-filename="6pmd">pmd</a>);</td></tr>
+<tr><th id="57">57</th><td>	<a class="ref fn" href="../include/asm/pgalloc.h.html#paravirt_release_pmd" title='paravirt_release_pmd' data-ref="paravirt_release_pmd" data-ref-filename="paravirt_release_pmd">paravirt_release_pmd</a>(<a class="macro" href="../include/asm/page.h.html#42" title="__phys_addr_nodebug((unsigned long)(pmd))" data-ref="_M/__pa">__pa</a>(<a class="local col6 ref" href="#6pmd" title='pmd' data-ref="6pmd" data-ref-filename="6pmd">pmd</a>) &gt;&gt; <a class="macro" href="../include/asm/page_types.h.html#10" title="12" data-ref="_M/PAGE_SHIFT">PAGE_SHIFT</a>);</td></tr>
+<tr><th id="58">58</th><td>	<i>/*</i></td></tr>
+<tr><th id="59">59</th><td><i>	 * NOTE! For PAE, any changes to the top page-directory-pointer-table</i></td></tr>
+<tr><th id="60">60</th><td><i>	 * entries need a full cr3 reload to flush.</i></td></tr>
+<tr><th id="61">61</th><td><i>	 */</i></td></tr>
+<tr><th id="62">62</th><td><u>#<span data-ppcond="62">ifdef</span> <span class="macro" data-ref="_M/CONFIG_X86_PAE">CONFIG_X86_PAE</span></u></td></tr>
+<tr><th id="63">63</th><td>	tlb-&gt;need_flush_all = <var>1</var>;</td></tr>
+<tr><th id="64">64</th><td><u>#<span data-ppcond="62">endif</span></u></td></tr>
+<tr><th id="65">65</th><td>	<a class="ref fn" href="../../../include/linux/mm.h.html#pgtable_pmd_page_dtor" title='pgtable_pmd_page_dtor' data-ref="pgtable_pmd_page_dtor" data-ref-filename="pgtable_pmd_page_dtor">pgtable_pmd_page_dtor</a>(<a class="local col7 ref" href="#7page" title='page' data-ref="7page" data-ref-filename="7page">page</a>);</td></tr>
+<tr><th id="66">66</th><td>	<a class="macro" href="../include/asm/tlbflush.h.html#599" title="tlb_remove_page(tlb, (void *)(page))" data-ref="_M/paravirt_tlb_remove_table">paravirt_tlb_remove_table</a>(<a class="local col5 ref" href="#5tlb" title='tlb' data-ref="5tlb" data-ref-filename="5tlb">tlb</a>, <a class="local col7 ref" href="#7page" title='page' data-ref="7page" data-ref-filename="7page">page</a>);</td></tr>
+<tr><th id="67">67</th><td>}</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td><u>#<span data-ppcond="69">if</span> <a class="macro" href="../../../include/generated/autoconf.h.html#392" title="4" data-ref="_M/CONFIG_PGTABLE_LEVELS">CONFIG_PGTABLE_LEVELS</a> &gt; 3</u></td></tr>
+<tr><th id="70">70</th><td><em>void</em> <dfn class="decl def fn" id="___pud_free_tlb" title='___pud_free_tlb' data-ref="___pud_free_tlb" data-ref-filename="___pud_free_tlb">___pud_free_tlb</dfn>(<b>struct</b> <a class="type" href="../../../include/asm-generic/tlb.h.html#mmu_gather" title='mmu_gather' data-ref="mmu_gather" data-ref-filename="mmu_gather">mmu_gather</a> *<dfn class="local col8 decl" id="8tlb" title='tlb' data-type='struct mmu_gather *' data-ref="8tlb" data-ref-filename="8tlb">tlb</dfn>, <a class="typedef" href="../include/asm/pgtable_types.h.html#pud_t" title='pud_t' data-type='struct pud_t' data-ref="pud_t" data-ref-filename="pud_t">pud_t</a> *<dfn class="local col9 decl" id="9pud" title='pud' data-type='pud_t *' data-ref="9pud" data-ref-filename="9pud">pud</dfn>)</td></tr>
+<tr><th id="71">71</th><td>{</td></tr>
+<tr><th id="72">72</th><td>	<a class="ref fn" href="../include/asm/pgalloc.h.html#paravirt_release_pud" title='paravirt_release_pud' data-ref="paravirt_release_pud" data-ref-filename="paravirt_release_pud">paravirt_release_pud</a>(<a class="macro" href="../include/asm/page.h.html#42" title="__phys_addr_nodebug((unsigned long)(pud))" data-ref="_M/__pa">__pa</a>(<a class="local col9 ref" href="#9pud" title='pud' data-ref="9pud" data-ref-filename="9pud">pud</a>) &gt;&gt; <a class="macro" href="../include/asm/page_types.h.html#10" title="12" data-ref="_M/PAGE_SHIFT">PAGE_SHIFT</a>);</td></tr>
+<tr><th id="73">73</th><td>	<a class="macro" href="../include/asm/tlbflush.h.html#599" title="tlb_remove_page(tlb, (void *)((((struct page *)vmemmap_base) + (__phys_addr_nodebug((unsigned long)(pud)) &gt;&gt; 12))))" data-ref="_M/paravirt_tlb_remove_table">paravirt_tlb_remove_table</a>(<a class="local col8 ref" href="#8tlb" title='tlb' data-ref="8tlb" data-ref-filename="8tlb">tlb</a>, <a class="macro" href="../include/asm/page.h.html#69" title="(((struct page *)vmemmap_base) + (__phys_addr_nodebug((unsigned long)(pud)) &gt;&gt; 12))" data-ref="_M/virt_to_page">virt_to_page</a>(<a class="local col9 ref" href="#9pud" title='pud' data-ref="9pud" data-ref-filename="9pud">pud</a>));</td></tr>
+<tr><th id="74">74</th><td>}</td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td><u>#<span data-ppcond="76">if</span> <a class="macro" href="../../../include/generated/autoconf.h.html#392" title="4" data-ref="_M/CONFIG_PGTABLE_LEVELS">CONFIG_PGTABLE_LEVELS</a> &gt; 4</u></td></tr>
+<tr><th id="77">77</th><td><em>void</em> ___p4d_free_tlb(<b>struct</b> mmu_gather *tlb, p4d_t *p4d)</td></tr>
+<tr><th id="78">78</th><td>{</td></tr>
+<tr><th id="79">79</th><td>	paravirt_release_p4d(__pa(p4d) &gt;&gt; PAGE_SHIFT);</td></tr>
+<tr><th id="80">80</th><td>	paravirt_tlb_remove_table(tlb, virt_to_page(p4d));</td></tr>
+<tr><th id="81">81</th><td>}</td></tr>
+<tr><th id="82">82</th><td><u>#<span data-ppcond="76">endif</span>	/* CONFIG_PGTABLE_LEVELS &gt; 4 */</u></td></tr>
+<tr><th id="83">83</th><td><u>#<span data-ppcond="69">endif</span>	/* CONFIG_PGTABLE_LEVELS &gt; 3 */</u></td></tr>
+<tr><th id="84">84</th><td><u>#<span data-ppcond="53">endif</span>	/* CONFIG_PGTABLE_LEVELS &gt; 2 */</u></td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="tu decl def fn" id="pgd_list_add" title='pgd_list_add' data-type='void pgd_list_add(pgd_t * pgd)' data-ref="pgd_list_add" data-ref-filename="pgd_list_add">pgd_list_add</dfn>(<a class="typedef" href="../include/asm/pgtable_types.h.html#pgd_t" title='pgd_t' data-type='struct pgd_t' data-ref="pgd_t" data-ref-filename="pgd_t">pgd_t</a> *<dfn class="local col0 decl" id="10pgd" title='pgd' data-type='pgd_t *' data-ref="10pgd" data-ref-filename="10pgd">pgd</dfn>)</td></tr>
+<tr><th id="87">87</th><td>{</td></tr>
+<tr><th id="88">88</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="local col1 decl" id="11page" title='page' data-type='struct page *' data-ref="11page" data-ref-filename="11page">page</dfn> = <a class="macro" href="../include/asm/page.h.html#69" title="(((struct page *)vmemmap_base) + (__phys_addr_nodebug((unsigned long)(pgd)) &gt;&gt; 12))" data-ref="_M/virt_to_page">virt_to_page</a>(<a class="local col0 ref" href="#10pgd" title='pgd' data-ref="10pgd" data-ref-filename="10pgd">pgd</a>);</td></tr>
+<tr><th id="89">89</th><td></td></tr>
+<tr><th id="90">90</th><td>	<a class="ref fn" href="../../../include/linux/list.h.html#list_add" title='list_add' data-ref="list_add" data-ref-filename="list_add">list_add</a>(&amp;<a class="local col1 ref" href="#11page" title='page' data-ref="11page" data-ref-filename="11page">page</a>-&gt;<a class="ref field" href="../../../include/linux/mm_types.h.html#page::(anonymousunion)::(anonymous)::lru" title='page::(anonymous union)::(anonymous struct)::lru' data-ref="page::(anonymousunion)::(anonymous)::lru" data-ref-filename="page..(anonymousunion)..(anonymous)..lru">lru</a>, &amp;<a class="ref" href="../include/asm/pgtable.h.html#pgd_list" title='pgd_list' data-ref="pgd_list" data-ref-filename="pgd_list">pgd_list</a>);</td></tr>
+<tr><th id="91">91</th><td>}</td></tr>
+<tr><th id="92">92</th><td></td></tr>
+<tr><th id="93">93</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="tu decl def fn" id="pgd_list_del" title='pgd_list_del' data-type='void pgd_list_del(pgd_t * pgd)' data-ref="pgd_list_del" data-ref-filename="pgd_list_del">pgd_list_del</dfn>(<a class="typedef" href="../include/asm/pgtable_types.h.html#pgd_t" title='pgd_t' data-type='struct pgd_t' data-ref="pgd_t" data-ref-filename="pgd_t">pgd_t</a> *<dfn class="local col2 decl" id="12pgd" title='pgd' data-type='pgd_t *' data-ref="12pgd" data-ref-filename="12pgd">pgd</dfn>)</td></tr>
+<tr><th id="94">94</th><td>{</td></tr>
+<tr><th id="95">95</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="local col3 decl" id="13page" title='page' data-type='struct page *' data-ref="13page" data-ref-filename="13page">page</dfn> = <a class="macro" href="../include/asm/page.h.html#69" title="(((struct page *)vmemmap_base) + (__phys_addr_nodebug((unsigned long)(pgd)) &gt;&gt; 12))" data-ref="_M/virt_to_page">virt_to_page</a>(<a class="local col2 ref" href="#12pgd" title='pgd' data-ref="12pgd" data-ref-filename="12pgd">pgd</a>);</td></tr>
+<tr><th id="96">96</th><td></td></tr>
+<tr><th id="97">97</th><td>	<a class="ref fn" href="../../../include/linux/list.h.html#list_del" title='list_del' data-ref="list_del" data-ref-filename="list_del">list_del</a>(&amp;<a class="local col3 ref" href="#13page" title='page' data-ref="13page" data-ref-filename="13page">page</a>-&gt;<a class="ref field" href="../../../include/linux/mm_types.h.html#page::(anonymousunion)::(anonymous)::lru" title='page::(anonymous union)::(anonymous struct)::lru' data-ref="page::(anonymousunion)::(anonymous)::lru" data-ref-filename="page..(anonymousunion)..(anonymous)..lru">lru</a>);</td></tr>
+<tr><th id="98">98</th><td>}</td></tr>
+<tr><th id="99">99</th><td></td></tr>
+<tr><th id="100">100</th><td><u>#define <dfn class="macro" id="_M/UNSHARED_PTRS_PER_PGD" data-ref="_M/UNSHARED_PTRS_PER_PGD">UNSHARED_PTRS_PER_PGD</dfn>				\</u></td></tr>
+<tr><th id="101">101</th><td><u>	(SHARED_KERNEL_PMD ? KERNEL_PGD_BOUNDARY : PTRS_PER_PGD)</u></td></tr>
+<tr><th id="102">102</th><td><u>#define <dfn class="macro" id="_M/MAX_UNSHARED_PTRS_PER_PGD" data-ref="_M/MAX_UNSHARED_PTRS_PER_PGD">MAX_UNSHARED_PTRS_PER_PGD</dfn>			\</u></td></tr>
+<tr><th id="103">103</th><td><u>	max_t(size_t, KERNEL_PGD_BOUNDARY, PTRS_PER_PGD)</u></td></tr>
+<tr><th id="104">104</th><td></td></tr>
+<tr><th id="105">105</th><td></td></tr>
+<tr><th id="106">106</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="pgd_set_mm" title='pgd_set_mm' data-type='void pgd_set_mm(pgd_t * pgd, struct mm_struct * mm)' data-ref="pgd_set_mm" data-ref-filename="pgd_set_mm">pgd_set_mm</dfn>(<a class="typedef" href="../include/asm/pgtable_types.h.html#pgd_t" title='pgd_t' data-type='struct pgd_t' data-ref="pgd_t" data-ref-filename="pgd_t">pgd_t</a> *<dfn class="local col4 decl" id="14pgd" title='pgd' data-type='pgd_t *' data-ref="14pgd" data-ref-filename="14pgd">pgd</dfn>, <b>struct</b> <a class="type" href="../../../include/linux/mm_types.h.html#mm_struct" title='mm_struct' data-ref="mm_struct" data-ref-filename="mm_struct">mm_struct</a> *<dfn class="local col5 decl" id="15mm" title='mm' data-type='struct mm_struct *' data-ref="15mm" data-ref-filename="15mm">mm</dfn>)</td></tr>
+<tr><th id="107">107</th><td>{</td></tr>
+<tr><th id="108">108</th><td>	<a class="macro" href="../include/asm/page.h.html#69" title="(((struct page *)vmemmap_base) + (__phys_addr_nodebug((unsigned long)(pgd)) &gt;&gt; 12))" data-ref="_M/virt_to_page">virt_to_page</a>(<a class="local col4 ref" href="#14pgd" title='pgd' data-ref="14pgd" data-ref-filename="14pgd">pgd</a>)-&gt;<a class="ref field" href="../../../include/linux/mm_types.h.html#page::(anonymousunion)::(anonymousstruct)::(anonymous)::pt_mm" title='page::(anonymous union)::(anonymous struct)::(anonymous union)::pt_mm' data-ref="page::(anonymousunion)::(anonymousstruct)::(anonymous)::pt_mm" data-ref-filename="page..(anonymousunion)..(anonymousstruct)..(anonymous)..pt_mm">pt_mm</a> = <a class="local col5 ref" href="#15mm" title='mm' data-ref="15mm" data-ref-filename="15mm">mm</a>;</td></tr>
+<tr><th id="109">109</th><td>}</td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td><b>struct</b> <a class="type" href="../../../include/linux/mm_types.h.html#mm_struct" title='mm_struct' data-ref="mm_struct" data-ref-filename="mm_struct">mm_struct</a> *<dfn class="decl def fn" id="pgd_page_get_mm" title='pgd_page_get_mm' data-ref="pgd_page_get_mm" data-ref-filename="pgd_page_get_mm">pgd_page_get_mm</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/mm_types.h.html#page" title='page' data-ref="page" data-ref-filename="page">page</a> *<dfn class="local col6 decl" id="16page" title='page' data-type='struct page *' data-ref="16page" data-ref-filename="16page">page</dfn>)</td></tr>
+<tr><th id="112">112</th><td>{</td></tr>
+<tr><th id="113">113</th><td>	<b>return</b> <a class="local col6 ref" href="#16page" title='page' data-ref="16page" data-ref-filename="16page">page</a>-&gt;<a class="ref field" href="../../../include/linux/mm_types.h.html#page::(anonymousunion)::(anonymousstruct)::(anonymous)::pt_mm" title='page::(anonymous union)::(anonymous struct)::(anonymous union)::pt_mm' data-ref="page::(anonymousunion)::(anonymousstruct)::(anonymous)::pt_mm" data-ref-filename="page..(anonymousunion)..(anonymousstruct)..(anonymous)..pt_mm">pt_mm</a>;</td></tr>
+<tr><th id="114">114</th><td>}</td></tr>
+<tr><th id="115">115</th><td></td></tr>
+<tr><th id="116">116</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="pgd_ctor" title='pgd_ctor' data-type='void pgd_ctor(struct mm_struct * mm, pgd_t * pgd)' data-ref="pgd_ctor" data-ref-filename="pgd_ctor">pgd_ctor</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/mm_types.h.html#mm_struct" title='mm_struct' data-ref="mm_struct" data-ref-filename="mm_struct">mm_struct</a> *<dfn class="local col7 decl" id="17mm" title='mm' data-type='struct mm_struct *' data-ref="17mm" data-ref-filename="17mm">mm</dfn>, <a class="typedef" href="../include/asm/pgtable_types.h.html#pgd_t" title='pgd_t' data-type='struct pgd_t' data-ref="pgd_t" data-ref-filename="pgd_t">pgd_t</a> *<dfn class="local col8 decl" id="18pgd" title='pgd' data-type='pgd_t *' data-ref="18pgd" data-ref-filename="18pgd">pgd</dfn>)</td></tr>
+<tr><th id="117">117</th><td>{</td></tr>
+<tr><th id="118">118</th><td>	<i>/* If the pgd points to a shared pagetable level (either the</i></td></tr>
+<tr><th id="119">119</th><td><i>	   ptes in non-PAE, or shared PMD in PAE), then just copy the</i></td></tr>
+<tr><th id="120">120</th><td><i>	   references from swapper_pg_dir. */</i></td></tr>
+<tr><th id="121">121</th><td>	<b>if</b> (<a class="macro" href="../../../include/generated/autoconf.h.html#392" title="4" data-ref="_M/CONFIG_PGTABLE_LEVELS">CONFIG_PGTABLE_LEVELS</a> == <var>2</var> ||</td></tr>
+<tr><th id="122">122</th><td>	    (<a class="macro" href="../../../include/generated/autoconf.h.html#392" title="4" data-ref="_M/CONFIG_PGTABLE_LEVELS">CONFIG_PGTABLE_LEVELS</a> == <var>3</var> &amp;&amp; <a class="macro" href="../include/asm/pgtable_64_types.h.html#48" title="0" data-ref="_M/SHARED_KERNEL_PMD">SHARED_KERNEL_PMD</a>) ||</td></tr>
+<tr><th id="123">123</th><td>	    <a class="macro" href="../../../include/generated/autoconf.h.html#392" title="4" data-ref="_M/CONFIG_PGTABLE_LEVELS">CONFIG_PGTABLE_LEVELS</a> &gt;= <var>4</var>) {</td></tr>
+<tr><th id="124">124</th><td>		<a class="ref fn" href="../include/asm/pgtable.h.html#clone_pgd_range" title='clone_pgd_range' data-ref="clone_pgd_range" data-ref-filename="clone_pgd_range">clone_pgd_range</a>(<a class="local col8 ref" href="#18pgd" title='pgd' data-ref="18pgd" data-ref-filename="18pgd">pgd</a> + <a class="macro" href="../include/asm/pgtable.h.html#1023" title="(((((unsigned long)page_offset_base)) &gt;&gt; 39) &amp; (512 - 1))" data-ref="_M/KERNEL_PGD_BOUNDARY">KERNEL_PGD_BOUNDARY</a>,</td></tr>
+<tr><th id="125">125</th><td>				<a class="macro" href="../include/asm/pgtable_64.h.html#29" title="init_top_pgt" data-ref="_M/swapper_pg_dir">swapper_pg_dir</a> + <a class="macro" href="../include/asm/pgtable.h.html#1023" title="(((((unsigned long)page_offset_base)) &gt;&gt; 39) &amp; (512 - 1))" data-ref="_M/KERNEL_PGD_BOUNDARY">KERNEL_PGD_BOUNDARY</a>,</td></tr>
+<tr><th id="126">126</th><td>				<a class="macro" href="../include/asm/pgtable.h.html#1024" title="(512 - (((((unsigned long)page_offset_base)) &gt;&gt; 39) &amp; (512 - 1)))" data-ref="_M/KERNEL_PGD_PTRS">KERNEL_PGD_PTRS</a>);</td></tr>
+<tr><th id="127">127</th><td>	}</td></tr>
+<tr><th id="128">128</th><td></td></tr>
+<tr><th id="129">129</th><td>	<i>/* list required to sync kernel mapping updates */</i></td></tr>
+<tr><th id="130">130</th><td>	<b>if</b> (!<a class="macro" href="../include/asm/pgtable_64_types.h.html#48" title="0" data-ref="_M/SHARED_KERNEL_PMD">SHARED_KERNEL_PMD</a>) {</td></tr>
+<tr><th id="131">131</th><td>		<a class="tu ref fn" href="#pgd_set_mm" title='pgd_set_mm' data-use='c' data-ref="pgd_set_mm" data-ref-filename="pgd_set_mm">pgd_set_mm</a>(<a class="local col8 ref" href="#18pgd" title='pgd' data-ref="18pgd" data-ref-filename="18pgd">pgd</a>, <a class="local col7 ref" href="#17mm" title='mm' data-ref="17mm" data-ref-filename="17mm">mm</a>);</td></tr>
+<tr><th id="132">132</th><td>		<a class="tu ref fn" href="#pgd_list_add" title='pgd_list_add' data-use='c' data-ref="pgd_list_add" data-ref-filename="pgd_list_add">pgd_list_add</a>(<a class="local col8 ref" href="#18pgd" title='pgd' data-ref="18pgd" data-ref-filename="18pgd">pgd</a>);</td></tr>
+<tr><th id="133">133</th><td>	}</td></tr>
+<tr><th id="134">134</th><td>}</td></tr>
+<tr><th id="135">135</th><td></td></tr>
+<tr><th id="136">136</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="pgd_dtor" title='pgd_dtor' data-type='void pgd_dtor(pgd_t * pgd)' data-ref="pgd_dtor" data-ref-filename="pgd_dtor">pgd_dtor</dfn>(<a class="typedef" href="../include/asm/pgtable_types.h.html#pgd_t" title='pgd_t' data-type='struct pgd_t' data-ref="pgd_t" data-ref-filename="pgd_t">pgd_t</a> *<dfn class="local col9 decl" id="19pgd" title='pgd' data-type='pgd_t *' data-ref="19pgd" data-ref-filename="19pgd">pgd</dfn>)</td></tr>
+<tr><th id="137">137</th><td>{</td></tr>
+<tr><th id="138">138</th><td>	<b>if</b> (<a class="macro" href="../include/asm/pgtable_64_types.h.html#48" title="0" data-ref="_M/SHARED_KERNEL_PMD">SHARED_KERNEL_PMD</a>)</td></tr>
+<tr><th id="139">139</th><td>		<b>return</b>;</td></tr>
+<tr><th id="140">140</th><td></td></tr>
+<tr><th id="141">141</th><td>	<a class="ref fn" href="../../../include/linux/spinlock.h.html#spin_lock" title='spin_lock' data-ref="spin_lock" data-ref-filename="spin_lock">spin_lock</a>(&amp;<a class="ref" href="../include/asm/pgtable.h.html#pgd_lock" title='pgd_lock' data-ref="pgd_lock" data-ref-filename="pgd_lock">pgd_lock</a>);</td></tr>
+<tr><th id="142">142</th><td>	<a class="tu ref fn" href="#pgd_list_del" title='pgd_list_del' data-use='c' data-ref="pgd_list_del" data-ref-filename="pgd_list_del">pgd_list_del</a>(<a class="local col9 ref" href="#19pgd" title='pgd' data-ref="19pgd" data-ref-filename="19pgd">pgd</a>);</td></tr>
+<tr><th id="143">143</th><td>	<a class="ref fn" href="../../../include/linux/spinlock.h.html#spin_unlock" title='spin_unlock' data-ref="spin_unlock" data-ref-filename="spin_unlock">spin_unlock</a>(&amp;<a class="ref" href="../include/asm/pgtable.h.html#pgd_lock" title='pgd_lock' data-ref="pgd_lock" data-ref-filename="pgd_lock">pgd_lock</a>);</td></tr>
+<tr><th id="144">144</th><td>}</td></tr>
+<tr><th id="145">145</th><td></td></tr>
+<tr><th id="146">146</th><td><i>/*</i></td></tr>
+<tr><th id="147">147</th><td><i> * List of all pgd's needed for non-PAE so it can invalidate entries</i></td></tr>
+<tr><th id="148">148</th><td><i> * in both cached and uncached pgd's; not needed for PAE since the</i></td></tr>
+<tr><th id="149">149</th><td><i> * kernel pmd is shared. If PAE were not to share the pmd a similar</i></td></tr>
+<tr><th id="150">150</th><td><i> * tactic would be needed. This is essentially codepath-based locking</i></td></tr>
+<tr><th id="151">151</th><td><i> * against pageattr.c; it is the unique case in which a valid change</i></td></tr>
+<tr><th id="152">152</th><td><i> * of kernel pagetables can't be lazily synchronized by vmalloc faults.</i></td></tr>
+<tr><th id="153">153</th><td><i> * vmalloc faults work because attached pagetables are never freed.</i></td></tr>
+<tr><th id="154">154</th><td><i> * -- nyc</i></td></tr>
+<tr><th id="155">155</th><td><i> */</i></td></tr>
+<tr><th id="156">156</th><td></td></tr>
+<tr><th id="157">157</th><td><u>#<span data-ppcond="157">ifdef</span> <span class="macro" data-ref="_M/CONFIG_X86_PAE">CONFIG_X86_PAE</span></u></td></tr>
+<tr><th id="158">158</th><td><i>/*</i></td></tr>
+<tr><th id="159">159</th><td><i> * In PAE mode, we need to do a cr3 reload (=tlb flush) when</i></td></tr>
+<tr><th id="160">160</th><td><i> * updating the top-level pagetable entries to guarantee the</i></td></tr>
+<tr><th id="161">161</th><td><i> * processor notices the update.  Since this is expensive, and</i></td></tr>
+<tr><th id="162">162</th><td><i> * all 4 top-level entries are used almost immediately in a</i></td></tr>
+<tr><th id="163">163</th><td><i> * new process's life, we just pre-populate them here.</i></td></tr>
+<tr><th id="164">164</th><td><i> *</i></td></tr>
+<tr><th id="165">165</th><td><i> * Also, if we're in a paravirt environment where the kernel pmd is</i></td></tr>
+<tr><th id="166">166</th><td><i> * not shared between pagetables (!SHARED_KERNEL_PMDS), we allocate</i></td></tr>
+<tr><th id="167">167</th><td><i> * and initialize the kernel pmds here.</i></td></tr>
+<tr><th id="168">168</th><td><i> */</i></td></tr>
+<tr><th id="169">169</th><td><u>#define PREALLOCATED_PMDS	UNSHARED_PTRS_PER_PGD</u></td></tr>
+<tr><th id="170">170</th><td><u>#define MAX_PREALLOCATED_PMDS	MAX_UNSHARED_PTRS_PER_PGD</u></td></tr>
+<tr><th id="171">171</th><td></td></tr>
+<tr><th id="172">172</th><td><i>/*</i></td></tr>
+<tr><th id="173">173</th><td><i> * We allocate separate PMDs for the kernel part of the user page-table</i></td></tr>
+<tr><th id="174">174</th><td><i> * when PTI is enabled. We need them to map the per-process LDT into the</i></td></tr>
+<tr><th id="175">175</th><td><i> * user-space page-table.</i></td></tr>
+<tr><th id="176">176</th><td><i> */</i></td></tr>
+<tr><th id="177">177</th><td><u>#define PREALLOCATED_USER_PMDS	 (boot_cpu_has(X86_FEATURE_PTI) ? \</u></td></tr>
+<tr><th id="178">178</th><td><u>					KERNEL_PGD_PTRS : 0)</u></td></tr>
+<tr><th id="179">179</th><td><u>#define MAX_PREALLOCATED_USER_PMDS KERNEL_PGD_PTRS</u></td></tr>
+<tr><th id="180">180</th><td></td></tr>
+<tr><th id="181">181</th><td><em>void</em> pud_populate(<b>struct</b> mm_struct *mm, pud_t *pudp, pmd_t *pmd)</td></tr>
+<tr><th id="182">182</th><td>{</td></tr>
+<tr><th id="183">183</th><td>	paravirt_alloc_pmd(mm, __pa(pmd) &gt;&gt; PAGE_SHIFT);</td></tr>
+<tr><th id="184">184</th><td></td></tr>
+<tr><th id="185">185</th><td>	<i>/* Note: almost everything apart from _PAGE_PRESENT is</i></td></tr>
+<tr><th id="186">186</th><td><i>	   reserved at the pmd (PDPT) level. */</i></td></tr>
+<tr><th id="187">187</th><td>	set_pud(pudp, __pud(__pa(pmd) | _PAGE_PRESENT));</td></tr>
+<tr><th id="188">188</th><td></td></tr>
+<tr><th id="189">189</th><td>	<i>/*</i></td></tr>
+<tr><th id="190">190</th><td><i>	 * According to Intel App note "TLBs, Paging-Structure Caches,</i></td></tr>
+<tr><th id="191">191</th><td><i>	 * and Their Invalidation", April 2007, document 317080-001,</i></td></tr>
+<tr><th id="192">192</th><td><i>	 * section 8.1: in PAE mode we explicitly have to flush the</i></td></tr>
+<tr><th id="193">193</th><td><i>	 * TLB via cr3 if the top-level pgd is changed...</i></td></tr>
+<tr><th id="194">194</th><td><i>	 */</i></td></tr>
+<tr><th id="195">195</th><td>	flush_tlb_mm(mm);</td></tr>
+<tr><th id="196">196</th><td>}</td></tr>
+<tr><th id="197">197</th><td><u>#<span data-ppcond="157">else</span>  /* !CONFIG_X86_PAE */</u></td></tr>
+<tr><th id="198">198</th><td></td></tr>
+<tr><th id="199">199</th><td><i>/* No need to prepopulate any pagetable entries in non-PAE modes. */</i></td></tr>
+<tr><th id="200">200</th><td><u>#define <dfn class="macro" id="_M/PREALLOCATED_PMDS" data-ref="_M/PREALLOCATED_PMDS">PREALLOCATED_PMDS</dfn>	0</u></td></tr>
+<tr><th id="201">201</th><td><u>#define <dfn class="macro" id="_M/MAX_PREALLOCATED_PMDS" data-ref="_M/MAX_PREALLOCATED_PMDS">MAX_PREALLOCATED_PMDS</dfn>	0</u></td></tr>
+<tr><th id="202">202</th><td><u>#define <dfn class="macro" id="_M/PREALLOCATED_USER_PMDS" data-ref="_M/PREALLOCATED_USER_PMDS">PREALLOCATED_USER_PMDS</dfn>	 0</u></td></tr>
+<tr><th id="203">203</th><td><u>#define <dfn class="macro" id="_M/MAX_PREALLOCATED_USER_PMDS" data-ref="_M/MAX_PREALLOCATED_USER_PMDS">MAX_PREALLOCATED_USER_PMDS</dfn> 0</u></td></tr>
+<tr><th id="204">204</th><td><u>#<span data-ppcond="157">endif</span>	/* CONFIG_X86_PAE */</u></td></tr>
+<tr><th id="205">205</th><td></td></tr>
+<tr><th id="206">206</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="free_pmds" title='free_pmds' data-type='void free_pmds(struct mm_struct * mm, pmd_t ** pmds, int count)' data-ref="free_pmds" data-ref-filename="free_pmds">free_pmds</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/mm_types.h.html#mm_struct" title='mm_struct' data-ref="mm_struct" data-ref-filename="mm_struct">mm_struct</a> *<dfn class="local col0 decl" id="20mm" title='mm' data-type='struct mm_struct *' data-ref="20mm" data-ref-filename="20mm">mm</dfn>, <a class="typedef" href="../include/asm/pgtable_types.h.html#pmd_t" title='pmd_t' data-type='struct pmd_t' data-ref="pmd_t" data-ref-filename="pmd_t">pmd_t</a> *<dfn class="local col1 decl" id="21pmds" title='pmds' data-type='pmd_t **' data-ref="21pmds" data-ref-filename="21pmds">pmds</dfn>[], <em>int</em> <dfn class="local col2 decl" id="22count" title='count' data-type='int' data-ref="22count" data-ref-filename="22count">count</dfn>)</td></tr>
+<tr><th id="207">207</th><td>{</td></tr>
+<tr><th id="208">208</th><td>	<em>int</em> <dfn class="local col3 decl" id="23i" title='i' data-type='int' data-ref="23i" data-ref-filename="23i">i</dfn>;</td></tr>
+<tr><th id="209">209</th><td></td></tr>
+<tr><th id="210">210</th><td>	<b>for</b> (<a class="local col3 ref" href="#23i" title='i' data-ref="23i" data-ref-filename="23i">i</a> = <var>0</var>; <a class="local col3 ref" href="#23i" title='i' data-ref="23i" data-ref-filename="23i">i</a> &lt; <a class="local col2 ref" href="#22count" title='count' data-ref="22count" data-ref-filename="22count">count</a>; <a class="local col3 ref" href="#23i" title='i' data-ref="23i" data-ref-filename="23i">i</a>++)</td></tr>
+<tr><th id="211">211</th><td>		<b>if</b> (<a class="local col1 ref" href="#21pmds" title='pmds' data-ref="21pmds" data-ref-filename="21pmds">pmds</a>[<a class="local col3 ref" href="#23i" title='i' data-ref="23i" data-ref-filename="23i">i</a>]) {</td></tr>
+<tr><th id="212">212</th><td>			<a class="ref fn" href="../../../include/linux/mm.h.html#pgtable_pmd_page_dtor" title='pgtable_pmd_page_dtor' data-ref="pgtable_pmd_page_dtor" data-ref-filename="pgtable_pmd_page_dtor">pgtable_pmd_page_dtor</a>(<a class="macro" href="../include/asm/page.h.html#69" title="(((struct page *)vmemmap_base) + (__phys_addr_nodebug((unsigned long)(pmds[i])) &gt;&gt; 12))" data-ref="_M/virt_to_page">virt_to_page</a>(<a class="local col1 ref" href="#21pmds" title='pmds' data-ref="21pmds" data-ref-filename="21pmds">pmds</a>[<a class="local col3 ref" href="#23i" title='i' data-ref="23i" data-ref-filename="23i">i</a>]));</td></tr>
+<tr><th id="213">213</th><td>			<a class="macro" href="../../../include/linux/gfp.h.html#551" title="free_pages(((unsigned long)pmds[i]), 0)" data-ref="_M/free_page">free_page</a>((<em>unsigned</em> <em>long</em>)<a class="local col1 ref" href="#21pmds" title='pmds' data-ref="21pmds" data-ref-filename="21pmds">pmds</a>[<a class="local col3 ref" href="#23i" title='i' data-ref="23i" data-ref-filename="23i">i</a>]);</td></tr>
+<tr><th id="214">214</th><td>			<a class="ref fn" href="../../../include/linux/mm.h.html#mm_dec_nr_pmds" title='mm_dec_nr_pmds' data-ref="mm_dec_nr_pmds" data-ref-filename="mm_dec_nr_pmds">mm_dec_nr_pmds</a>(<a class="local col0 ref" href="#20mm" title='mm' data-ref="20mm" data-ref-filename="20mm">mm</a>);</td></tr>
+<tr><th id="215">215</th><td>		}</td></tr>
+<tr><th id="216">216</th><td>}</td></tr>
+<tr><th id="217">217</th><td></td></tr>
+<tr><th id="218">218</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="preallocate_pmds" title='preallocate_pmds' data-type='int preallocate_pmds(struct mm_struct * mm, pmd_t ** pmds, int count)' data-ref="preallocate_pmds" data-ref-filename="preallocate_pmds">preallocate_pmds</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/mm_types.h.html#mm_struct" title='mm_struct' data-ref="mm_struct" data-ref-filename="mm_struct">mm_struct</a> *<dfn class="local col4 decl" id="24mm" title='mm' data-type='struct mm_struct *' data-ref="24mm" data-ref-filename="24mm">mm</dfn>, <a class="typedef" href="../include/asm/pgtable_types.h.html#pmd_t" title='pmd_t' data-type='struct pmd_t' data-ref="pmd_t" data-ref-filename="pmd_t">pmd_t</a> *<dfn class="local col5 decl" id="25pmds" title='pmds' data-type='pmd_t **' data-ref="25pmds" data-ref-filename="25pmds">pmds</dfn>[], <em>int</em> <dfn class="local col6 decl" id="26count" title='count' data-type='int' data-ref="26count" data-ref-filename="26count">count</dfn>)</td></tr>
+<tr><th id="219">219</th><td>{</td></tr>
+<tr><th id="220">220</th><td>	<em>int</em> <dfn class="local col7 decl" id="27i" title='i' data-type='int' data-ref="27i" data-ref-filename="27i">i</dfn>;</td></tr>
+<tr><th id="221">221</th><td>	<a class="typedef" href="../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col8 decl" id="28failed" title='failed' data-type='bool' data-ref="28failed" data-ref-filename="28failed">failed</dfn> = <a class="enum" href="../../../include/linux/stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="222">222</th><td>	<a class="typedef" href="../../../include/linux/types.h.html#gfp_t" title='gfp_t' data-type='unsigned int' data-ref="gfp_t" data-ref-filename="gfp_t">gfp_t</a> <dfn class="local col9 decl" id="29gfp" title='gfp' data-type='gfp_t' data-ref="29gfp" data-ref-filename="29gfp">gfp</dfn> = <a class="macro" href="../../../include/asm-generic/pgalloc.h.html#8" title="((((( gfp_t)(0x400u|0x800u)) | (( gfp_t)0x40u) | (( gfp_t)0x80u)) | (( gfp_t)0x100u)) | (( gfp_t)0x400000u))" data-ref="_M/GFP_PGTABLE_USER">GFP_PGTABLE_USER</a>;</td></tr>
+<tr><th id="223">223</th><td></td></tr>
+<tr><th id="224">224</th><td>	<b>if</b> (<a class="local col4 ref" href="#24mm" title='mm' data-ref="24mm" data-ref-filename="24mm">mm</a> == &amp;<a class="ref" href="../../../include/linux/mm_types.h.html#init_mm" title='init_mm' data-ref="init_mm" data-ref-filename="init_mm">init_mm</a>)</td></tr>
+<tr><th id="225">225</th><td>		<a class="local col9 ref" href="#29gfp" title='gfp' data-ref="29gfp" data-ref-filename="29gfp">gfp</a> &amp;= ~<a class="macro" href="../../../include/linux/gfp.h.html#93" title="(( gfp_t)0x400000u)" data-ref="_M/__GFP_ACCOUNT">__GFP_ACCOUNT</a>;</td></tr>
+<tr><th id="226">226</th><td></td></tr>
+<tr><th id="227">227</th><td>	<b>for</b> (<a class="local col7 ref" href="#27i" title='i' data-ref="27i" data-ref-filename="27i">i</a> = <var>0</var>; <a class="local col7 ref" href="#27i" title='i' data-ref="27i" data-ref-filename="27i">i</a> &lt; <a class="local col6 ref" href="#26count" title='count' data-ref="26count" data-ref-filename="26count">count</a>; <a class="local col7 ref" href="#27i" title='i' data-ref="27i" data-ref-filename="27i">i</a>++) {</td></tr>
+<tr><th id="228">228</th><td>		<a class="typedef" href="../include/asm/pgtable_types.h.html#pmd_t" title='pmd_t' data-type='struct pmd_t' data-ref="pmd_t" data-ref-filename="pmd_t">pmd_t</a> *<dfn class="local col0 decl" id="30pmd" title='pmd' data-type='pmd_t *' data-ref="30pmd" data-ref-filename="30pmd">pmd</dfn> = (<a class="typedef" href="../include/asm/pgtable_types.h.html#pmd_t" title='pmd_t' data-type='struct pmd_t' data-ref="pmd_t" data-ref-filename="pmd_t">pmd_t</a> *)<a class="macro" href="../../../include/linux/gfp.h.html#533" title="__get_free_pages((gfp), 0)" data-ref="_M/__get_free_page">__get_free_page</a>(<a class="local col9 ref" href="#29gfp" title='gfp' data-ref="29gfp" data-ref-filename="29gfp">gfp</a>);</td></tr>
+<tr><th id="229">229</th><td>		<b>if</b> (!<a class="local col0 ref" href="#30pmd" title='pmd' data-ref="30pmd" data-ref-filename="30pmd">pmd</a>)</td></tr>
+<tr><th id="230">230</th><td>			<a class="local col8 ref" href="#28failed" title='failed' data-ref="28failed" data-ref-filename="28failed">failed</a> = <a class="enum" href="../../../include/linux/stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>;</td></tr>
+<tr><th id="231">231</th><td>		<b>if</b> (<a class="local col0 ref" href="#30pmd" title='pmd' data-ref="30pmd" data-ref-filename="30pmd">pmd</a> &amp;&amp; !<a class="ref fn" href="../../../include/linux/mm.h.html#pgtable_pmd_page_ctor" title='pgtable_pmd_page_ctor' data-ref="pgtable_pmd_page_ctor" data-ref-filename="pgtable_pmd_page_ctor">pgtable_pmd_page_ctor</a>(<a class="macro" href="../include/asm/page.h.html#69" title="(((struct page *)vmemmap_base) + (__phys_addr_nodebug((unsigned long)(pmd)) &gt;&gt; 12))" data-ref="_M/virt_to_page">virt_to_page</a>(<a class="local col0 ref" href="#30pmd" title='pmd' data-ref="30pmd" data-ref-filename="30pmd">pmd</a>))) {</td></tr>
+<tr><th id="232">232</th><td>			<a class="macro" href="../../../include/linux/gfp.h.html#551" title="free_pages(((unsigned long)pmd), 0)" data-ref="_M/free_page">free_page</a>((<em>unsigned</em> <em>long</em>)<a class="local col0 ref" href="#30pmd" title='pmd' data-ref="30pmd" data-ref-filename="30pmd">pmd</a>);</td></tr>
+<tr><th id="233">233</th><td>			<a class="local col0 ref" href="#30pmd" title='pmd' data-ref="30pmd" data-ref-filename="30pmd">pmd</a> = <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="234">234</th><td>			<a class="local col8 ref" href="#28failed" title='failed' data-ref="28failed" data-ref-filename="28failed">failed</a> = <a class="enum" href="../../../include/linux/stddef.h.html#true" title='true' data-ref="true" data-ref-filename="true">true</a>;</td></tr>
+<tr><th id="235">235</th><td>		}</td></tr>
+<tr><th id="236">236</th><td>		<b>if</b> (<a class="local col0 ref" href="#30pmd" title='pmd' data-ref="30pmd" data-ref-filename="30pmd">pmd</a>)</td></tr>
+<tr><th id="237">237</th><td>			<a class="ref fn" href="../../../include/linux/mm.h.html#mm_inc_nr_pmds" title='mm_inc_nr_pmds' data-ref="mm_inc_nr_pmds" data-ref-filename="mm_inc_nr_pmds">mm_inc_nr_pmds</a>(<a class="local col4 ref" href="#24mm" title='mm' data-ref="24mm" data-ref-filename="24mm">mm</a>);</td></tr>
+<tr><th id="238">238</th><td>		<a class="local col5 ref" href="#25pmds" title='pmds' data-ref="25pmds" data-ref-filename="25pmds">pmds</a>[<a class="local col7 ref" href="#27i" title='i' data-ref="27i" data-ref-filename="27i">i</a>] = <a class="local col0 ref" href="#30pmd" title='pmd' data-ref="30pmd" data-ref-filename="30pmd">pmd</a>;</td></tr>
+<tr><th id="239">239</th><td>	}</td></tr>
+<tr><th id="240">240</th><td></td></tr>
+<tr><th id="241">241</th><td>	<b>if</b> (<a class="local col8 ref" href="#28failed" title='failed' data-ref="28failed" data-ref-filename="28failed">failed</a>) {</td></tr>
+<tr><th id="242">242</th><td>		<a class="tu ref fn" href="#free_pmds" title='free_pmds' data-use='c' data-ref="free_pmds" data-ref-filename="free_pmds">free_pmds</a>(<a class="local col4 ref" href="#24mm" title='mm' data-ref="24mm" data-ref-filename="24mm">mm</a>, <a class="local col5 ref" href="#25pmds" title='pmds' data-ref="25pmds" data-ref-filename="25pmds">pmds</a>, <a class="local col6 ref" href="#26count" title='count' data-ref="26count" data-ref-filename="26count">count</a>);</td></tr>
+<tr><th id="243">243</th><td>		<b>return</b> -<a class="macro" href="../../../include/uapi/asm-generic/errno-base.h.html#16" title="12" data-ref="_M/ENOMEM">ENOMEM</a>;</td></tr>
+<tr><th id="244">244</th><td>	}</td></tr>
+<tr><th id="245">245</th><td></td></tr>
+<tr><th id="246">246</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="247">247</th><td>}</td></tr>
+<tr><th id="248">248</th><td></td></tr>
+<tr><th id="249">249</th><td><i  data-doc="mop_up_one_pmd">/*</i></td></tr>
+<tr><th id="250">250</th><td><i  data-doc="mop_up_one_pmd"> * Mop up any pmd pages which may still be attached to the pgd.</i></td></tr>
+<tr><th id="251">251</th><td><i  data-doc="mop_up_one_pmd"> * Normally they will be freed by munmap/exit_mmap, but any pmd we</i></td></tr>
+<tr><th id="252">252</th><td><i  data-doc="mop_up_one_pmd"> * preallocate which never got a corresponding vma will need to be</i></td></tr>
+<tr><th id="253">253</th><td><i  data-doc="mop_up_one_pmd"> * freed manually.</i></td></tr>
+<tr><th id="254">254</th><td><i  data-doc="mop_up_one_pmd"> */</i></td></tr>
+<tr><th id="255">255</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="mop_up_one_pmd" title='mop_up_one_pmd' data-type='void mop_up_one_pmd(struct mm_struct * mm, pgd_t * pgdp)' data-ref="mop_up_one_pmd" data-ref-filename="mop_up_one_pmd">mop_up_one_pmd</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/mm_types.h.html#mm_struct" title='mm_struct' data-ref="mm_struct" data-ref-filename="mm_struct">mm_struct</a> *<dfn class="local col1 decl" id="31mm" title='mm' data-type='struct mm_struct *' data-ref="31mm" data-ref-filename="31mm">mm</dfn>, <a class="typedef" href="../include/asm/pgtable_types.h.html#pgd_t" title='pgd_t' data-type='struct pgd_t' data-ref="pgd_t" data-ref-filename="pgd_t">pgd_t</a> *<dfn class="local col2 decl" id="32pgdp" title='pgdp' data-type='pgd_t *' data-ref="32pgdp" data-ref-filename="32pgdp">pgdp</dfn>)</td></tr>
+<tr><th id="256">256</th><td>{</td></tr>
+<tr><th id="257">257</th><td>	<a class="typedef" href="../include/asm/pgtable_types.h.html#pgd_t" title='pgd_t' data-type='struct pgd_t' data-ref="pgd_t" data-ref-filename="pgd_t">pgd_t</a> <dfn class="local col3 decl" id="33pgd" title='pgd' data-type='pgd_t' data-ref="33pgd" data-ref-filename="33pgd">pgd</dfn> = *<a class="local col2 ref" href="#32pgdp" title='pgdp' data-ref="32pgdp" data-ref-filename="32pgdp">pgdp</a>;</td></tr>
+<tr><th id="258">258</th><td></td></tr>
+<tr><th id="259">259</th><td>	<b>if</b> (<a class="macro" href="../include/asm/pgtable.h.html#95" title="native_pgd_val(pgd)" data-ref="_M/pgd_val">pgd_val</a>(<a class="local col3 ref" href="#33pgd" title='pgd' data-ref="33pgd" data-ref-filename="33pgd">pgd</a>) != <var>0</var>) {</td></tr>
+<tr><th id="260">260</th><td>		<a class="typedef" href="../include/asm/pgtable_types.h.html#pmd_t" title='pmd_t' data-type='struct pmd_t' data-ref="pmd_t" data-ref-filename="pmd_t">pmd_t</a> *<dfn class="local col4 decl" id="34pmd" title='pmd' data-type='pmd_t *' data-ref="34pmd" data-ref-filename="34pmd">pmd</dfn> = (<a class="typedef" href="../include/asm/pgtable_types.h.html#pmd_t" title='pmd_t' data-type='struct pmd_t' data-ref="pmd_t" data-ref-filename="pmd_t">pmd_t</a> *)<a class="macro" href="../../../include/asm-generic/pgtable-nop4d.h.html#45" title="(p4d_page_vaddr((p4d_t){ pgd }))" data-ref="_M/pgd_page_vaddr">pgd_page_vaddr</a>(<a class="local col3 ref" href="#33pgd" title='pgd' data-ref="33pgd" data-ref-filename="33pgd">pgd</a>);</td></tr>
+<tr><th id="261">261</th><td></td></tr>
+<tr><th id="262">262</th><td>		<a class="ref fn" href="../../../include/asm-generic/pgtable-nop4d.h.html#pgd_clear" title='pgd_clear' data-ref="pgd_clear" data-ref-filename="pgd_clear">pgd_clear</a>(<a class="local col2 ref" href="#32pgdp" title='pgdp' data-ref="32pgdp" data-ref-filename="32pgdp">pgdp</a>);</td></tr>
+<tr><th id="263">263</th><td></td></tr>
+<tr><th id="264">264</th><td>		<a class="ref fn" href="../include/asm/pgalloc.h.html#paravirt_release_pmd" title='paravirt_release_pmd' data-ref="paravirt_release_pmd" data-ref-filename="paravirt_release_pmd">paravirt_release_pmd</a>(<a class="macro" href="../include/asm/pgtable.h.html#95" title="native_pgd_val(pgd)" data-ref="_M/pgd_val">pgd_val</a>(<a class="local col3 ref" href="#33pgd" title='pgd' data-ref="33pgd" data-ref-filename="33pgd">pgd</a>) &gt;&gt; <a class="macro" href="../include/asm/page_types.h.html#10" title="12" data-ref="_M/PAGE_SHIFT">PAGE_SHIFT</a>);</td></tr>
+<tr><th id="265">265</th><td>		<a class="ref fn" href="../include/asm/pgalloc.h.html#pmd_free" title='pmd_free' data-ref="pmd_free" data-ref-filename="pmd_free">pmd_free</a>(<a class="local col1 ref" href="#31mm" title='mm' data-ref="31mm" data-ref-filename="31mm">mm</a>, <a class="local col4 ref" href="#34pmd" title='pmd' data-ref="34pmd" data-ref-filename="34pmd">pmd</a>);</td></tr>
+<tr><th id="266">266</th><td>		<a class="ref fn" href="../../../include/linux/mm.h.html#mm_dec_nr_pmds" title='mm_dec_nr_pmds' data-ref="mm_dec_nr_pmds" data-ref-filename="mm_dec_nr_pmds">mm_dec_nr_pmds</a>(<a class="local col1 ref" href="#31mm" title='mm' data-ref="31mm" data-ref-filename="31mm">mm</a>);</td></tr>
+<tr><th id="267">267</th><td>	}</td></tr>
+<tr><th id="268">268</th><td>}</td></tr>
+<tr><th id="269">269</th><td></td></tr>
+<tr><th id="270">270</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="pgd_mop_up_pmds" title='pgd_mop_up_pmds' data-type='void pgd_mop_up_pmds(struct mm_struct * mm, pgd_t * pgdp)' data-ref="pgd_mop_up_pmds" data-ref-filename="pgd_mop_up_pmds">pgd_mop_up_pmds</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/mm_types.h.html#mm_struct" title='mm_struct' data-ref="mm_struct" data-ref-filename="mm_struct">mm_struct</a> *<dfn class="local col5 decl" id="35mm" title='mm' data-type='struct mm_struct *' data-ref="35mm" data-ref-filename="35mm">mm</dfn>, <a class="typedef" href="../include/asm/pgtable_types.h.html#pgd_t" title='pgd_t' data-type='struct pgd_t' data-ref="pgd_t" data-ref-filename="pgd_t">pgd_t</a> *<dfn class="local col6 decl" id="36pgdp" title='pgdp' data-type='pgd_t *' data-ref="36pgdp" data-ref-filename="36pgdp">pgdp</dfn>)</td></tr>
+<tr><th id="271">271</th><td>{</td></tr>
+<tr><th id="272">272</th><td>	<em>int</em> <dfn class="local col7 decl" id="37i" title='i' data-type='int' data-ref="37i" data-ref-filename="37i">i</dfn>;</td></tr>
+<tr><th id="273">273</th><td></td></tr>
+<tr><th id="274">274</th><td>	<b>for</b> (<a class="local col7 ref" href="#37i" title='i' data-ref="37i" data-ref-filename="37i">i</a> = <var>0</var>; <a class="local col7 ref" href="#37i" title='i' data-ref="37i" data-ref-filename="37i">i</a> &lt; <a class="macro" href="#200" title="0" data-ref="_M/PREALLOCATED_PMDS">PREALLOCATED_PMDS</a>; <a class="local col7 ref" href="#37i" title='i' data-ref="37i" data-ref-filename="37i">i</a>++)</td></tr>
+<tr><th id="275">275</th><td>		<a class="tu ref fn" href="#mop_up_one_pmd" title='mop_up_one_pmd' data-use='c' data-ref="mop_up_one_pmd" data-ref-filename="mop_up_one_pmd">mop_up_one_pmd</a>(<a class="local col5 ref" href="#35mm" title='mm' data-ref="35mm" data-ref-filename="35mm">mm</a>, &amp;<a class="local col6 ref" href="#36pgdp" title='pgdp' data-ref="36pgdp" data-ref-filename="36pgdp">pgdp</a>[<a class="local col7 ref" href="#37i" title='i' data-ref="37i" data-ref-filename="37i">i</a>]);</td></tr>
+<tr><th id="276">276</th><td></td></tr>
+<tr><th id="277">277</th><td><u>#<span data-ppcond="277">ifdef</span> <a class="macro" href="../../../include/generated/autoconf.h.html#320" data-ref="_M/CONFIG_PAGE_TABLE_ISOLATION">CONFIG_PAGE_TABLE_ISOLATION</a></u></td></tr>
+<tr><th id="278">278</th><td></td></tr>
+<tr><th id="279">279</th><td>	<b>if</b> (!<a class="macro" href="../include/asm/cpufeature.h.html#130" title="(__builtin_constant_p(( 7*32+11)) &amp;&amp; ( (((( 7*32+11))&gt;&gt;5)==(0) &amp;&amp; (1UL&lt;&lt;((( 7*32+11))&amp;31) &amp; ((1&lt;&lt;(( 0*32+ 0) &amp; 31))|(1&lt;&lt;(( 0*32+ 3)) &amp; 31)|(1&lt;&lt;(( 0*32+ 5) &amp; 31))|(1&lt;&lt;(( 0*32+ 6) &amp; 31))| (1&lt;&lt;(( 0*32+ 8) &amp; 31))|(1&lt;&lt;(( 0*32+13)) &amp; 31)|(1&lt;&lt;(( 0*32+24) &amp; 31))|(1&lt;&lt;(( 0*32+15) &amp; 31))| (1&lt;&lt;(( 0*32+25) &amp; 31))|(1&lt;&lt;(( 0*32+26) &amp; 31))) )) || (((( 7*32+11))&gt;&gt;5)==(1) &amp;&amp; (1UL&lt;&lt;((( 7*32+11))&amp;31) &amp; ((1&lt;&lt;(( 1*32+29) &amp; 31))|0) )) || (((( 7*32+11))&gt;&gt;5)==(2) &amp;&amp; (1UL&lt;&lt;((( 7*32+11))&amp;31) &amp; 0 )) || (((( 7*32+11))&gt;&gt;5)==(3) &amp;&amp; (1UL&lt;&lt;((( 7*32+11))&amp;31) &amp; ((1&lt;&lt;(( 3*32+20) &amp; 31))) )) || (((( 7*32+11))&gt;&gt;5)==(4) &amp;&amp; (1UL&lt;&lt;((( 7*32+11))&amp;31) &amp; (0) )) || (((( 7*32+11))&gt;&gt;5)==(5) &amp;&amp; (1UL&lt;&lt;((( 7*32+11))&amp;31) &amp; 0 )) || (((( 7*32+11))&gt;&gt;5)==(6) &amp;&amp; (1UL&lt;&lt;((( 7*32+11))&amp;31) &amp; 0 )) || (((( 7*32+11))&gt;&gt;5)==(7) &amp;&amp; (1UL&lt;&lt;((( 7*32+11))&amp;31) &amp; 0 )) || (((( 7*32+11))&gt;&gt;5)==(8) &amp;&amp; (1UL&lt;&lt;((( 7*32+11))&amp;31) &amp; 0 )) || (((( 7*32+11))&gt;&gt;5)==(9) &amp;&amp; (1UL&lt;&lt;((( 7*32+11))&amp;31) &amp; 0 )) || (((( 7*32+11))&gt;&gt;5)==(10) &amp;&amp; (1UL&lt;&lt;((( 7*32+11))&amp;31) &amp; 0 )) || (((( 7*32+11))&gt;&gt;5)==(11) &amp;&amp; (1UL&lt;&lt;((( 7*32+11))&amp;31) &amp; 0 )) || (((( 7*32+11))&gt;&gt;5)==(12) &amp;&amp; (1UL&lt;&lt;((( 7*32+11))&amp;31) &amp; 0 )) || (((( 7*32+11))&gt;&gt;5)==(13) &amp;&amp; (1UL&lt;&lt;((( 7*32+11))&amp;31) &amp; 0 )) || (((( 7*32+11))&gt;&gt;5)==(14) &amp;&amp; (1UL&lt;&lt;((( 7*32+11))&amp;31) &amp; 0 )) || (((( 7*32+11))&gt;&gt;5)==(15) &amp;&amp; (1UL&lt;&lt;((( 7*32+11))&amp;31) &amp; 0 )) || (((( 7*32+11))&gt;&gt;5)==(16) &amp;&amp; (1UL&lt;&lt;((( 7*32+11))&amp;31) &amp; 0 )) || (((( 7*32+11))&gt;&gt;5)==(17) &amp;&amp; (1UL&lt;&lt;((( 7*32+11))&amp;31) &amp; 0 )) || (((( 7*32+11))&gt;&gt;5)==(18) &amp;&amp; (1UL&lt;&lt;((( 7*32+11))&amp;31) &amp; 0 )) || (sizeof(struct { int:(-!!(19 != 19)); })) || (sizeof(struct { int:(-!!(19 != 19)); }))) ? 1 : test_bit(( 7*32+11), (unsigned long *)((&amp;boot_cpu_data)-&gt;x86_capability)))" data-ref="_M/boot_cpu_has">boot_cpu_has</a>(<a class="macro" href="../include/asm/cpufeatures.h.html#204" title="( 7*32+11)" data-ref="_M/X86_FEATURE_PTI">X86_FEATURE_PTI</a>))</td></tr>
+<tr><th id="280">280</th><td>		<b>return</b>;</td></tr>
+<tr><th id="281">281</th><td></td></tr>
+<tr><th id="282">282</th><td>	<a class="local col6 ref" href="#36pgdp" title='pgdp' data-ref="36pgdp" data-ref-filename="36pgdp">pgdp</a> = <a class="ref fn" href="../include/asm/pgtable.h.html#kernel_to_user_pgdp" title='kernel_to_user_pgdp' data-ref="kernel_to_user_pgdp" data-ref-filename="kernel_to_user_pgdp">kernel_to_user_pgdp</a>(<a class="local col6 ref" href="#36pgdp" title='pgdp' data-ref="36pgdp" data-ref-filename="36pgdp">pgdp</a>);</td></tr>
+<tr><th id="283">283</th><td></td></tr>
+<tr><th id="284">284</th><td>	<b>for</b> (<a class="local col7 ref" href="#37i" title='i' data-ref="37i" data-ref-filename="37i">i</a> = <var>0</var>; <a class="local col7 ref" href="#37i" title='i' data-ref="37i" data-ref-filename="37i">i</a> &lt; <a class="macro" href="#202" title="0" data-ref="_M/PREALLOCATED_USER_PMDS">PREALLOCATED_USER_PMDS</a>; <a class="local col7 ref" href="#37i" title='i' data-ref="37i" data-ref-filename="37i">i</a>++)</td></tr>
+<tr><th id="285">285</th><td>		<a class="tu ref fn" href="#mop_up_one_pmd" title='mop_up_one_pmd' data-use='c' data-ref="mop_up_one_pmd" data-ref-filename="mop_up_one_pmd">mop_up_one_pmd</a>(<a class="local col5 ref" href="#35mm" title='mm' data-ref="35mm" data-ref-filename="35mm">mm</a>, &amp;<a class="local col6 ref" href="#36pgdp" title='pgdp' data-ref="36pgdp" data-ref-filename="36pgdp">pgdp</a>[<a class="local col7 ref" href="#37i" title='i' data-ref="37i" data-ref-filename="37i">i</a> + <a class="macro" href="../include/asm/pgtable.h.html#1023" title="(((((unsigned long)page_offset_base)) &gt;&gt; 39) &amp; (512 - 1))" data-ref="_M/KERNEL_PGD_BOUNDARY">KERNEL_PGD_BOUNDARY</a>]);</td></tr>
+<tr><th id="286">286</th><td><u>#<span data-ppcond="277">endif</span></u></td></tr>
+<tr><th id="287">287</th><td>}</td></tr>
+<tr><th id="288">288</th><td></td></tr>
+<tr><th id="289">289</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="pgd_prepopulate_pmd" title='pgd_prepopulate_pmd' data-type='void pgd_prepopulate_pmd(struct mm_struct * mm, pgd_t * pgd, pmd_t ** pmds)' data-ref="pgd_prepopulate_pmd" data-ref-filename="pgd_prepopulate_pmd">pgd_prepopulate_pmd</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/mm_types.h.html#mm_struct" title='mm_struct' data-ref="mm_struct" data-ref-filename="mm_struct">mm_struct</a> *<dfn class="local col8 decl" id="38mm" title='mm' data-type='struct mm_struct *' data-ref="38mm" data-ref-filename="38mm">mm</dfn>, <a class="typedef" href="../include/asm/pgtable_types.h.html#pgd_t" title='pgd_t' data-type='struct pgd_t' data-ref="pgd_t" data-ref-filename="pgd_t">pgd_t</a> *<dfn class="local col9 decl" id="39pgd" title='pgd' data-type='pgd_t *' data-ref="39pgd" data-ref-filename="39pgd">pgd</dfn>, <a class="typedef" href="../include/asm/pgtable_types.h.html#pmd_t" title='pmd_t' data-type='struct pmd_t' data-ref="pmd_t" data-ref-filename="pmd_t">pmd_t</a> *<dfn class="local col0 decl" id="40pmds" title='pmds' data-type='pmd_t **' data-ref="40pmds" data-ref-filename="40pmds">pmds</dfn>[])</td></tr>
+<tr><th id="290">290</th><td>{</td></tr>
+<tr><th id="291">291</th><td>	<a class="typedef" href="../../../include/asm-generic/pgtable-nop4d.h.html#p4d_t" title='p4d_t' data-type='struct p4d_t' data-ref="p4d_t" data-ref-filename="p4d_t">p4d_t</a> *<dfn class="local col1 decl" id="41p4d" title='p4d' data-type='p4d_t *' data-ref="41p4d" data-ref-filename="41p4d">p4d</dfn>;</td></tr>
+<tr><th id="292">292</th><td>	<a class="typedef" href="../include/asm/pgtable_types.h.html#pud_t" title='pud_t' data-type='struct pud_t' data-ref="pud_t" data-ref-filename="pud_t">pud_t</a> *<dfn class="local col2 decl" id="42pud" title='pud' data-type='pud_t *' data-ref="42pud" data-ref-filename="42pud">pud</dfn>;</td></tr>
+<tr><th id="293">293</th><td>	<em>int</em> <dfn class="local col3 decl" id="43i" title='i' data-type='int' data-ref="43i" data-ref-filename="43i">i</dfn>;</td></tr>
+<tr><th id="294">294</th><td></td></tr>
+<tr><th id="295">295</th><td>	<b>if</b> (<a class="macro" href="#200" title="0" data-ref="_M/PREALLOCATED_PMDS">PREALLOCATED_PMDS</a> == <var>0</var>) <i>/* Work around gcc-3.4.x bug */</i></td></tr>
+<tr><th id="296">296</th><td>		<b>return</b>;</td></tr>
+<tr><th id="297">297</th><td></td></tr>
+<tr><th id="298">298</th><td>	<a class="local col1 ref" href="#41p4d" title='p4d' data-ref="41p4d" data-ref-filename="41p4d">p4d</a> = <a class="ref fn" href="../../../include/asm-generic/pgtable-nop4d.h.html#p4d_offset" title='p4d_offset' data-ref="p4d_offset" data-ref-filename="p4d_offset">p4d_offset</a>(<a class="local col9 ref" href="#39pgd" title='pgd' data-ref="39pgd" data-ref-filename="39pgd">pgd</a>, <var>0</var>);</td></tr>
+<tr><th id="299">299</th><td>	<a class="local col2 ref" href="#42pud" title='pud' data-ref="42pud" data-ref-filename="42pud">pud</a> = <a class="ref fn" href="../include/asm/pgtable.h.html#pud_offset" title='pud_offset' data-ref="pud_offset" data-ref-filename="pud_offset">pud_offset</a>(<a class="local col1 ref" href="#41p4d" title='p4d' data-ref="41p4d" data-ref-filename="41p4d">p4d</a>, <var>0</var>);</td></tr>
+<tr><th id="300">300</th><td></td></tr>
+<tr><th id="301">301</th><td>	<b>for</b> (<a class="local col3 ref" href="#43i" title='i' data-ref="43i" data-ref-filename="43i">i</a> = <var>0</var>; <a class="local col3 ref" href="#43i" title='i' data-ref="43i" data-ref-filename="43i">i</a> &lt; <a class="macro" href="#200" title="0" data-ref="_M/PREALLOCATED_PMDS">PREALLOCATED_PMDS</a>; <a class="local col3 ref" href="#43i" title='i' data-ref="43i" data-ref-filename="43i">i</a>++, <a class="local col2 ref" href="#42pud" title='pud' data-ref="42pud" data-ref-filename="42pud">pud</a>++) {</td></tr>
+<tr><th id="302">302</th><td>		<a class="typedef" href="../include/asm/pgtable_types.h.html#pmd_t" title='pmd_t' data-type='struct pmd_t' data-ref="pmd_t" data-ref-filename="pmd_t">pmd_t</a> *<dfn class="local col4 decl" id="44pmd" title='pmd' data-type='pmd_t *' data-ref="44pmd" data-ref-filename="44pmd">pmd</dfn> = <a class="local col0 ref" href="#40pmds" title='pmds' data-ref="40pmds" data-ref-filename="40pmds">pmds</a>[<a class="local col3 ref" href="#43i" title='i' data-ref="43i" data-ref-filename="43i">i</a>];</td></tr>
+<tr><th id="303">303</th><td></td></tr>
+<tr><th id="304">304</th><td>		<b>if</b> (<a class="local col3 ref" href="#43i" title='i' data-ref="43i" data-ref-filename="43i">i</a> &gt;= <a class="macro" href="../include/asm/pgtable.h.html#1023" title="(((((unsigned long)page_offset_base)) &gt;&gt; 39) &amp; (512 - 1))" data-ref="_M/KERNEL_PGD_BOUNDARY">KERNEL_PGD_BOUNDARY</a>)</td></tr>
+<tr><th id="305">305</th><td>			<a class="ref fn" href="../include/asm/string_64.h.html#memcpy" title='memcpy' data-ref="memcpy" data-ref-filename="memcpy">memcpy</a>(<a class="local col4 ref" href="#44pmd" title='pmd' data-ref="44pmd" data-ref-filename="44pmd">pmd</a>, (<a class="typedef" href="../include/asm/pgtable_types.h.html#pmd_t" title='pmd_t' data-type='struct pmd_t' data-ref="pmd_t" data-ref-filename="pmd_t">pmd_t</a> *)<a class="macro" href="../../../include/asm-generic/pgtable-nop4d.h.html#45" title="(p4d_page_vaddr((p4d_t){ init_top_pgt[i] }))" data-ref="_M/pgd_page_vaddr">pgd_page_vaddr</a>(<a class="macro" href="../include/asm/pgtable_64.h.html#29" title="init_top_pgt" data-ref="_M/swapper_pg_dir">swapper_pg_dir</a>[<a class="local col3 ref" href="#43i" title='i' data-ref="43i" data-ref-filename="43i">i</a>]),</td></tr>
+<tr><th id="306">306</th><td>			       <b>sizeof</b>(<a class="typedef" href="../include/asm/pgtable_types.h.html#pmd_t" title='pmd_t' data-type='struct pmd_t' data-ref="pmd_t" data-ref-filename="pmd_t">pmd_t</a>) * <a class="macro" href="../include/asm/pgtable_64_types.h.html#91" title="512" data-ref="_M/PTRS_PER_PMD">PTRS_PER_PMD</a>);</td></tr>
+<tr><th id="307">307</th><td></td></tr>
+<tr><th id="308">308</th><td>		<a class="ref fn" href="../include/asm/pgalloc.h.html#pud_populate" title='pud_populate' data-ref="pud_populate" data-ref-filename="pud_populate">pud_populate</a>(<a class="local col8 ref" href="#38mm" title='mm' data-ref="38mm" data-ref-filename="38mm">mm</a>, <a class="local col2 ref" href="#42pud" title='pud' data-ref="42pud" data-ref-filename="42pud">pud</a>, <a class="local col4 ref" href="#44pmd" title='pmd' data-ref="44pmd" data-ref-filename="44pmd">pmd</a>);</td></tr>
+<tr><th id="309">309</th><td>	}</td></tr>
+<tr><th id="310">310</th><td>}</td></tr>
+<tr><th id="311">311</th><td></td></tr>
+<tr><th id="312">312</th><td><u>#<span data-ppcond="312">ifdef</span> <a class="macro" href="../../../include/generated/autoconf.h.html#320" data-ref="_M/CONFIG_PAGE_TABLE_ISOLATION">CONFIG_PAGE_TABLE_ISOLATION</a></u></td></tr>
+<tr><th id="313">313</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="pgd_prepopulate_user_pmd" title='pgd_prepopulate_user_pmd' data-type='void pgd_prepopulate_user_pmd(struct mm_struct * mm, pgd_t * k_pgd, pmd_t ** pmds)' data-ref="pgd_prepopulate_user_pmd" data-ref-filename="pgd_prepopulate_user_pmd">pgd_prepopulate_user_pmd</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/mm_types.h.html#mm_struct" title='mm_struct' data-ref="mm_struct" data-ref-filename="mm_struct">mm_struct</a> *<dfn class="local col5 decl" id="45mm" title='mm' data-type='struct mm_struct *' data-ref="45mm" data-ref-filename="45mm">mm</dfn>,</td></tr>
+<tr><th id="314">314</th><td>				     <a class="typedef" href="../include/asm/pgtable_types.h.html#pgd_t" title='pgd_t' data-type='struct pgd_t' data-ref="pgd_t" data-ref-filename="pgd_t">pgd_t</a> *<dfn class="local col6 decl" id="46k_pgd" title='k_pgd' data-type='pgd_t *' data-ref="46k_pgd" data-ref-filename="46k_pgd">k_pgd</dfn>, <a class="typedef" href="../include/asm/pgtable_types.h.html#pmd_t" title='pmd_t' data-type='struct pmd_t' data-ref="pmd_t" data-ref-filename="pmd_t">pmd_t</a> *<dfn class="local col7 decl" id="47pmds" title='pmds' data-type='pmd_t **' data-ref="47pmds" data-ref-filename="47pmds">pmds</dfn>[])</td></tr>
+<tr><th id="315">315</th><td>{</td></tr>
+<tr><th id="316">316</th><td>	<a class="typedef" href="../include/asm/pgtable_types.h.html#pgd_t" title='pgd_t' data-type='struct pgd_t' data-ref="pgd_t" data-ref-filename="pgd_t">pgd_t</a> *<dfn class="local col8 decl" id="48s_pgd" title='s_pgd' data-type='pgd_t *' data-ref="48s_pgd" data-ref-filename="48s_pgd">s_pgd</dfn> = <a class="ref fn" href="../include/asm/pgtable.h.html#kernel_to_user_pgdp" title='kernel_to_user_pgdp' data-ref="kernel_to_user_pgdp" data-ref-filename="kernel_to_user_pgdp">kernel_to_user_pgdp</a>(<a class="macro" href="../include/asm/pgtable_64.h.html#29" title="init_top_pgt" data-ref="_M/swapper_pg_dir">swapper_pg_dir</a>);</td></tr>
+<tr><th id="317">317</th><td>	<a class="typedef" href="../include/asm/pgtable_types.h.html#pgd_t" title='pgd_t' data-type='struct pgd_t' data-ref="pgd_t" data-ref-filename="pgd_t">pgd_t</a> *<dfn class="local col9 decl" id="49u_pgd" title='u_pgd' data-type='pgd_t *' data-ref="49u_pgd" data-ref-filename="49u_pgd">u_pgd</dfn> = <a class="ref fn" href="../include/asm/pgtable.h.html#kernel_to_user_pgdp" title='kernel_to_user_pgdp' data-ref="kernel_to_user_pgdp" data-ref-filename="kernel_to_user_pgdp">kernel_to_user_pgdp</a>(<a class="local col6 ref" href="#46k_pgd" title='k_pgd' data-ref="46k_pgd" data-ref-filename="46k_pgd">k_pgd</a>);</td></tr>
+<tr><th id="318">318</th><td>	<a class="typedef" href="../../../include/asm-generic/pgtable-nop4d.h.html#p4d_t" title='p4d_t' data-type='struct p4d_t' data-ref="p4d_t" data-ref-filename="p4d_t">p4d_t</a> *<dfn class="local col0 decl" id="50u_p4d" title='u_p4d' data-type='p4d_t *' data-ref="50u_p4d" data-ref-filename="50u_p4d">u_p4d</dfn>;</td></tr>
+<tr><th id="319">319</th><td>	<a class="typedef" href="../include/asm/pgtable_types.h.html#pud_t" title='pud_t' data-type='struct pud_t' data-ref="pud_t" data-ref-filename="pud_t">pud_t</a> *<dfn class="local col1 decl" id="51u_pud" title='u_pud' data-type='pud_t *' data-ref="51u_pud" data-ref-filename="51u_pud">u_pud</dfn>;</td></tr>
+<tr><th id="320">320</th><td>	<em>int</em> <dfn class="local col2 decl" id="52i" title='i' data-type='int' data-ref="52i" data-ref-filename="52i">i</dfn>;</td></tr>
+<tr><th id="321">321</th><td></td></tr>
+<tr><th id="322">322</th><td>	<a class="local col0 ref" href="#50u_p4d" title='u_p4d' data-ref="50u_p4d" data-ref-filename="50u_p4d">u_p4d</a> = <a class="ref fn" href="../../../include/asm-generic/pgtable-nop4d.h.html#p4d_offset" title='p4d_offset' data-ref="p4d_offset" data-ref-filename="p4d_offset">p4d_offset</a>(<a class="local col9 ref" href="#49u_pgd" title='u_pgd' data-ref="49u_pgd" data-ref-filename="49u_pgd">u_pgd</a>, <var>0</var>);</td></tr>
+<tr><th id="323">323</th><td>	<a class="local col1 ref" href="#51u_pud" title='u_pud' data-ref="51u_pud" data-ref-filename="51u_pud">u_pud</a> = <a class="ref fn" href="../include/asm/pgtable.h.html#pud_offset" title='pud_offset' data-ref="pud_offset" data-ref-filename="pud_offset">pud_offset</a>(<a class="local col0 ref" href="#50u_p4d" title='u_p4d' data-ref="50u_p4d" data-ref-filename="50u_p4d">u_p4d</a>, <var>0</var>);</td></tr>
+<tr><th id="324">324</th><td></td></tr>
+<tr><th id="325">325</th><td>	<a class="local col8 ref" href="#48s_pgd" title='s_pgd' data-ref="48s_pgd" data-ref-filename="48s_pgd">s_pgd</a> += <a class="macro" href="../include/asm/pgtable.h.html#1023" title="(((((unsigned long)page_offset_base)) &gt;&gt; 39) &amp; (512 - 1))" data-ref="_M/KERNEL_PGD_BOUNDARY">KERNEL_PGD_BOUNDARY</a>;</td></tr>
+<tr><th id="326">326</th><td>	<a class="local col1 ref" href="#51u_pud" title='u_pud' data-ref="51u_pud" data-ref-filename="51u_pud">u_pud</a> += <a class="macro" href="../include/asm/pgtable.h.html#1023" title="(((((unsigned long)page_offset_base)) &gt;&gt; 39) &amp; (512 - 1))" data-ref="_M/KERNEL_PGD_BOUNDARY">KERNEL_PGD_BOUNDARY</a>;</td></tr>
+<tr><th id="327">327</th><td></td></tr>
+<tr><th id="328">328</th><td>	<b>for</b> (<a class="local col2 ref" href="#52i" title='i' data-ref="52i" data-ref-filename="52i">i</a> = <var>0</var>; <a class="local col2 ref" href="#52i" title='i' data-ref="52i" data-ref-filename="52i">i</a> &lt; <a class="macro" href="#202" title="0" data-ref="_M/PREALLOCATED_USER_PMDS">PREALLOCATED_USER_PMDS</a>; <a class="local col2 ref" href="#52i" title='i' data-ref="52i" data-ref-filename="52i">i</a>++, <a class="local col1 ref" href="#51u_pud" title='u_pud' data-ref="51u_pud" data-ref-filename="51u_pud">u_pud</a>++, <a class="local col8 ref" href="#48s_pgd" title='s_pgd' data-ref="48s_pgd" data-ref-filename="48s_pgd">s_pgd</a>++) {</td></tr>
+<tr><th id="329">329</th><td>		<a class="typedef" href="../include/asm/pgtable_types.h.html#pmd_t" title='pmd_t' data-type='struct pmd_t' data-ref="pmd_t" data-ref-filename="pmd_t">pmd_t</a> *<dfn class="local col3 decl" id="53pmd" title='pmd' data-type='pmd_t *' data-ref="53pmd" data-ref-filename="53pmd">pmd</dfn> = <a class="local col7 ref" href="#47pmds" title='pmds' data-ref="47pmds" data-ref-filename="47pmds">pmds</a>[<a class="local col2 ref" href="#52i" title='i' data-ref="52i" data-ref-filename="52i">i</a>];</td></tr>
+<tr><th id="330">330</th><td></td></tr>
+<tr><th id="331">331</th><td>		<a class="ref fn" href="../include/asm/string_64.h.html#memcpy" title='memcpy' data-ref="memcpy" data-ref-filename="memcpy">memcpy</a>(<a class="local col3 ref" href="#53pmd" title='pmd' data-ref="53pmd" data-ref-filename="53pmd">pmd</a>, (<a class="typedef" href="../include/asm/pgtable_types.h.html#pmd_t" title='pmd_t' data-type='struct pmd_t' data-ref="pmd_t" data-ref-filename="pmd_t">pmd_t</a> *)<a class="macro" href="../../../include/asm-generic/pgtable-nop4d.h.html#45" title="(p4d_page_vaddr((p4d_t){ *s_pgd }))" data-ref="_M/pgd_page_vaddr">pgd_page_vaddr</a>(*<a class="local col8 ref" href="#48s_pgd" title='s_pgd' data-ref="48s_pgd" data-ref-filename="48s_pgd">s_pgd</a>),</td></tr>
+<tr><th id="332">332</th><td>		       <b>sizeof</b>(<a class="typedef" href="../include/asm/pgtable_types.h.html#pmd_t" title='pmd_t' data-type='struct pmd_t' data-ref="pmd_t" data-ref-filename="pmd_t">pmd_t</a>) * <a class="macro" href="../include/asm/pgtable_64_types.h.html#91" title="512" data-ref="_M/PTRS_PER_PMD">PTRS_PER_PMD</a>);</td></tr>
+<tr><th id="333">333</th><td></td></tr>
+<tr><th id="334">334</th><td>		<a class="ref fn" href="../include/asm/pgalloc.h.html#pud_populate" title='pud_populate' data-ref="pud_populate" data-ref-filename="pud_populate">pud_populate</a>(<a class="local col5 ref" href="#45mm" title='mm' data-ref="45mm" data-ref-filename="45mm">mm</a>, <a class="local col1 ref" href="#51u_pud" title='u_pud' data-ref="51u_pud" data-ref-filename="51u_pud">u_pud</a>, <a class="local col3 ref" href="#53pmd" title='pmd' data-ref="53pmd" data-ref-filename="53pmd">pmd</a>);</td></tr>
+<tr><th id="335">335</th><td>	}</td></tr>
+<tr><th id="336">336</th><td></td></tr>
+<tr><th id="337">337</th><td>}</td></tr>
+<tr><th id="338">338</th><td><u>#<span data-ppcond="312">else</span></u></td></tr>
+<tr><th id="339">339</th><td><em>static</em> <em>void</em> pgd_prepopulate_user_pmd(<b>struct</b> mm_struct *mm,</td></tr>
+<tr><th id="340">340</th><td>				     pgd_t *k_pgd, pmd_t *pmds[])</td></tr>
+<tr><th id="341">341</th><td>{</td></tr>
+<tr><th id="342">342</th><td>}</td></tr>
+<tr><th id="343">343</th><td><u>#<span data-ppcond="312">endif</span></u></td></tr>
+<tr><th id="344">344</th><td><i>/*</i></td></tr>
+<tr><th id="345">345</th><td><i> * Xen paravirt assumes pgd table should be in one page. 64 bit kernel also</i></td></tr>
+<tr><th id="346">346</th><td><i> * assumes that pgd should be in one page.</i></td></tr>
+<tr><th id="347">347</th><td><i> *</i></td></tr>
+<tr><th id="348">348</th><td><i> * But kernel with PAE paging that is not running as a Xen domain</i></td></tr>
+<tr><th id="349">349</th><td><i> * only needs to allocate 32 bytes for pgd instead of one page.</i></td></tr>
+<tr><th id="350">350</th><td><i> */</i></td></tr>
+<tr><th id="351">351</th><td><u>#<span data-ppcond="351">ifdef</span> <span class="macro" data-ref="_M/CONFIG_X86_PAE">CONFIG_X86_PAE</span></u></td></tr>
+<tr><th id="352">352</th><td></td></tr>
+<tr><th id="353">353</th><td><u>#include &lt;linux/slab.h&gt;</u></td></tr>
+<tr><th id="354">354</th><td></td></tr>
+<tr><th id="355">355</th><td><u>#define PGD_SIZE	(PTRS_PER_PGD * sizeof(pgd_t))</u></td></tr>
+<tr><th id="356">356</th><td><u>#define PGD_ALIGN	32</u></td></tr>
+<tr><th id="357">357</th><td></td></tr>
+<tr><th id="358">358</th><td><em>static</em> <b>struct</b> kmem_cache *pgd_cache;</td></tr>
+<tr><th id="359">359</th><td></td></tr>
+<tr><th id="360">360</th><td><em>void</em> __init pgd_cache_init(<em>void</em>)</td></tr>
+<tr><th id="361">361</th><td>{</td></tr>
+<tr><th id="362">362</th><td>	<i>/*</i></td></tr>
+<tr><th id="363">363</th><td><i>	 * When PAE kernel is running as a Xen domain, it does not use</i></td></tr>
+<tr><th id="364">364</th><td><i>	 * shared kernel pmd. And this requires a whole page for pgd.</i></td></tr>
+<tr><th id="365">365</th><td><i>	 */</i></td></tr>
+<tr><th id="366">366</th><td>	<b>if</b> (!SHARED_KERNEL_PMD)</td></tr>
+<tr><th id="367">367</th><td>		<b>return</b>;</td></tr>
+<tr><th id="368">368</th><td></td></tr>
+<tr><th id="369">369</th><td>	<i>/*</i></td></tr>
+<tr><th id="370">370</th><td><i>	 * when PAE kernel is not running as a Xen domain, it uses</i></td></tr>
+<tr><th id="371">371</th><td><i>	 * shared kernel pmd. Shared kernel pmd does not require a whole</i></td></tr>
+<tr><th id="372">372</th><td><i>	 * page for pgd. We are able to just allocate a 32-byte for pgd.</i></td></tr>
+<tr><th id="373">373</th><td><i>	 * During boot time, we create a 32-byte slab for pgd table allocation.</i></td></tr>
+<tr><th id="374">374</th><td><i>	 */</i></td></tr>
+<tr><th id="375">375</th><td>	pgd_cache = kmem_cache_create(<q>"pgd_cache"</q>, PGD_SIZE, PGD_ALIGN,</td></tr>
+<tr><th id="376">376</th><td>				      SLAB_PANIC, NULL);</td></tr>
+<tr><th id="377">377</th><td>}</td></tr>
+<tr><th id="378">378</th><td></td></tr>
+<tr><th id="379">379</th><td><em>static</em> <b>inline</b> pgd_t *_pgd_alloc(<em>void</em>)</td></tr>
+<tr><th id="380">380</th><td>{</td></tr>
+<tr><th id="381">381</th><td>	<i>/*</i></td></tr>
+<tr><th id="382">382</th><td><i>	 * If no SHARED_KERNEL_PMD, PAE kernel is running as a Xen domain.</i></td></tr>
+<tr><th id="383">383</th><td><i>	 * We allocate one page for pgd.</i></td></tr>
+<tr><th id="384">384</th><td><i>	 */</i></td></tr>
+<tr><th id="385">385</th><td>	<b>if</b> (!SHARED_KERNEL_PMD)</td></tr>
+<tr><th id="386">386</th><td>		<b>return</b> (pgd_t *)__get_free_pages(GFP_PGTABLE_USER,</td></tr>
+<tr><th id="387">387</th><td>						 PGD_ALLOCATION_ORDER);</td></tr>
+<tr><th id="388">388</th><td></td></tr>
+<tr><th id="389">389</th><td>	<i>/*</i></td></tr>
+<tr><th id="390">390</th><td><i>	 * Now PAE kernel is not running as a Xen domain. We can allocate</i></td></tr>
+<tr><th id="391">391</th><td><i>	 * a 32-byte slab for pgd to save memory space.</i></td></tr>
+<tr><th id="392">392</th><td><i>	 */</i></td></tr>
+<tr><th id="393">393</th><td>	<b>return</b> kmem_cache_alloc(pgd_cache, GFP_PGTABLE_USER);</td></tr>
+<tr><th id="394">394</th><td>}</td></tr>
+<tr><th id="395">395</th><td></td></tr>
+<tr><th id="396">396</th><td><em>static</em> <b>inline</b> <em>void</em> _pgd_free(pgd_t *pgd)</td></tr>
+<tr><th id="397">397</th><td>{</td></tr>
+<tr><th id="398">398</th><td>	<b>if</b> (!SHARED_KERNEL_PMD)</td></tr>
+<tr><th id="399">399</th><td>		free_pages((<em>unsigned</em> <em>long</em>)pgd, PGD_ALLOCATION_ORDER);</td></tr>
+<tr><th id="400">400</th><td>	<b>else</b></td></tr>
+<tr><th id="401">401</th><td>		kmem_cache_free(pgd_cache, pgd);</td></tr>
+<tr><th id="402">402</th><td>}</td></tr>
+<tr><th id="403">403</th><td><u>#<span data-ppcond="351">else</span></u></td></tr>
+<tr><th id="404">404</th><td></td></tr>
+<tr><th id="405">405</th><td><em>void</em> <a class="macro" href="../../../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="decl def fn" id="pgd_cache_init" title='pgd_cache_init' data-ref="pgd_cache_init" data-ref-filename="pgd_cache_init">pgd_cache_init</dfn>(<em>void</em>)</td></tr>
+<tr><th id="406">406</th><td>{</td></tr>
+<tr><th id="407">407</th><td>}</td></tr>
+<tr><th id="408">408</th><td></td></tr>
+<tr><th id="409">409</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../include/asm/pgtable_types.h.html#pgd_t" title='pgd_t' data-type='struct pgd_t' data-ref="pgd_t" data-ref-filename="pgd_t">pgd_t</a> *<dfn class="tu decl def fn" id="_pgd_alloc" title='_pgd_alloc' data-type='pgd_t * _pgd_alloc()' data-ref="_pgd_alloc" data-ref-filename="_pgd_alloc">_pgd_alloc</dfn>(<em>void</em>)</td></tr>
+<tr><th id="410">410</th><td>{</td></tr>
+<tr><th id="411">411</th><td>	<b>return</b> (<a class="typedef" href="../include/asm/pgtable_types.h.html#pgd_t" title='pgd_t' data-type='struct pgd_t' data-ref="pgd_t" data-ref-filename="pgd_t">pgd_t</a> *)<a class="ref fn" href="../../../include/linux/gfp.h.html#__get_free_pages" title='__get_free_pages' data-ref="__get_free_pages" data-ref-filename="__get_free_pages">__get_free_pages</a>(<a class="macro" href="../../../include/asm-generic/pgalloc.h.html#8" title="((((( gfp_t)(0x400u|0x800u)) | (( gfp_t)0x40u) | (( gfp_t)0x80u)) | (( gfp_t)0x100u)) | (( gfp_t)0x400000u))" data-ref="_M/GFP_PGTABLE_USER">GFP_PGTABLE_USER</a>,</td></tr>
+<tr><th id="412">412</th><td>					 <a class="macro" href="../include/asm/pgalloc.h.html#42" title="1" data-ref="_M/PGD_ALLOCATION_ORDER">PGD_ALLOCATION_ORDER</a>);</td></tr>
+<tr><th id="413">413</th><td>}</td></tr>
+<tr><th id="414">414</th><td></td></tr>
+<tr><th id="415">415</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="tu decl def fn" id="_pgd_free" title='_pgd_free' data-type='void _pgd_free(pgd_t * pgd)' data-ref="_pgd_free" data-ref-filename="_pgd_free">_pgd_free</dfn>(<a class="typedef" href="../include/asm/pgtable_types.h.html#pgd_t" title='pgd_t' data-type='struct pgd_t' data-ref="pgd_t" data-ref-filename="pgd_t">pgd_t</a> *<dfn class="local col4 decl" id="54pgd" title='pgd' data-type='pgd_t *' data-ref="54pgd" data-ref-filename="54pgd">pgd</dfn>)</td></tr>
+<tr><th id="416">416</th><td>{</td></tr>
+<tr><th id="417">417</th><td>	<a class="ref fn" href="../../../include/linux/gfp.h.html#free_pages" title='free_pages' data-ref="free_pages" data-ref-filename="free_pages">free_pages</a>((<em>unsigned</em> <em>long</em>)<a class="local col4 ref" href="#54pgd" title='pgd' data-ref="54pgd" data-ref-filename="54pgd">pgd</a>, <a class="macro" href="../include/asm/pgalloc.h.html#42" title="1" data-ref="_M/PGD_ALLOCATION_ORDER">PGD_ALLOCATION_ORDER</a>);</td></tr>
+<tr><th id="418">418</th><td>}</td></tr>
+<tr><th id="419">419</th><td><u>#<span data-ppcond="351">endif</span> /* CONFIG_X86_PAE */</u></td></tr>
+<tr><th id="420">420</th><td></td></tr>
+<tr><th id="421">421</th><td><a class="typedef" href="../include/asm/pgtable_types.h.html#pgd_t" title='pgd_t' data-type='struct pgd_t' data-ref="pgd_t" data-ref-filename="pgd_t">pgd_t</a> *<dfn class="decl def fn" id="pgd_alloc" title='pgd_alloc' data-ref="pgd_alloc" data-ref-filename="pgd_alloc">pgd_alloc</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/mm_types.h.html#mm_struct" title='mm_struct' data-ref="mm_struct" data-ref-filename="mm_struct">mm_struct</a> *<dfn class="local col5 decl" id="55mm" title='mm' data-type='struct mm_struct *' data-ref="55mm" data-ref-filename="55mm">mm</dfn>)</td></tr>
+<tr><th id="422">422</th><td>{</td></tr>
+<tr><th id="423">423</th><td>	<a class="typedef" href="../include/asm/pgtable_types.h.html#pgd_t" title='pgd_t' data-type='struct pgd_t' data-ref="pgd_t" data-ref-filename="pgd_t">pgd_t</a> *<dfn class="local col6 decl" id="56pgd" title='pgd' data-type='pgd_t *' data-ref="56pgd" data-ref-filename="56pgd">pgd</dfn>;</td></tr>
+<tr><th id="424">424</th><td>	<a class="typedef" href="../include/asm/pgtable_types.h.html#pmd_t" title='pmd_t' data-type='struct pmd_t' data-ref="pmd_t" data-ref-filename="pmd_t">pmd_t</a> *<dfn class="local col7 decl" id="57u_pmds" title='u_pmds' data-type='pmd_t *[0]' data-ref="57u_pmds" data-ref-filename="57u_pmds">u_pmds</dfn>[<a class="macro" href="#203" title="0" data-ref="_M/MAX_PREALLOCATED_USER_PMDS">MAX_PREALLOCATED_USER_PMDS</a>];</td></tr>
+<tr><th id="425">425</th><td>	<a class="typedef" href="../include/asm/pgtable_types.h.html#pmd_t" title='pmd_t' data-type='struct pmd_t' data-ref="pmd_t" data-ref-filename="pmd_t">pmd_t</a> *<dfn class="local col8 decl" id="58pmds" title='pmds' data-type='pmd_t *[0]' data-ref="58pmds" data-ref-filename="58pmds">pmds</dfn>[<a class="macro" href="#201" title="0" data-ref="_M/MAX_PREALLOCATED_PMDS">MAX_PREALLOCATED_PMDS</a>];</td></tr>
+<tr><th id="426">426</th><td></td></tr>
+<tr><th id="427">427</th><td>	<a class="local col6 ref" href="#56pgd" title='pgd' data-ref="56pgd" data-ref-filename="56pgd">pgd</a> = <a class="tu ref fn" href="#_pgd_alloc" title='_pgd_alloc' data-use='c' data-ref="_pgd_alloc" data-ref-filename="_pgd_alloc">_pgd_alloc</a>();</td></tr>
+<tr><th id="428">428</th><td></td></tr>
+<tr><th id="429">429</th><td>	<b>if</b> (<a class="local col6 ref" href="#56pgd" title='pgd' data-ref="56pgd" data-ref-filename="56pgd">pgd</a> == <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>)</td></tr>
+<tr><th id="430">430</th><td>		<b>goto</b> <a class="lbl" href="#59out" data-ref="59out" data-ref-filename="59out">out</a>;</td></tr>
+<tr><th id="431">431</th><td></td></tr>
+<tr><th id="432">432</th><td>	<a class="local col5 ref" href="#55mm" title='mm' data-ref="55mm" data-ref-filename="55mm">mm</a>-&gt;<a class="ref field" href="../../../include/linux/mm_types.h.html#mm_struct::(anonymous)::pgd" title='mm_struct::(anonymous struct)::pgd' data-ref="mm_struct::(anonymous)::pgd" data-ref-filename="mm_struct..(anonymous)..pgd">pgd</a> = <a class="local col6 ref" href="#56pgd" title='pgd' data-ref="56pgd" data-ref-filename="56pgd">pgd</a>;</td></tr>
+<tr><th id="433">433</th><td></td></tr>
+<tr><th id="434">434</th><td>	<b>if</b> (<a class="tu ref fn" href="#preallocate_pmds" title='preallocate_pmds' data-use='c' data-ref="preallocate_pmds" data-ref-filename="preallocate_pmds">preallocate_pmds</a>(<a class="local col5 ref" href="#55mm" title='mm' data-ref="55mm" data-ref-filename="55mm">mm</a>, <a class="local col8 ref" href="#58pmds" title='pmds' data-ref="58pmds" data-ref-filename="58pmds">pmds</a>, <a class="macro" href="#200" title="0" data-ref="_M/PREALLOCATED_PMDS">PREALLOCATED_PMDS</a>) != <var>0</var>)</td></tr>
+<tr><th id="435">435</th><td>		<b>goto</b> <a class="lbl" href="#60out_free_pgd" data-ref="60out_free_pgd" data-ref-filename="60out_free_pgd">out_free_pgd</a>;</td></tr>
+<tr><th id="436">436</th><td></td></tr>
+<tr><th id="437">437</th><td>	<b>if</b> (<a class="tu ref fn" href="#preallocate_pmds" title='preallocate_pmds' data-use='c' data-ref="preallocate_pmds" data-ref-filename="preallocate_pmds">preallocate_pmds</a>(<a class="local col5 ref" href="#55mm" title='mm' data-ref="55mm" data-ref-filename="55mm">mm</a>, <a class="local col7 ref" href="#57u_pmds" title='u_pmds' data-ref="57u_pmds" data-ref-filename="57u_pmds">u_pmds</a>, <a class="macro" href="#202" title="0" data-ref="_M/PREALLOCATED_USER_PMDS">PREALLOCATED_USER_PMDS</a>) != <var>0</var>)</td></tr>
+<tr><th id="438">438</th><td>		<b>goto</b> <a class="lbl" href="#61out_free_pmds" data-ref="61out_free_pmds" data-ref-filename="61out_free_pmds">out_free_pmds</a>;</td></tr>
+<tr><th id="439">439</th><td></td></tr>
+<tr><th id="440">440</th><td>	<b>if</b> (<a class="macro" href="../include/asm/pgalloc.h.html#17" title="__paravirt_pgd_alloc(mm)" data-ref="_M/paravirt_pgd_alloc">paravirt_pgd_alloc</a>(<a class="local col5 ref" href="#55mm" title='mm' data-ref="55mm" data-ref-filename="55mm">mm</a>) != <var>0</var>)</td></tr>
+<tr><th id="441">441</th><td>		<b>goto</b> <a class="lbl" href="#62out_free_user_pmds" data-ref="62out_free_user_pmds" data-ref-filename="62out_free_user_pmds">out_free_user_pmds</a>;</td></tr>
+<tr><th id="442">442</th><td></td></tr>
+<tr><th id="443">443</th><td>	<i>/*</i></td></tr>
+<tr><th id="444">444</th><td><i>	 * Make sure that pre-populating the pmds is atomic with</i></td></tr>
+<tr><th id="445">445</th><td><i>	 * respect to anything walking the pgd_list, so that they</i></td></tr>
+<tr><th id="446">446</th><td><i>	 * never see a partially populated pgd.</i></td></tr>
+<tr><th id="447">447</th><td><i>	 */</i></td></tr>
+<tr><th id="448">448</th><td>	<a class="ref fn" href="../../../include/linux/spinlock.h.html#spin_lock" title='spin_lock' data-ref="spin_lock" data-ref-filename="spin_lock">spin_lock</a>(&amp;<a class="ref" href="../include/asm/pgtable.h.html#pgd_lock" title='pgd_lock' data-ref="pgd_lock" data-ref-filename="pgd_lock">pgd_lock</a>);</td></tr>
+<tr><th id="449">449</th><td></td></tr>
+<tr><th id="450">450</th><td>	<a class="tu ref fn" href="#pgd_ctor" title='pgd_ctor' data-use='c' data-ref="pgd_ctor" data-ref-filename="pgd_ctor">pgd_ctor</a>(<a class="local col5 ref" href="#55mm" title='mm' data-ref="55mm" data-ref-filename="55mm">mm</a>, <a class="local col6 ref" href="#56pgd" title='pgd' data-ref="56pgd" data-ref-filename="56pgd">pgd</a>);</td></tr>
+<tr><th id="451">451</th><td>	<a class="tu ref fn" href="#pgd_prepopulate_pmd" title='pgd_prepopulate_pmd' data-use='c' data-ref="pgd_prepopulate_pmd" data-ref-filename="pgd_prepopulate_pmd">pgd_prepopulate_pmd</a>(<a class="local col5 ref" href="#55mm" title='mm' data-ref="55mm" data-ref-filename="55mm">mm</a>, <a class="local col6 ref" href="#56pgd" title='pgd' data-ref="56pgd" data-ref-filename="56pgd">pgd</a>, <a class="local col8 ref" href="#58pmds" title='pmds' data-ref="58pmds" data-ref-filename="58pmds">pmds</a>);</td></tr>
+<tr><th id="452">452</th><td>	<a class="tu ref fn" href="#pgd_prepopulate_user_pmd" title='pgd_prepopulate_user_pmd' data-use='c' data-ref="pgd_prepopulate_user_pmd" data-ref-filename="pgd_prepopulate_user_pmd">pgd_prepopulate_user_pmd</a>(<a class="local col5 ref" href="#55mm" title='mm' data-ref="55mm" data-ref-filename="55mm">mm</a>, <a class="local col6 ref" href="#56pgd" title='pgd' data-ref="56pgd" data-ref-filename="56pgd">pgd</a>, <a class="local col7 ref" href="#57u_pmds" title='u_pmds' data-ref="57u_pmds" data-ref-filename="57u_pmds">u_pmds</a>);</td></tr>
+<tr><th id="453">453</th><td></td></tr>
+<tr><th id="454">454</th><td>	<a class="ref fn" href="../../../include/linux/spinlock.h.html#spin_unlock" title='spin_unlock' data-ref="spin_unlock" data-ref-filename="spin_unlock">spin_unlock</a>(&amp;<a class="ref" href="../include/asm/pgtable.h.html#pgd_lock" title='pgd_lock' data-ref="pgd_lock" data-ref-filename="pgd_lock">pgd_lock</a>);</td></tr>
+<tr><th id="455">455</th><td></td></tr>
+<tr><th id="456">456</th><td>	<b>return</b> <a class="local col6 ref" href="#56pgd" title='pgd' data-ref="56pgd" data-ref-filename="56pgd">pgd</a>;</td></tr>
+<tr><th id="457">457</th><td></td></tr>
+<tr><th id="458">458</th><td><dfn class="lbl" id="62out_free_user_pmds" data-ref="62out_free_user_pmds" data-ref-filename="62out_free_user_pmds">out_free_user_pmds</dfn>:</td></tr>
+<tr><th id="459">459</th><td>	<a class="tu ref fn" href="#free_pmds" title='free_pmds' data-use='c' data-ref="free_pmds" data-ref-filename="free_pmds">free_pmds</a>(<a class="local col5 ref" href="#55mm" title='mm' data-ref="55mm" data-ref-filename="55mm">mm</a>, <a class="local col7 ref" href="#57u_pmds" title='u_pmds' data-ref="57u_pmds" data-ref-filename="57u_pmds">u_pmds</a>, <a class="macro" href="#202" title="0" data-ref="_M/PREALLOCATED_USER_PMDS">PREALLOCATED_USER_PMDS</a>);</td></tr>
+<tr><th id="460">460</th><td><dfn class="lbl" id="61out_free_pmds" data-ref="61out_free_pmds" data-ref-filename="61out_free_pmds">out_free_pmds</dfn>:</td></tr>
+<tr><th id="461">461</th><td>	<a class="tu ref fn" href="#free_pmds" title='free_pmds' data-use='c' data-ref="free_pmds" data-ref-filename="free_pmds">free_pmds</a>(<a class="local col5 ref" href="#55mm" title='mm' data-ref="55mm" data-ref-filename="55mm">mm</a>, <a class="local col8 ref" href="#58pmds" title='pmds' data-ref="58pmds" data-ref-filename="58pmds">pmds</a>, <a class="macro" href="#200" title="0" data-ref="_M/PREALLOCATED_PMDS">PREALLOCATED_PMDS</a>);</td></tr>
+<tr><th id="462">462</th><td><dfn class="lbl" id="60out_free_pgd" data-ref="60out_free_pgd" data-ref-filename="60out_free_pgd">out_free_pgd</dfn>:</td></tr>
+<tr><th id="463">463</th><td>	<a class="tu ref fn" href="#_pgd_free" title='_pgd_free' data-use='c' data-ref="_pgd_free" data-ref-filename="_pgd_free">_pgd_free</a>(<a class="local col6 ref" href="#56pgd" title='pgd' data-ref="56pgd" data-ref-filename="56pgd">pgd</a>);</td></tr>
+<tr><th id="464">464</th><td><dfn class="lbl" id="59out" data-ref="59out" data-ref-filename="59out">out</dfn>:</td></tr>
+<tr><th id="465">465</th><td>	<b>return</b> <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="466">466</th><td>}</td></tr>
+<tr><th id="467">467</th><td></td></tr>
+<tr><th id="468">468</th><td><em>void</em> <dfn class="decl def fn" id="pgd_free" title='pgd_free' data-ref="pgd_free" data-ref-filename="pgd_free">pgd_free</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/mm_types.h.html#mm_struct" title='mm_struct' data-ref="mm_struct" data-ref-filename="mm_struct">mm_struct</a> *<dfn class="local col3 decl" id="63mm" title='mm' data-type='struct mm_struct *' data-ref="63mm" data-ref-filename="63mm">mm</dfn>, <a class="typedef" href="../include/asm/pgtable_types.h.html#pgd_t" title='pgd_t' data-type='struct pgd_t' data-ref="pgd_t" data-ref-filename="pgd_t">pgd_t</a> *<dfn class="local col4 decl" id="64pgd" title='pgd' data-type='pgd_t *' data-ref="64pgd" data-ref-filename="64pgd">pgd</dfn>)</td></tr>
+<tr><th id="469">469</th><td>{</td></tr>
+<tr><th id="470">470</th><td>	<a class="tu ref fn" href="#pgd_mop_up_pmds" title='pgd_mop_up_pmds' data-use='c' data-ref="pgd_mop_up_pmds" data-ref-filename="pgd_mop_up_pmds">pgd_mop_up_pmds</a>(<a class="local col3 ref" href="#63mm" title='mm' data-ref="63mm" data-ref-filename="63mm">mm</a>, <a class="local col4 ref" href="#64pgd" title='pgd' data-ref="64pgd" data-ref-filename="64pgd">pgd</a>);</td></tr>
+<tr><th id="471">471</th><td>	<a class="tu ref fn" href="#pgd_dtor" title='pgd_dtor' data-use='c' data-ref="pgd_dtor" data-ref-filename="pgd_dtor">pgd_dtor</a>(<a class="local col4 ref" href="#64pgd" title='pgd' data-ref="64pgd" data-ref-filename="64pgd">pgd</a>);</td></tr>
+<tr><th id="472">472</th><td>	<a class="ref fn" href="../include/asm/pgalloc.h.html#paravirt_pgd_free" title='paravirt_pgd_free' data-ref="paravirt_pgd_free" data-ref-filename="paravirt_pgd_free">paravirt_pgd_free</a>(<a class="local col3 ref" href="#63mm" title='mm' data-ref="63mm" data-ref-filename="63mm">mm</a>, <a class="local col4 ref" href="#64pgd" title='pgd' data-ref="64pgd" data-ref-filename="64pgd">pgd</a>);</td></tr>
+<tr><th id="473">473</th><td>	<a class="tu ref fn" href="#_pgd_free" title='_pgd_free' data-use='c' data-ref="_pgd_free" data-ref-filename="_pgd_free">_pgd_free</a>(<a class="local col4 ref" href="#64pgd" title='pgd' data-ref="64pgd" data-ref-filename="64pgd">pgd</a>);</td></tr>
+<tr><th id="474">474</th><td>}</td></tr>
+<tr><th id="475">475</th><td></td></tr>
+<tr><th id="476">476</th><td><i>/*</i></td></tr>
+<tr><th id="477">477</th><td><i> * Used to set accessed or dirty bits in the page table entries</i></td></tr>
+<tr><th id="478">478</th><td><i> * on other architectures. On x86, the accessed and dirty bits</i></td></tr>
+<tr><th id="479">479</th><td><i> * are tracked by hardware. However, do_wp_page calls this function</i></td></tr>
+<tr><th id="480">480</th><td><i> * to also make the pte writeable at the same time the dirty bit is</i></td></tr>
+<tr><th id="481">481</th><td><i> * set. In that case we do actually need to write the PTE.</i></td></tr>
+<tr><th id="482">482</th><td><i> */</i></td></tr>
+<tr><th id="483">483</th><td><em>int</em> <dfn class="decl def fn" id="ptep_set_access_flags" title='ptep_set_access_flags' data-ref="ptep_set_access_flags" data-ref-filename="ptep_set_access_flags">ptep_set_access_flags</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/mm_types.h.html#vm_area_struct" title='vm_area_struct' data-ref="vm_area_struct" data-ref-filename="vm_area_struct">vm_area_struct</a> *<dfn class="local col5 decl" id="65vma" title='vma' data-type='struct vm_area_struct *' data-ref="65vma" data-ref-filename="65vma">vma</dfn>,</td></tr>
+<tr><th id="484">484</th><td>			  <em>unsigned</em> <em>long</em> <dfn class="local col6 decl" id="66address" title='address' data-type='unsigned long' data-ref="66address" data-ref-filename="66address">address</dfn>, <a class="typedef" href="../include/asm/pgtable_64_types.h.html#pte_t" title='pte_t' data-type='struct pte_t' data-ref="pte_t" data-ref-filename="pte_t">pte_t</a> *<dfn class="local col7 decl" id="67ptep" title='ptep' data-type='pte_t *' data-ref="67ptep" data-ref-filename="67ptep">ptep</dfn>,</td></tr>
+<tr><th id="485">485</th><td>			  <a class="typedef" href="../include/asm/pgtable_64_types.h.html#pte_t" title='pte_t' data-type='struct pte_t' data-ref="pte_t" data-ref-filename="pte_t">pte_t</a> <dfn class="local col8 decl" id="68entry" title='entry' data-type='pte_t' data-ref="68entry" data-ref-filename="68entry">entry</dfn>, <em>int</em> <dfn class="local col9 decl" id="69dirty" title='dirty' data-type='int' data-ref="69dirty" data-ref-filename="69dirty">dirty</dfn>)</td></tr>
+<tr><th id="486">486</th><td>{</td></tr>
+<tr><th id="487">487</th><td>	<em>int</em> <dfn class="local col0 decl" id="70changed" title='changed' data-type='int' data-ref="70changed" data-ref-filename="70changed">changed</dfn> = !<a class="ref fn" href="../include/asm/pgtable.h.html#pte_same" title='pte_same' data-ref="pte_same" data-ref-filename="pte_same">pte_same</a>(*<a class="local col7 ref" href="#67ptep" title='ptep' data-ref="67ptep" data-ref-filename="67ptep">ptep</a>, <a class="local col8 ref" href="#68entry" title='entry' data-ref="68entry" data-ref-filename="68entry">entry</a>);</td></tr>
+<tr><th id="488">488</th><td></td></tr>
+<tr><th id="489">489</th><td>	<b>if</b> (<a class="local col0 ref" href="#70changed" title='changed' data-ref="70changed" data-ref-filename="70changed">changed</a> &amp;&amp; <a class="local col9 ref" href="#69dirty" title='dirty' data-ref="69dirty" data-ref-filename="69dirty">dirty</a>)</td></tr>
+<tr><th id="490">490</th><td>		<a class="macro" href="../include/asm/pgtable.h.html#63" title="native_set_pte(ptep, entry)" data-ref="_M/set_pte">set_pte</a>(<a class="local col7 ref" href="#67ptep" title='ptep' data-ref="67ptep" data-ref-filename="67ptep">ptep</a>, <a class="local col8 ref" href="#68entry" title='entry' data-ref="68entry" data-ref-filename="68entry">entry</a>);</td></tr>
+<tr><th id="491">491</th><td></td></tr>
+<tr><th id="492">492</th><td>	<b>return</b> <a class="local col0 ref" href="#70changed" title='changed' data-ref="70changed" data-ref-filename="70changed">changed</a>;</td></tr>
+<tr><th id="493">493</th><td>}</td></tr>
+<tr><th id="494">494</th><td></td></tr>
+<tr><th id="495">495</th><td><u>#<span data-ppcond="495">ifdef</span> <span class="macro" data-ref="_M/CONFIG_TRANSPARENT_HUGEPAGE">CONFIG_TRANSPARENT_HUGEPAGE</span></u></td></tr>
+<tr><th id="496">496</th><td><em>int</em> pmdp_set_access_flags(<b>struct</b> vm_area_struct *vma,</td></tr>
+<tr><th id="497">497</th><td>			  <em>unsigned</em> <em>long</em> address, pmd_t *pmdp,</td></tr>
+<tr><th id="498">498</th><td>			  pmd_t entry, <em>int</em> dirty)</td></tr>
+<tr><th id="499">499</th><td>{</td></tr>
+<tr><th id="500">500</th><td>	<em>int</em> changed = !pmd_same(*pmdp, entry);</td></tr>
+<tr><th id="501">501</th><td></td></tr>
+<tr><th id="502">502</th><td>	VM_BUG_ON(address &amp; ~HPAGE_PMD_MASK);</td></tr>
+<tr><th id="503">503</th><td></td></tr>
+<tr><th id="504">504</th><td>	<b>if</b> (changed &amp;&amp; dirty) {</td></tr>
+<tr><th id="505">505</th><td>		set_pmd(pmdp, entry);</td></tr>
+<tr><th id="506">506</th><td>		<i>/*</i></td></tr>
+<tr><th id="507">507</th><td><i>		 * We had a write-protection fault here and changed the pmd</i></td></tr>
+<tr><th id="508">508</th><td><i>		 * to to more permissive. No need to flush the TLB for that,</i></td></tr>
+<tr><th id="509">509</th><td><i>		 * #PF is architecturally guaranteed to do that and in the</i></td></tr>
+<tr><th id="510">510</th><td><i>		 * worst-case we'll generate a spurious fault.</i></td></tr>
+<tr><th id="511">511</th><td><i>		 */</i></td></tr>
+<tr><th id="512">512</th><td>	}</td></tr>
+<tr><th id="513">513</th><td></td></tr>
+<tr><th id="514">514</th><td>	<b>return</b> changed;</td></tr>
+<tr><th id="515">515</th><td>}</td></tr>
+<tr><th id="516">516</th><td></td></tr>
+<tr><th id="517">517</th><td><em>int</em> pudp_set_access_flags(<b>struct</b> vm_area_struct *vma, <em>unsigned</em> <em>long</em> address,</td></tr>
+<tr><th id="518">518</th><td>			  pud_t *pudp, pud_t entry, <em>int</em> dirty)</td></tr>
+<tr><th id="519">519</th><td>{</td></tr>
+<tr><th id="520">520</th><td>	<em>int</em> changed = !pud_same(*pudp, entry);</td></tr>
+<tr><th id="521">521</th><td></td></tr>
+<tr><th id="522">522</th><td>	VM_BUG_ON(address &amp; ~HPAGE_PUD_MASK);</td></tr>
+<tr><th id="523">523</th><td></td></tr>
+<tr><th id="524">524</th><td>	<b>if</b> (changed &amp;&amp; dirty) {</td></tr>
+<tr><th id="525">525</th><td>		set_pud(pudp, entry);</td></tr>
+<tr><th id="526">526</th><td>		<i>/*</i></td></tr>
+<tr><th id="527">527</th><td><i>		 * We had a write-protection fault here and changed the pud</i></td></tr>
+<tr><th id="528">528</th><td><i>		 * to to more permissive. No need to flush the TLB for that,</i></td></tr>
+<tr><th id="529">529</th><td><i>		 * #PF is architecturally guaranteed to do that and in the</i></td></tr>
+<tr><th id="530">530</th><td><i>		 * worst-case we'll generate a spurious fault.</i></td></tr>
+<tr><th id="531">531</th><td><i>		 */</i></td></tr>
+<tr><th id="532">532</th><td>	}</td></tr>
+<tr><th id="533">533</th><td></td></tr>
+<tr><th id="534">534</th><td>	<b>return</b> changed;</td></tr>
+<tr><th id="535">535</th><td>}</td></tr>
+<tr><th id="536">536</th><td><u>#<span data-ppcond="495">endif</span></u></td></tr>
+<tr><th id="537">537</th><td></td></tr>
+<tr><th id="538">538</th><td><em>int</em> <dfn class="decl def fn" id="ptep_test_and_clear_young" title='ptep_test_and_clear_young' data-ref="ptep_test_and_clear_young" data-ref-filename="ptep_test_and_clear_young">ptep_test_and_clear_young</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/mm_types.h.html#vm_area_struct" title='vm_area_struct' data-ref="vm_area_struct" data-ref-filename="vm_area_struct">vm_area_struct</a> *<dfn class="local col1 decl" id="71vma" title='vma' data-type='struct vm_area_struct *' data-ref="71vma" data-ref-filename="71vma">vma</dfn>,</td></tr>
+<tr><th id="539">539</th><td>			      <em>unsigned</em> <em>long</em> <dfn class="local col2 decl" id="72addr" title='addr' data-type='unsigned long' data-ref="72addr" data-ref-filename="72addr">addr</dfn>, <a class="typedef" href="../include/asm/pgtable_64_types.h.html#pte_t" title='pte_t' data-type='struct pte_t' data-ref="pte_t" data-ref-filename="pte_t">pte_t</a> *<dfn class="local col3 decl" id="73ptep" title='ptep' data-type='pte_t *' data-ref="73ptep" data-ref-filename="73ptep">ptep</dfn>)</td></tr>
+<tr><th id="540">540</th><td>{</td></tr>
+<tr><th id="541">541</th><td>	<em>int</em> <dfn class="local col4 decl" id="74ret" title='ret' data-type='int' data-ref="74ret" data-ref-filename="74ret">ret</dfn> = <var>0</var>;</td></tr>
+<tr><th id="542">542</th><td></td></tr>
+<tr><th id="543">543</th><td>	<b>if</b> (<a class="ref fn" href="../include/asm/pgtable.h.html#pte_young" title='pte_young' data-ref="pte_young" data-ref-filename="pte_young">pte_young</a>(*<a class="local col3 ref" href="#73ptep" title='ptep' data-ref="73ptep" data-ref-filename="73ptep">ptep</a>))</td></tr>
+<tr><th id="544">544</th><td>		<a class="local col4 ref" href="#74ret" title='ret' data-ref="74ret" data-ref-filename="74ret">ret</a> = <a class="ref fn" href="../../../include/asm-generic/bitops-instrumented.h.html#test_and_clear_bit" title='test_and_clear_bit' data-ref="test_and_clear_bit" data-ref-filename="test_and_clear_bit">test_and_clear_bit</a>(<a class="macro" href="../include/asm/pgtable_types.h.html#17" title="5" data-ref="_M/_PAGE_BIT_ACCESSED">_PAGE_BIT_ACCESSED</a>,</td></tr>
+<tr><th id="545">545</th><td>					 (<em>unsigned</em> <em>long</em> *) &amp;<a class="local col3 ref" href="#73ptep" title='ptep' data-ref="73ptep" data-ref-filename="73ptep">ptep</a>-&gt;<a class="ref field" href="../include/asm/pgtable_64_types.h.html#(anonymous)::pte" title='(anonymous struct)::pte' data-ref="(anonymous)::pte" data-ref-filename="(anonymous)..pte">pte</a>);</td></tr>
+<tr><th id="546">546</th><td></td></tr>
+<tr><th id="547">547</th><td>	<b>return</b> <a class="local col4 ref" href="#74ret" title='ret' data-ref="74ret" data-ref-filename="74ret">ret</a>;</td></tr>
+<tr><th id="548">548</th><td>}</td></tr>
+<tr><th id="549">549</th><td></td></tr>
+<tr><th id="550">550</th><td><u>#<span data-ppcond="550">ifdef</span> <span class="macro" data-ref="_M/CONFIG_TRANSPARENT_HUGEPAGE">CONFIG_TRANSPARENT_HUGEPAGE</span></u></td></tr>
+<tr><th id="551">551</th><td><em>int</em> pmdp_test_and_clear_young(<b>struct</b> vm_area_struct *vma,</td></tr>
+<tr><th id="552">552</th><td>			      <em>unsigned</em> <em>long</em> addr, pmd_t *pmdp)</td></tr>
+<tr><th id="553">553</th><td>{</td></tr>
+<tr><th id="554">554</th><td>	<em>int</em> ret = <var>0</var>;</td></tr>
+<tr><th id="555">555</th><td></td></tr>
+<tr><th id="556">556</th><td>	<b>if</b> (pmd_young(*pmdp))</td></tr>
+<tr><th id="557">557</th><td>		ret = test_and_clear_bit(_PAGE_BIT_ACCESSED,</td></tr>
+<tr><th id="558">558</th><td>					 (<em>unsigned</em> <em>long</em> *)pmdp);</td></tr>
+<tr><th id="559">559</th><td></td></tr>
+<tr><th id="560">560</th><td>	<b>return</b> ret;</td></tr>
+<tr><th id="561">561</th><td>}</td></tr>
+<tr><th id="562">562</th><td><em>int</em> pudp_test_and_clear_young(<b>struct</b> vm_area_struct *vma,</td></tr>
+<tr><th id="563">563</th><td>			      <em>unsigned</em> <em>long</em> addr, pud_t *pudp)</td></tr>
+<tr><th id="564">564</th><td>{</td></tr>
+<tr><th id="565">565</th><td>	<em>int</em> ret = <var>0</var>;</td></tr>
+<tr><th id="566">566</th><td></td></tr>
+<tr><th id="567">567</th><td>	<b>if</b> (pud_young(*pudp))</td></tr>
+<tr><th id="568">568</th><td>		ret = test_and_clear_bit(_PAGE_BIT_ACCESSED,</td></tr>
+<tr><th id="569">569</th><td>					 (<em>unsigned</em> <em>long</em> *)pudp);</td></tr>
+<tr><th id="570">570</th><td></td></tr>
+<tr><th id="571">571</th><td>	<b>return</b> ret;</td></tr>
+<tr><th id="572">572</th><td>}</td></tr>
+<tr><th id="573">573</th><td><u>#<span data-ppcond="550">endif</span></u></td></tr>
+<tr><th id="574">574</th><td></td></tr>
+<tr><th id="575">575</th><td><em>int</em> <dfn class="decl def fn" id="ptep_clear_flush_young" title='ptep_clear_flush_young' data-ref="ptep_clear_flush_young" data-ref-filename="ptep_clear_flush_young">ptep_clear_flush_young</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/mm_types.h.html#vm_area_struct" title='vm_area_struct' data-ref="vm_area_struct" data-ref-filename="vm_area_struct">vm_area_struct</a> *<dfn class="local col5 decl" id="75vma" title='vma' data-type='struct vm_area_struct *' data-ref="75vma" data-ref-filename="75vma">vma</dfn>,</td></tr>
+<tr><th id="576">576</th><td>			   <em>unsigned</em> <em>long</em> <dfn class="local col6 decl" id="76address" title='address' data-type='unsigned long' data-ref="76address" data-ref-filename="76address">address</dfn>, <a class="typedef" href="../include/asm/pgtable_64_types.h.html#pte_t" title='pte_t' data-type='struct pte_t' data-ref="pte_t" data-ref-filename="pte_t">pte_t</a> *<dfn class="local col7 decl" id="77ptep" title='ptep' data-type='pte_t *' data-ref="77ptep" data-ref-filename="77ptep">ptep</dfn>)</td></tr>
+<tr><th id="577">577</th><td>{</td></tr>
+<tr><th id="578">578</th><td>	<i>/*</i></td></tr>
+<tr><th id="579">579</th><td><i>	 * On x86 CPUs, clearing the accessed bit without a TLB flush</i></td></tr>
+<tr><th id="580">580</th><td><i>	 * doesn't cause data corruption. [ It could cause incorrect</i></td></tr>
+<tr><th id="581">581</th><td><i>	 * page aging and the (mistaken) reclaim of hot pages, but the</i></td></tr>
+<tr><th id="582">582</th><td><i>	 * chance of that should be relatively low. ]</i></td></tr>
+<tr><th id="583">583</th><td><i>	 *</i></td></tr>
+<tr><th id="584">584</th><td><i>	 * So as a performance optimization don't flush the TLB when</i></td></tr>
+<tr><th id="585">585</th><td><i>	 * clearing the accessed bit, it will eventually be flushed by</i></td></tr>
+<tr><th id="586">586</th><td><i>	 * a context switch or a VM operation anyway. [ In the rare</i></td></tr>
+<tr><th id="587">587</th><td><i>	 * event of it not getting flushed for a long time the delay</i></td></tr>
+<tr><th id="588">588</th><td><i>	 * shouldn't really matter because there's no real memory</i></td></tr>
+<tr><th id="589">589</th><td><i>	 * pressure for swapout to react to. ]</i></td></tr>
+<tr><th id="590">590</th><td><i>	 */</i></td></tr>
+<tr><th id="591">591</th><td>	<b>return</b> <a class="ref fn" href="#ptep_test_and_clear_young" title='ptep_test_and_clear_young' data-ref="ptep_test_and_clear_young" data-ref-filename="ptep_test_and_clear_young">ptep_test_and_clear_young</a>(<a class="local col5 ref" href="#75vma" title='vma' data-ref="75vma" data-ref-filename="75vma">vma</a>, <a class="local col6 ref" href="#76address" title='address' data-ref="76address" data-ref-filename="76address">address</a>, <a class="local col7 ref" href="#77ptep" title='ptep' data-ref="77ptep" data-ref-filename="77ptep">ptep</a>);</td></tr>
+<tr><th id="592">592</th><td>}</td></tr>
+<tr><th id="593">593</th><td></td></tr>
+<tr><th id="594">594</th><td><u>#<span data-ppcond="594">ifdef</span> <span class="macro" data-ref="_M/CONFIG_TRANSPARENT_HUGEPAGE">CONFIG_TRANSPARENT_HUGEPAGE</span></u></td></tr>
+<tr><th id="595">595</th><td><em>int</em> pmdp_clear_flush_young(<b>struct</b> vm_area_struct *vma,</td></tr>
+<tr><th id="596">596</th><td>			   <em>unsigned</em> <em>long</em> address, pmd_t *pmdp)</td></tr>
+<tr><th id="597">597</th><td>{</td></tr>
+<tr><th id="598">598</th><td>	<em>int</em> young;</td></tr>
+<tr><th id="599">599</th><td></td></tr>
+<tr><th id="600">600</th><td>	VM_BUG_ON(address &amp; ~HPAGE_PMD_MASK);</td></tr>
+<tr><th id="601">601</th><td></td></tr>
+<tr><th id="602">602</th><td>	young = pmdp_test_and_clear_young(vma, address, pmdp);</td></tr>
+<tr><th id="603">603</th><td>	<b>if</b> (young)</td></tr>
+<tr><th id="604">604</th><td>		flush_tlb_range(vma, address, address + HPAGE_PMD_SIZE);</td></tr>
+<tr><th id="605">605</th><td></td></tr>
+<tr><th id="606">606</th><td>	<b>return</b> young;</td></tr>
+<tr><th id="607">607</th><td>}</td></tr>
+<tr><th id="608">608</th><td><u>#<span data-ppcond="594">endif</span></u></td></tr>
+<tr><th id="609">609</th><td></td></tr>
+<tr><th id="610">610</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="611">611</th><td><i class="doc"> * reserve_top_address - reserves a hole in the top of kernel address space</i></td></tr>
+<tr><th id="612">612</th><td><i class="doc"> *<span class="command"> @reserve</span> - size of hole to reserve</i></td></tr>
+<tr><th id="613">613</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="614">614</th><td><i class="doc"> * Can be used to relocate the fixmap area and poke a hole in the top</i></td></tr>
+<tr><th id="615">615</th><td><i class="doc"> * of kernel address space to make room for a hypervisor.</i></td></tr>
+<tr><th id="616">616</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="617">617</th><td><em>void</em> <a class="macro" href="../../../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="decl def fn" id="reserve_top_address" title='reserve_top_address' data-ref="reserve_top_address" data-ref-filename="reserve_top_address">reserve_top_address</dfn>(<em>unsigned</em> <em>long</em> <dfn class="local col8 decl" id="78reserve" title='reserve' data-type='unsigned long' data-ref="78reserve" data-ref-filename="78reserve">reserve</dfn>)</td></tr>
+<tr><th id="618">618</th><td>{</td></tr>
+<tr><th id="619">619</th><td><u>#<span data-ppcond="619">ifdef</span> <span class="macro" data-ref="_M/CONFIG_X86_32">CONFIG_X86_32</span></u></td></tr>
+<tr><th id="620">620</th><td>	BUG_ON(fixmaps_set &gt; <var>0</var>);</td></tr>
+<tr><th id="621">621</th><td>	__FIXADDR_TOP = round_down(-reserve, <var>1</var> &lt;&lt; PMD_SHIFT) - PAGE_SIZE;</td></tr>
+<tr><th id="622">622</th><td>	printk(KERN_INFO <q>"Reserving virtual address space above 0x%08lx (rounded to 0x%08lx)\n"</q>,</td></tr>
+<tr><th id="623">623</th><td>	       -reserve, __FIXADDR_TOP + PAGE_SIZE);</td></tr>
+<tr><th id="624">624</th><td><u>#<span data-ppcond="619">endif</span></u></td></tr>
+<tr><th id="625">625</th><td>}</td></tr>
+<tr><th id="626">626</th><td></td></tr>
+<tr><th id="627">627</th><td><em>int</em> <dfn class="decl def" id="fixmaps_set" title='fixmaps_set' data-ref="fixmaps_set" data-ref-filename="fixmaps_set">fixmaps_set</dfn>;</td></tr>
+<tr><th id="628">628</th><td></td></tr>
+<tr><th id="629">629</th><td><em>void</em> <dfn class="decl def fn" id="__native_set_fixmap" title='__native_set_fixmap' data-ref="__native_set_fixmap" data-ref-filename="__native_set_fixmap">__native_set_fixmap</dfn>(<b>enum</b> <a class="type" href="../include/asm/fixmap.h.html#fixed_addresses" title='fixed_addresses' data-ref="fixed_addresses" data-ref-filename="fixed_addresses">fixed_addresses</a> <dfn class="local col9 decl" id="79idx" title='idx' data-type='enum fixed_addresses' data-ref="79idx" data-ref-filename="79idx">idx</dfn>, <a class="typedef" href="../include/asm/pgtable_64_types.h.html#pte_t" title='pte_t' data-type='struct pte_t' data-ref="pte_t" data-ref-filename="pte_t">pte_t</a> <dfn class="local col0 decl" id="80pte" title='pte' data-type='pte_t' data-ref="80pte" data-ref-filename="80pte">pte</dfn>)</td></tr>
+<tr><th id="630">630</th><td>{</td></tr>
+<tr><th id="631">631</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col1 decl" id="81address" title='address' data-type='unsigned long' data-ref="81address" data-ref-filename="81address">address</dfn> = <a class="macro" href="../../../include/asm-generic/fixmap.h.html#21" title="(((((((-10UL &lt;&lt; 20) + ((1UL) &lt;&lt; 12))-1) | ((__typeof__((-10UL &lt;&lt; 20) + ((1UL) &lt;&lt; 12)))((1&lt;&lt;21)-1)))+1) - ((1UL) &lt;&lt; 12)) - ((idx) &lt;&lt; 12))" data-ref="_M/__fix_to_virt">__fix_to_virt</a>(<a class="local col9 ref" href="#79idx" title='idx' data-ref="79idx" data-ref-filename="79idx">idx</a>);</td></tr>
+<tr><th id="632">632</th><td></td></tr>
+<tr><th id="633">633</th><td><u>#<span data-ppcond="633">ifdef</span> <a class="macro" href="../../../include/generated/autoconf.h.html#961" data-ref="_M/CONFIG_X86_64">CONFIG_X86_64</a></u></td></tr>
+<tr><th id="634">634</th><td>       <i>/*</i></td></tr>
+<tr><th id="635">635</th><td><i>	* Ensure that the static initial page tables are covering the</i></td></tr>
+<tr><th id="636">636</th><td><i>	* fixmap completely.</i></td></tr>
+<tr><th id="637">637</th><td><i>	*/</i></td></tr>
+<tr><th id="638">638</th><td>	<a class="macro" href="../../../include/linux/build_bug.h.html#49" title="do { extern void __compiletime_assert_639(void) ; if (!(!(__end_of_permanent_fixed_addresses &gt; (2 * 512)))) __compiletime_assert_639(); } while (0)" data-ref="_M/BUILD_BUG_ON">BUILD_BUG_ON</a>(<a class="enum" href="../include/asm/fixmap.h.html#__end_of_permanent_fixed_addresses" title='__end_of_permanent_fixed_addresses' data-ref="__end_of_permanent_fixed_addresses" data-ref-filename="__end_of_permanent_fixed_addresses">__end_of_permanent_fixed_addresses</a> &gt;</td></tr>
+<tr><th id="639">639</th><td>		     (<a class="macro" href="../include/asm/fixmap.h.html#23" title="2" data-ref="_M/FIXMAP_PMD_NUM">FIXMAP_PMD_NUM</a> * <a class="macro" href="../include/asm/pgtable_64_types.h.html#96" title="512" data-ref="_M/PTRS_PER_PTE">PTRS_PER_PTE</a>));</td></tr>
+<tr><th id="640">640</th><td><u>#<span data-ppcond="633">endif</span></u></td></tr>
+<tr><th id="641">641</th><td></td></tr>
+<tr><th id="642">642</th><td>	<b>if</b> (<a class="local col9 ref" href="#79idx" title='idx' data-ref="79idx" data-ref-filename="79idx">idx</a> &gt;= <a class="enum" href="../include/asm/fixmap.h.html#__end_of_fixed_addresses" title='__end_of_fixed_addresses' data-ref="__end_of_fixed_addresses" data-ref-filename="__end_of_fixed_addresses">__end_of_fixed_addresses</a>) {</td></tr>
+<tr><th id="643">643</th><td>		<a class="macro" href="../include/asm/bug.h.html#71" title="do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/arch/x86/mm/pgtable.c&quot;), &quot;i&quot; (643), &quot;i&quot; (0), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); do { ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.unreachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (97)); }); __builtin_unreachable(); } while (0); } while (0)" data-ref="_M/BUG">BUG</a>();</td></tr>
+<tr><th id="644">644</th><td>		<b>return</b>;</td></tr>
+<tr><th id="645">645</th><td>	}</td></tr>
+<tr><th id="646">646</th><td>	<a class="ref fn" href="../include/asm/pgtable_types.h.html#set_pte_vaddr" title='set_pte_vaddr' data-ref="set_pte_vaddr" data-ref-filename="set_pte_vaddr">set_pte_vaddr</a>(<a class="local col1 ref" href="#81address" title='address' data-ref="81address" data-ref-filename="81address">address</a>, <a class="local col0 ref" href="#80pte" title='pte' data-ref="80pte" data-ref-filename="80pte">pte</a>);</td></tr>
+<tr><th id="647">647</th><td>	<a class="ref" href="../include/asm/fixmap.h.html#fixmaps_set" title='fixmaps_set' data-ref="fixmaps_set" data-ref-filename="fixmaps_set">fixmaps_set</a>++;</td></tr>
+<tr><th id="648">648</th><td>}</td></tr>
+<tr><th id="649">649</th><td></td></tr>
+<tr><th id="650">650</th><td><em>void</em> <dfn class="decl def fn" id="native_set_fixmap" title='native_set_fixmap' data-ref="native_set_fixmap" data-ref-filename="native_set_fixmap">native_set_fixmap</dfn>(<b>enum</b> <a class="type" href="../include/asm/fixmap.h.html#fixed_addresses" title='fixed_addresses' data-ref="fixed_addresses" data-ref-filename="fixed_addresses">fixed_addresses</a> <dfn class="local col2 decl" id="82idx" title='idx' data-type='enum fixed_addresses' data-ref="82idx" data-ref-filename="82idx">idx</dfn>, <a class="typedef" href="../../../include/linux/types.h.html#phys_addr_t" title='phys_addr_t' data-type='u64' data-ref="phys_addr_t" data-ref-filename="phys_addr_t">phys_addr_t</a> <dfn class="local col3 decl" id="83phys" title='phys' data-type='phys_addr_t' data-ref="83phys" data-ref-filename="83phys">phys</dfn>,</td></tr>
+<tr><th id="651">651</th><td>		       <a class="typedef" href="../include/asm/pgtable_types.h.html#pgprot_t" title='pgprot_t' data-type='struct pgprot' data-ref="pgprot_t" data-ref-filename="pgprot_t">pgprot_t</a> <dfn class="local col4 decl" id="84flags" title='flags' data-type='pgprot_t' data-ref="84flags" data-ref-filename="84flags">flags</dfn>)</td></tr>
+<tr><th id="652">652</th><td>{</td></tr>
+<tr><th id="653">653</th><td>	<i>/* Sanitize 'prot' against any unsupported bits: */</i></td></tr>
+<tr><th id="654">654</th><td>	<a class="macro" href="../include/asm/pgtable_types.h.html#452" title="((flags).pgprot)" data-ref="_M/pgprot_val">pgprot_val</a>(<a class="local col4 ref" href="#84flags" title='flags' data-ref="84flags" data-ref-filename="84flags">flags</a>) &amp;= <a class="ref" href="../include/asm/pgtable_types.h.html#__default_kernel_pte_mask" title='__default_kernel_pte_mask' data-ref="__default_kernel_pte_mask" data-ref-filename="__default_kernel_pte_mask">__default_kernel_pte_mask</a>;</td></tr>
+<tr><th id="655">655</th><td></td></tr>
+<tr><th id="656">656</th><td>	<a class="ref fn" href="#__native_set_fixmap" title='__native_set_fixmap' data-ref="__native_set_fixmap" data-ref-filename="__native_set_fixmap">__native_set_fixmap</a>(<a class="local col2 ref" href="#82idx" title='idx' data-ref="82idx" data-ref-filename="82idx">idx</a>, <a class="ref fn" href="../include/asm/pgtable.h.html#pfn_pte" title='pfn_pte' data-ref="pfn_pte" data-ref-filename="pfn_pte">pfn_pte</a>(<a class="local col3 ref" href="#83phys" title='phys' data-ref="83phys" data-ref-filename="83phys">phys</a> &gt;&gt; <a class="macro" href="../include/asm/page_types.h.html#10" title="12" data-ref="_M/PAGE_SHIFT">PAGE_SHIFT</a>, <a class="local col4 ref" href="#84flags" title='flags' data-ref="84flags" data-ref-filename="84flags">flags</a>));</td></tr>
+<tr><th id="657">657</th><td>}</td></tr>
+<tr><th id="658">658</th><td></td></tr>
+<tr><th id="659">659</th><td><u>#<span data-ppcond="659">ifdef</span> <a class="macro" href="../../../include/generated/autoconf.h.html#106" data-ref="_M/CONFIG_HAVE_ARCH_HUGE_VMAP">CONFIG_HAVE_ARCH_HUGE_VMAP</a></u></td></tr>
+<tr><th id="660">660</th><td><u>#<span data-ppcond="660">ifdef</span> <span class="macro" data-ref="_M/CONFIG_X86_5LEVEL">CONFIG_X86_5LEVEL</span></u></td></tr>
+<tr><th id="661">661</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="662">662</th><td><i class="doc"> * p4d_set_huge - setup kernel P4D mapping</i></td></tr>
+<tr><th id="663">663</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="664">664</th><td><i class="doc"> * No 512GB pages yet -- always return 0</i></td></tr>
+<tr><th id="665">665</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="666">666</th><td><em>int</em> p4d_set_huge(p4d_t *p4d, phys_addr_t addr, pgprot_t prot)</td></tr>
+<tr><th id="667">667</th><td>{</td></tr>
+<tr><th id="668">668</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="669">669</th><td>}</td></tr>
+<tr><th id="670">670</th><td></td></tr>
+<tr><th id="671">671</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="672">672</th><td><i class="doc"> * p4d_clear_huge - clear kernel P4D mapping when it is set</i></td></tr>
+<tr><th id="673">673</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="674">674</th><td><i class="doc"> * No 512GB pages yet -- always return 0</i></td></tr>
+<tr><th id="675">675</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="676">676</th><td><em>int</em> p4d_clear_huge(p4d_t *p4d)</td></tr>
+<tr><th id="677">677</th><td>{</td></tr>
+<tr><th id="678">678</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="679">679</th><td>}</td></tr>
+<tr><th id="680">680</th><td><u>#<span data-ppcond="660">endif</span></u></td></tr>
+<tr><th id="681">681</th><td></td></tr>
+<tr><th id="682">682</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="683">683</th><td><i class="doc"> * pud_set_huge - setup kernel PUD mapping</i></td></tr>
+<tr><th id="684">684</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="685">685</th><td><i class="doc"> * MTRRs can override PAT memory types with 4KiB granularity. Therefore, this</i></td></tr>
+<tr><th id="686">686</th><td><i class="doc"> * function sets up a huge page only if any of the following conditions are met:</i></td></tr>
+<tr><th id="687">687</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="688">688</th><td><i class="doc"> * - MTRRs are disabled, or</i></td></tr>
+<tr><th id="689">689</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="690">690</th><td><i class="doc"> * - MTRRs are enabled and the range is completely covered by a single MTRR, or</i></td></tr>
+<tr><th id="691">691</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="692">692</th><td><i class="doc"> * - MTRRs are enabled and the corresponding MTRR memory type is WB, which</i></td></tr>
+<tr><th id="693">693</th><td><i class="doc"> *   has no effect on the requested PAT memory type.</i></td></tr>
+<tr><th id="694">694</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="695">695</th><td><i class="doc"> * Callers should try to decrease page size (1GB -&gt; 2MB -&gt; 4K) if the bigger</i></td></tr>
+<tr><th id="696">696</th><td><i class="doc"> * page mapping attempt fails.</i></td></tr>
+<tr><th id="697">697</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="698">698</th><td><i class="doc"> * Returns 1 on success and 0 on failure.</i></td></tr>
+<tr><th id="699">699</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="700">700</th><td><em>int</em> <dfn class="decl def fn" id="pud_set_huge" title='pud_set_huge' data-ref="pud_set_huge" data-ref-filename="pud_set_huge">pud_set_huge</dfn>(<a class="typedef" href="../include/asm/pgtable_types.h.html#pud_t" title='pud_t' data-type='struct pud_t' data-ref="pud_t" data-ref-filename="pud_t">pud_t</a> *<dfn class="local col5 decl" id="85pud" title='pud' data-type='pud_t *' data-ref="85pud" data-ref-filename="85pud">pud</dfn>, <a class="typedef" href="../../../include/linux/types.h.html#phys_addr_t" title='phys_addr_t' data-type='u64' data-ref="phys_addr_t" data-ref-filename="phys_addr_t">phys_addr_t</a> <dfn class="local col6 decl" id="86addr" title='addr' data-type='phys_addr_t' data-ref="86addr" data-ref-filename="86addr">addr</dfn>, <a class="typedef" href="../include/asm/pgtable_types.h.html#pgprot_t" title='pgprot_t' data-type='struct pgprot' data-ref="pgprot_t" data-ref-filename="pgprot_t">pgprot_t</a> <dfn class="local col7 decl" id="87prot" title='prot' data-type='pgprot_t' data-ref="87prot" data-ref-filename="87prot">prot</dfn>)</td></tr>
+<tr><th id="701">701</th><td>{</td></tr>
+<tr><th id="702">702</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="local col8 decl" id="88mtrr" title='mtrr' data-type='u8' data-ref="88mtrr" data-ref-filename="88mtrr">mtrr</dfn>, <dfn class="local col9 decl" id="89uniform" title='uniform' data-type='u8' data-ref="89uniform" data-ref-filename="89uniform">uniform</dfn>;</td></tr>
+<tr><th id="703">703</th><td></td></tr>
+<tr><th id="704">704</th><td>	<a class="local col8 ref" href="#88mtrr" title='mtrr' data-ref="88mtrr" data-ref-filename="88mtrr">mtrr</a> = <a class="ref fn" href="../include/asm/mtrr.h.html#mtrr_type_lookup" title='mtrr_type_lookup' data-ref="mtrr_type_lookup" data-ref-filename="mtrr_type_lookup">mtrr_type_lookup</a>(<a class="local col6 ref" href="#86addr" title='addr' data-ref="86addr" data-ref-filename="86addr">addr</a>, <a class="local col6 ref" href="#86addr" title='addr' data-ref="86addr" data-ref-filename="86addr">addr</a> + <a class="macro" href="../include/asm/pgtable_64_types.h.html#100" title="((1UL) &lt;&lt; 30)" data-ref="_M/PUD_SIZE">PUD_SIZE</a>, &amp;<a class="local col9 ref" href="#89uniform" title='uniform' data-ref="89uniform" data-ref-filename="89uniform">uniform</a>);</td></tr>
+<tr><th id="705">705</th><td>	<b>if</b> ((<a class="local col8 ref" href="#88mtrr" title='mtrr' data-ref="88mtrr" data-ref-filename="88mtrr">mtrr</a> != <a class="macro" href="../include/uapi/asm/mtrr.h.html#122" title="0xff" data-ref="_M/MTRR_TYPE_INVALID">MTRR_TYPE_INVALID</a>) &amp;&amp; (!<a class="local col9 ref" href="#89uniform" title='uniform' data-ref="89uniform" data-ref-filename="89uniform">uniform</a>) &amp;&amp;</td></tr>
+<tr><th id="706">706</th><td>	    (<a class="local col8 ref" href="#88mtrr" title='mtrr' data-ref="88mtrr" data-ref-filename="88mtrr">mtrr</a> != <a class="macro" href="../include/uapi/asm/mtrr.h.html#114" title="6" data-ref="_M/MTRR_TYPE_WRBACK">MTRR_TYPE_WRBACK</a>))</td></tr>
+<tr><th id="707">707</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="708">708</th><td></td></tr>
+<tr><th id="709">709</th><td>	<i>/* Bail out if we are we on a populated non-leaf entry: */</i></td></tr>
+<tr><th id="710">710</th><td>	<b>if</b> (<a class="ref fn" href="../include/asm/pgtable.h.html#pud_present" title='pud_present' data-ref="pud_present" data-ref-filename="pud_present">pud_present</a>(*<a class="local col5 ref" href="#85pud" title='pud' data-ref="85pud" data-ref-filename="85pud">pud</a>) &amp;&amp; !<a class="ref fn" href="../../../include/linux/hugetlb.h.html#pud_huge" title='pud_huge' data-ref="pud_huge" data-ref-filename="pud_huge">pud_huge</a>(*<a class="local col5 ref" href="#85pud" title='pud' data-ref="85pud" data-ref-filename="85pud">pud</a>))</td></tr>
+<tr><th id="711">711</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="712">712</th><td></td></tr>
+<tr><th id="713">713</th><td>	<a class="local col7 ref" href="#87prot" title='prot' data-ref="87prot" data-ref-filename="87prot">prot</a> = <a class="ref fn" href="../include/asm/pgtable_types.h.html#pgprot_4k_2_large" title='pgprot_4k_2_large' data-ref="pgprot_4k_2_large" data-ref-filename="pgprot_4k_2_large">pgprot_4k_2_large</a>(<a class="local col7 ref" href="#87prot" title='prot' data-ref="87prot" data-ref-filename="87prot">prot</a>);</td></tr>
+<tr><th id="714">714</th><td></td></tr>
+<tr><th id="715">715</th><td>	<a class="macro" href="../include/asm/pgtable.h.html#63" title="native_set_pte((pte_t *)pud, pfn_pte( (u64)addr &gt;&gt; 12, ((pgprot_t) { (((prot).pgprot) | (((pteval_t)(1)) &lt;&lt; 7)) } )))" data-ref="_M/set_pte">set_pte</a>((<a class="typedef" href="../include/asm/pgtable_64_types.h.html#pte_t" title='pte_t' data-type='struct pte_t' data-ref="pte_t" data-ref-filename="pte_t">pte_t</a> *)<a class="local col5 ref" href="#85pud" title='pud' data-ref="85pud" data-ref-filename="85pud">pud</a>, <a class="ref fn" href="../include/asm/pgtable.h.html#pfn_pte" title='pfn_pte' data-ref="pfn_pte" data-ref-filename="pfn_pte">pfn_pte</a>(</td></tr>
+<tr><th id="716">716</th><td>		(<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a>)<a class="local col6 ref" href="#86addr" title='addr' data-ref="86addr" data-ref-filename="86addr">addr</a> &gt;&gt; <a class="macro" href="../include/asm/page_types.h.html#10" title="12" data-ref="_M/PAGE_SHIFT">PAGE_SHIFT</a>,</td></tr>
+<tr><th id="717">717</th><td>		<a class="macro" href="../include/asm/pgtable_types.h.html#453" title="((pgprot_t) { (((prot).pgprot) | (((pteval_t)(1)) &lt;&lt; 7)) } )" data-ref="_M/__pgprot">__pgprot</a>(<a class="macro" href="../include/asm/pgtable_types.h.html#452" title="((prot).pgprot)" data-ref="_M/pgprot_val">pgprot_val</a>(<a class="local col7 ref" href="#87prot" title='prot' data-ref="87prot" data-ref-filename="87prot">prot</a>) | <a class="macro" href="../include/asm/pgtable_types.h.html#49" title="(((pteval_t)(1)) &lt;&lt; 7)" data-ref="_M/_PAGE_PSE">_PAGE_PSE</a>)));</td></tr>
+<tr><th id="718">718</th><td></td></tr>
+<tr><th id="719">719</th><td>	<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="720">720</th><td>}</td></tr>
+<tr><th id="721">721</th><td></td></tr>
+<tr><th id="722">722</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="723">723</th><td><i class="doc"> * pmd_set_huge - setup kernel PMD mapping</i></td></tr>
+<tr><th id="724">724</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="725">725</th><td><i class="doc"> * See text over pud_set_huge() above.</i></td></tr>
+<tr><th id="726">726</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="727">727</th><td><i class="doc"> * Returns 1 on success and 0 on failure.</i></td></tr>
+<tr><th id="728">728</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="729">729</th><td><em>int</em> <dfn class="decl def fn" id="pmd_set_huge" title='pmd_set_huge' data-ref="pmd_set_huge" data-ref-filename="pmd_set_huge">pmd_set_huge</dfn>(<a class="typedef" href="../include/asm/pgtable_types.h.html#pmd_t" title='pmd_t' data-type='struct pmd_t' data-ref="pmd_t" data-ref-filename="pmd_t">pmd_t</a> *<dfn class="local col0 decl" id="90pmd" title='pmd' data-type='pmd_t *' data-ref="90pmd" data-ref-filename="90pmd">pmd</dfn>, <a class="typedef" href="../../../include/linux/types.h.html#phys_addr_t" title='phys_addr_t' data-type='u64' data-ref="phys_addr_t" data-ref-filename="phys_addr_t">phys_addr_t</a> <dfn class="local col1 decl" id="91addr" title='addr' data-type='phys_addr_t' data-ref="91addr" data-ref-filename="91addr">addr</dfn>, <a class="typedef" href="../include/asm/pgtable_types.h.html#pgprot_t" title='pgprot_t' data-type='struct pgprot' data-ref="pgprot_t" data-ref-filename="pgprot_t">pgprot_t</a> <dfn class="local col2 decl" id="92prot" title='prot' data-type='pgprot_t' data-ref="92prot" data-ref-filename="92prot">prot</dfn>)</td></tr>
+<tr><th id="730">730</th><td>{</td></tr>
+<tr><th id="731">731</th><td>	<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="local col3 decl" id="93mtrr" title='mtrr' data-type='u8' data-ref="93mtrr" data-ref-filename="93mtrr">mtrr</dfn>, <dfn class="local col4 decl" id="94uniform" title='uniform' data-type='u8' data-ref="94uniform" data-ref-filename="94uniform">uniform</dfn>;</td></tr>
+<tr><th id="732">732</th><td></td></tr>
+<tr><th id="733">733</th><td>	<a class="local col3 ref" href="#93mtrr" title='mtrr' data-ref="93mtrr" data-ref-filename="93mtrr">mtrr</a> = <a class="ref fn" href="../include/asm/mtrr.h.html#mtrr_type_lookup" title='mtrr_type_lookup' data-ref="mtrr_type_lookup" data-ref-filename="mtrr_type_lookup">mtrr_type_lookup</a>(<a class="local col1 ref" href="#91addr" title='addr' data-ref="91addr" data-ref-filename="91addr">addr</a>, <a class="local col1 ref" href="#91addr" title='addr' data-ref="91addr" data-ref-filename="91addr">addr</a> + <a class="macro" href="../include/asm/pgtable_64_types.h.html#98" title="((1UL) &lt;&lt; 21)" data-ref="_M/PMD_SIZE">PMD_SIZE</a>, &amp;<a class="local col4 ref" href="#94uniform" title='uniform' data-ref="94uniform" data-ref-filename="94uniform">uniform</a>);</td></tr>
+<tr><th id="734">734</th><td>	<b>if</b> ((<a class="local col3 ref" href="#93mtrr" title='mtrr' data-ref="93mtrr" data-ref-filename="93mtrr">mtrr</a> != <a class="macro" href="../include/uapi/asm/mtrr.h.html#122" title="0xff" data-ref="_M/MTRR_TYPE_INVALID">MTRR_TYPE_INVALID</a>) &amp;&amp; (!<a class="local col4 ref" href="#94uniform" title='uniform' data-ref="94uniform" data-ref-filename="94uniform">uniform</a>) &amp;&amp;</td></tr>
+<tr><th id="735">735</th><td>	    (<a class="local col3 ref" href="#93mtrr" title='mtrr' data-ref="93mtrr" data-ref-filename="93mtrr">mtrr</a> != <a class="macro" href="../include/uapi/asm/mtrr.h.html#114" title="6" data-ref="_M/MTRR_TYPE_WRBACK">MTRR_TYPE_WRBACK</a>)) {</td></tr>
+<tr><th id="736">736</th><td>		<a class="macro" href="../../../include/linux/printk.h.html#387" title="({ static bool __attribute__((__section__(&quot;.data.once&quot;))) __print_once; bool __ret_print_once = !__print_once; if (!__print_once) { __print_once = true; printk(&quot;\001&quot; &quot;4&quot; &quot;%s: Cannot satisfy [mem %#010llx-%#010llx] with a huge-page mapping due to MTRR override.\n&quot;, __func__, addr, addr + ((1UL) &lt;&lt; 21)); } __builtin_expect(!!(__ret_print_once), 0); })" data-ref="_M/pr_warn_once">pr_warn_once</a>(<q>"%s: Cannot satisfy [mem %#010llx-%#010llx] with a huge-page mapping due to MTRR override.\n"</q>,</td></tr>
+<tr><th id="737">737</th><td>			     <b>__func__</b>, <a class="local col1 ref" href="#91addr" title='addr' data-ref="91addr" data-ref-filename="91addr">addr</a>, <a class="local col1 ref" href="#91addr" title='addr' data-ref="91addr" data-ref-filename="91addr">addr</a> + PMD_SIZE);</td></tr>
+<tr><th id="738">738</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="739">739</th><td>	}</td></tr>
+<tr><th id="740">740</th><td></td></tr>
+<tr><th id="741">741</th><td>	<i>/* Bail out if we are we on a populated non-leaf entry: */</i></td></tr>
+<tr><th id="742">742</th><td>	<b>if</b> (<a class="ref fn" href="../include/asm/pgtable.h.html#pmd_present" title='pmd_present' data-ref="pmd_present" data-ref-filename="pmd_present">pmd_present</a>(*<a class="local col0 ref" href="#90pmd" title='pmd' data-ref="90pmd" data-ref-filename="90pmd">pmd</a>) &amp;&amp; !<a class="ref fn" href="../../../include/linux/hugetlb.h.html#pmd_huge" title='pmd_huge' data-ref="pmd_huge" data-ref-filename="pmd_huge">pmd_huge</a>(*<a class="local col0 ref" href="#90pmd" title='pmd' data-ref="90pmd" data-ref-filename="90pmd">pmd</a>))</td></tr>
+<tr><th id="743">743</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="744">744</th><td></td></tr>
+<tr><th id="745">745</th><td>	<a class="local col2 ref" href="#92prot" title='prot' data-ref="92prot" data-ref-filename="92prot">prot</a> = <a class="ref fn" href="../include/asm/pgtable_types.h.html#pgprot_4k_2_large" title='pgprot_4k_2_large' data-ref="pgprot_4k_2_large" data-ref-filename="pgprot_4k_2_large">pgprot_4k_2_large</a>(<a class="local col2 ref" href="#92prot" title='prot' data-ref="92prot" data-ref-filename="92prot">prot</a>);</td></tr>
+<tr><th id="746">746</th><td></td></tr>
+<tr><th id="747">747</th><td>	<a class="macro" href="../include/asm/pgtable.h.html#63" title="native_set_pte((pte_t *)pmd, pfn_pte( (u64)addr &gt;&gt; 12, ((pgprot_t) { (((prot).pgprot) | (((pteval_t)(1)) &lt;&lt; 7)) } )))" data-ref="_M/set_pte">set_pte</a>((<a class="typedef" href="../include/asm/pgtable_64_types.h.html#pte_t" title='pte_t' data-type='struct pte_t' data-ref="pte_t" data-ref-filename="pte_t">pte_t</a> *)<a class="local col0 ref" href="#90pmd" title='pmd' data-ref="90pmd" data-ref-filename="90pmd">pmd</a>, <a class="ref fn" href="../include/asm/pgtable.h.html#pfn_pte" title='pfn_pte' data-ref="pfn_pte" data-ref-filename="pfn_pte">pfn_pte</a>(</td></tr>
+<tr><th id="748">748</th><td>		(<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a>)<a class="local col1 ref" href="#91addr" title='addr' data-ref="91addr" data-ref-filename="91addr">addr</a> &gt;&gt; <a class="macro" href="../include/asm/page_types.h.html#10" title="12" data-ref="_M/PAGE_SHIFT">PAGE_SHIFT</a>,</td></tr>
+<tr><th id="749">749</th><td>		<a class="macro" href="../include/asm/pgtable_types.h.html#453" title="((pgprot_t) { (((prot).pgprot) | (((pteval_t)(1)) &lt;&lt; 7)) } )" data-ref="_M/__pgprot">__pgprot</a>(<a class="macro" href="../include/asm/pgtable_types.h.html#452" title="((prot).pgprot)" data-ref="_M/pgprot_val">pgprot_val</a>(<a class="local col2 ref" href="#92prot" title='prot' data-ref="92prot" data-ref-filename="92prot">prot</a>) | <a class="macro" href="../include/asm/pgtable_types.h.html#49" title="(((pteval_t)(1)) &lt;&lt; 7)" data-ref="_M/_PAGE_PSE">_PAGE_PSE</a>)));</td></tr>
+<tr><th id="750">750</th><td></td></tr>
+<tr><th id="751">751</th><td>	<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="752">752</th><td>}</td></tr>
+<tr><th id="753">753</th><td></td></tr>
+<tr><th id="754">754</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="755">755</th><td><i class="doc"> * pud_clear_huge - clear kernel PUD mapping when it is set</i></td></tr>
+<tr><th id="756">756</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="757">757</th><td><i class="doc"> * Returns 1 on success and 0 on failure (no PUD map is found).</i></td></tr>
+<tr><th id="758">758</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="759">759</th><td><em>int</em> <dfn class="decl def fn" id="pud_clear_huge" title='pud_clear_huge' data-ref="pud_clear_huge" data-ref-filename="pud_clear_huge">pud_clear_huge</dfn>(<a class="typedef" href="../include/asm/pgtable_types.h.html#pud_t" title='pud_t' data-type='struct pud_t' data-ref="pud_t" data-ref-filename="pud_t">pud_t</a> *<dfn class="local col5 decl" id="95pud" title='pud' data-type='pud_t *' data-ref="95pud" data-ref-filename="95pud">pud</dfn>)</td></tr>
+<tr><th id="760">760</th><td>{</td></tr>
+<tr><th id="761">761</th><td>	<b>if</b> (<a class="ref fn" href="../include/asm/pgtable.h.html#pud_large" title='pud_large' data-ref="pud_large" data-ref-filename="pud_large">pud_large</a>(*<a class="local col5 ref" href="#95pud" title='pud' data-ref="95pud" data-ref-filename="95pud">pud</a>)) {</td></tr>
+<tr><th id="762">762</th><td>		<a class="macro" href="../include/asm/pgtable.h.html#89" title="native_pud_clear(pud)" data-ref="_M/pud_clear">pud_clear</a>(<a class="local col5 ref" href="#95pud" title='pud' data-ref="95pud" data-ref-filename="95pud">pud</a>);</td></tr>
+<tr><th id="763">763</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="764">764</th><td>	}</td></tr>
+<tr><th id="765">765</th><td></td></tr>
+<tr><th id="766">766</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="767">767</th><td>}</td></tr>
+<tr><th id="768">768</th><td></td></tr>
+<tr><th id="769">769</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="770">770</th><td><i class="doc"> * pmd_clear_huge - clear kernel PMD mapping when it is set</i></td></tr>
+<tr><th id="771">771</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="772">772</th><td><i class="doc"> * Returns 1 on success and 0 on failure (no PMD map is found).</i></td></tr>
+<tr><th id="773">773</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="774">774</th><td><em>int</em> <dfn class="decl def fn" id="pmd_clear_huge" title='pmd_clear_huge' data-ref="pmd_clear_huge" data-ref-filename="pmd_clear_huge">pmd_clear_huge</dfn>(<a class="typedef" href="../include/asm/pgtable_types.h.html#pmd_t" title='pmd_t' data-type='struct pmd_t' data-ref="pmd_t" data-ref-filename="pmd_t">pmd_t</a> *<dfn class="local col6 decl" id="96pmd" title='pmd' data-type='pmd_t *' data-ref="96pmd" data-ref-filename="96pmd">pmd</dfn>)</td></tr>
+<tr><th id="775">775</th><td>{</td></tr>
+<tr><th id="776">776</th><td>	<b>if</b> (<a class="ref fn" href="../include/asm/pgtable.h.html#pmd_large" title='pmd_large' data-ref="pmd_large" data-ref-filename="pmd_large">pmd_large</a>(*<a class="local col6 ref" href="#96pmd" title='pmd' data-ref="96pmd" data-ref-filename="96pmd">pmd</a>)) {</td></tr>
+<tr><th id="777">777</th><td>		<a class="macro" href="../include/asm/pgtable.h.html#93" title="native_pmd_clear(pmd)" data-ref="_M/pmd_clear">pmd_clear</a>(<a class="local col6 ref" href="#96pmd" title='pmd' data-ref="96pmd" data-ref-filename="96pmd">pmd</a>);</td></tr>
+<tr><th id="778">778</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="779">779</th><td>	}</td></tr>
+<tr><th id="780">780</th><td></td></tr>
+<tr><th id="781">781</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="782">782</th><td>}</td></tr>
+<tr><th id="783">783</th><td></td></tr>
+<tr><th id="784">784</th><td><i>/*</i></td></tr>
+<tr><th id="785">785</th><td><i> * Until we support 512GB pages, skip them in the vmap area.</i></td></tr>
+<tr><th id="786">786</th><td><i> */</i></td></tr>
+<tr><th id="787">787</th><td><em>int</em> <dfn class="decl def fn" id="p4d_free_pud_page" title='p4d_free_pud_page' data-ref="p4d_free_pud_page" data-ref-filename="p4d_free_pud_page">p4d_free_pud_page</dfn>(<a class="typedef" href="../../../include/asm-generic/pgtable-nop4d.h.html#p4d_t" title='p4d_t' data-type='struct p4d_t' data-ref="p4d_t" data-ref-filename="p4d_t">p4d_t</a> *<dfn class="local col7 decl" id="97p4d" title='p4d' data-type='p4d_t *' data-ref="97p4d" data-ref-filename="97p4d">p4d</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col8 decl" id="98addr" title='addr' data-type='unsigned long' data-ref="98addr" data-ref-filename="98addr">addr</dfn>)</td></tr>
+<tr><th id="788">788</th><td>{</td></tr>
+<tr><th id="789">789</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="790">790</th><td>}</td></tr>
+<tr><th id="791">791</th><td></td></tr>
+<tr><th id="792">792</th><td><u>#<span data-ppcond="792">ifdef</span> <a class="macro" href="../../../include/generated/autoconf.h.html#961" data-ref="_M/CONFIG_X86_64">CONFIG_X86_64</a></u></td></tr>
+<tr><th id="793">793</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="794">794</th><td><i class="doc"> * pud_free_pmd_page - Clear pud entry and free pmd page.</i></td></tr>
+<tr><th id="795">795</th><td><i class="doc"> *<span class="command"> @pud</span>: Pointer to a PUD.</i></td></tr>
+<tr><th id="796">796</th><td><i class="doc"> *<span class="command"> @addr</span>: Virtual address associated with pud.</i></td></tr>
+<tr><th id="797">797</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="798">798</th><td><i class="doc"> * Context: The pud range has been unmapped and TLB purged.</i></td></tr>
+<tr><th id="799">799</th><td><i class="doc"> * Return: 1 if clearing the entry succeeded. 0 otherwise.</i></td></tr>
+<tr><th id="800">800</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="801">801</th><td><i class="doc"> * NOTE: Callers must allow a single page allocation.</i></td></tr>
+<tr><th id="802">802</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="803">803</th><td><em>int</em> <dfn class="decl def fn" id="pud_free_pmd_page" title='pud_free_pmd_page' data-ref="pud_free_pmd_page" data-ref-filename="pud_free_pmd_page">pud_free_pmd_page</dfn>(<a class="typedef" href="../include/asm/pgtable_types.h.html#pud_t" title='pud_t' data-type='struct pud_t' data-ref="pud_t" data-ref-filename="pud_t">pud_t</a> *<dfn class="local col9 decl" id="99pud" title='pud' data-type='pud_t *' data-ref="99pud" data-ref-filename="99pud">pud</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col0 decl" id="100addr" title='addr' data-type='unsigned long' data-ref="100addr" data-ref-filename="100addr">addr</dfn>)</td></tr>
+<tr><th id="804">804</th><td>{</td></tr>
+<tr><th id="805">805</th><td>	<a class="typedef" href="../include/asm/pgtable_types.h.html#pmd_t" title='pmd_t' data-type='struct pmd_t' data-ref="pmd_t" data-ref-filename="pmd_t">pmd_t</a> *<dfn class="local col1 decl" id="101pmd" title='pmd' data-type='pmd_t *' data-ref="101pmd" data-ref-filename="101pmd">pmd</dfn>, *<dfn class="local col2 decl" id="102pmd_sv" title='pmd_sv' data-type='pmd_t *' data-ref="102pmd_sv" data-ref-filename="102pmd_sv">pmd_sv</dfn>;</td></tr>
+<tr><th id="806">806</th><td>	<a class="typedef" href="../include/asm/pgtable_64_types.h.html#pte_t" title='pte_t' data-type='struct pte_t' data-ref="pte_t" data-ref-filename="pte_t">pte_t</a> *<dfn class="local col3 decl" id="103pte" title='pte' data-type='pte_t *' data-ref="103pte" data-ref-filename="103pte">pte</dfn>;</td></tr>
+<tr><th id="807">807</th><td>	<em>int</em> <dfn class="local col4 decl" id="104i" title='i' data-type='int' data-ref="104i" data-ref-filename="104i">i</dfn>;</td></tr>
+<tr><th id="808">808</th><td></td></tr>
+<tr><th id="809">809</th><td>	<a class="local col1 ref" href="#101pmd" title='pmd' data-ref="101pmd" data-ref-filename="101pmd">pmd</a> = (<a class="typedef" href="../include/asm/pgtable_types.h.html#pmd_t" title='pmd_t' data-type='struct pmd_t' data-ref="pmd_t" data-ref-filename="pmd_t">pmd_t</a> *)<a class="ref fn" href="../include/asm/pgtable.h.html#pud_page_vaddr" title='pud_page_vaddr' data-ref="pud_page_vaddr" data-ref-filename="pud_page_vaddr">pud_page_vaddr</a>(*<a class="local col9 ref" href="#99pud" title='pud' data-ref="99pud" data-ref-filename="99pud">pud</a>);</td></tr>
+<tr><th id="810">810</th><td>	<a class="local col2 ref" href="#102pmd_sv" title='pmd_sv' data-ref="102pmd_sv" data-ref-filename="102pmd_sv">pmd_sv</a> = (<a class="typedef" href="../include/asm/pgtable_types.h.html#pmd_t" title='pmd_t' data-type='struct pmd_t' data-ref="pmd_t" data-ref-filename="pmd_t">pmd_t</a> *)<a class="macro" href="../../../include/linux/gfp.h.html#533" title="__get_free_pages((((( gfp_t)(0x400u|0x800u)) | (( gfp_t)0x40u) | (( gfp_t)0x80u))), 0)" data-ref="_M/__get_free_page">__get_free_page</a>(<a class="macro" href="../../../include/linux/gfp.h.html#290" title="((( gfp_t)(0x400u|0x800u)) | (( gfp_t)0x40u) | (( gfp_t)0x80u))" data-ref="_M/GFP_KERNEL">GFP_KERNEL</a>);</td></tr>
+<tr><th id="811">811</th><td>	<b>if</b> (!<a class="local col2 ref" href="#102pmd_sv" title='pmd_sv' data-ref="102pmd_sv" data-ref-filename="102pmd_sv">pmd_sv</a>)</td></tr>
+<tr><th id="812">812</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="813">813</th><td></td></tr>
+<tr><th id="814">814</th><td>	<b>for</b> (<a class="local col4 ref" href="#104i" title='i' data-ref="104i" data-ref-filename="104i">i</a> = <var>0</var>; <a class="local col4 ref" href="#104i" title='i' data-ref="104i" data-ref-filename="104i">i</a> &lt; <a class="macro" href="../include/asm/pgtable_64_types.h.html#91" title="512" data-ref="_M/PTRS_PER_PMD">PTRS_PER_PMD</a>; <a class="local col4 ref" href="#104i" title='i' data-ref="104i" data-ref-filename="104i">i</a>++) {</td></tr>
+<tr><th id="815">815</th><td>		<a class="local col2 ref" href="#102pmd_sv" title='pmd_sv' data-ref="102pmd_sv" data-ref-filename="102pmd_sv">pmd_sv</a>[<a class="local col4 ref" href="#104i" title='i' data-ref="104i" data-ref-filename="104i">i</a>] = <a class="local col1 ref" href="#101pmd" title='pmd' data-ref="101pmd" data-ref-filename="101pmd">pmd</a>[<a class="local col4 ref" href="#104i" title='i' data-ref="104i" data-ref-filename="104i">i</a>];</td></tr>
+<tr><th id="816">816</th><td>		<b>if</b> (!<a class="ref fn" href="../include/asm/pgtable.h.html#pmd_none" title='pmd_none' data-ref="pmd_none" data-ref-filename="pmd_none">pmd_none</a>(<a class="local col1 ref" href="#101pmd" title='pmd' data-ref="101pmd" data-ref-filename="101pmd">pmd</a>[<a class="local col4 ref" href="#104i" title='i' data-ref="104i" data-ref-filename="104i">i</a>]))</td></tr>
+<tr><th id="817">817</th><td>			<a class="macro" href="../include/asm/pgtable.h.html#93" title="native_pmd_clear(&amp;pmd[i])" data-ref="_M/pmd_clear">pmd_clear</a>(&amp;<a class="local col1 ref" href="#101pmd" title='pmd' data-ref="101pmd" data-ref-filename="101pmd">pmd</a>[<a class="local col4 ref" href="#104i" title='i' data-ref="104i" data-ref-filename="104i">i</a>]);</td></tr>
+<tr><th id="818">818</th><td>	}</td></tr>
+<tr><th id="819">819</th><td></td></tr>
+<tr><th id="820">820</th><td>	<a class="macro" href="../include/asm/pgtable.h.html#89" title="native_pud_clear(pud)" data-ref="_M/pud_clear">pud_clear</a>(<a class="local col9 ref" href="#99pud" title='pud' data-ref="99pud" data-ref-filename="99pud">pud</a>);</td></tr>
+<tr><th id="821">821</th><td></td></tr>
+<tr><th id="822">822</th><td>	<i>/* INVLPG to clear all paging-structure caches */</i></td></tr>
+<tr><th id="823">823</th><td>	<a class="ref fn" href="../include/asm/tlbflush.h.html#flush_tlb_kernel_range" title='flush_tlb_kernel_range' data-ref="flush_tlb_kernel_range" data-ref-filename="flush_tlb_kernel_range">flush_tlb_kernel_range</a>(<a class="local col0 ref" href="#100addr" title='addr' data-ref="100addr" data-ref-filename="100addr">addr</a>, <a class="local col0 ref" href="#100addr" title='addr' data-ref="100addr" data-ref-filename="100addr">addr</a> + <a class="macro" href="../include/asm/page_types.h.html#11" title="((1UL) &lt;&lt; 12)" data-ref="_M/PAGE_SIZE">PAGE_SIZE</a>-<var>1</var>);</td></tr>
+<tr><th id="824">824</th><td></td></tr>
+<tr><th id="825">825</th><td>	<b>for</b> (<a class="local col4 ref" href="#104i" title='i' data-ref="104i" data-ref-filename="104i">i</a> = <var>0</var>; <a class="local col4 ref" href="#104i" title='i' data-ref="104i" data-ref-filename="104i">i</a> &lt; <a class="macro" href="../include/asm/pgtable_64_types.h.html#91" title="512" data-ref="_M/PTRS_PER_PMD">PTRS_PER_PMD</a>; <a class="local col4 ref" href="#104i" title='i' data-ref="104i" data-ref-filename="104i">i</a>++) {</td></tr>
+<tr><th id="826">826</th><td>		<b>if</b> (!<a class="ref fn" href="../include/asm/pgtable.h.html#pmd_none" title='pmd_none' data-ref="pmd_none" data-ref-filename="pmd_none">pmd_none</a>(<a class="local col2 ref" href="#102pmd_sv" title='pmd_sv' data-ref="102pmd_sv" data-ref-filename="102pmd_sv">pmd_sv</a>[<a class="local col4 ref" href="#104i" title='i' data-ref="104i" data-ref-filename="104i">i</a>])) {</td></tr>
+<tr><th id="827">827</th><td>			<a class="local col3 ref" href="#103pte" title='pte' data-ref="103pte" data-ref-filename="103pte">pte</a> = (<a class="typedef" href="../include/asm/pgtable_64_types.h.html#pte_t" title='pte_t' data-type='struct pte_t' data-ref="pte_t" data-ref-filename="pte_t">pte_t</a> *)<a class="ref fn" href="../include/asm/pgtable.h.html#pmd_page_vaddr" title='pmd_page_vaddr' data-ref="pmd_page_vaddr" data-ref-filename="pmd_page_vaddr">pmd_page_vaddr</a>(<a class="local col2 ref" href="#102pmd_sv" title='pmd_sv' data-ref="102pmd_sv" data-ref-filename="102pmd_sv">pmd_sv</a>[<a class="local col4 ref" href="#104i" title='i' data-ref="104i" data-ref-filename="104i">i</a>]);</td></tr>
+<tr><th id="828">828</th><td>			<a class="macro" href="../../../include/linux/gfp.h.html#551" title="free_pages(((unsigned long)pte), 0)" data-ref="_M/free_page">free_page</a>((<em>unsigned</em> <em>long</em>)<a class="local col3 ref" href="#103pte" title='pte' data-ref="103pte" data-ref-filename="103pte">pte</a>);</td></tr>
+<tr><th id="829">829</th><td>		}</td></tr>
+<tr><th id="830">830</th><td>	}</td></tr>
+<tr><th id="831">831</th><td></td></tr>
+<tr><th id="832">832</th><td>	<a class="macro" href="../../../include/linux/gfp.h.html#551" title="free_pages(((unsigned long)pmd_sv), 0)" data-ref="_M/free_page">free_page</a>((<em>unsigned</em> <em>long</em>)<a class="local col2 ref" href="#102pmd_sv" title='pmd_sv' data-ref="102pmd_sv" data-ref-filename="102pmd_sv">pmd_sv</a>);</td></tr>
+<tr><th id="833">833</th><td>	<a class="macro" href="../../../include/linux/gfp.h.html#551" title="free_pages(((unsigned long)pmd), 0)" data-ref="_M/free_page">free_page</a>((<em>unsigned</em> <em>long</em>)<a class="local col1 ref" href="#101pmd" title='pmd' data-ref="101pmd" data-ref-filename="101pmd">pmd</a>);</td></tr>
+<tr><th id="834">834</th><td></td></tr>
+<tr><th id="835">835</th><td>	<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="836">836</th><td>}</td></tr>
+<tr><th id="837">837</th><td></td></tr>
+<tr><th id="838">838</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="839">839</th><td><i class="doc"> * pmd_free_pte_page - Clear pmd entry and free pte page.</i></td></tr>
+<tr><th id="840">840</th><td><i class="doc"> *<span class="command"> @pmd</span>: Pointer to a PMD.</i></td></tr>
+<tr><th id="841">841</th><td><i class="doc"> *<span class="command"> @addr</span>: Virtual address associated with pmd.</i></td></tr>
+<tr><th id="842">842</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="843">843</th><td><i class="doc"> * Context: The pmd range has been unmapped and TLB purged.</i></td></tr>
+<tr><th id="844">844</th><td><i class="doc"> * Return: 1 if clearing the entry succeeded. 0 otherwise.</i></td></tr>
+<tr><th id="845">845</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="846">846</th><td><em>int</em> <dfn class="decl def fn" id="pmd_free_pte_page" title='pmd_free_pte_page' data-ref="pmd_free_pte_page" data-ref-filename="pmd_free_pte_page">pmd_free_pte_page</dfn>(<a class="typedef" href="../include/asm/pgtable_types.h.html#pmd_t" title='pmd_t' data-type='struct pmd_t' data-ref="pmd_t" data-ref-filename="pmd_t">pmd_t</a> *<dfn class="local col5 decl" id="105pmd" title='pmd' data-type='pmd_t *' data-ref="105pmd" data-ref-filename="105pmd">pmd</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col6 decl" id="106addr" title='addr' data-type='unsigned long' data-ref="106addr" data-ref-filename="106addr">addr</dfn>)</td></tr>
+<tr><th id="847">847</th><td>{</td></tr>
+<tr><th id="848">848</th><td>	<a class="typedef" href="../include/asm/pgtable_64_types.h.html#pte_t" title='pte_t' data-type='struct pte_t' data-ref="pte_t" data-ref-filename="pte_t">pte_t</a> *<dfn class="local col7 decl" id="107pte" title='pte' data-type='pte_t *' data-ref="107pte" data-ref-filename="107pte">pte</dfn>;</td></tr>
+<tr><th id="849">849</th><td></td></tr>
+<tr><th id="850">850</th><td>	<a class="local col7 ref" href="#107pte" title='pte' data-ref="107pte" data-ref-filename="107pte">pte</a> = (<a class="typedef" href="../include/asm/pgtable_64_types.h.html#pte_t" title='pte_t' data-type='struct pte_t' data-ref="pte_t" data-ref-filename="pte_t">pte_t</a> *)<a class="ref fn" href="../include/asm/pgtable.h.html#pmd_page_vaddr" title='pmd_page_vaddr' data-ref="pmd_page_vaddr" data-ref-filename="pmd_page_vaddr">pmd_page_vaddr</a>(*<a class="local col5 ref" href="#105pmd" title='pmd' data-ref="105pmd" data-ref-filename="105pmd">pmd</a>);</td></tr>
+<tr><th id="851">851</th><td>	<a class="macro" href="../include/asm/pgtable.h.html#93" title="native_pmd_clear(pmd)" data-ref="_M/pmd_clear">pmd_clear</a>(<a class="local col5 ref" href="#105pmd" title='pmd' data-ref="105pmd" data-ref-filename="105pmd">pmd</a>);</td></tr>
+<tr><th id="852">852</th><td></td></tr>
+<tr><th id="853">853</th><td>	<i>/* INVLPG to clear all paging-structure caches */</i></td></tr>
+<tr><th id="854">854</th><td>	<a class="ref fn" href="../include/asm/tlbflush.h.html#flush_tlb_kernel_range" title='flush_tlb_kernel_range' data-ref="flush_tlb_kernel_range" data-ref-filename="flush_tlb_kernel_range">flush_tlb_kernel_range</a>(<a class="local col6 ref" href="#106addr" title='addr' data-ref="106addr" data-ref-filename="106addr">addr</a>, <a class="local col6 ref" href="#106addr" title='addr' data-ref="106addr" data-ref-filename="106addr">addr</a> + <a class="macro" href="../include/asm/page_types.h.html#11" title="((1UL) &lt;&lt; 12)" data-ref="_M/PAGE_SIZE">PAGE_SIZE</a>-<var>1</var>);</td></tr>
+<tr><th id="855">855</th><td></td></tr>
+<tr><th id="856">856</th><td>	<a class="macro" href="../../../include/linux/gfp.h.html#551" title="free_pages(((unsigned long)pte), 0)" data-ref="_M/free_page">free_page</a>((<em>unsigned</em> <em>long</em>)<a class="local col7 ref" href="#107pte" title='pte' data-ref="107pte" data-ref-filename="107pte">pte</a>);</td></tr>
+<tr><th id="857">857</th><td></td></tr>
+<tr><th id="858">858</th><td>	<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="859">859</th><td>}</td></tr>
+<tr><th id="860">860</th><td></td></tr>
+<tr><th id="861">861</th><td><u>#<span data-ppcond="792">else</span> /* !CONFIG_X86_64 */</u></td></tr>
+<tr><th id="862">862</th><td></td></tr>
+<tr><th id="863">863</th><td><em>int</em> pud_free_pmd_page(pud_t *pud, <em>unsigned</em> <em>long</em> addr)</td></tr>
+<tr><th id="864">864</th><td>{</td></tr>
+<tr><th id="865">865</th><td>	<b>return</b> pud_none(*pud);</td></tr>
+<tr><th id="866">866</th><td>}</td></tr>
+<tr><th id="867">867</th><td></td></tr>
+<tr><th id="868">868</th><td><i>/*</i></td></tr>
+<tr><th id="869">869</th><td><i> * Disable free page handling on x86-PAE. This assures that ioremap()</i></td></tr>
+<tr><th id="870">870</th><td><i> * does not update sync'd pmd entries. See vmalloc_sync_one().</i></td></tr>
+<tr><th id="871">871</th><td><i> */</i></td></tr>
+<tr><th id="872">872</th><td><em>int</em> pmd_free_pte_page(pmd_t *pmd, <em>unsigned</em> <em>long</em> addr)</td></tr>
+<tr><th id="873">873</th><td>{</td></tr>
+<tr><th id="874">874</th><td>	<b>return</b> pmd_none(*pmd);</td></tr>
+<tr><th id="875">875</th><td>}</td></tr>
+<tr><th id="876">876</th><td></td></tr>
+<tr><th id="877">877</th><td><u>#<span data-ppcond="792">endif</span> /* CONFIG_X86_64 */</u></td></tr>
+<tr><th id="878">878</th><td><u>#<span data-ppcond="659">endif</span>	/* CONFIG_HAVE_ARCH_HUGE_VMAP */</u></td></tr>
+<tr><th id="879">879</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

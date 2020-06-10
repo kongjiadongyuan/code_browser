@@ -1,0 +1,255 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>cpupri.c source code [linux-5.3.1/kernel/sched/cpupri.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/kernel/sched/cpupri.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>kernel</a>/<a href='./'>sched</a>/<a href='cpupri.c.html'>cpupri.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0-only</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> *  kernel/sched/cpupri.c</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> *  CPU priority management</i></td></tr>
+<tr><th id="6">6</th><td><i> *</i></td></tr>
+<tr><th id="7">7</th><td><i> *  Copyright (C) 2007-2008 Novell</i></td></tr>
+<tr><th id="8">8</th><td><i> *</i></td></tr>
+<tr><th id="9">9</th><td><i> *  Author: Gregory Haskins &lt;ghaskins@novell.com&gt;</i></td></tr>
+<tr><th id="10">10</th><td><i> *</i></td></tr>
+<tr><th id="11">11</th><td><i> *  This code tracks the priority of each CPU so that global migration</i></td></tr>
+<tr><th id="12">12</th><td><i> *  decisions are easy to calculate.  Each CPU can be in a state as follows:</i></td></tr>
+<tr><th id="13">13</th><td><i> *</i></td></tr>
+<tr><th id="14">14</th><td><i> *                 (INVALID), IDLE, NORMAL, RT1, ... RT99</i></td></tr>
+<tr><th id="15">15</th><td><i> *</i></td></tr>
+<tr><th id="16">16</th><td><i> *  going from the lowest priority to the highest.  CPUs in the INVALID state</i></td></tr>
+<tr><th id="17">17</th><td><i> *  are not eligible for routing.  The system maintains this state with</i></td></tr>
+<tr><th id="18">18</th><td><i> *  a 2 dimensional bitmap (the first for priority class, the second for CPUs</i></td></tr>
+<tr><th id="19">19</th><td><i> *  in that class).  Therefore a typical application without affinity</i></td></tr>
+<tr><th id="20">20</th><td><i> *  restrictions can find a suitable CPU with O(1) complexity (e.g. two bit</i></td></tr>
+<tr><th id="21">21</th><td><i> *  searches).  For tasks with affinity restrictions, the algorithm has a</i></td></tr>
+<tr><th id="22">22</th><td><i> *  worst case complexity of O(min(102, nr_domcpus)), though the scenario that</i></td></tr>
+<tr><th id="23">23</th><td><i> *  yields the worst case search is fairly contrived.</i></td></tr>
+<tr><th id="24">24</th><td><i> */</i></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="sched.h.html">"sched.h"</a></u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><i  data-doc="convert_prio">/* Convert between a 140 based task-&gt;prio, and our 102 based cpupri */</i></td></tr>
+<tr><th id="28">28</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="convert_prio" title='convert_prio' data-type='int convert_prio(int prio)' data-ref="convert_prio" data-ref-filename="convert_prio">convert_prio</dfn>(<em>int</em> <dfn class="local col1 decl" id="1prio" title='prio' data-type='int' data-ref="1prio" data-ref-filename="1prio">prio</dfn>)</td></tr>
+<tr><th id="29">29</th><td>{</td></tr>
+<tr><th id="30">30</th><td>	<em>int</em> <dfn class="local col2 decl" id="2cpupri" title='cpupri' data-type='int' data-ref="2cpupri" data-ref-filename="2cpupri">cpupri</dfn>;</td></tr>
+<tr><th id="31">31</th><td></td></tr>
+<tr><th id="32">32</th><td>	<b>if</b> (<a class="local col1 ref" href="#1prio" title='prio' data-ref="1prio" data-ref-filename="1prio">prio</a> == <a class="macro" href="cpupri.h.html#5" title="-1" data-ref="_M/CPUPRI_INVALID">CPUPRI_INVALID</a>)</td></tr>
+<tr><th id="33">33</th><td>		<a class="local col2 ref" href="#2cpupri" title='cpupri' data-ref="2cpupri" data-ref-filename="2cpupri">cpupri</a> = <a class="macro" href="cpupri.h.html#5" title="-1" data-ref="_M/CPUPRI_INVALID">CPUPRI_INVALID</a>;</td></tr>
+<tr><th id="34">34</th><td>	<b>else</b> <b>if</b> (<a class="local col1 ref" href="#1prio" title='prio' data-ref="1prio" data-ref-filename="1prio">prio</a> == <a class="macro" href="../../include/linux/sched/prio.h.html#25" title="(100 + (19 - -20 + 1))" data-ref="_M/MAX_PRIO">MAX_PRIO</a>)</td></tr>
+<tr><th id="35">35</th><td>		<a class="local col2 ref" href="#2cpupri" title='cpupri' data-ref="2cpupri" data-ref-filename="2cpupri">cpupri</a> = <a class="macro" href="cpupri.h.html#6" title="0" data-ref="_M/CPUPRI_IDLE">CPUPRI_IDLE</a>;</td></tr>
+<tr><th id="36">36</th><td>	<b>else</b> <b>if</b> (<a class="local col1 ref" href="#1prio" title='prio' data-ref="1prio" data-ref-filename="1prio">prio</a> &gt;= <a class="macro" href="../../include/linux/sched/prio.h.html#23" title="100" data-ref="_M/MAX_RT_PRIO">MAX_RT_PRIO</a>)</td></tr>
+<tr><th id="37">37</th><td>		<a class="local col2 ref" href="#2cpupri" title='cpupri' data-ref="2cpupri" data-ref-filename="2cpupri">cpupri</a> = <a class="macro" href="cpupri.h.html#7" title="1" data-ref="_M/CPUPRI_NORMAL">CPUPRI_NORMAL</a>;</td></tr>
+<tr><th id="38">38</th><td>	<b>else</b></td></tr>
+<tr><th id="39">39</th><td>		<a class="local col2 ref" href="#2cpupri" title='cpupri' data-ref="2cpupri" data-ref-filename="2cpupri">cpupri</a> = <a class="macro" href="../../include/linux/sched/prio.h.html#23" title="100" data-ref="_M/MAX_RT_PRIO">MAX_RT_PRIO</a> - <a class="local col1 ref" href="#1prio" title='prio' data-ref="1prio" data-ref-filename="1prio">prio</a> + <var>1</var>;</td></tr>
+<tr><th id="40">40</th><td></td></tr>
+<tr><th id="41">41</th><td>	<b>return</b> <a class="local col2 ref" href="#2cpupri" title='cpupri' data-ref="2cpupri" data-ref-filename="2cpupri">cpupri</a>;</td></tr>
+<tr><th id="42">42</th><td>}</td></tr>
+<tr><th id="43">43</th><td></td></tr>
+<tr><th id="44">44</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="45">45</th><td><i class="doc"> * cpupri_find - find the best (lowest-pri) CPU in the system</i></td></tr>
+<tr><th id="46">46</th><td><i class="doc"> *<span class="command"> @cp</span>: The cpupri context</i></td></tr>
+<tr><th id="47">47</th><td><i class="doc"> *<span class="command"> @p</span><span class="arg">:</span> The task</i></td></tr>
+<tr><th id="48">48</th><td><i class="doc"> *<span class="command"> @lowest</span>_mask: A mask to fill in with selected CPUs (or NULL)</i></td></tr>
+<tr><th id="49">49</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="50">50</th><td><i class="doc"> * Note: This function returns the recommended CPUs as calculated during the</i></td></tr>
+<tr><th id="51">51</th><td><i class="doc"> * current invocation.  By the time the call returns, the CPUs may have in</i></td></tr>
+<tr><th id="52">52</th><td><i class="doc"> * fact changed priorities any number of times.  While not ideal, it is not</i></td></tr>
+<tr><th id="53">53</th><td><i class="doc"> * an issue of correctness since the normal rebalancer logic will correct</i></td></tr>
+<tr><th id="54">54</th><td><i class="doc"> * any discrepancies created by racing against the uncertainty of the current</i></td></tr>
+<tr><th id="55">55</th><td><i class="doc"> * priority configuration.</i></td></tr>
+<tr><th id="56">56</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="57">57</th><td><i class="doc"> * Return: (int)bool - CPUs were found</i></td></tr>
+<tr><th id="58">58</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="59">59</th><td><em>int</em> <dfn class="decl def fn" id="cpupri_find" title='cpupri_find' data-ref="cpupri_find" data-ref-filename="cpupri_find">cpupri_find</dfn>(<b>struct</b> <a class="type" href="cpupri.h.html#cpupri" title='cpupri' data-ref="cpupri" data-ref-filename="cpupri">cpupri</a> *<dfn class="local col3 decl" id="3cp" title='cp' data-type='struct cpupri *' data-ref="3cp" data-ref-filename="3cp">cp</dfn>, <b>struct</b> <a class="type" href="../../include/linux/sched.h.html#task_struct" title='task_struct' data-ref="task_struct" data-ref-filename="task_struct">task_struct</a> *<dfn class="local col4 decl" id="4p" title='p' data-type='struct task_struct *' data-ref="4p" data-ref-filename="4p">p</dfn>,</td></tr>
+<tr><th id="60">60</th><td>		<b>struct</b> <a class="type" href="../../include/linux/cpumask.h.html#cpumask" title='cpumask' data-ref="cpumask" data-ref-filename="cpumask">cpumask</a> *<dfn class="local col5 decl" id="5lowest_mask" title='lowest_mask' data-type='struct cpumask *' data-ref="5lowest_mask" data-ref-filename="5lowest_mask">lowest_mask</dfn>)</td></tr>
+<tr><th id="61">61</th><td>{</td></tr>
+<tr><th id="62">62</th><td>	<em>int</em> <dfn class="local col6 decl" id="6idx" title='idx' data-type='int' data-ref="6idx" data-ref-filename="6idx">idx</dfn> = <var>0</var>;</td></tr>
+<tr><th id="63">63</th><td>	<em>int</em> <dfn class="local col7 decl" id="7task_pri" title='task_pri' data-type='int' data-ref="7task_pri" data-ref-filename="7task_pri">task_pri</dfn> = <a class="tu ref fn" href="#convert_prio" title='convert_prio' data-use='c' data-ref="convert_prio" data-ref-filename="convert_prio">convert_prio</a>(<a class="local col4 ref" href="#4p" title='p' data-ref="4p" data-ref-filename="4p">p</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#task_struct::prio" title='task_struct::prio' data-ref="task_struct::prio" data-ref-filename="task_struct..prio">prio</a>);</td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td>	<a class="macro" href="../../include/asm-generic/bug.h.html#61" title="do { if (__builtin_expect(!!(task_pri &gt;= (100 + 2)), 0)) do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/kernel/sched/cpupri.c&quot;), &quot;i&quot; (65), &quot;i&quot; (0), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); do { ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.unreachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (158)); }); __builtin_unreachable(); } while (0); } while (0); } while (0)" data-ref="_M/BUG_ON">BUG_ON</a>(<a class="local col7 ref" href="#7task_pri" title='task_pri' data-ref="7task_pri" data-ref-filename="7task_pri">task_pri</a> &gt;= <a class="macro" href="cpupri.h.html#3" title="(100 + 2)" data-ref="_M/CPUPRI_NR_PRIORITIES">CPUPRI_NR_PRIORITIES</a>);</td></tr>
+<tr><th id="66">66</th><td></td></tr>
+<tr><th id="67">67</th><td>	<b>for</b> (<a class="local col6 ref" href="#6idx" title='idx' data-ref="6idx" data-ref-filename="6idx">idx</a> = <var>0</var>; <a class="local col6 ref" href="#6idx" title='idx' data-ref="6idx" data-ref-filename="6idx">idx</a> &lt; <a class="local col7 ref" href="#7task_pri" title='task_pri' data-ref="7task_pri" data-ref-filename="7task_pri">task_pri</a>; <a class="local col6 ref" href="#6idx" title='idx' data-ref="6idx" data-ref-filename="6idx">idx</a>++) {</td></tr>
+<tr><th id="68">68</th><td>		<b>struct</b> <a class="type" href="cpupri.h.html#cpupri_vec" title='cpupri_vec' data-ref="cpupri_vec" data-ref-filename="cpupri_vec">cpupri_vec</a> *<dfn class="local col8 decl" id="8vec" title='vec' data-type='struct cpupri_vec *' data-ref="8vec" data-ref-filename="8vec">vec</dfn>  = &amp;<a class="local col3 ref" href="#3cp" title='cp' data-ref="3cp" data-ref-filename="3cp">cp</a>-&gt;<a class="ref field" href="cpupri.h.html#cpupri::pri_to_cpu" title='cpupri::pri_to_cpu' data-ref="cpupri::pri_to_cpu" data-ref-filename="cpupri..pri_to_cpu">pri_to_cpu</a>[<a class="local col6 ref" href="#6idx" title='idx' data-ref="6idx" data-ref-filename="6idx">idx</a>];</td></tr>
+<tr><th id="69">69</th><td>		<em>int</em> <dfn class="local col9 decl" id="9skip" title='skip' data-type='int' data-ref="9skip" data-ref-filename="9skip">skip</dfn> = <var>0</var>;</td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td>		<b>if</b> (!<a class="macro" href="../../include/asm-generic/atomic-instrumented.h.html#29" title="atomic_read" data-ref="_M/atomic_read">atomic_read</a>(&amp;(<a class="local col8 ref" href="#8vec" title='vec' data-ref="8vec" data-ref-filename="8vec">vec</a>)-&gt;<a class="ref field" href="cpupri.h.html#cpupri_vec::count" title='cpupri_vec::count' data-ref="cpupri_vec::count" data-ref-filename="cpupri_vec..count">count</a>))</td></tr>
+<tr><th id="72">72</th><td>			<a class="local col9 ref" href="#9skip" title='skip' data-ref="9skip" data-ref-filename="9skip">skip</a> = <var>1</var>;</td></tr>
+<tr><th id="73">73</th><td>		<i>/*</i></td></tr>
+<tr><th id="74">74</th><td><i>		 * When looking at the vector, we need to read the counter,</i></td></tr>
+<tr><th id="75">75</th><td><i>		 * do a memory barrier, then read the mask.</i></td></tr>
+<tr><th id="76">76</th><td><i>		 *</i></td></tr>
+<tr><th id="77">77</th><td><i>		 * Note: This is still all racey, but we can deal with it.</i></td></tr>
+<tr><th id="78">78</th><td><i>		 *  Ideally, we only want to look at masks that are set.</i></td></tr>
+<tr><th id="79">79</th><td><i>		 *</i></td></tr>
+<tr><th id="80">80</th><td><i>		 *  If a mask is not set, then the only thing wrong is that we</i></td></tr>
+<tr><th id="81">81</th><td><i>		 *  did a little more work than necessary.</i></td></tr>
+<tr><th id="82">82</th><td><i>		 *</i></td></tr>
+<tr><th id="83">83</th><td><i>		 *  If we read a zero count but the mask is set, because of the</i></td></tr>
+<tr><th id="84">84</th><td><i>		 *  memory barriers, that can only happen when the highest prio</i></td></tr>
+<tr><th id="85">85</th><td><i>		 *  task for a run queue has left the run queue, in which case,</i></td></tr>
+<tr><th id="86">86</th><td><i>		 *  it will be followed by a pull. If the task we are processing</i></td></tr>
+<tr><th id="87">87</th><td><i>		 *  fails to find a proper place to go, that pull request will</i></td></tr>
+<tr><th id="88">88</th><td><i>		 *  pull this task if the run queue is running at a lower</i></td></tr>
+<tr><th id="89">89</th><td><i>		 *  priority.</i></td></tr>
+<tr><th id="90">90</th><td><i>		 */</i></td></tr>
+<tr><th id="91">91</th><td>		<a class="macro" href="../../include/asm-generic/barrier.h.html#76" title="__asm__ __volatile__(&quot;&quot; : : : &quot;memory&quot;)" data-ref="_M/smp_rmb">smp_rmb</a>();</td></tr>
+<tr><th id="92">92</th><td></td></tr>
+<tr><th id="93">93</th><td>		<i>/* Need to do the rmb for every iteration */</i></td></tr>
+<tr><th id="94">94</th><td>		<b>if</b> (<a class="local col9 ref" href="#9skip" title='skip' data-ref="9skip" data-ref-filename="9skip">skip</a>)</td></tr>
+<tr><th id="95">95</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="96">96</th><td></td></tr>
+<tr><th id="97">97</th><td>		<b>if</b> (<a class="macro" href="../../include/linux/cpumask.h.html#590" title="cpumask_next_and(-1, ((p-&gt;cpus_ptr)), ((vec-&gt;mask)))" data-ref="_M/cpumask_any_and">cpumask_any_and</a>(<a class="local col4 ref" href="#4p" title='p' data-ref="4p" data-ref-filename="4p">p</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#task_struct::cpus_ptr" title='task_struct::cpus_ptr' data-ref="task_struct::cpus_ptr" data-ref-filename="task_struct..cpus_ptr">cpus_ptr</a>, <a class="local col8 ref" href="#8vec" title='vec' data-ref="8vec" data-ref-filename="8vec">vec</a>-&gt;<a class="ref field" href="cpupri.h.html#cpupri_vec::mask" title='cpupri_vec::mask' data-ref="cpupri_vec::mask" data-ref-filename="cpupri_vec..mask">mask</a>) &gt;= <a class="ref" href="../../include/linux/cpumask.h.html#nr_cpu_ids" title='nr_cpu_ids' data-ref="nr_cpu_ids" data-ref-filename="nr_cpu_ids">nr_cpu_ids</a>)</td></tr>
+<tr><th id="98">98</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="99">99</th><td></td></tr>
+<tr><th id="100">100</th><td>		<b>if</b> (<a class="local col5 ref" href="#5lowest_mask" title='lowest_mask' data-ref="5lowest_mask" data-ref-filename="5lowest_mask">lowest_mask</a>) {</td></tr>
+<tr><th id="101">101</th><td>			<a class="ref fn" href="../../include/linux/cpumask.h.html#cpumask_and" title='cpumask_and' data-ref="cpumask_and" data-ref-filename="cpumask_and">cpumask_and</a>(<a class="local col5 ref" href="#5lowest_mask" title='lowest_mask' data-ref="5lowest_mask" data-ref-filename="5lowest_mask">lowest_mask</a>, <a class="local col4 ref" href="#4p" title='p' data-ref="4p" data-ref-filename="4p">p</a>-&gt;<a class="ref field" href="../../include/linux/sched.h.html#task_struct::cpus_ptr" title='task_struct::cpus_ptr' data-ref="task_struct::cpus_ptr" data-ref-filename="task_struct..cpus_ptr">cpus_ptr</a>, <a class="local col8 ref" href="#8vec" title='vec' data-ref="8vec" data-ref-filename="8vec">vec</a>-&gt;<a class="ref field" href="cpupri.h.html#cpupri_vec::mask" title='cpupri_vec::mask' data-ref="cpupri_vec::mask" data-ref-filename="cpupri_vec..mask">mask</a>);</td></tr>
+<tr><th id="102">102</th><td></td></tr>
+<tr><th id="103">103</th><td>			<i>/*</i></td></tr>
+<tr><th id="104">104</th><td><i>			 * We have to ensure that we have at least one bit</i></td></tr>
+<tr><th id="105">105</th><td><i>			 * still set in the array, since the map could have</i></td></tr>
+<tr><th id="106">106</th><td><i>			 * been concurrently emptied between the first and</i></td></tr>
+<tr><th id="107">107</th><td><i>			 * second reads of vec-&gt;mask.  If we hit this</i></td></tr>
+<tr><th id="108">108</th><td><i>			 * condition, simply act as though we never hit this</i></td></tr>
+<tr><th id="109">109</th><td><i>			 * priority level and continue on.</i></td></tr>
+<tr><th id="110">110</th><td><i>			 */</i></td></tr>
+<tr><th id="111">111</th><td>			<b>if</b> (<a class="macro" href="../../include/linux/cpumask.h.html#572" title="cpumask_first(lowest_mask)" data-ref="_M/cpumask_any">cpumask_any</a>(<a class="local col5 ref" href="#5lowest_mask" title='lowest_mask' data-ref="5lowest_mask" data-ref-filename="5lowest_mask">lowest_mask</a>) &gt;= <a class="ref" href="../../include/linux/cpumask.h.html#nr_cpu_ids" title='nr_cpu_ids' data-ref="nr_cpu_ids" data-ref-filename="nr_cpu_ids">nr_cpu_ids</a>)</td></tr>
+<tr><th id="112">112</th><td>				<b>continue</b>;</td></tr>
+<tr><th id="113">113</th><td>		}</td></tr>
+<tr><th id="114">114</th><td></td></tr>
+<tr><th id="115">115</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="116">116</th><td>	}</td></tr>
+<tr><th id="117">117</th><td></td></tr>
+<tr><th id="118">118</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="119">119</th><td>}</td></tr>
+<tr><th id="120">120</th><td></td></tr>
+<tr><th id="121">121</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="122">122</th><td><i class="doc"> * cpupri_set - update the CPU priority setting</i></td></tr>
+<tr><th id="123">123</th><td><i class="doc"> *<span class="command"> @cp</span>: The cpupri context</i></td></tr>
+<tr><th id="124">124</th><td><i class="doc"> *<span class="command"> @cpu</span>: The target CPU</i></td></tr>
+<tr><th id="125">125</th><td><i class="doc"> *<span class="command"> @newpri</span>: The priority (INVALID-RT99) to assign to this CPU</i></td></tr>
+<tr><th id="126">126</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="127">127</th><td><i class="doc"> * Note: Assumes cpu_rq(cpu)-&gt;lock is locked</i></td></tr>
+<tr><th id="128">128</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="129">129</th><td><i class="doc"> * Returns: (void)</i></td></tr>
+<tr><th id="130">130</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="131">131</th><td><em>void</em> <dfn class="decl def fn" id="cpupri_set" title='cpupri_set' data-ref="cpupri_set" data-ref-filename="cpupri_set">cpupri_set</dfn>(<b>struct</b> <a class="type" href="cpupri.h.html#cpupri" title='cpupri' data-ref="cpupri" data-ref-filename="cpupri">cpupri</a> *<dfn class="local col0 decl" id="10cp" title='cp' data-type='struct cpupri *' data-ref="10cp" data-ref-filename="10cp">cp</dfn>, <em>int</em> <dfn class="local col1 decl" id="11cpu" title='cpu' data-type='int' data-ref="11cpu" data-ref-filename="11cpu">cpu</dfn>, <em>int</em> <dfn class="local col2 decl" id="12newpri" title='newpri' data-type='int' data-ref="12newpri" data-ref-filename="12newpri">newpri</dfn>)</td></tr>
+<tr><th id="132">132</th><td>{</td></tr>
+<tr><th id="133">133</th><td>	<em>int</em> *<dfn class="local col3 decl" id="13currpri" title='currpri' data-type='int *' data-ref="13currpri" data-ref-filename="13currpri">currpri</dfn> = &amp;<a class="local col0 ref" href="#10cp" title='cp' data-ref="10cp" data-ref-filename="10cp">cp</a>-&gt;<a class="ref field" href="cpupri.h.html#cpupri::cpu_to_pri" title='cpupri::cpu_to_pri' data-ref="cpupri::cpu_to_pri" data-ref-filename="cpupri..cpu_to_pri">cpu_to_pri</a>[<a class="local col1 ref" href="#11cpu" title='cpu' data-ref="11cpu" data-ref-filename="11cpu">cpu</a>];</td></tr>
+<tr><th id="134">134</th><td>	<em>int</em> <dfn class="local col4 decl" id="14oldpri" title='oldpri' data-type='int' data-ref="14oldpri" data-ref-filename="14oldpri">oldpri</dfn> = *<a class="local col3 ref" href="#13currpri" title='currpri' data-ref="13currpri" data-ref-filename="13currpri">currpri</a>;</td></tr>
+<tr><th id="135">135</th><td>	<em>int</em> <dfn class="local col5 decl" id="15do_mb" title='do_mb' data-type='int' data-ref="15do_mb" data-ref-filename="15do_mb">do_mb</dfn> = <var>0</var>;</td></tr>
+<tr><th id="136">136</th><td></td></tr>
+<tr><th id="137">137</th><td>	<a class="local col2 ref" href="#12newpri" title='newpri' data-ref="12newpri" data-ref-filename="12newpri">newpri</a> = <a class="tu ref fn" href="#convert_prio" title='convert_prio' data-use='c' data-ref="convert_prio" data-ref-filename="convert_prio">convert_prio</a>(<a class="local col2 ref" href="#12newpri" title='newpri' data-ref="12newpri" data-ref-filename="12newpri">newpri</a>);</td></tr>
+<tr><th id="138">138</th><td></td></tr>
+<tr><th id="139">139</th><td>	<a class="macro" href="../../include/asm-generic/bug.h.html#61" title="do { if (__builtin_expect(!!(newpri &gt;= (100 + 2)), 0)) do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/kernel/sched/cpupri.c&quot;), &quot;i&quot; (139), &quot;i&quot; (0), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); do { ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.unreachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (160)); }); __builtin_unreachable(); } while (0); } while (0); } while (0)" data-ref="_M/BUG_ON">BUG_ON</a>(<a class="local col2 ref" href="#12newpri" title='newpri' data-ref="12newpri" data-ref-filename="12newpri">newpri</a> &gt;= <a class="macro" href="cpupri.h.html#3" title="(100 + 2)" data-ref="_M/CPUPRI_NR_PRIORITIES">CPUPRI_NR_PRIORITIES</a>);</td></tr>
+<tr><th id="140">140</th><td></td></tr>
+<tr><th id="141">141</th><td>	<b>if</b> (<a class="local col2 ref" href="#12newpri" title='newpri' data-ref="12newpri" data-ref-filename="12newpri">newpri</a> == <a class="local col4 ref" href="#14oldpri" title='oldpri' data-ref="14oldpri" data-ref-filename="14oldpri">oldpri</a>)</td></tr>
+<tr><th id="142">142</th><td>		<b>return</b>;</td></tr>
+<tr><th id="143">143</th><td></td></tr>
+<tr><th id="144">144</th><td>	<i>/*</i></td></tr>
+<tr><th id="145">145</th><td><i>	 * If the CPU was currently mapped to a different value, we</i></td></tr>
+<tr><th id="146">146</th><td><i>	 * need to map it to the new value then remove the old value.</i></td></tr>
+<tr><th id="147">147</th><td><i>	 * Note, we must add the new value first, otherwise we risk the</i></td></tr>
+<tr><th id="148">148</th><td><i>	 * cpu being missed by the priority loop in cpupri_find.</i></td></tr>
+<tr><th id="149">149</th><td><i>	 */</i></td></tr>
+<tr><th id="150">150</th><td>	<b>if</b> (<a class="macro" href="../../include/linux/compiler.h.html#77" title="__builtin_expect(!!(newpri != -1), 1)" data-ref="_M/likely">likely</a>(<a class="local col2 ref" href="#12newpri" title='newpri' data-ref="12newpri" data-ref-filename="12newpri">newpri</a> != <a class="macro" href="cpupri.h.html#5" title="-1" data-ref="_M/CPUPRI_INVALID">CPUPRI_INVALID</a>)) {</td></tr>
+<tr><th id="151">151</th><td>		<b>struct</b> <a class="type" href="cpupri.h.html#cpupri_vec" title='cpupri_vec' data-ref="cpupri_vec" data-ref-filename="cpupri_vec">cpupri_vec</a> *<dfn class="local col6 decl" id="16vec" title='vec' data-type='struct cpupri_vec *' data-ref="16vec" data-ref-filename="16vec">vec</dfn> = &amp;<a class="local col0 ref" href="#10cp" title='cp' data-ref="10cp" data-ref-filename="10cp">cp</a>-&gt;<a class="ref field" href="cpupri.h.html#cpupri::pri_to_cpu" title='cpupri::pri_to_cpu' data-ref="cpupri::pri_to_cpu" data-ref-filename="cpupri..pri_to_cpu">pri_to_cpu</a>[<a class="local col2 ref" href="#12newpri" title='newpri' data-ref="12newpri" data-ref-filename="12newpri">newpri</a>];</td></tr>
+<tr><th id="152">152</th><td></td></tr>
+<tr><th id="153">153</th><td>		<a class="ref fn" href="../../include/linux/cpumask.h.html#cpumask_set_cpu" title='cpumask_set_cpu' data-ref="cpumask_set_cpu" data-ref-filename="cpumask_set_cpu">cpumask_set_cpu</a>(<a class="local col1 ref" href="#11cpu" title='cpu' data-ref="11cpu" data-ref-filename="11cpu">cpu</a>, <a class="local col6 ref" href="#16vec" title='vec' data-ref="16vec" data-ref-filename="16vec">vec</a>-&gt;<a class="ref field" href="cpupri.h.html#cpupri_vec::mask" title='cpupri_vec::mask' data-ref="cpupri_vec::mask" data-ref-filename="cpupri_vec..mask">mask</a>);</td></tr>
+<tr><th id="154">154</th><td>		<i>/*</i></td></tr>
+<tr><th id="155">155</th><td><i>		 * When adding a new vector, we update the mask first,</i></td></tr>
+<tr><th id="156">156</th><td><i>		 * do a write memory barrier, and then update the count, to</i></td></tr>
+<tr><th id="157">157</th><td><i>		 * make sure the vector is visible when count is set.</i></td></tr>
+<tr><th id="158">158</th><td><i>		 */</i></td></tr>
+<tr><th id="159">159</th><td>		<a class="macro" href="../../include/asm-generic/barrier.h.html#145" title="do { } while (0)" data-ref="_M/smp_mb__before_atomic">smp_mb__before_atomic</a>();</td></tr>
+<tr><th id="160">160</th><td>		<a class="macro" href="../../include/asm-generic/atomic-instrumented.h.html#242" title="atomic_inc" data-ref="_M/atomic_inc">atomic_inc</a>(&amp;(<a class="local col6 ref" href="#16vec" title='vec' data-ref="16vec" data-ref-filename="16vec">vec</a>)-&gt;<a class="ref field" href="cpupri.h.html#cpupri_vec::count" title='cpupri_vec::count' data-ref="cpupri_vec::count" data-ref-filename="cpupri_vec..count">count</a>);</td></tr>
+<tr><th id="161">161</th><td>		<a class="local col5 ref" href="#15do_mb" title='do_mb' data-ref="15do_mb" data-ref-filename="15do_mb">do_mb</a> = <var>1</var>;</td></tr>
+<tr><th id="162">162</th><td>	}</td></tr>
+<tr><th id="163">163</th><td>	<b>if</b> (<a class="macro" href="../../include/linux/compiler.h.html#77" title="__builtin_expect(!!(oldpri != -1), 1)" data-ref="_M/likely">likely</a>(<a class="local col4 ref" href="#14oldpri" title='oldpri' data-ref="14oldpri" data-ref-filename="14oldpri">oldpri</a> != <a class="macro" href="cpupri.h.html#5" title="-1" data-ref="_M/CPUPRI_INVALID">CPUPRI_INVALID</a>)) {</td></tr>
+<tr><th id="164">164</th><td>		<b>struct</b> <a class="type" href="cpupri.h.html#cpupri_vec" title='cpupri_vec' data-ref="cpupri_vec" data-ref-filename="cpupri_vec">cpupri_vec</a> *<dfn class="local col7 decl" id="17vec" title='vec' data-type='struct cpupri_vec *' data-ref="17vec" data-ref-filename="17vec">vec</dfn>  = &amp;<a class="local col0 ref" href="#10cp" title='cp' data-ref="10cp" data-ref-filename="10cp">cp</a>-&gt;<a class="ref field" href="cpupri.h.html#cpupri::pri_to_cpu" title='cpupri::pri_to_cpu' data-ref="cpupri::pri_to_cpu" data-ref-filename="cpupri..pri_to_cpu">pri_to_cpu</a>[<a class="local col4 ref" href="#14oldpri" title='oldpri' data-ref="14oldpri" data-ref-filename="14oldpri">oldpri</a>];</td></tr>
+<tr><th id="165">165</th><td></td></tr>
+<tr><th id="166">166</th><td>		<i>/*</i></td></tr>
+<tr><th id="167">167</th><td><i>		 * Because the order of modification of the vec-&gt;count</i></td></tr>
+<tr><th id="168">168</th><td><i>		 * is important, we must make sure that the update</i></td></tr>
+<tr><th id="169">169</th><td><i>		 * of the new prio is seen before we decrement the</i></td></tr>
+<tr><th id="170">170</th><td><i>		 * old prio. This makes sure that the loop sees</i></td></tr>
+<tr><th id="171">171</th><td><i>		 * one or the other when we raise the priority of</i></td></tr>
+<tr><th id="172">172</th><td><i>		 * the run queue. We don't care about when we lower the</i></td></tr>
+<tr><th id="173">173</th><td><i>		 * priority, as that will trigger an rt pull anyway.</i></td></tr>
+<tr><th id="174">174</th><td><i>		 *</i></td></tr>
+<tr><th id="175">175</th><td><i>		 * We only need to do a memory barrier if we updated</i></td></tr>
+<tr><th id="176">176</th><td><i>		 * the new priority vec.</i></td></tr>
+<tr><th id="177">177</th><td><i>		 */</i></td></tr>
+<tr><th id="178">178</th><td>		<b>if</b> (<a class="local col5 ref" href="#15do_mb" title='do_mb' data-ref="15do_mb" data-ref-filename="15do_mb">do_mb</a>)</td></tr>
+<tr><th id="179">179</th><td>			<a class="macro" href="../../include/asm-generic/barrier.h.html#149" title="do { } while (0)" data-ref="_M/smp_mb__after_atomic">smp_mb__after_atomic</a>();</td></tr>
+<tr><th id="180">180</th><td></td></tr>
+<tr><th id="181">181</th><td>		<i>/*</i></td></tr>
+<tr><th id="182">182</th><td><i>		 * When removing from the vector, we decrement the counter first</i></td></tr>
+<tr><th id="183">183</th><td><i>		 * do a memory barrier and then clear the mask.</i></td></tr>
+<tr><th id="184">184</th><td><i>		 */</i></td></tr>
+<tr><th id="185">185</th><td>		<a class="macro" href="../../include/asm-generic/atomic-instrumented.h.html#332" title="atomic_dec" data-ref="_M/atomic_dec">atomic_dec</a>(&amp;(<a class="local col7 ref" href="#17vec" title='vec' data-ref="17vec" data-ref-filename="17vec">vec</a>)-&gt;<a class="ref field" href="cpupri.h.html#cpupri_vec::count" title='cpupri_vec::count' data-ref="cpupri_vec::count" data-ref-filename="cpupri_vec..count">count</a>);</td></tr>
+<tr><th id="186">186</th><td>		<a class="macro" href="../../include/asm-generic/barrier.h.html#149" title="do { } while (0)" data-ref="_M/smp_mb__after_atomic">smp_mb__after_atomic</a>();</td></tr>
+<tr><th id="187">187</th><td>		<a class="ref fn" href="../../include/linux/cpumask.h.html#cpumask_clear_cpu" title='cpumask_clear_cpu' data-ref="cpumask_clear_cpu" data-ref-filename="cpumask_clear_cpu">cpumask_clear_cpu</a>(<a class="local col1 ref" href="#11cpu" title='cpu' data-ref="11cpu" data-ref-filename="11cpu">cpu</a>, <a class="local col7 ref" href="#17vec" title='vec' data-ref="17vec" data-ref-filename="17vec">vec</a>-&gt;<a class="ref field" href="cpupri.h.html#cpupri_vec::mask" title='cpupri_vec::mask' data-ref="cpupri_vec::mask" data-ref-filename="cpupri_vec..mask">mask</a>);</td></tr>
+<tr><th id="188">188</th><td>	}</td></tr>
+<tr><th id="189">189</th><td></td></tr>
+<tr><th id="190">190</th><td>	*<a class="local col3 ref" href="#13currpri" title='currpri' data-ref="13currpri" data-ref-filename="13currpri">currpri</a> = <a class="local col2 ref" href="#12newpri" title='newpri' data-ref="12newpri" data-ref-filename="12newpri">newpri</a>;</td></tr>
+<tr><th id="191">191</th><td>}</td></tr>
+<tr><th id="192">192</th><td></td></tr>
+<tr><th id="193">193</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="194">194</th><td><i class="doc"> * cpupri_init - initialize the cpupri structure</i></td></tr>
+<tr><th id="195">195</th><td><i class="doc"> *<span class="command"> @cp</span>: The cpupri context</i></td></tr>
+<tr><th id="196">196</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="197">197</th><td><i class="doc"> * Return: -ENOMEM on memory allocation failure.</i></td></tr>
+<tr><th id="198">198</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="199">199</th><td><em>int</em> <dfn class="decl def fn" id="cpupri_init" title='cpupri_init' data-ref="cpupri_init" data-ref-filename="cpupri_init">cpupri_init</dfn>(<b>struct</b> <a class="type" href="cpupri.h.html#cpupri" title='cpupri' data-ref="cpupri" data-ref-filename="cpupri">cpupri</a> *<dfn class="local col8 decl" id="18cp" title='cp' data-type='struct cpupri *' data-ref="18cp" data-ref-filename="18cp">cp</dfn>)</td></tr>
+<tr><th id="200">200</th><td>{</td></tr>
+<tr><th id="201">201</th><td>	<em>int</em> <dfn class="local col9 decl" id="19i" title='i' data-type='int' data-ref="19i" data-ref-filename="19i">i</dfn>;</td></tr>
+<tr><th id="202">202</th><td></td></tr>
+<tr><th id="203">203</th><td>	<b>for</b> (<a class="local col9 ref" href="#19i" title='i' data-ref="19i" data-ref-filename="19i">i</a> = <var>0</var>; <a class="local col9 ref" href="#19i" title='i' data-ref="19i" data-ref-filename="19i">i</a> &lt; <a class="macro" href="cpupri.h.html#3" title="(100 + 2)" data-ref="_M/CPUPRI_NR_PRIORITIES">CPUPRI_NR_PRIORITIES</a>; <a class="local col9 ref" href="#19i" title='i' data-ref="19i" data-ref-filename="19i">i</a>++) {</td></tr>
+<tr><th id="204">204</th><td>		<b>struct</b> <a class="type" href="cpupri.h.html#cpupri_vec" title='cpupri_vec' data-ref="cpupri_vec" data-ref-filename="cpupri_vec">cpupri_vec</a> *<dfn class="local col0 decl" id="20vec" title='vec' data-type='struct cpupri_vec *' data-ref="20vec" data-ref-filename="20vec">vec</dfn> = &amp;<a class="local col8 ref" href="#18cp" title='cp' data-ref="18cp" data-ref-filename="18cp">cp</a>-&gt;<a class="ref field" href="cpupri.h.html#cpupri::pri_to_cpu" title='cpupri::pri_to_cpu' data-ref="cpupri::pri_to_cpu" data-ref-filename="cpupri..pri_to_cpu">pri_to_cpu</a>[<a class="local col9 ref" href="#19i" title='i' data-ref="19i" data-ref-filename="19i">i</a>];</td></tr>
+<tr><th id="205">205</th><td></td></tr>
+<tr><th id="206">206</th><td>		<a class="macro" href="../../include/asm-generic/atomic-instrumented.h.html#47" title="atomic_set" data-ref="_M/atomic_set">atomic_set</a>(&amp;<a class="local col0 ref" href="#20vec" title='vec' data-ref="20vec" data-ref-filename="20vec">vec</a>-&gt;<a class="ref field" href="cpupri.h.html#cpupri_vec::count" title='cpupri_vec::count' data-ref="cpupri_vec::count" data-ref-filename="cpupri_vec..count">count</a>, <var>0</var>);</td></tr>
+<tr><th id="207">207</th><td>		<b>if</b> (!<a class="ref fn" href="../../include/linux/cpumask.h.html#zalloc_cpumask_var" title='zalloc_cpumask_var' data-ref="zalloc_cpumask_var" data-ref-filename="zalloc_cpumask_var">zalloc_cpumask_var</a>(&amp;<a class="local col0 ref" href="#20vec" title='vec' data-ref="20vec" data-ref-filename="20vec">vec</a>-&gt;<a class="ref field" href="cpupri.h.html#cpupri_vec::mask" title='cpupri_vec::mask' data-ref="cpupri_vec::mask" data-ref-filename="cpupri_vec..mask">mask</a>, <a class="macro" href="../../include/linux/gfp.h.html#290" title="((( gfp_t)(0x400u|0x800u)) | (( gfp_t)0x40u) | (( gfp_t)0x80u))" data-ref="_M/GFP_KERNEL">GFP_KERNEL</a>))</td></tr>
+<tr><th id="208">208</th><td>			<b>goto</b> <a class="lbl" href="#21cleanup" data-ref="21cleanup" data-ref-filename="21cleanup">cleanup</a>;</td></tr>
+<tr><th id="209">209</th><td>	}</td></tr>
+<tr><th id="210">210</th><td></td></tr>
+<tr><th id="211">211</th><td>	<a class="local col8 ref" href="#18cp" title='cp' data-ref="18cp" data-ref-filename="18cp">cp</a>-&gt;<a class="ref field" href="cpupri.h.html#cpupri::cpu_to_pri" title='cpupri::cpu_to_pri' data-ref="cpupri::cpu_to_pri" data-ref-filename="cpupri..cpu_to_pri">cpu_to_pri</a> = <a class="ref fn" href="../../include/linux/slab.h.html#kcalloc" title='kcalloc' data-ref="kcalloc" data-ref-filename="kcalloc">kcalloc</a>(<a class="ref" href="../../include/linux/cpumask.h.html#nr_cpu_ids" title='nr_cpu_ids' data-ref="nr_cpu_ids" data-ref-filename="nr_cpu_ids">nr_cpu_ids</a>, <b>sizeof</b>(<em>int</em>), <a class="macro" href="../../include/linux/gfp.h.html#290" title="((( gfp_t)(0x400u|0x800u)) | (( gfp_t)0x40u) | (( gfp_t)0x80u))" data-ref="_M/GFP_KERNEL">GFP_KERNEL</a>);</td></tr>
+<tr><th id="212">212</th><td>	<b>if</b> (!<a class="local col8 ref" href="#18cp" title='cp' data-ref="18cp" data-ref-filename="18cp">cp</a>-&gt;<a class="ref field" href="cpupri.h.html#cpupri::cpu_to_pri" title='cpupri::cpu_to_pri' data-ref="cpupri::cpu_to_pri" data-ref-filename="cpupri..cpu_to_pri">cpu_to_pri</a>)</td></tr>
+<tr><th id="213">213</th><td>		<b>goto</b> <a class="lbl" href="#21cleanup" data-ref="21cleanup" data-ref-filename="21cleanup">cleanup</a>;</td></tr>
+<tr><th id="214">214</th><td></td></tr>
+<tr><th id="215">215</th><td>	<a class="macro" href="../../include/linux/cpumask.h.html#776" title="for (((i)) = -1; ((i)) = cpumask_next(((i)), (((const struct cpumask *)&amp;__cpu_possible_mask))), ((i)) &lt; nr_cpu_ids;)" data-ref="_M/for_each_possible_cpu">for_each_possible_cpu</a>(<a class="local col9 ref" href="#19i" title='i' data-ref="19i" data-ref-filename="19i">i</a>)</td></tr>
+<tr><th id="216">216</th><td>		<a class="local col8 ref" href="#18cp" title='cp' data-ref="18cp" data-ref-filename="18cp">cp</a>-&gt;<a class="ref field" href="cpupri.h.html#cpupri::cpu_to_pri" title='cpupri::cpu_to_pri' data-ref="cpupri::cpu_to_pri" data-ref-filename="cpupri..cpu_to_pri">cpu_to_pri</a>[<a class="local col9 ref" href="#19i" title='i' data-ref="19i" data-ref-filename="19i">i</a>] = <a class="macro" href="cpupri.h.html#5" title="-1" data-ref="_M/CPUPRI_INVALID">CPUPRI_INVALID</a>;</td></tr>
+<tr><th id="217">217</th><td></td></tr>
+<tr><th id="218">218</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="219">219</th><td></td></tr>
+<tr><th id="220">220</th><td><dfn class="lbl" id="21cleanup" data-ref="21cleanup" data-ref-filename="21cleanup">cleanup</dfn>:</td></tr>
+<tr><th id="221">221</th><td>	<b>for</b> (<a class="local col9 ref" href="#19i" title='i' data-ref="19i" data-ref-filename="19i">i</a>--; <a class="local col9 ref" href="#19i" title='i' data-ref="19i" data-ref-filename="19i">i</a> &gt;= <var>0</var>; <a class="local col9 ref" href="#19i" title='i' data-ref="19i" data-ref-filename="19i">i</a>--)</td></tr>
+<tr><th id="222">222</th><td>		<a class="ref fn" href="../../include/linux/cpumask.h.html#free_cpumask_var" title='free_cpumask_var' data-ref="free_cpumask_var" data-ref-filename="free_cpumask_var">free_cpumask_var</a>(<a class="local col8 ref" href="#18cp" title='cp' data-ref="18cp" data-ref-filename="18cp">cp</a>-&gt;<a class="ref field" href="cpupri.h.html#cpupri::pri_to_cpu" title='cpupri::pri_to_cpu' data-ref="cpupri::pri_to_cpu" data-ref-filename="cpupri..pri_to_cpu">pri_to_cpu</a>[<a class="local col9 ref" href="#19i" title='i' data-ref="19i" data-ref-filename="19i">i</a>].<a class="ref field" href="cpupri.h.html#cpupri_vec::mask" title='cpupri_vec::mask' data-ref="cpupri_vec::mask" data-ref-filename="cpupri_vec..mask">mask</a>);</td></tr>
+<tr><th id="223">223</th><td>	<b>return</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#16" title="12" data-ref="_M/ENOMEM">ENOMEM</a>;</td></tr>
+<tr><th id="224">224</th><td>}</td></tr>
+<tr><th id="225">225</th><td></td></tr>
+<tr><th id="226">226</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="227">227</th><td><i class="doc"> * cpupri_cleanup - clean up the cpupri structure</i></td></tr>
+<tr><th id="228">228</th><td><i class="doc"> *<span class="command"> @cp</span>: The cpupri context</i></td></tr>
+<tr><th id="229">229</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="230">230</th><td><em>void</em> <dfn class="decl def fn" id="cpupri_cleanup" title='cpupri_cleanup' data-ref="cpupri_cleanup" data-ref-filename="cpupri_cleanup">cpupri_cleanup</dfn>(<b>struct</b> <a class="type" href="cpupri.h.html#cpupri" title='cpupri' data-ref="cpupri" data-ref-filename="cpupri">cpupri</a> *<dfn class="local col2 decl" id="22cp" title='cp' data-type='struct cpupri *' data-ref="22cp" data-ref-filename="22cp">cp</dfn>)</td></tr>
+<tr><th id="231">231</th><td>{</td></tr>
+<tr><th id="232">232</th><td>	<em>int</em> <dfn class="local col3 decl" id="23i" title='i' data-type='int' data-ref="23i" data-ref-filename="23i">i</dfn>;</td></tr>
+<tr><th id="233">233</th><td></td></tr>
+<tr><th id="234">234</th><td>	<a class="ref fn" href="../../include/linux/slab.h.html#kfree" title='kfree' data-ref="kfree" data-ref-filename="kfree">kfree</a>(<a class="local col2 ref" href="#22cp" title='cp' data-ref="22cp" data-ref-filename="22cp">cp</a>-&gt;<a class="ref field" href="cpupri.h.html#cpupri::cpu_to_pri" title='cpupri::cpu_to_pri' data-ref="cpupri::cpu_to_pri" data-ref-filename="cpupri..cpu_to_pri">cpu_to_pri</a>);</td></tr>
+<tr><th id="235">235</th><td>	<b>for</b> (<a class="local col3 ref" href="#23i" title='i' data-ref="23i" data-ref-filename="23i">i</a> = <var>0</var>; <a class="local col3 ref" href="#23i" title='i' data-ref="23i" data-ref-filename="23i">i</a> &lt; <a class="macro" href="cpupri.h.html#3" title="(100 + 2)" data-ref="_M/CPUPRI_NR_PRIORITIES">CPUPRI_NR_PRIORITIES</a>; <a class="local col3 ref" href="#23i" title='i' data-ref="23i" data-ref-filename="23i">i</a>++)</td></tr>
+<tr><th id="236">236</th><td>		<a class="ref fn" href="../../include/linux/cpumask.h.html#free_cpumask_var" title='free_cpumask_var' data-ref="free_cpumask_var" data-ref-filename="free_cpumask_var">free_cpumask_var</a>(<a class="local col2 ref" href="#22cp" title='cp' data-ref="22cp" data-ref-filename="22cp">cp</a>-&gt;<a class="ref field" href="cpupri.h.html#cpupri::pri_to_cpu" title='cpupri::pri_to_cpu' data-ref="cpupri::pri_to_cpu" data-ref-filename="cpupri..pri_to_cpu">pri_to_cpu</a>[<a class="local col3 ref" href="#23i" title='i' data-ref="23i" data-ref-filename="23i">i</a>].<a class="ref field" href="cpupri.h.html#cpupri_vec::mask" title='cpupri_vec::mask' data-ref="cpupri_vec::mask" data-ref-filename="cpupri_vec..mask">mask</a>);</td></tr>
+<tr><th id="237">237</th><td>}</td></tr>
+<tr><th id="238">238</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

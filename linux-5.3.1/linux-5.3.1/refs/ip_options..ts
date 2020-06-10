@@ -1,0 +1,24 @@
+<dec f='linux-5.3.1/include/net/inet_sock.h' l='45' type='unsigned char'/>
+<offset>88</offset>
+<use f='linux-5.3.1/net/ipv4/cipso_ipv4.c' l='1986' u='r' c='cipso_v4_delopt'/>
+<use f='linux-5.3.1/net/ipv4/cipso_ipv4.c' l='2001' u='r' c='cipso_v4_delopt'/>
+<use f='linux-5.3.1/net/ipv4/cipso_ipv4.c' l='2002' u='w' c='cipso_v4_delopt'/>
+<use f='linux-5.3.1/net/ipv4/ip_options.c' l='60' u='r' c='ip_options_build'/>
+<use f='linux-5.3.1/net/ipv4/ip_options.c' l='60' u='r' c='ip_options_build'/>
+<use f='linux-5.3.1/net/ipv4/ip_options.c' l='65' u='r' c='ip_options_build'/>
+<use f='linux-5.3.1/net/ipv4/ip_options.c' l='65' u='r' c='ip_options_build'/>
+<use f='linux-5.3.1/net/ipv4/ip_options.c' l='74' u='r' c='ip_options_build'/>
+<use f='linux-5.3.1/net/ipv4/ip_options.c' l='75' u='r' c='ip_options_build'/>
+<use f='linux-5.3.1/net/ipv4/ip_options.c' l='75' u='r' c='ip_options_build'/>
+<use f='linux-5.3.1/net/ipv4/ip_options.c' l='76' u='w' c='ip_options_build'/>
+<use f='linux-5.3.1/net/ipv4/ip_options.c' l='119' u='r' c='__ip_options_echo'/>
+<use f='linux-5.3.1/net/ipv4/ip_options.c' l='120' u='r' c='__ip_options_echo'/>
+<use f='linux-5.3.1/net/ipv4/ip_options.c' l='121' u='r' c='__ip_options_echo'/>
+<use f='linux-5.3.1/net/ipv4/ip_options.c' l='122' u='w' c='__ip_options_echo'/>
+<use f='linux-5.3.1/net/ipv4/ip_options.c' l='123' u='r' c='__ip_options_echo'/>
+<use f='linux-5.3.1/net/ipv4/ip_options.c' l='232' u='w' c='ip_options_fragment'/>
+<use f='linux-5.3.1/net/ipv4/ip_options.c' l='353' u='r' c='__ip_options_compile'/>
+<use f='linux-5.3.1/net/ipv4/ip_options.c' l='433' u='w' c='__ip_options_compile'/>
+<use f='linux-5.3.1/net/ipv4/ip_options.c' l='507' u='r' c='ip_options_undo'/>
+<use f='linux-5.3.1/net/ipv4/ip_options.c' l='508' u='r' c='ip_options_undo'/>
+<use f='linux-5.3.1/net/ipv4/ip_options.c' l='605' u='r' c='ip_forward_options'/>

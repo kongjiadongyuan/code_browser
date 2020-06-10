@@ -1,0 +1,223 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>xz_lzma2.h source code [linux-5.3.1/lib/xz/xz_lzma2.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="lzma_state "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/lib/xz/xz_lzma2.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>lib</a>/<a href='./'>xz</a>/<a href='xz_lzma2.h.html'>xz_lzma2.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*</i></td></tr>
+<tr><th id="2">2</th><td><i> * LZMA2 definitions</i></td></tr>
+<tr><th id="3">3</th><td><i> *</i></td></tr>
+<tr><th id="4">4</th><td><i> * Authors: Lasse Collin &lt;lasse.collin@tukaani.org&gt;</i></td></tr>
+<tr><th id="5">5</th><td><i> *          Igor Pavlov &lt;<a href="http://7-zip.org/">http://7-zip.org/</a>&gt;</i></td></tr>
+<tr><th id="6">6</th><td><i> *</i></td></tr>
+<tr><th id="7">7</th><td><i> * This file has been put into the public domain.</i></td></tr>
+<tr><th id="8">8</th><td><i> * You can do whatever you want with this file.</i></td></tr>
+<tr><th id="9">9</th><td><i> */</i></td></tr>
+<tr><th id="10">10</th><td></td></tr>
+<tr><th id="11">11</th><td><u>#<span data-ppcond="11">ifndef</span> <span class="macro" data-ref="_M/XZ_LZMA2_H">XZ_LZMA2_H</span></u></td></tr>
+<tr><th id="12">12</th><td><u>#define <dfn class="macro" id="_M/XZ_LZMA2_H" data-ref="_M/XZ_LZMA2_H">XZ_LZMA2_H</dfn></u></td></tr>
+<tr><th id="13">13</th><td></td></tr>
+<tr><th id="14">14</th><td><i>/* Range coder constants */</i></td></tr>
+<tr><th id="15">15</th><td><u>#define <dfn class="macro" id="_M/RC_SHIFT_BITS" data-ref="_M/RC_SHIFT_BITS">RC_SHIFT_BITS</dfn> 8</u></td></tr>
+<tr><th id="16">16</th><td><u>#define <dfn class="macro" id="_M/RC_TOP_BITS" data-ref="_M/RC_TOP_BITS">RC_TOP_BITS</dfn> 24</u></td></tr>
+<tr><th id="17">17</th><td><u>#define <dfn class="macro" id="_M/RC_TOP_VALUE" data-ref="_M/RC_TOP_VALUE">RC_TOP_VALUE</dfn> (1 &lt;&lt; RC_TOP_BITS)</u></td></tr>
+<tr><th id="18">18</th><td><u>#define <dfn class="macro" id="_M/RC_BIT_MODEL_TOTAL_BITS" data-ref="_M/RC_BIT_MODEL_TOTAL_BITS">RC_BIT_MODEL_TOTAL_BITS</dfn> 11</u></td></tr>
+<tr><th id="19">19</th><td><u>#define <dfn class="macro" id="_M/RC_BIT_MODEL_TOTAL" data-ref="_M/RC_BIT_MODEL_TOTAL">RC_BIT_MODEL_TOTAL</dfn> (1 &lt;&lt; RC_BIT_MODEL_TOTAL_BITS)</u></td></tr>
+<tr><th id="20">20</th><td><u>#define <dfn class="macro" id="_M/RC_MOVE_BITS" data-ref="_M/RC_MOVE_BITS">RC_MOVE_BITS</dfn> 5</u></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td><i>/*</i></td></tr>
+<tr><th id="23">23</th><td><i> * Maximum number of position states. A position state is the lowest pb</i></td></tr>
+<tr><th id="24">24</th><td><i> * number of bits of the current uncompressed offset. In some places there</i></td></tr>
+<tr><th id="25">25</th><td><i> * are different sets of probabilities for different position states.</i></td></tr>
+<tr><th id="26">26</th><td><i> */</i></td></tr>
+<tr><th id="27">27</th><td><u>#define <dfn class="macro" id="_M/POS_STATES_MAX" data-ref="_M/POS_STATES_MAX">POS_STATES_MAX</dfn> (1 &lt;&lt; 4)</u></td></tr>
+<tr><th id="28">28</th><td></td></tr>
+<tr><th id="29">29</th><td><i>/*</i></td></tr>
+<tr><th id="30">30</th><td><i> * This enum is used to track which LZMA symbols have occurred most recently</i></td></tr>
+<tr><th id="31">31</th><td><i> * and in which order. This information is used to predict the next symbol.</i></td></tr>
+<tr><th id="32">32</th><td><i> *</i></td></tr>
+<tr><th id="33">33</th><td><i> * Symbols:</i></td></tr>
+<tr><th id="34">34</th><td><i> *  - Literal: One 8-bit byte</i></td></tr>
+<tr><th id="35">35</th><td><i> *  - Match: Repeat a chunk of data at some distance</i></td></tr>
+<tr><th id="36">36</th><td><i> *  - Long repeat: Multi-byte match at a recently seen distance</i></td></tr>
+<tr><th id="37">37</th><td><i> *  - Short repeat: One-byte repeat at a recently seen distance</i></td></tr>
+<tr><th id="38">38</th><td><i> *</i></td></tr>
+<tr><th id="39">39</th><td><i> * The symbol names are in from STATE_oldest_older_previous. REP means</i></td></tr>
+<tr><th id="40">40</th><td><i> * either short or long repeated match, and NONLIT means any non-literal.</i></td></tr>
+<tr><th id="41">41</th><td><i> */</i></td></tr>
+<tr><th id="42">42</th><td><b>enum</b> <dfn class="type def" id="lzma_state" title='lzma_state' data-ref="lzma_state" data-ref-filename="lzma_state">lzma_state</dfn> {</td></tr>
+<tr><th id="43">43</th><td>	<dfn class="enum" id="STATE_LIT_LIT" title='STATE_LIT_LIT' data-ref="STATE_LIT_LIT" data-ref-filename="STATE_LIT_LIT">STATE_LIT_LIT</dfn>,</td></tr>
+<tr><th id="44">44</th><td>	<dfn class="enum" id="STATE_MATCH_LIT_LIT" title='STATE_MATCH_LIT_LIT' data-ref="STATE_MATCH_LIT_LIT" data-ref-filename="STATE_MATCH_LIT_LIT">STATE_MATCH_LIT_LIT</dfn>,</td></tr>
+<tr><th id="45">45</th><td>	<dfn class="enum" id="STATE_REP_LIT_LIT" title='STATE_REP_LIT_LIT' data-ref="STATE_REP_LIT_LIT" data-ref-filename="STATE_REP_LIT_LIT">STATE_REP_LIT_LIT</dfn>,</td></tr>
+<tr><th id="46">46</th><td>	<dfn class="enum" id="STATE_SHORTREP_LIT_LIT" title='STATE_SHORTREP_LIT_LIT' data-ref="STATE_SHORTREP_LIT_LIT" data-ref-filename="STATE_SHORTREP_LIT_LIT">STATE_SHORTREP_LIT_LIT</dfn>,</td></tr>
+<tr><th id="47">47</th><td>	<dfn class="enum" id="STATE_MATCH_LIT" title='STATE_MATCH_LIT' data-ref="STATE_MATCH_LIT" data-ref-filename="STATE_MATCH_LIT">STATE_MATCH_LIT</dfn>,</td></tr>
+<tr><th id="48">48</th><td>	<dfn class="enum" id="STATE_REP_LIT" title='STATE_REP_LIT' data-ref="STATE_REP_LIT" data-ref-filename="STATE_REP_LIT">STATE_REP_LIT</dfn>,</td></tr>
+<tr><th id="49">49</th><td>	<dfn class="enum" id="STATE_SHORTREP_LIT" title='STATE_SHORTREP_LIT' data-ref="STATE_SHORTREP_LIT" data-ref-filename="STATE_SHORTREP_LIT">STATE_SHORTREP_LIT</dfn>,</td></tr>
+<tr><th id="50">50</th><td>	<dfn class="enum" id="STATE_LIT_MATCH" title='STATE_LIT_MATCH' data-ref="STATE_LIT_MATCH" data-ref-filename="STATE_LIT_MATCH">STATE_LIT_MATCH</dfn>,</td></tr>
+<tr><th id="51">51</th><td>	<dfn class="enum" id="STATE_LIT_LONGREP" title='STATE_LIT_LONGREP' data-ref="STATE_LIT_LONGREP" data-ref-filename="STATE_LIT_LONGREP">STATE_LIT_LONGREP</dfn>,</td></tr>
+<tr><th id="52">52</th><td>	<dfn class="enum" id="STATE_LIT_SHORTREP" title='STATE_LIT_SHORTREP' data-ref="STATE_LIT_SHORTREP" data-ref-filename="STATE_LIT_SHORTREP">STATE_LIT_SHORTREP</dfn>,</td></tr>
+<tr><th id="53">53</th><td>	<dfn class="enum" id="STATE_NONLIT_MATCH" title='STATE_NONLIT_MATCH' data-ref="STATE_NONLIT_MATCH" data-ref-filename="STATE_NONLIT_MATCH">STATE_NONLIT_MATCH</dfn>,</td></tr>
+<tr><th id="54">54</th><td>	<dfn class="enum" id="STATE_NONLIT_REP" title='STATE_NONLIT_REP' data-ref="STATE_NONLIT_REP" data-ref-filename="STATE_NONLIT_REP">STATE_NONLIT_REP</dfn></td></tr>
+<tr><th id="55">55</th><td>};</td></tr>
+<tr><th id="56">56</th><td></td></tr>
+<tr><th id="57">57</th><td><i>/* Total number of states */</i></td></tr>
+<tr><th id="58">58</th><td><u>#define <dfn class="macro" id="_M/STATES" data-ref="_M/STATES">STATES</dfn> 12</u></td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td><i>/* The lowest 7 states indicate that the previous state was a literal. */</i></td></tr>
+<tr><th id="61">61</th><td><u>#define <dfn class="macro" id="_M/LIT_STATES" data-ref="_M/LIT_STATES">LIT_STATES</dfn> 7</u></td></tr>
+<tr><th id="62">62</th><td></td></tr>
+<tr><th id="63">63</th><td><i>/* Indicate that the latest symbol was a literal. */</i></td></tr>
+<tr><th id="64">64</th><td><em>static</em> <a class="macro" href="../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="lzma_state_literal" title='lzma_state_literal' data-ref="lzma_state_literal" data-ref-filename="lzma_state_literal">lzma_state_literal</dfn>(<b>enum</b> <a class="type" href="#lzma_state" title='lzma_state' data-ref="lzma_state" data-ref-filename="lzma_state">lzma_state</a> *<dfn class="local col1 decl" id="1state" title='state' data-type='enum lzma_state *' data-ref="1state" data-ref-filename="1state">state</dfn>)</td></tr>
+<tr><th id="65">65</th><td>{</td></tr>
+<tr><th id="66">66</th><td>	<b>if</b> (*<a class="local col1 ref" href="#1state" title='state' data-ref="1state" data-ref-filename="1state">state</a> &lt;= <a class="enum" href="#STATE_SHORTREP_LIT_LIT" title='STATE_SHORTREP_LIT_LIT' data-ref="STATE_SHORTREP_LIT_LIT" data-ref-filename="STATE_SHORTREP_LIT_LIT">STATE_SHORTREP_LIT_LIT</a>)</td></tr>
+<tr><th id="67">67</th><td>		*<a class="local col1 ref" href="#1state" title='state' data-ref="1state" data-ref-filename="1state">state</a> = <a class="enum" href="#STATE_LIT_LIT" title='STATE_LIT_LIT' data-ref="STATE_LIT_LIT" data-ref-filename="STATE_LIT_LIT">STATE_LIT_LIT</a>;</td></tr>
+<tr><th id="68">68</th><td>	<b>else</b> <b>if</b> (*<a class="local col1 ref" href="#1state" title='state' data-ref="1state" data-ref-filename="1state">state</a> &lt;= <a class="enum" href="#STATE_LIT_SHORTREP" title='STATE_LIT_SHORTREP' data-ref="STATE_LIT_SHORTREP" data-ref-filename="STATE_LIT_SHORTREP">STATE_LIT_SHORTREP</a>)</td></tr>
+<tr><th id="69">69</th><td>		*<a class="local col1 ref" href="#1state" title='state' data-ref="1state" data-ref-filename="1state">state</a> -= <var>3</var>;</td></tr>
+<tr><th id="70">70</th><td>	<b>else</b></td></tr>
+<tr><th id="71">71</th><td>		*<a class="local col1 ref" href="#1state" title='state' data-ref="1state" data-ref-filename="1state">state</a> -= <var>6</var>;</td></tr>
+<tr><th id="72">72</th><td>}</td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td><i>/* Indicate that the latest symbol was a match. */</i></td></tr>
+<tr><th id="75">75</th><td><em>static</em> <a class="macro" href="../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="lzma_state_match" title='lzma_state_match' data-ref="lzma_state_match" data-ref-filename="lzma_state_match">lzma_state_match</dfn>(<b>enum</b> <a class="type" href="#lzma_state" title='lzma_state' data-ref="lzma_state" data-ref-filename="lzma_state">lzma_state</a> *<dfn class="local col2 decl" id="2state" title='state' data-type='enum lzma_state *' data-ref="2state" data-ref-filename="2state">state</dfn>)</td></tr>
+<tr><th id="76">76</th><td>{</td></tr>
+<tr><th id="77">77</th><td>	*<a class="local col2 ref" href="#2state" title='state' data-ref="2state" data-ref-filename="2state">state</a> = *<a class="local col2 ref" href="#2state" title='state' data-ref="2state" data-ref-filename="2state">state</a> &lt; <a class="macro" href="#61" title="7" data-ref="_M/LIT_STATES">LIT_STATES</a> ? <a class="enum" href="#STATE_LIT_MATCH" title='STATE_LIT_MATCH' data-ref="STATE_LIT_MATCH" data-ref-filename="STATE_LIT_MATCH">STATE_LIT_MATCH</a> : <a class="enum" href="#STATE_NONLIT_MATCH" title='STATE_NONLIT_MATCH' data-ref="STATE_NONLIT_MATCH" data-ref-filename="STATE_NONLIT_MATCH">STATE_NONLIT_MATCH</a>;</td></tr>
+<tr><th id="78">78</th><td>}</td></tr>
+<tr><th id="79">79</th><td></td></tr>
+<tr><th id="80">80</th><td><i>/* Indicate that the latest state was a long repeated match. */</i></td></tr>
+<tr><th id="81">81</th><td><em>static</em> <a class="macro" href="../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="lzma_state_long_rep" title='lzma_state_long_rep' data-ref="lzma_state_long_rep" data-ref-filename="lzma_state_long_rep">lzma_state_long_rep</dfn>(<b>enum</b> <a class="type" href="#lzma_state" title='lzma_state' data-ref="lzma_state" data-ref-filename="lzma_state">lzma_state</a> *<dfn class="local col3 decl" id="3state" title='state' data-type='enum lzma_state *' data-ref="3state" data-ref-filename="3state">state</dfn>)</td></tr>
+<tr><th id="82">82</th><td>{</td></tr>
+<tr><th id="83">83</th><td>	*<a class="local col3 ref" href="#3state" title='state' data-ref="3state" data-ref-filename="3state">state</a> = *<a class="local col3 ref" href="#3state" title='state' data-ref="3state" data-ref-filename="3state">state</a> &lt; <a class="macro" href="#61" title="7" data-ref="_M/LIT_STATES">LIT_STATES</a> ? <a class="enum" href="#STATE_LIT_LONGREP" title='STATE_LIT_LONGREP' data-ref="STATE_LIT_LONGREP" data-ref-filename="STATE_LIT_LONGREP">STATE_LIT_LONGREP</a> : <a class="enum" href="#STATE_NONLIT_REP" title='STATE_NONLIT_REP' data-ref="STATE_NONLIT_REP" data-ref-filename="STATE_NONLIT_REP">STATE_NONLIT_REP</a>;</td></tr>
+<tr><th id="84">84</th><td>}</td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td><i>/* Indicate that the latest symbol was a short match. */</i></td></tr>
+<tr><th id="87">87</th><td><em>static</em> <a class="macro" href="../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="lzma_state_short_rep" title='lzma_state_short_rep' data-ref="lzma_state_short_rep" data-ref-filename="lzma_state_short_rep">lzma_state_short_rep</dfn>(<b>enum</b> <a class="type" href="#lzma_state" title='lzma_state' data-ref="lzma_state" data-ref-filename="lzma_state">lzma_state</a> *<dfn class="local col4 decl" id="4state" title='state' data-type='enum lzma_state *' data-ref="4state" data-ref-filename="4state">state</dfn>)</td></tr>
+<tr><th id="88">88</th><td>{</td></tr>
+<tr><th id="89">89</th><td>	*<a class="local col4 ref" href="#4state" title='state' data-ref="4state" data-ref-filename="4state">state</a> = *<a class="local col4 ref" href="#4state" title='state' data-ref="4state" data-ref-filename="4state">state</a> &lt; <a class="macro" href="#61" title="7" data-ref="_M/LIT_STATES">LIT_STATES</a> ? <a class="enum" href="#STATE_LIT_SHORTREP" title='STATE_LIT_SHORTREP' data-ref="STATE_LIT_SHORTREP" data-ref-filename="STATE_LIT_SHORTREP">STATE_LIT_SHORTREP</a> : <a class="enum" href="#STATE_NONLIT_REP" title='STATE_NONLIT_REP' data-ref="STATE_NONLIT_REP" data-ref-filename="STATE_NONLIT_REP">STATE_NONLIT_REP</a>;</td></tr>
+<tr><th id="90">90</th><td>}</td></tr>
+<tr><th id="91">91</th><td></td></tr>
+<tr><th id="92">92</th><td><i>/* Test if the previous symbol was a literal. */</i></td></tr>
+<tr><th id="93">93</th><td><em>static</em> <a class="macro" href="../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="lzma_state_is_literal" title='lzma_state_is_literal' data-ref="lzma_state_is_literal" data-ref-filename="lzma_state_is_literal">lzma_state_is_literal</dfn>(<b>enum</b> <a class="type" href="#lzma_state" title='lzma_state' data-ref="lzma_state" data-ref-filename="lzma_state">lzma_state</a> <dfn class="local col5 decl" id="5state" title='state' data-type='enum lzma_state' data-ref="5state" data-ref-filename="5state">state</dfn>)</td></tr>
+<tr><th id="94">94</th><td>{</td></tr>
+<tr><th id="95">95</th><td>	<b>return</b> <a class="local col5 ref" href="#5state" title='state' data-ref="5state" data-ref-filename="5state">state</a> &lt; <a class="macro" href="#61" title="7" data-ref="_M/LIT_STATES">LIT_STATES</a>;</td></tr>
+<tr><th id="96">96</th><td>}</td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td><i>/* Each literal coder is divided in three sections:</i></td></tr>
+<tr><th id="99">99</th><td><i> *   - 0x001-0x0FF: Without match byte</i></td></tr>
+<tr><th id="100">100</th><td><i> *   - 0x101-0x1FF: With match byte; match bit is 0</i></td></tr>
+<tr><th id="101">101</th><td><i> *   - 0x201-0x2FF: With match byte; match bit is 1</i></td></tr>
+<tr><th id="102">102</th><td><i> *</i></td></tr>
+<tr><th id="103">103</th><td><i> * Match byte is used when the previous LZMA symbol was something else than</i></td></tr>
+<tr><th id="104">104</th><td><i> * a literal (that is, it was some kind of match).</i></td></tr>
+<tr><th id="105">105</th><td><i> */</i></td></tr>
+<tr><th id="106">106</th><td><u>#define <dfn class="macro" id="_M/LITERAL_CODER_SIZE" data-ref="_M/LITERAL_CODER_SIZE">LITERAL_CODER_SIZE</dfn> 0x300</u></td></tr>
+<tr><th id="107">107</th><td></td></tr>
+<tr><th id="108">108</th><td><i>/* Maximum number of literal coders */</i></td></tr>
+<tr><th id="109">109</th><td><u>#define <dfn class="macro" id="_M/LITERAL_CODERS_MAX" data-ref="_M/LITERAL_CODERS_MAX">LITERAL_CODERS_MAX</dfn> (1 &lt;&lt; 4)</u></td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td><i>/* Minimum length of a match is two bytes. */</i></td></tr>
+<tr><th id="112">112</th><td><u>#define <dfn class="macro" id="_M/MATCH_LEN_MIN" data-ref="_M/MATCH_LEN_MIN">MATCH_LEN_MIN</dfn> 2</u></td></tr>
+<tr><th id="113">113</th><td></td></tr>
+<tr><th id="114">114</th><td><i>/* Match length is encoded with 4, 5, or 10 bits.</i></td></tr>
+<tr><th id="115">115</th><td><i> *</i></td></tr>
+<tr><th id="116">116</th><td><i> * Length   Bits</i></td></tr>
+<tr><th id="117">117</th><td><i> *  2-9      4 = Choice=0 + 3 bits</i></td></tr>
+<tr><th id="118">118</th><td><i> * 10-17     5 = Choice=1 + Choice2=0 + 3 bits</i></td></tr>
+<tr><th id="119">119</th><td><i> * 18-273   10 = Choice=1 + Choice2=1 + 8 bits</i></td></tr>
+<tr><th id="120">120</th><td><i> */</i></td></tr>
+<tr><th id="121">121</th><td><u>#define <dfn class="macro" id="_M/LEN_LOW_BITS" data-ref="_M/LEN_LOW_BITS">LEN_LOW_BITS</dfn> 3</u></td></tr>
+<tr><th id="122">122</th><td><u>#define <dfn class="macro" id="_M/LEN_LOW_SYMBOLS" data-ref="_M/LEN_LOW_SYMBOLS">LEN_LOW_SYMBOLS</dfn> (1 &lt;&lt; LEN_LOW_BITS)</u></td></tr>
+<tr><th id="123">123</th><td><u>#define <dfn class="macro" id="_M/LEN_MID_BITS" data-ref="_M/LEN_MID_BITS">LEN_MID_BITS</dfn> 3</u></td></tr>
+<tr><th id="124">124</th><td><u>#define <dfn class="macro" id="_M/LEN_MID_SYMBOLS" data-ref="_M/LEN_MID_SYMBOLS">LEN_MID_SYMBOLS</dfn> (1 &lt;&lt; LEN_MID_BITS)</u></td></tr>
+<tr><th id="125">125</th><td><u>#define <dfn class="macro" id="_M/LEN_HIGH_BITS" data-ref="_M/LEN_HIGH_BITS">LEN_HIGH_BITS</dfn> 8</u></td></tr>
+<tr><th id="126">126</th><td><u>#define <dfn class="macro" id="_M/LEN_HIGH_SYMBOLS" data-ref="_M/LEN_HIGH_SYMBOLS">LEN_HIGH_SYMBOLS</dfn> (1 &lt;&lt; LEN_HIGH_BITS)</u></td></tr>
+<tr><th id="127">127</th><td><u>#define <dfn class="macro" id="_M/LEN_SYMBOLS" data-ref="_M/LEN_SYMBOLS">LEN_SYMBOLS</dfn> (LEN_LOW_SYMBOLS + LEN_MID_SYMBOLS + LEN_HIGH_SYMBOLS)</u></td></tr>
+<tr><th id="128">128</th><td></td></tr>
+<tr><th id="129">129</th><td><i>/*</i></td></tr>
+<tr><th id="130">130</th><td><i> * Maximum length of a match is 273 which is a result of the encoding</i></td></tr>
+<tr><th id="131">131</th><td><i> * described above.</i></td></tr>
+<tr><th id="132">132</th><td><i> */</i></td></tr>
+<tr><th id="133">133</th><td><u>#define <dfn class="macro" id="_M/MATCH_LEN_MAX" data-ref="_M/MATCH_LEN_MAX">MATCH_LEN_MAX</dfn> (MATCH_LEN_MIN + LEN_SYMBOLS - 1)</u></td></tr>
+<tr><th id="134">134</th><td></td></tr>
+<tr><th id="135">135</th><td><i>/*</i></td></tr>
+<tr><th id="136">136</th><td><i> * Different sets of probabilities are used for match distances that have</i></td></tr>
+<tr><th id="137">137</th><td><i> * very short match length: Lengths of 2, 3, and 4 bytes have a separate</i></td></tr>
+<tr><th id="138">138</th><td><i> * set of probabilities for each length. The matches with longer length</i></td></tr>
+<tr><th id="139">139</th><td><i> * use a shared set of probabilities.</i></td></tr>
+<tr><th id="140">140</th><td><i> */</i></td></tr>
+<tr><th id="141">141</th><td><u>#define <dfn class="macro" id="_M/DIST_STATES" data-ref="_M/DIST_STATES">DIST_STATES</dfn> 4</u></td></tr>
+<tr><th id="142">142</th><td></td></tr>
+<tr><th id="143">143</th><td><i>/*</i></td></tr>
+<tr><th id="144">144</th><td><i> * Get the index of the appropriate probability array for decoding</i></td></tr>
+<tr><th id="145">145</th><td><i> * the distance slot.</i></td></tr>
+<tr><th id="146">146</th><td><i> */</i></td></tr>
+<tr><th id="147">147</th><td><em>static</em> <a class="macro" href="../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../../include/linux/types.h.html#uint32_t" title='uint32_t' data-type='u32' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a> <dfn class="decl def fn" id="lzma_get_dist_state" title='lzma_get_dist_state' data-ref="lzma_get_dist_state" data-ref-filename="lzma_get_dist_state">lzma_get_dist_state</dfn>(<a class="typedef" href="../../include/linux/types.h.html#uint32_t" title='uint32_t' data-type='u32' data-ref="uint32_t" data-ref-filename="uint32_t">uint32_t</a> <dfn class="local col6 decl" id="6len" title='len' data-type='uint32_t' data-ref="6len" data-ref-filename="6len">len</dfn>)</td></tr>
+<tr><th id="148">148</th><td>{</td></tr>
+<tr><th id="149">149</th><td>	<b>return</b> <a class="local col6 ref" href="#6len" title='len' data-ref="6len" data-ref-filename="6len">len</a> &lt; <a class="macro" href="#141" title="4" data-ref="_M/DIST_STATES">DIST_STATES</a> + <a class="macro" href="#112" title="2" data-ref="_M/MATCH_LEN_MIN">MATCH_LEN_MIN</a></td></tr>
+<tr><th id="150">150</th><td>			? <a class="local col6 ref" href="#6len" title='len' data-ref="6len" data-ref-filename="6len">len</a> - <a class="macro" href="#112" title="2" data-ref="_M/MATCH_LEN_MIN">MATCH_LEN_MIN</a> : <a class="macro" href="#141" title="4" data-ref="_M/DIST_STATES">DIST_STATES</a> - <var>1</var>;</td></tr>
+<tr><th id="151">151</th><td>}</td></tr>
+<tr><th id="152">152</th><td></td></tr>
+<tr><th id="153">153</th><td><i>/*</i></td></tr>
+<tr><th id="154">154</th><td><i> * The highest two bits of a 32-bit match distance are encoded using six bits.</i></td></tr>
+<tr><th id="155">155</th><td><i> * This six-bit value is called a distance slot. This way encoding a 32-bit</i></td></tr>
+<tr><th id="156">156</th><td><i> * value takes 6-36 bits, larger values taking more bits.</i></td></tr>
+<tr><th id="157">157</th><td><i> */</i></td></tr>
+<tr><th id="158">158</th><td><u>#define <dfn class="macro" id="_M/DIST_SLOT_BITS" data-ref="_M/DIST_SLOT_BITS">DIST_SLOT_BITS</dfn> 6</u></td></tr>
+<tr><th id="159">159</th><td><u>#define <dfn class="macro" id="_M/DIST_SLOTS" data-ref="_M/DIST_SLOTS">DIST_SLOTS</dfn> (1 &lt;&lt; DIST_SLOT_BITS)</u></td></tr>
+<tr><th id="160">160</th><td></td></tr>
+<tr><th id="161">161</th><td><i>/* Match distances up to 127 are fully encoded using probabilities. Since</i></td></tr>
+<tr><th id="162">162</th><td><i> * the highest two bits (distance slot) are always encoded using six bits,</i></td></tr>
+<tr><th id="163">163</th><td><i> * the distances 0-3 don't need any additional bits to encode, since the</i></td></tr>
+<tr><th id="164">164</th><td><i> * distance slot itself is the same as the actual distance. DIST_MODEL_START</i></td></tr>
+<tr><th id="165">165</th><td><i> * indicates the first distance slot where at least one additional bit is</i></td></tr>
+<tr><th id="166">166</th><td><i> * needed.</i></td></tr>
+<tr><th id="167">167</th><td><i> */</i></td></tr>
+<tr><th id="168">168</th><td><u>#define <dfn class="macro" id="_M/DIST_MODEL_START" data-ref="_M/DIST_MODEL_START">DIST_MODEL_START</dfn> 4</u></td></tr>
+<tr><th id="169">169</th><td></td></tr>
+<tr><th id="170">170</th><td><i>/*</i></td></tr>
+<tr><th id="171">171</th><td><i> * Match distances greater than 127 are encoded in three pieces:</i></td></tr>
+<tr><th id="172">172</th><td><i> *   - distance slot: the highest two bits</i></td></tr>
+<tr><th id="173">173</th><td><i> *   - direct bits: 2-26 bits below the highest two bits</i></td></tr>
+<tr><th id="174">174</th><td><i> *   - alignment bits: four lowest bits</i></td></tr>
+<tr><th id="175">175</th><td><i> *</i></td></tr>
+<tr><th id="176">176</th><td><i> * Direct bits don't use any probabilities.</i></td></tr>
+<tr><th id="177">177</th><td><i> *</i></td></tr>
+<tr><th id="178">178</th><td><i> * The distance slot value of 14 is for distances 128-191.</i></td></tr>
+<tr><th id="179">179</th><td><i> */</i></td></tr>
+<tr><th id="180">180</th><td><u>#define <dfn class="macro" id="_M/DIST_MODEL_END" data-ref="_M/DIST_MODEL_END">DIST_MODEL_END</dfn> 14</u></td></tr>
+<tr><th id="181">181</th><td></td></tr>
+<tr><th id="182">182</th><td><i>/* Distance slots that indicate a distance &lt;= 127. */</i></td></tr>
+<tr><th id="183">183</th><td><u>#define <dfn class="macro" id="_M/FULL_DISTANCES_BITS" data-ref="_M/FULL_DISTANCES_BITS">FULL_DISTANCES_BITS</dfn> (DIST_MODEL_END / 2)</u></td></tr>
+<tr><th id="184">184</th><td><u>#define <dfn class="macro" id="_M/FULL_DISTANCES" data-ref="_M/FULL_DISTANCES">FULL_DISTANCES</dfn> (1 &lt;&lt; FULL_DISTANCES_BITS)</u></td></tr>
+<tr><th id="185">185</th><td></td></tr>
+<tr><th id="186">186</th><td><i>/*</i></td></tr>
+<tr><th id="187">187</th><td><i> * For match distances greater than 127, only the highest two bits and the</i></td></tr>
+<tr><th id="188">188</th><td><i> * lowest four bits (alignment) is encoded using probabilities.</i></td></tr>
+<tr><th id="189">189</th><td><i> */</i></td></tr>
+<tr><th id="190">190</th><td><u>#define <dfn class="macro" id="_M/ALIGN_BITS" data-ref="_M/ALIGN_BITS">ALIGN_BITS</dfn> 4</u></td></tr>
+<tr><th id="191">191</th><td><u>#define <dfn class="macro" id="_M/ALIGN_SIZE" data-ref="_M/ALIGN_SIZE">ALIGN_SIZE</dfn> (1 &lt;&lt; ALIGN_BITS)</u></td></tr>
+<tr><th id="192">192</th><td><u>#define <dfn class="macro" id="_M/ALIGN_MASK" data-ref="_M/ALIGN_MASK">ALIGN_MASK</dfn> (ALIGN_SIZE - 1)</u></td></tr>
+<tr><th id="193">193</th><td></td></tr>
+<tr><th id="194">194</th><td><i>/* Total number of all probability variables */</i></td></tr>
+<tr><th id="195">195</th><td><u>#define <dfn class="macro" id="_M/PROBS_TOTAL" data-ref="_M/PROBS_TOTAL">PROBS_TOTAL</dfn> (1846 + LITERAL_CODERS_MAX * LITERAL_CODER_SIZE)</u></td></tr>
+<tr><th id="196">196</th><td></td></tr>
+<tr><th id="197">197</th><td><i>/*</i></td></tr>
+<tr><th id="198">198</th><td><i> * LZMA remembers the four most recent match distances. Reusing these</i></td></tr>
+<tr><th id="199">199</th><td><i> * distances tends to take less space than re-encoding the actual</i></td></tr>
+<tr><th id="200">200</th><td><i> * distance value.</i></td></tr>
+<tr><th id="201">201</th><td><i> */</i></td></tr>
+<tr><th id="202">202</th><td><u>#define <dfn class="macro" id="_M/REPS" data-ref="_M/REPS">REPS</dfn> 4</u></td></tr>
+<tr><th id="203">203</th><td></td></tr>
+<tr><th id="204">204</th><td><u>#<span data-ppcond="11">endif</span></u></td></tr>
+<tr><th id="205">205</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='xz_dec_lzma2.c.html'>linux-5.3.1/lib/xz/xz_dec_lzma2.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

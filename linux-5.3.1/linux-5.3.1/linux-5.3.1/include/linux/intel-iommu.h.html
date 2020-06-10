@@ -1,0 +1,736 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>intel-iommu.h source code [linux-5.3.1/include/linux/intel-iommu.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="context_entry,device_domain_info,dma_pte,dmar_domain,intel_iommu,iommu_flush,q_inval,qi_desc,root_entry "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/include/linux/intel-iommu.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>include</a>/<a href='./'>linux</a>/<a href='intel-iommu.h.html'>intel-iommu.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0-only */</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * Copyright © 2006-2015, Intel Corporation.</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * Authors: Ashok Raj &lt;ashok.raj@intel.com&gt;</i></td></tr>
+<tr><th id="6">6</th><td><i> *          Anil S Keshavamurthy &lt;anil.s.keshavamurthy@intel.com&gt;</i></td></tr>
+<tr><th id="7">7</th><td><i> *          David Woodhouse &lt;David.Woodhouse@intel.com&gt;</i></td></tr>
+<tr><th id="8">8</th><td><i> */</i></td></tr>
+<tr><th id="9">9</th><td></td></tr>
+<tr><th id="10">10</th><td><u>#<span data-ppcond="10">ifndef</span> <span class="macro" data-ref="_M/_INTEL_IOMMU_H_">_INTEL_IOMMU_H_</span></u></td></tr>
+<tr><th id="11">11</th><td><u>#define <dfn class="macro" id="_M/_INTEL_IOMMU_H_" data-ref="_M/_INTEL_IOMMU_H_">_INTEL_IOMMU_H_</dfn></u></td></tr>
+<tr><th id="12">12</th><td></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="types.h.html">&lt;linux/types.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="iova.h.html">&lt;linux/iova.h&gt;</a></u></td></tr>
+<tr><th id="15">15</th><td><u>#include <a href="io.h.html">&lt;linux/io.h&gt;</a></u></td></tr>
+<tr><th id="16">16</th><td><u>#include <a href="idr.h.html">&lt;linux/idr.h&gt;</a></u></td></tr>
+<tr><th id="17">17</th><td><u>#include <a href="mmu_notifier.h.html">&lt;linux/mmu_notifier.h&gt;</a></u></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="list.h.html">&lt;linux/list.h&gt;</a></u></td></tr>
+<tr><th id="19">19</th><td><u>#include <a href="iommu.h.html">&lt;linux/iommu.h&gt;</a></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="io-64-nonatomic-lo-hi.h.html">&lt;linux/io-64-nonatomic-lo-hi.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="dmar.h.html">&lt;linux/dmar.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../../arch/x86/include/asm/cacheflush.h.html">&lt;asm/cacheflush.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../../arch/x86/include/asm/iommu.h.html">&lt;asm/iommu.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td><i>/*</i></td></tr>
+<tr><th id="27">27</th><td><i> * VT-d hardware uses 4KiB page size regardless of host page size.</i></td></tr>
+<tr><th id="28">28</th><td><i> */</i></td></tr>
+<tr><th id="29">29</th><td><u>#define <dfn class="macro" id="_M/VTD_PAGE_SHIFT" data-ref="_M/VTD_PAGE_SHIFT">VTD_PAGE_SHIFT</dfn>		(12)</u></td></tr>
+<tr><th id="30">30</th><td><u>#define <dfn class="macro" id="_M/VTD_PAGE_SIZE" data-ref="_M/VTD_PAGE_SIZE">VTD_PAGE_SIZE</dfn>		(1UL &lt;&lt; VTD_PAGE_SHIFT)</u></td></tr>
+<tr><th id="31">31</th><td><u>#define <dfn class="macro" id="_M/VTD_PAGE_MASK" data-ref="_M/VTD_PAGE_MASK">VTD_PAGE_MASK</dfn>		(((<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a>)-1) &lt;&lt; VTD_PAGE_SHIFT)</u></td></tr>
+<tr><th id="32">32</th><td><u>#define <dfn class="macro" id="_M/VTD_PAGE_ALIGN" data-ref="_M/VTD_PAGE_ALIGN">VTD_PAGE_ALIGN</dfn>(addr)	(((addr) + VTD_PAGE_SIZE - 1) &amp; VTD_PAGE_MASK)</u></td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td><u>#define <dfn class="macro" id="_M/VTD_STRIDE_SHIFT" data-ref="_M/VTD_STRIDE_SHIFT">VTD_STRIDE_SHIFT</dfn>        (9)</u></td></tr>
+<tr><th id="35">35</th><td><u>#define <dfn class="macro" id="_M/VTD_STRIDE_MASK" data-ref="_M/VTD_STRIDE_MASK">VTD_STRIDE_MASK</dfn>         (((u64)-1) &lt;&lt; VTD_STRIDE_SHIFT)</u></td></tr>
+<tr><th id="36">36</th><td></td></tr>
+<tr><th id="37">37</th><td><u>#define <dfn class="macro" id="_M/DMA_PTE_READ" data-ref="_M/DMA_PTE_READ">DMA_PTE_READ</dfn> (1)</u></td></tr>
+<tr><th id="38">38</th><td><u>#define <dfn class="macro" id="_M/DMA_PTE_WRITE" data-ref="_M/DMA_PTE_WRITE">DMA_PTE_WRITE</dfn> (2)</u></td></tr>
+<tr><th id="39">39</th><td><u>#define <dfn class="macro" id="_M/DMA_PTE_LARGE_PAGE" data-ref="_M/DMA_PTE_LARGE_PAGE">DMA_PTE_LARGE_PAGE</dfn> (1 &lt;&lt; 7)</u></td></tr>
+<tr><th id="40">40</th><td><u>#define <dfn class="macro" id="_M/DMA_PTE_SNP" data-ref="_M/DMA_PTE_SNP">DMA_PTE_SNP</dfn> (1 &lt;&lt; 11)</u></td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td><u>#define <dfn class="macro" id="_M/CONTEXT_TT_MULTI_LEVEL" data-ref="_M/CONTEXT_TT_MULTI_LEVEL">CONTEXT_TT_MULTI_LEVEL</dfn>	0</u></td></tr>
+<tr><th id="43">43</th><td><u>#define <dfn class="macro" id="_M/CONTEXT_TT_DEV_IOTLB" data-ref="_M/CONTEXT_TT_DEV_IOTLB">CONTEXT_TT_DEV_IOTLB</dfn>	1</u></td></tr>
+<tr><th id="44">44</th><td><u>#define <dfn class="macro" id="_M/CONTEXT_TT_PASS_THROUGH" data-ref="_M/CONTEXT_TT_PASS_THROUGH">CONTEXT_TT_PASS_THROUGH</dfn> 2</u></td></tr>
+<tr><th id="45">45</th><td><u>#define <dfn class="macro" id="_M/CONTEXT_PASIDE" data-ref="_M/CONTEXT_PASIDE">CONTEXT_PASIDE</dfn>		BIT_ULL(3)</u></td></tr>
+<tr><th id="46">46</th><td></td></tr>
+<tr><th id="47">47</th><td><i>/*</i></td></tr>
+<tr><th id="48">48</th><td><i> * Intel IOMMU register specification per version 1.0 public spec.</i></td></tr>
+<tr><th id="49">49</th><td><i> */</i></td></tr>
+<tr><th id="50">50</th><td><u>#define	<dfn class="macro" id="_M/DMAR_VER_REG" data-ref="_M/DMAR_VER_REG">DMAR_VER_REG</dfn>	0x0	/* Arch version supported by this IOMMU */</u></td></tr>
+<tr><th id="51">51</th><td><u>#define	<dfn class="macro" id="_M/DMAR_CAP_REG" data-ref="_M/DMAR_CAP_REG">DMAR_CAP_REG</dfn>	0x8	/* Hardware supported capabilities */</u></td></tr>
+<tr><th id="52">52</th><td><u>#define	<dfn class="macro" id="_M/DMAR_ECAP_REG" data-ref="_M/DMAR_ECAP_REG">DMAR_ECAP_REG</dfn>	0x10	/* Extended capabilities supported */</u></td></tr>
+<tr><th id="53">53</th><td><u>#define	<dfn class="macro" id="_M/DMAR_GCMD_REG" data-ref="_M/DMAR_GCMD_REG">DMAR_GCMD_REG</dfn>	0x18	/* Global command register */</u></td></tr>
+<tr><th id="54">54</th><td><u>#define	<dfn class="macro" id="_M/DMAR_GSTS_REG" data-ref="_M/DMAR_GSTS_REG">DMAR_GSTS_REG</dfn>	0x1c	/* Global status register */</u></td></tr>
+<tr><th id="55">55</th><td><u>#define	<dfn class="macro" id="_M/DMAR_RTADDR_REG" data-ref="_M/DMAR_RTADDR_REG">DMAR_RTADDR_REG</dfn>	0x20	/* Root entry table */</u></td></tr>
+<tr><th id="56">56</th><td><u>#define	<dfn class="macro" id="_M/DMAR_CCMD_REG" data-ref="_M/DMAR_CCMD_REG">DMAR_CCMD_REG</dfn>	0x28	/* Context command reg */</u></td></tr>
+<tr><th id="57">57</th><td><u>#define	<dfn class="macro" id="_M/DMAR_FSTS_REG" data-ref="_M/DMAR_FSTS_REG">DMAR_FSTS_REG</dfn>	0x34	/* Fault Status register */</u></td></tr>
+<tr><th id="58">58</th><td><u>#define	<dfn class="macro" id="_M/DMAR_FECTL_REG" data-ref="_M/DMAR_FECTL_REG">DMAR_FECTL_REG</dfn>	0x38	/* Fault control register */</u></td></tr>
+<tr><th id="59">59</th><td><u>#define	<dfn class="macro" id="_M/DMAR_FEDATA_REG" data-ref="_M/DMAR_FEDATA_REG">DMAR_FEDATA_REG</dfn>	0x3c	/* Fault event interrupt data register */</u></td></tr>
+<tr><th id="60">60</th><td><u>#define	<dfn class="macro" id="_M/DMAR_FEADDR_REG" data-ref="_M/DMAR_FEADDR_REG">DMAR_FEADDR_REG</dfn>	0x40	/* Fault event interrupt addr register */</u></td></tr>
+<tr><th id="61">61</th><td><u>#define	<dfn class="macro" id="_M/DMAR_FEUADDR_REG" data-ref="_M/DMAR_FEUADDR_REG">DMAR_FEUADDR_REG</dfn> 0x44	/* Upper address register */</u></td></tr>
+<tr><th id="62">62</th><td><u>#define	<dfn class="macro" id="_M/DMAR_AFLOG_REG" data-ref="_M/DMAR_AFLOG_REG">DMAR_AFLOG_REG</dfn>	0x58	/* Advanced Fault control */</u></td></tr>
+<tr><th id="63">63</th><td><u>#define	<dfn class="macro" id="_M/DMAR_PMEN_REG" data-ref="_M/DMAR_PMEN_REG">DMAR_PMEN_REG</dfn>	0x64	/* Enable Protected Memory Region */</u></td></tr>
+<tr><th id="64">64</th><td><u>#define	<dfn class="macro" id="_M/DMAR_PLMBASE_REG" data-ref="_M/DMAR_PLMBASE_REG">DMAR_PLMBASE_REG</dfn> 0x68	/* PMRR Low addr */</u></td></tr>
+<tr><th id="65">65</th><td><u>#define	<dfn class="macro" id="_M/DMAR_PLMLIMIT_REG" data-ref="_M/DMAR_PLMLIMIT_REG">DMAR_PLMLIMIT_REG</dfn> 0x6c	/* PMRR low limit */</u></td></tr>
+<tr><th id="66">66</th><td><u>#define	<dfn class="macro" id="_M/DMAR_PHMBASE_REG" data-ref="_M/DMAR_PHMBASE_REG">DMAR_PHMBASE_REG</dfn> 0x70	/* pmrr high base addr */</u></td></tr>
+<tr><th id="67">67</th><td><u>#define	<dfn class="macro" id="_M/DMAR_PHMLIMIT_REG" data-ref="_M/DMAR_PHMLIMIT_REG">DMAR_PHMLIMIT_REG</dfn> 0x78	/* pmrr high limit */</u></td></tr>
+<tr><th id="68">68</th><td><u>#define <dfn class="macro" id="_M/DMAR_IQH_REG" data-ref="_M/DMAR_IQH_REG">DMAR_IQH_REG</dfn>	0x80	/* Invalidation queue head register */</u></td></tr>
+<tr><th id="69">69</th><td><u>#define <dfn class="macro" id="_M/DMAR_IQT_REG" data-ref="_M/DMAR_IQT_REG">DMAR_IQT_REG</dfn>	0x88	/* Invalidation queue tail register */</u></td></tr>
+<tr><th id="70">70</th><td><u>#define <dfn class="macro" id="_M/DMAR_IQ_SHIFT" data-ref="_M/DMAR_IQ_SHIFT">DMAR_IQ_SHIFT</dfn>	4	/* Invalidation queue head/tail shift */</u></td></tr>
+<tr><th id="71">71</th><td><u>#define <dfn class="macro" id="_M/DMAR_IQA_REG" data-ref="_M/DMAR_IQA_REG">DMAR_IQA_REG</dfn>	0x90	/* Invalidation queue addr register */</u></td></tr>
+<tr><th id="72">72</th><td><u>#define <dfn class="macro" id="_M/DMAR_ICS_REG" data-ref="_M/DMAR_ICS_REG">DMAR_ICS_REG</dfn>	0x9c	/* Invalidation complete status register */</u></td></tr>
+<tr><th id="73">73</th><td><u>#define <dfn class="macro" id="_M/DMAR_IRTA_REG" data-ref="_M/DMAR_IRTA_REG">DMAR_IRTA_REG</dfn>	0xb8    /* Interrupt remapping table addr register */</u></td></tr>
+<tr><th id="74">74</th><td><u>#define <dfn class="macro" id="_M/DMAR_PQH_REG" data-ref="_M/DMAR_PQH_REG">DMAR_PQH_REG</dfn>	0xc0	/* Page request queue head register */</u></td></tr>
+<tr><th id="75">75</th><td><u>#define <dfn class="macro" id="_M/DMAR_PQT_REG" data-ref="_M/DMAR_PQT_REG">DMAR_PQT_REG</dfn>	0xc8	/* Page request queue tail register */</u></td></tr>
+<tr><th id="76">76</th><td><u>#define <dfn class="macro" id="_M/DMAR_PQA_REG" data-ref="_M/DMAR_PQA_REG">DMAR_PQA_REG</dfn>	0xd0	/* Page request queue address register */</u></td></tr>
+<tr><th id="77">77</th><td><u>#define <dfn class="macro" id="_M/DMAR_PRS_REG" data-ref="_M/DMAR_PRS_REG">DMAR_PRS_REG</dfn>	0xdc	/* Page request status register */</u></td></tr>
+<tr><th id="78">78</th><td><u>#define <dfn class="macro" id="_M/DMAR_PECTL_REG" data-ref="_M/DMAR_PECTL_REG">DMAR_PECTL_REG</dfn>	0xe0	/* Page request event control register */</u></td></tr>
+<tr><th id="79">79</th><td><u>#define	<dfn class="macro" id="_M/DMAR_PEDATA_REG" data-ref="_M/DMAR_PEDATA_REG">DMAR_PEDATA_REG</dfn>	0xe4	/* Page request event interrupt data register */</u></td></tr>
+<tr><th id="80">80</th><td><u>#define	<dfn class="macro" id="_M/DMAR_PEADDR_REG" data-ref="_M/DMAR_PEADDR_REG">DMAR_PEADDR_REG</dfn>	0xe8	/* Page request event interrupt addr register */</u></td></tr>
+<tr><th id="81">81</th><td><u>#define	<dfn class="macro" id="_M/DMAR_PEUADDR_REG" data-ref="_M/DMAR_PEUADDR_REG">DMAR_PEUADDR_REG</dfn> 0xec	/* Page request event Upper address register */</u></td></tr>
+<tr><th id="82">82</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRRCAP_REG" data-ref="_M/DMAR_MTRRCAP_REG">DMAR_MTRRCAP_REG</dfn> 0x100	/* MTRR capability register */</u></td></tr>
+<tr><th id="83">83</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRRDEF_REG" data-ref="_M/DMAR_MTRRDEF_REG">DMAR_MTRRDEF_REG</dfn> 0x108	/* MTRR default type register */</u></td></tr>
+<tr><th id="84">84</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_FIX64K_00000_REG" data-ref="_M/DMAR_MTRR_FIX64K_00000_REG">DMAR_MTRR_FIX64K_00000_REG</dfn> 0x120 /* MTRR Fixed range registers */</u></td></tr>
+<tr><th id="85">85</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_FIX16K_80000_REG" data-ref="_M/DMAR_MTRR_FIX16K_80000_REG">DMAR_MTRR_FIX16K_80000_REG</dfn> 0x128</u></td></tr>
+<tr><th id="86">86</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_FIX16K_A0000_REG" data-ref="_M/DMAR_MTRR_FIX16K_A0000_REG">DMAR_MTRR_FIX16K_A0000_REG</dfn> 0x130</u></td></tr>
+<tr><th id="87">87</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_FIX4K_C0000_REG" data-ref="_M/DMAR_MTRR_FIX4K_C0000_REG">DMAR_MTRR_FIX4K_C0000_REG</dfn> 0x138</u></td></tr>
+<tr><th id="88">88</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_FIX4K_C8000_REG" data-ref="_M/DMAR_MTRR_FIX4K_C8000_REG">DMAR_MTRR_FIX4K_C8000_REG</dfn> 0x140</u></td></tr>
+<tr><th id="89">89</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_FIX4K_D0000_REG" data-ref="_M/DMAR_MTRR_FIX4K_D0000_REG">DMAR_MTRR_FIX4K_D0000_REG</dfn> 0x148</u></td></tr>
+<tr><th id="90">90</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_FIX4K_D8000_REG" data-ref="_M/DMAR_MTRR_FIX4K_D8000_REG">DMAR_MTRR_FIX4K_D8000_REG</dfn> 0x150</u></td></tr>
+<tr><th id="91">91</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_FIX4K_E0000_REG" data-ref="_M/DMAR_MTRR_FIX4K_E0000_REG">DMAR_MTRR_FIX4K_E0000_REG</dfn> 0x158</u></td></tr>
+<tr><th id="92">92</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_FIX4K_E8000_REG" data-ref="_M/DMAR_MTRR_FIX4K_E8000_REG">DMAR_MTRR_FIX4K_E8000_REG</dfn> 0x160</u></td></tr>
+<tr><th id="93">93</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_FIX4K_F0000_REG" data-ref="_M/DMAR_MTRR_FIX4K_F0000_REG">DMAR_MTRR_FIX4K_F0000_REG</dfn> 0x168</u></td></tr>
+<tr><th id="94">94</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_FIX4K_F8000_REG" data-ref="_M/DMAR_MTRR_FIX4K_F8000_REG">DMAR_MTRR_FIX4K_F8000_REG</dfn> 0x170</u></td></tr>
+<tr><th id="95">95</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_PHYSBASE0_REG" data-ref="_M/DMAR_MTRR_PHYSBASE0_REG">DMAR_MTRR_PHYSBASE0_REG</dfn> 0x180 /* MTRR Variable range registers */</u></td></tr>
+<tr><th id="96">96</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_PHYSMASK0_REG" data-ref="_M/DMAR_MTRR_PHYSMASK0_REG">DMAR_MTRR_PHYSMASK0_REG</dfn> 0x188</u></td></tr>
+<tr><th id="97">97</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_PHYSBASE1_REG" data-ref="_M/DMAR_MTRR_PHYSBASE1_REG">DMAR_MTRR_PHYSBASE1_REG</dfn> 0x190</u></td></tr>
+<tr><th id="98">98</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_PHYSMASK1_REG" data-ref="_M/DMAR_MTRR_PHYSMASK1_REG">DMAR_MTRR_PHYSMASK1_REG</dfn> 0x198</u></td></tr>
+<tr><th id="99">99</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_PHYSBASE2_REG" data-ref="_M/DMAR_MTRR_PHYSBASE2_REG">DMAR_MTRR_PHYSBASE2_REG</dfn> 0x1a0</u></td></tr>
+<tr><th id="100">100</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_PHYSMASK2_REG" data-ref="_M/DMAR_MTRR_PHYSMASK2_REG">DMAR_MTRR_PHYSMASK2_REG</dfn> 0x1a8</u></td></tr>
+<tr><th id="101">101</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_PHYSBASE3_REG" data-ref="_M/DMAR_MTRR_PHYSBASE3_REG">DMAR_MTRR_PHYSBASE3_REG</dfn> 0x1b0</u></td></tr>
+<tr><th id="102">102</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_PHYSMASK3_REG" data-ref="_M/DMAR_MTRR_PHYSMASK3_REG">DMAR_MTRR_PHYSMASK3_REG</dfn> 0x1b8</u></td></tr>
+<tr><th id="103">103</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_PHYSBASE4_REG" data-ref="_M/DMAR_MTRR_PHYSBASE4_REG">DMAR_MTRR_PHYSBASE4_REG</dfn> 0x1c0</u></td></tr>
+<tr><th id="104">104</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_PHYSMASK4_REG" data-ref="_M/DMAR_MTRR_PHYSMASK4_REG">DMAR_MTRR_PHYSMASK4_REG</dfn> 0x1c8</u></td></tr>
+<tr><th id="105">105</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_PHYSBASE5_REG" data-ref="_M/DMAR_MTRR_PHYSBASE5_REG">DMAR_MTRR_PHYSBASE5_REG</dfn> 0x1d0</u></td></tr>
+<tr><th id="106">106</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_PHYSMASK5_REG" data-ref="_M/DMAR_MTRR_PHYSMASK5_REG">DMAR_MTRR_PHYSMASK5_REG</dfn> 0x1d8</u></td></tr>
+<tr><th id="107">107</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_PHYSBASE6_REG" data-ref="_M/DMAR_MTRR_PHYSBASE6_REG">DMAR_MTRR_PHYSBASE6_REG</dfn> 0x1e0</u></td></tr>
+<tr><th id="108">108</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_PHYSMASK6_REG" data-ref="_M/DMAR_MTRR_PHYSMASK6_REG">DMAR_MTRR_PHYSMASK6_REG</dfn> 0x1e8</u></td></tr>
+<tr><th id="109">109</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_PHYSBASE7_REG" data-ref="_M/DMAR_MTRR_PHYSBASE7_REG">DMAR_MTRR_PHYSBASE7_REG</dfn> 0x1f0</u></td></tr>
+<tr><th id="110">110</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_PHYSMASK7_REG" data-ref="_M/DMAR_MTRR_PHYSMASK7_REG">DMAR_MTRR_PHYSMASK7_REG</dfn> 0x1f8</u></td></tr>
+<tr><th id="111">111</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_PHYSBASE8_REG" data-ref="_M/DMAR_MTRR_PHYSBASE8_REG">DMAR_MTRR_PHYSBASE8_REG</dfn> 0x200</u></td></tr>
+<tr><th id="112">112</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_PHYSMASK8_REG" data-ref="_M/DMAR_MTRR_PHYSMASK8_REG">DMAR_MTRR_PHYSMASK8_REG</dfn> 0x208</u></td></tr>
+<tr><th id="113">113</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_PHYSBASE9_REG" data-ref="_M/DMAR_MTRR_PHYSBASE9_REG">DMAR_MTRR_PHYSBASE9_REG</dfn> 0x210</u></td></tr>
+<tr><th id="114">114</th><td><u>#define <dfn class="macro" id="_M/DMAR_MTRR_PHYSMASK9_REG" data-ref="_M/DMAR_MTRR_PHYSMASK9_REG">DMAR_MTRR_PHYSMASK9_REG</dfn> 0x218</u></td></tr>
+<tr><th id="115">115</th><td><u>#define <dfn class="macro" id="_M/DMAR_VCCAP_REG" data-ref="_M/DMAR_VCCAP_REG">DMAR_VCCAP_REG</dfn>		0xe00 /* Virtual command capability register */</u></td></tr>
+<tr><th id="116">116</th><td><u>#define <dfn class="macro" id="_M/DMAR_VCMD_REG" data-ref="_M/DMAR_VCMD_REG">DMAR_VCMD_REG</dfn>		0xe10 /* Virtual command register */</u></td></tr>
+<tr><th id="117">117</th><td><u>#define <dfn class="macro" id="_M/DMAR_VCRSP_REG" data-ref="_M/DMAR_VCRSP_REG">DMAR_VCRSP_REG</dfn>		0xe20 /* Virtual command response register */</u></td></tr>
+<tr><th id="118">118</th><td></td></tr>
+<tr><th id="119">119</th><td><u>#define <dfn class="macro" id="_M/OFFSET_STRIDE" data-ref="_M/OFFSET_STRIDE">OFFSET_STRIDE</dfn>		(9)</u></td></tr>
+<tr><th id="120">120</th><td></td></tr>
+<tr><th id="121">121</th><td><u>#define <dfn class="macro" id="_M/dmar_readq" data-ref="_M/dmar_readq">dmar_readq</dfn>(a) readq(a)</u></td></tr>
+<tr><th id="122">122</th><td><u>#define <dfn class="macro" id="_M/dmar_writeq" data-ref="_M/dmar_writeq">dmar_writeq</dfn>(a,v) writeq(v,a)</u></td></tr>
+<tr><th id="123">123</th><td></td></tr>
+<tr><th id="124">124</th><td><u>#define <dfn class="macro" id="_M/DMAR_VER_MAJOR" data-ref="_M/DMAR_VER_MAJOR">DMAR_VER_MAJOR</dfn>(v)		(((v) &amp; 0xf0) &gt;&gt; 4)</u></td></tr>
+<tr><th id="125">125</th><td><u>#define <dfn class="macro" id="_M/DMAR_VER_MINOR" data-ref="_M/DMAR_VER_MINOR">DMAR_VER_MINOR</dfn>(v)		((v) &amp; 0x0f)</u></td></tr>
+<tr><th id="126">126</th><td></td></tr>
+<tr><th id="127">127</th><td><i>/*</i></td></tr>
+<tr><th id="128">128</th><td><i> * Decoding Capability Register</i></td></tr>
+<tr><th id="129">129</th><td><i> */</i></td></tr>
+<tr><th id="130">130</th><td><u>#define <dfn class="macro" id="_M/cap_5lp_support" data-ref="_M/cap_5lp_support">cap_5lp_support</dfn>(c)	(((c) &gt;&gt; 60) &amp; 1)</u></td></tr>
+<tr><th id="131">131</th><td><u>#define <dfn class="macro" id="_M/cap_pi_support" data-ref="_M/cap_pi_support">cap_pi_support</dfn>(c)	(((c) &gt;&gt; 59) &amp; 1)</u></td></tr>
+<tr><th id="132">132</th><td><u>#define <dfn class="macro" id="_M/cap_fl1gp_support" data-ref="_M/cap_fl1gp_support">cap_fl1gp_support</dfn>(c)	(((c) &gt;&gt; 56) &amp; 1)</u></td></tr>
+<tr><th id="133">133</th><td><u>#define <dfn class="macro" id="_M/cap_read_drain" data-ref="_M/cap_read_drain">cap_read_drain</dfn>(c)	(((c) &gt;&gt; 55) &amp; 1)</u></td></tr>
+<tr><th id="134">134</th><td><u>#define <dfn class="macro" id="_M/cap_write_drain" data-ref="_M/cap_write_drain">cap_write_drain</dfn>(c)	(((c) &gt;&gt; 54) &amp; 1)</u></td></tr>
+<tr><th id="135">135</th><td><u>#define <dfn class="macro" id="_M/cap_max_amask_val" data-ref="_M/cap_max_amask_val">cap_max_amask_val</dfn>(c)	(((c) &gt;&gt; 48) &amp; 0x3f)</u></td></tr>
+<tr><th id="136">136</th><td><u>#define <dfn class="macro" id="_M/cap_num_fault_regs" data-ref="_M/cap_num_fault_regs">cap_num_fault_regs</dfn>(c)	((((c) &gt;&gt; 40) &amp; 0xff) + 1)</u></td></tr>
+<tr><th id="137">137</th><td><u>#define <dfn class="macro" id="_M/cap_pgsel_inv" data-ref="_M/cap_pgsel_inv">cap_pgsel_inv</dfn>(c)	(((c) &gt;&gt; 39) &amp; 1)</u></td></tr>
+<tr><th id="138">138</th><td></td></tr>
+<tr><th id="139">139</th><td><u>#define <dfn class="macro" id="_M/cap_super_page_val" data-ref="_M/cap_super_page_val">cap_super_page_val</dfn>(c)	(((c) &gt;&gt; 34) &amp; 0xf)</u></td></tr>
+<tr><th id="140">140</th><td><u>#define <dfn class="macro" id="_M/cap_super_offset" data-ref="_M/cap_super_offset">cap_super_offset</dfn>(c)	(((find_first_bit(&amp;cap_super_page_val(c), 4)) \</u></td></tr>
+<tr><th id="141">141</th><td><u>					* OFFSET_STRIDE) + 21)</u></td></tr>
+<tr><th id="142">142</th><td></td></tr>
+<tr><th id="143">143</th><td><u>#define <dfn class="macro" id="_M/cap_fault_reg_offset" data-ref="_M/cap_fault_reg_offset">cap_fault_reg_offset</dfn>(c)	((((c) &gt;&gt; 24) &amp; 0x3ff) * 16)</u></td></tr>
+<tr><th id="144">144</th><td><u>#define <dfn class="macro" id="_M/cap_max_fault_reg_offset" data-ref="_M/cap_max_fault_reg_offset">cap_max_fault_reg_offset</dfn>(c) \</u></td></tr>
+<tr><th id="145">145</th><td><u>	(cap_fault_reg_offset(c) + cap_num_fault_regs(c) * 16)</u></td></tr>
+<tr><th id="146">146</th><td></td></tr>
+<tr><th id="147">147</th><td><u>#define <dfn class="macro" id="_M/cap_zlr" data-ref="_M/cap_zlr">cap_zlr</dfn>(c)		(((c) &gt;&gt; 22) &amp; 1)</u></td></tr>
+<tr><th id="148">148</th><td><u>#define <dfn class="macro" id="_M/cap_isoch" data-ref="_M/cap_isoch">cap_isoch</dfn>(c)		(((c) &gt;&gt; 23) &amp; 1)</u></td></tr>
+<tr><th id="149">149</th><td><u>#define <dfn class="macro" id="_M/cap_mgaw" data-ref="_M/cap_mgaw">cap_mgaw</dfn>(c)		((((c) &gt;&gt; 16) &amp; 0x3f) + 1)</u></td></tr>
+<tr><th id="150">150</th><td><u>#define <dfn class="macro" id="_M/cap_sagaw" data-ref="_M/cap_sagaw">cap_sagaw</dfn>(c)		(((c) &gt;&gt; 8) &amp; 0x1f)</u></td></tr>
+<tr><th id="151">151</th><td><u>#define <dfn class="macro" id="_M/cap_caching_mode" data-ref="_M/cap_caching_mode">cap_caching_mode</dfn>(c)	(((c) &gt;&gt; 7) &amp; 1)</u></td></tr>
+<tr><th id="152">152</th><td><u>#define <dfn class="macro" id="_M/cap_phmr" data-ref="_M/cap_phmr">cap_phmr</dfn>(c)		(((c) &gt;&gt; 6) &amp; 1)</u></td></tr>
+<tr><th id="153">153</th><td><u>#define <dfn class="macro" id="_M/cap_plmr" data-ref="_M/cap_plmr">cap_plmr</dfn>(c)		(((c) &gt;&gt; 5) &amp; 1)</u></td></tr>
+<tr><th id="154">154</th><td><u>#define <dfn class="macro" id="_M/cap_rwbf" data-ref="_M/cap_rwbf">cap_rwbf</dfn>(c)		(((c) &gt;&gt; 4) &amp; 1)</u></td></tr>
+<tr><th id="155">155</th><td><u>#define <dfn class="macro" id="_M/cap_afl" data-ref="_M/cap_afl">cap_afl</dfn>(c)		(((c) &gt;&gt; 3) &amp; 1)</u></td></tr>
+<tr><th id="156">156</th><td><u>#define <dfn class="macro" id="_M/cap_ndoms" data-ref="_M/cap_ndoms">cap_ndoms</dfn>(c)		(((unsigned long)1) &lt;&lt; (4 + 2 * ((c) &amp; 0x7)))</u></td></tr>
+<tr><th id="157">157</th><td><i>/*</i></td></tr>
+<tr><th id="158">158</th><td><i> * Extended Capability Register</i></td></tr>
+<tr><th id="159">159</th><td><i> */</i></td></tr>
+<tr><th id="160">160</th><td></td></tr>
+<tr><th id="161">161</th><td><u>#define <dfn class="macro" id="_M/ecap_smpwc" data-ref="_M/ecap_smpwc">ecap_smpwc</dfn>(e)		(((e) &gt;&gt; 48) &amp; 0x1)</u></td></tr>
+<tr><th id="162">162</th><td><u>#define <dfn class="macro" id="_M/ecap_flts" data-ref="_M/ecap_flts">ecap_flts</dfn>(e)		(((e) &gt;&gt; 47) &amp; 0x1)</u></td></tr>
+<tr><th id="163">163</th><td><u>#define <dfn class="macro" id="_M/ecap_slts" data-ref="_M/ecap_slts">ecap_slts</dfn>(e)		(((e) &gt;&gt; 46) &amp; 0x1)</u></td></tr>
+<tr><th id="164">164</th><td><u>#define <dfn class="macro" id="_M/ecap_smts" data-ref="_M/ecap_smts">ecap_smts</dfn>(e)		(((e) &gt;&gt; 43) &amp; 0x1)</u></td></tr>
+<tr><th id="165">165</th><td><u>#define <dfn class="macro" id="_M/ecap_dit" data-ref="_M/ecap_dit">ecap_dit</dfn>(e)		((e &gt;&gt; 41) &amp; 0x1)</u></td></tr>
+<tr><th id="166">166</th><td><u>#define <dfn class="macro" id="_M/ecap_pasid" data-ref="_M/ecap_pasid">ecap_pasid</dfn>(e)		((e &gt;&gt; 40) &amp; 0x1)</u></td></tr>
+<tr><th id="167">167</th><td><u>#define <dfn class="macro" id="_M/ecap_pss" data-ref="_M/ecap_pss">ecap_pss</dfn>(e)		((e &gt;&gt; 35) &amp; 0x1f)</u></td></tr>
+<tr><th id="168">168</th><td><u>#define <dfn class="macro" id="_M/ecap_eafs" data-ref="_M/ecap_eafs">ecap_eafs</dfn>(e)		((e &gt;&gt; 34) &amp; 0x1)</u></td></tr>
+<tr><th id="169">169</th><td><u>#define <dfn class="macro" id="_M/ecap_nwfs" data-ref="_M/ecap_nwfs">ecap_nwfs</dfn>(e)		((e &gt;&gt; 33) &amp; 0x1)</u></td></tr>
+<tr><th id="170">170</th><td><u>#define <dfn class="macro" id="_M/ecap_srs" data-ref="_M/ecap_srs">ecap_srs</dfn>(e)		((e &gt;&gt; 31) &amp; 0x1)</u></td></tr>
+<tr><th id="171">171</th><td><u>#define <dfn class="macro" id="_M/ecap_ers" data-ref="_M/ecap_ers">ecap_ers</dfn>(e)		((e &gt;&gt; 30) &amp; 0x1)</u></td></tr>
+<tr><th id="172">172</th><td><u>#define <dfn class="macro" id="_M/ecap_prs" data-ref="_M/ecap_prs">ecap_prs</dfn>(e)		((e &gt;&gt; 29) &amp; 0x1)</u></td></tr>
+<tr><th id="173">173</th><td><u>#define <dfn class="macro" id="_M/ecap_broken_pasid" data-ref="_M/ecap_broken_pasid">ecap_broken_pasid</dfn>(e)	((e &gt;&gt; 28) &amp; 0x1)</u></td></tr>
+<tr><th id="174">174</th><td><u>#define <dfn class="macro" id="_M/ecap_dis" data-ref="_M/ecap_dis">ecap_dis</dfn>(e)		((e &gt;&gt; 27) &amp; 0x1)</u></td></tr>
+<tr><th id="175">175</th><td><u>#define <dfn class="macro" id="_M/ecap_nest" data-ref="_M/ecap_nest">ecap_nest</dfn>(e)		((e &gt;&gt; 26) &amp; 0x1)</u></td></tr>
+<tr><th id="176">176</th><td><u>#define <dfn class="macro" id="_M/ecap_mts" data-ref="_M/ecap_mts">ecap_mts</dfn>(e)		((e &gt;&gt; 25) &amp; 0x1)</u></td></tr>
+<tr><th id="177">177</th><td><u>#define <dfn class="macro" id="_M/ecap_ecs" data-ref="_M/ecap_ecs">ecap_ecs</dfn>(e)		((e &gt;&gt; 24) &amp; 0x1)</u></td></tr>
+<tr><th id="178">178</th><td><u>#define <dfn class="macro" id="_M/ecap_iotlb_offset" data-ref="_M/ecap_iotlb_offset">ecap_iotlb_offset</dfn>(e) 	((((e) &gt;&gt; 8) &amp; 0x3ff) * 16)</u></td></tr>
+<tr><th id="179">179</th><td><u>#define <dfn class="macro" id="_M/ecap_max_iotlb_offset" data-ref="_M/ecap_max_iotlb_offset">ecap_max_iotlb_offset</dfn>(e) (ecap_iotlb_offset(e) + 16)</u></td></tr>
+<tr><th id="180">180</th><td><u>#define <dfn class="macro" id="_M/ecap_coherent" data-ref="_M/ecap_coherent">ecap_coherent</dfn>(e)	((e) &amp; 0x1)</u></td></tr>
+<tr><th id="181">181</th><td><u>#define <dfn class="macro" id="_M/ecap_qis" data-ref="_M/ecap_qis">ecap_qis</dfn>(e)		((e) &amp; 0x2)</u></td></tr>
+<tr><th id="182">182</th><td><u>#define <dfn class="macro" id="_M/ecap_pass_through" data-ref="_M/ecap_pass_through">ecap_pass_through</dfn>(e)	((e &gt;&gt; 6) &amp; 0x1)</u></td></tr>
+<tr><th id="183">183</th><td><u>#define <dfn class="macro" id="_M/ecap_eim_support" data-ref="_M/ecap_eim_support">ecap_eim_support</dfn>(e)	((e &gt;&gt; 4) &amp; 0x1)</u></td></tr>
+<tr><th id="184">184</th><td><u>#define <dfn class="macro" id="_M/ecap_ir_support" data-ref="_M/ecap_ir_support">ecap_ir_support</dfn>(e)	((e &gt;&gt; 3) &amp; 0x1)</u></td></tr>
+<tr><th id="185">185</th><td><u>#define <dfn class="macro" id="_M/ecap_dev_iotlb_support" data-ref="_M/ecap_dev_iotlb_support">ecap_dev_iotlb_support</dfn>(e)	(((e) &gt;&gt; 2) &amp; 0x1)</u></td></tr>
+<tr><th id="186">186</th><td><u>#define <dfn class="macro" id="_M/ecap_max_handle_mask" data-ref="_M/ecap_max_handle_mask">ecap_max_handle_mask</dfn>(e) ((e &gt;&gt; 20) &amp; 0xf)</u></td></tr>
+<tr><th id="187">187</th><td><u>#define <dfn class="macro" id="_M/ecap_sc_support" data-ref="_M/ecap_sc_support">ecap_sc_support</dfn>(e)	((e &gt;&gt; 7) &amp; 0x1) /* Snooping Control */</u></td></tr>
+<tr><th id="188">188</th><td></td></tr>
+<tr><th id="189">189</th><td><i>/* IOTLB_REG */</i></td></tr>
+<tr><th id="190">190</th><td><u>#define <dfn class="macro" id="_M/DMA_TLB_FLUSH_GRANU_OFFSET" data-ref="_M/DMA_TLB_FLUSH_GRANU_OFFSET">DMA_TLB_FLUSH_GRANU_OFFSET</dfn>  60</u></td></tr>
+<tr><th id="191">191</th><td><u>#define <dfn class="macro" id="_M/DMA_TLB_GLOBAL_FLUSH" data-ref="_M/DMA_TLB_GLOBAL_FLUSH">DMA_TLB_GLOBAL_FLUSH</dfn> (((u64)1) &lt;&lt; 60)</u></td></tr>
+<tr><th id="192">192</th><td><u>#define <dfn class="macro" id="_M/DMA_TLB_DSI_FLUSH" data-ref="_M/DMA_TLB_DSI_FLUSH">DMA_TLB_DSI_FLUSH</dfn> (((u64)2) &lt;&lt; 60)</u></td></tr>
+<tr><th id="193">193</th><td><u>#define <dfn class="macro" id="_M/DMA_TLB_PSI_FLUSH" data-ref="_M/DMA_TLB_PSI_FLUSH">DMA_TLB_PSI_FLUSH</dfn> (((u64)3) &lt;&lt; 60)</u></td></tr>
+<tr><th id="194">194</th><td><u>#define <dfn class="macro" id="_M/DMA_TLB_IIRG" data-ref="_M/DMA_TLB_IIRG">DMA_TLB_IIRG</dfn>(type) ((type &gt;&gt; 60) &amp; 3)</u></td></tr>
+<tr><th id="195">195</th><td><u>#define <dfn class="macro" id="_M/DMA_TLB_IAIG" data-ref="_M/DMA_TLB_IAIG">DMA_TLB_IAIG</dfn>(val) (((val) &gt;&gt; 57) &amp; 3)</u></td></tr>
+<tr><th id="196">196</th><td><u>#define <dfn class="macro" id="_M/DMA_TLB_READ_DRAIN" data-ref="_M/DMA_TLB_READ_DRAIN">DMA_TLB_READ_DRAIN</dfn> (((u64)1) &lt;&lt; 49)</u></td></tr>
+<tr><th id="197">197</th><td><u>#define <dfn class="macro" id="_M/DMA_TLB_WRITE_DRAIN" data-ref="_M/DMA_TLB_WRITE_DRAIN">DMA_TLB_WRITE_DRAIN</dfn> (((u64)1) &lt;&lt; 48)</u></td></tr>
+<tr><th id="198">198</th><td><u>#define <dfn class="macro" id="_M/DMA_TLB_DID" data-ref="_M/DMA_TLB_DID">DMA_TLB_DID</dfn>(id)	(((u64)((id) &amp; 0xffff)) &lt;&lt; 32)</u></td></tr>
+<tr><th id="199">199</th><td><u>#define <dfn class="macro" id="_M/DMA_TLB_IVT" data-ref="_M/DMA_TLB_IVT">DMA_TLB_IVT</dfn> (((u64)1) &lt;&lt; 63)</u></td></tr>
+<tr><th id="200">200</th><td><u>#define <dfn class="macro" id="_M/DMA_TLB_IH_NONLEAF" data-ref="_M/DMA_TLB_IH_NONLEAF">DMA_TLB_IH_NONLEAF</dfn> (((u64)1) &lt;&lt; 6)</u></td></tr>
+<tr><th id="201">201</th><td><u>#define <dfn class="macro" id="_M/DMA_TLB_MAX_SIZE" data-ref="_M/DMA_TLB_MAX_SIZE">DMA_TLB_MAX_SIZE</dfn> (0x3f)</u></td></tr>
+<tr><th id="202">202</th><td></td></tr>
+<tr><th id="203">203</th><td><i>/* INVALID_DESC */</i></td></tr>
+<tr><th id="204">204</th><td><u>#define <dfn class="macro" id="_M/DMA_CCMD_INVL_GRANU_OFFSET" data-ref="_M/DMA_CCMD_INVL_GRANU_OFFSET">DMA_CCMD_INVL_GRANU_OFFSET</dfn>  61</u></td></tr>
+<tr><th id="205">205</th><td><u>#define <dfn class="macro" id="_M/DMA_ID_TLB_GLOBAL_FLUSH" data-ref="_M/DMA_ID_TLB_GLOBAL_FLUSH">DMA_ID_TLB_GLOBAL_FLUSH</dfn>	(((u64)1) &lt;&lt; 4)</u></td></tr>
+<tr><th id="206">206</th><td><u>#define <dfn class="macro" id="_M/DMA_ID_TLB_DSI_FLUSH" data-ref="_M/DMA_ID_TLB_DSI_FLUSH">DMA_ID_TLB_DSI_FLUSH</dfn>	(((u64)2) &lt;&lt; 4)</u></td></tr>
+<tr><th id="207">207</th><td><u>#define <dfn class="macro" id="_M/DMA_ID_TLB_PSI_FLUSH" data-ref="_M/DMA_ID_TLB_PSI_FLUSH">DMA_ID_TLB_PSI_FLUSH</dfn>	(((u64)3) &lt;&lt; 4)</u></td></tr>
+<tr><th id="208">208</th><td><u>#define <dfn class="macro" id="_M/DMA_ID_TLB_READ_DRAIN" data-ref="_M/DMA_ID_TLB_READ_DRAIN">DMA_ID_TLB_READ_DRAIN</dfn>	(((u64)1) &lt;&lt; 7)</u></td></tr>
+<tr><th id="209">209</th><td><u>#define <dfn class="macro" id="_M/DMA_ID_TLB_WRITE_DRAIN" data-ref="_M/DMA_ID_TLB_WRITE_DRAIN">DMA_ID_TLB_WRITE_DRAIN</dfn>	(((u64)1) &lt;&lt; 6)</u></td></tr>
+<tr><th id="210">210</th><td><u>#define <dfn class="macro" id="_M/DMA_ID_TLB_DID" data-ref="_M/DMA_ID_TLB_DID">DMA_ID_TLB_DID</dfn>(id)	(((u64)((id &amp; 0xffff) &lt;&lt; 16)))</u></td></tr>
+<tr><th id="211">211</th><td><u>#define <dfn class="macro" id="_M/DMA_ID_TLB_IH_NONLEAF" data-ref="_M/DMA_ID_TLB_IH_NONLEAF">DMA_ID_TLB_IH_NONLEAF</dfn>	(((u64)1) &lt;&lt; 6)</u></td></tr>
+<tr><th id="212">212</th><td><u>#define <dfn class="macro" id="_M/DMA_ID_TLB_ADDR" data-ref="_M/DMA_ID_TLB_ADDR">DMA_ID_TLB_ADDR</dfn>(addr)	(addr)</u></td></tr>
+<tr><th id="213">213</th><td><u>#define <dfn class="macro" id="_M/DMA_ID_TLB_ADDR_MASK" data-ref="_M/DMA_ID_TLB_ADDR_MASK">DMA_ID_TLB_ADDR_MASK</dfn>(mask)	(mask)</u></td></tr>
+<tr><th id="214">214</th><td></td></tr>
+<tr><th id="215">215</th><td><i>/* PMEN_REG */</i></td></tr>
+<tr><th id="216">216</th><td><u>#define <dfn class="macro" id="_M/DMA_PMEN_EPM" data-ref="_M/DMA_PMEN_EPM">DMA_PMEN_EPM</dfn> (((u32)1)&lt;&lt;31)</u></td></tr>
+<tr><th id="217">217</th><td><u>#define <dfn class="macro" id="_M/DMA_PMEN_PRS" data-ref="_M/DMA_PMEN_PRS">DMA_PMEN_PRS</dfn> (((u32)1)&lt;&lt;0)</u></td></tr>
+<tr><th id="218">218</th><td></td></tr>
+<tr><th id="219">219</th><td><i>/* GCMD_REG */</i></td></tr>
+<tr><th id="220">220</th><td><u>#define <dfn class="macro" id="_M/DMA_GCMD_TE" data-ref="_M/DMA_GCMD_TE">DMA_GCMD_TE</dfn> (((u32)1) &lt;&lt; 31)</u></td></tr>
+<tr><th id="221">221</th><td><u>#define <dfn class="macro" id="_M/DMA_GCMD_SRTP" data-ref="_M/DMA_GCMD_SRTP">DMA_GCMD_SRTP</dfn> (((u32)1) &lt;&lt; 30)</u></td></tr>
+<tr><th id="222">222</th><td><u>#define <dfn class="macro" id="_M/DMA_GCMD_SFL" data-ref="_M/DMA_GCMD_SFL">DMA_GCMD_SFL</dfn> (((u32)1) &lt;&lt; 29)</u></td></tr>
+<tr><th id="223">223</th><td><u>#define <dfn class="macro" id="_M/DMA_GCMD_EAFL" data-ref="_M/DMA_GCMD_EAFL">DMA_GCMD_EAFL</dfn> (((u32)1) &lt;&lt; 28)</u></td></tr>
+<tr><th id="224">224</th><td><u>#define <dfn class="macro" id="_M/DMA_GCMD_WBF" data-ref="_M/DMA_GCMD_WBF">DMA_GCMD_WBF</dfn> (((u32)1) &lt;&lt; 27)</u></td></tr>
+<tr><th id="225">225</th><td><u>#define <dfn class="macro" id="_M/DMA_GCMD_QIE" data-ref="_M/DMA_GCMD_QIE">DMA_GCMD_QIE</dfn> (((u32)1) &lt;&lt; 26)</u></td></tr>
+<tr><th id="226">226</th><td><u>#define <dfn class="macro" id="_M/DMA_GCMD_SIRTP" data-ref="_M/DMA_GCMD_SIRTP">DMA_GCMD_SIRTP</dfn> (((u32)1) &lt;&lt; 24)</u></td></tr>
+<tr><th id="227">227</th><td><u>#define <dfn class="macro" id="_M/DMA_GCMD_IRE" data-ref="_M/DMA_GCMD_IRE">DMA_GCMD_IRE</dfn> (((u32) 1) &lt;&lt; 25)</u></td></tr>
+<tr><th id="228">228</th><td><u>#define <dfn class="macro" id="_M/DMA_GCMD_CFI" data-ref="_M/DMA_GCMD_CFI">DMA_GCMD_CFI</dfn> (((u32) 1) &lt;&lt; 23)</u></td></tr>
+<tr><th id="229">229</th><td></td></tr>
+<tr><th id="230">230</th><td><i>/* GSTS_REG */</i></td></tr>
+<tr><th id="231">231</th><td><u>#define <dfn class="macro" id="_M/DMA_GSTS_TES" data-ref="_M/DMA_GSTS_TES">DMA_GSTS_TES</dfn> (((u32)1) &lt;&lt; 31)</u></td></tr>
+<tr><th id="232">232</th><td><u>#define <dfn class="macro" id="_M/DMA_GSTS_RTPS" data-ref="_M/DMA_GSTS_RTPS">DMA_GSTS_RTPS</dfn> (((u32)1) &lt;&lt; 30)</u></td></tr>
+<tr><th id="233">233</th><td><u>#define <dfn class="macro" id="_M/DMA_GSTS_FLS" data-ref="_M/DMA_GSTS_FLS">DMA_GSTS_FLS</dfn> (((u32)1) &lt;&lt; 29)</u></td></tr>
+<tr><th id="234">234</th><td><u>#define <dfn class="macro" id="_M/DMA_GSTS_AFLS" data-ref="_M/DMA_GSTS_AFLS">DMA_GSTS_AFLS</dfn> (((u32)1) &lt;&lt; 28)</u></td></tr>
+<tr><th id="235">235</th><td><u>#define <dfn class="macro" id="_M/DMA_GSTS_WBFS" data-ref="_M/DMA_GSTS_WBFS">DMA_GSTS_WBFS</dfn> (((u32)1) &lt;&lt; 27)</u></td></tr>
+<tr><th id="236">236</th><td><u>#define <dfn class="macro" id="_M/DMA_GSTS_QIES" data-ref="_M/DMA_GSTS_QIES">DMA_GSTS_QIES</dfn> (((u32)1) &lt;&lt; 26)</u></td></tr>
+<tr><th id="237">237</th><td><u>#define <dfn class="macro" id="_M/DMA_GSTS_IRTPS" data-ref="_M/DMA_GSTS_IRTPS">DMA_GSTS_IRTPS</dfn> (((u32)1) &lt;&lt; 24)</u></td></tr>
+<tr><th id="238">238</th><td><u>#define <dfn class="macro" id="_M/DMA_GSTS_IRES" data-ref="_M/DMA_GSTS_IRES">DMA_GSTS_IRES</dfn> (((u32)1) &lt;&lt; 25)</u></td></tr>
+<tr><th id="239">239</th><td><u>#define <dfn class="macro" id="_M/DMA_GSTS_CFIS" data-ref="_M/DMA_GSTS_CFIS">DMA_GSTS_CFIS</dfn> (((u32)1) &lt;&lt; 23)</u></td></tr>
+<tr><th id="240">240</th><td></td></tr>
+<tr><th id="241">241</th><td><i>/* DMA_RTADDR_REG */</i></td></tr>
+<tr><th id="242">242</th><td><u>#define <dfn class="macro" id="_M/DMA_RTADDR_RTT" data-ref="_M/DMA_RTADDR_RTT">DMA_RTADDR_RTT</dfn> (((u64)1) &lt;&lt; 11)</u></td></tr>
+<tr><th id="243">243</th><td><u>#define <dfn class="macro" id="_M/DMA_RTADDR_SMT" data-ref="_M/DMA_RTADDR_SMT">DMA_RTADDR_SMT</dfn> (((u64)1) &lt;&lt; 10)</u></td></tr>
+<tr><th id="244">244</th><td></td></tr>
+<tr><th id="245">245</th><td><i>/* CCMD_REG */</i></td></tr>
+<tr><th id="246">246</th><td><u>#define <dfn class="macro" id="_M/DMA_CCMD_ICC" data-ref="_M/DMA_CCMD_ICC">DMA_CCMD_ICC</dfn> (((u64)1) &lt;&lt; 63)</u></td></tr>
+<tr><th id="247">247</th><td><u>#define <dfn class="macro" id="_M/DMA_CCMD_GLOBAL_INVL" data-ref="_M/DMA_CCMD_GLOBAL_INVL">DMA_CCMD_GLOBAL_INVL</dfn> (((u64)1) &lt;&lt; 61)</u></td></tr>
+<tr><th id="248">248</th><td><u>#define <dfn class="macro" id="_M/DMA_CCMD_DOMAIN_INVL" data-ref="_M/DMA_CCMD_DOMAIN_INVL">DMA_CCMD_DOMAIN_INVL</dfn> (((u64)2) &lt;&lt; 61)</u></td></tr>
+<tr><th id="249">249</th><td><u>#define <dfn class="macro" id="_M/DMA_CCMD_DEVICE_INVL" data-ref="_M/DMA_CCMD_DEVICE_INVL">DMA_CCMD_DEVICE_INVL</dfn> (((u64)3) &lt;&lt; 61)</u></td></tr>
+<tr><th id="250">250</th><td><u>#define <dfn class="macro" id="_M/DMA_CCMD_FM" data-ref="_M/DMA_CCMD_FM">DMA_CCMD_FM</dfn>(m) (((u64)((m) &amp; 0x3)) &lt;&lt; 32)</u></td></tr>
+<tr><th id="251">251</th><td><u>#define <dfn class="macro" id="_M/DMA_CCMD_MASK_NOBIT" data-ref="_M/DMA_CCMD_MASK_NOBIT">DMA_CCMD_MASK_NOBIT</dfn> 0</u></td></tr>
+<tr><th id="252">252</th><td><u>#define <dfn class="macro" id="_M/DMA_CCMD_MASK_1BIT" data-ref="_M/DMA_CCMD_MASK_1BIT">DMA_CCMD_MASK_1BIT</dfn> 1</u></td></tr>
+<tr><th id="253">253</th><td><u>#define <dfn class="macro" id="_M/DMA_CCMD_MASK_2BIT" data-ref="_M/DMA_CCMD_MASK_2BIT">DMA_CCMD_MASK_2BIT</dfn> 2</u></td></tr>
+<tr><th id="254">254</th><td><u>#define <dfn class="macro" id="_M/DMA_CCMD_MASK_3BIT" data-ref="_M/DMA_CCMD_MASK_3BIT">DMA_CCMD_MASK_3BIT</dfn> 3</u></td></tr>
+<tr><th id="255">255</th><td><u>#define <dfn class="macro" id="_M/DMA_CCMD_SID" data-ref="_M/DMA_CCMD_SID">DMA_CCMD_SID</dfn>(s) (((u64)((s) &amp; 0xffff)) &lt;&lt; 16)</u></td></tr>
+<tr><th id="256">256</th><td><u>#define <dfn class="macro" id="_M/DMA_CCMD_DID" data-ref="_M/DMA_CCMD_DID">DMA_CCMD_DID</dfn>(d) ((u64)((d) &amp; 0xffff))</u></td></tr>
+<tr><th id="257">257</th><td></td></tr>
+<tr><th id="258">258</th><td><i>/* FECTL_REG */</i></td></tr>
+<tr><th id="259">259</th><td><u>#define <dfn class="macro" id="_M/DMA_FECTL_IM" data-ref="_M/DMA_FECTL_IM">DMA_FECTL_IM</dfn> (((u32)1) &lt;&lt; 31)</u></td></tr>
+<tr><th id="260">260</th><td></td></tr>
+<tr><th id="261">261</th><td><i>/* FSTS_REG */</i></td></tr>
+<tr><th id="262">262</th><td><u>#define <dfn class="macro" id="_M/DMA_FSTS_PFO" data-ref="_M/DMA_FSTS_PFO">DMA_FSTS_PFO</dfn> (1 &lt;&lt; 0) /* Primary Fault Overflow */</u></td></tr>
+<tr><th id="263">263</th><td><u>#define <dfn class="macro" id="_M/DMA_FSTS_PPF" data-ref="_M/DMA_FSTS_PPF">DMA_FSTS_PPF</dfn> (1 &lt;&lt; 1) /* Primary Pending Fault */</u></td></tr>
+<tr><th id="264">264</th><td><u>#define <dfn class="macro" id="_M/DMA_FSTS_IQE" data-ref="_M/DMA_FSTS_IQE">DMA_FSTS_IQE</dfn> (1 &lt;&lt; 4) /* Invalidation Queue Error */</u></td></tr>
+<tr><th id="265">265</th><td><u>#define <dfn class="macro" id="_M/DMA_FSTS_ICE" data-ref="_M/DMA_FSTS_ICE">DMA_FSTS_ICE</dfn> (1 &lt;&lt; 5) /* Invalidation Completion Error */</u></td></tr>
+<tr><th id="266">266</th><td><u>#define <dfn class="macro" id="_M/DMA_FSTS_ITE" data-ref="_M/DMA_FSTS_ITE">DMA_FSTS_ITE</dfn> (1 &lt;&lt; 6) /* Invalidation Time-out Error */</u></td></tr>
+<tr><th id="267">267</th><td><u>#define <dfn class="macro" id="_M/DMA_FSTS_PRO" data-ref="_M/DMA_FSTS_PRO">DMA_FSTS_PRO</dfn> (1 &lt;&lt; 7) /* Page Request Overflow */</u></td></tr>
+<tr><th id="268">268</th><td><u>#define <dfn class="macro" id="_M/dma_fsts_fault_record_index" data-ref="_M/dma_fsts_fault_record_index">dma_fsts_fault_record_index</dfn>(s) (((s) &gt;&gt; 8) &amp; 0xff)</u></td></tr>
+<tr><th id="269">269</th><td></td></tr>
+<tr><th id="270">270</th><td><i>/* FRCD_REG, 32 bits access */</i></td></tr>
+<tr><th id="271">271</th><td><u>#define <dfn class="macro" id="_M/DMA_FRCD_F" data-ref="_M/DMA_FRCD_F">DMA_FRCD_F</dfn> (((u32)1) &lt;&lt; 31)</u></td></tr>
+<tr><th id="272">272</th><td><u>#define <dfn class="macro" id="_M/dma_frcd_type" data-ref="_M/dma_frcd_type">dma_frcd_type</dfn>(d) ((d &gt;&gt; 30) &amp; 1)</u></td></tr>
+<tr><th id="273">273</th><td><u>#define <dfn class="macro" id="_M/dma_frcd_fault_reason" data-ref="_M/dma_frcd_fault_reason">dma_frcd_fault_reason</dfn>(c) (c &amp; 0xff)</u></td></tr>
+<tr><th id="274">274</th><td><u>#define <dfn class="macro" id="_M/dma_frcd_source_id" data-ref="_M/dma_frcd_source_id">dma_frcd_source_id</dfn>(c) (c &amp; 0xffff)</u></td></tr>
+<tr><th id="275">275</th><td><i>/* low 64 bit */</i></td></tr>
+<tr><th id="276">276</th><td><u>#define <dfn class="macro" id="_M/dma_frcd_page_addr" data-ref="_M/dma_frcd_page_addr">dma_frcd_page_addr</dfn>(d) (d &amp; (((u64)-1) &lt;&lt; PAGE_SHIFT))</u></td></tr>
+<tr><th id="277">277</th><td></td></tr>
+<tr><th id="278">278</th><td><i>/* PRS_REG */</i></td></tr>
+<tr><th id="279">279</th><td><u>#define <dfn class="macro" id="_M/DMA_PRS_PPR" data-ref="_M/DMA_PRS_PPR">DMA_PRS_PPR</dfn>	((u32)1)</u></td></tr>
+<tr><th id="280">280</th><td></td></tr>
+<tr><th id="281">281</th><td><u>#define <dfn class="macro" id="_M/IOMMU_WAIT_OP" data-ref="_M/IOMMU_WAIT_OP">IOMMU_WAIT_OP</dfn>(iommu, offset, op, cond, sts)			\</u></td></tr>
+<tr><th id="282">282</th><td><u>do {									\</u></td></tr>
+<tr><th id="283">283</th><td><u>	cycles_t start_time = get_cycles();				\</u></td></tr>
+<tr><th id="284">284</th><td><u>	while (1) {							\</u></td></tr>
+<tr><th id="285">285</th><td><u>		sts = op(iommu-&gt;reg + offset);				\</u></td></tr>
+<tr><th id="286">286</th><td><u>		if (cond)						\</u></td></tr>
+<tr><th id="287">287</th><td><u>			break;						\</u></td></tr>
+<tr><th id="288">288</th><td><u>		if (DMAR_OPERATION_TIMEOUT &lt; (get_cycles() - start_time))\</u></td></tr>
+<tr><th id="289">289</th><td><u>			panic("DMAR hardware is malfunctioning\n");	\</u></td></tr>
+<tr><th id="290">290</th><td><u>		cpu_relax();						\</u></td></tr>
+<tr><th id="291">291</th><td><u>	}								\</u></td></tr>
+<tr><th id="292">292</th><td><u>} while (0)</u></td></tr>
+<tr><th id="293">293</th><td></td></tr>
+<tr><th id="294">294</th><td><u>#define <dfn class="macro" id="_M/QI_LENGTH" data-ref="_M/QI_LENGTH">QI_LENGTH</dfn>	256	/* queue length */</u></td></tr>
+<tr><th id="295">295</th><td></td></tr>
+<tr><th id="296">296</th><td><b>enum</b> {</td></tr>
+<tr><th id="297">297</th><td>	<dfn class="enum" id="QI_FREE" title='QI_FREE' data-ref="QI_FREE" data-ref-filename="QI_FREE">QI_FREE</dfn>,</td></tr>
+<tr><th id="298">298</th><td>	<dfn class="enum" id="QI_IN_USE" title='QI_IN_USE' data-ref="QI_IN_USE" data-ref-filename="QI_IN_USE">QI_IN_USE</dfn>,</td></tr>
+<tr><th id="299">299</th><td>	<dfn class="enum" id="QI_DONE" title='QI_DONE' data-ref="QI_DONE" data-ref-filename="QI_DONE">QI_DONE</dfn>,</td></tr>
+<tr><th id="300">300</th><td>	<dfn class="enum" id="QI_ABORT" title='QI_ABORT' data-ref="QI_ABORT" data-ref-filename="QI_ABORT">QI_ABORT</dfn></td></tr>
+<tr><th id="301">301</th><td>};</td></tr>
+<tr><th id="302">302</th><td></td></tr>
+<tr><th id="303">303</th><td><u>#define <dfn class="macro" id="_M/QI_CC_TYPE" data-ref="_M/QI_CC_TYPE">QI_CC_TYPE</dfn>		0x1</u></td></tr>
+<tr><th id="304">304</th><td><u>#define <dfn class="macro" id="_M/QI_IOTLB_TYPE" data-ref="_M/QI_IOTLB_TYPE">QI_IOTLB_TYPE</dfn>		0x2</u></td></tr>
+<tr><th id="305">305</th><td><u>#define <dfn class="macro" id="_M/QI_DIOTLB_TYPE" data-ref="_M/QI_DIOTLB_TYPE">QI_DIOTLB_TYPE</dfn>		0x3</u></td></tr>
+<tr><th id="306">306</th><td><u>#define <dfn class="macro" id="_M/QI_IEC_TYPE" data-ref="_M/QI_IEC_TYPE">QI_IEC_TYPE</dfn>		0x4</u></td></tr>
+<tr><th id="307">307</th><td><u>#define <dfn class="macro" id="_M/QI_IWD_TYPE" data-ref="_M/QI_IWD_TYPE">QI_IWD_TYPE</dfn>		0x5</u></td></tr>
+<tr><th id="308">308</th><td><u>#define <dfn class="macro" id="_M/QI_EIOTLB_TYPE" data-ref="_M/QI_EIOTLB_TYPE">QI_EIOTLB_TYPE</dfn>		0x6</u></td></tr>
+<tr><th id="309">309</th><td><u>#define <dfn class="macro" id="_M/QI_PC_TYPE" data-ref="_M/QI_PC_TYPE">QI_PC_TYPE</dfn>		0x7</u></td></tr>
+<tr><th id="310">310</th><td><u>#define <dfn class="macro" id="_M/QI_DEIOTLB_TYPE" data-ref="_M/QI_DEIOTLB_TYPE">QI_DEIOTLB_TYPE</dfn>		0x8</u></td></tr>
+<tr><th id="311">311</th><td><u>#define <dfn class="macro" id="_M/QI_PGRP_RESP_TYPE" data-ref="_M/QI_PGRP_RESP_TYPE">QI_PGRP_RESP_TYPE</dfn>	0x9</u></td></tr>
+<tr><th id="312">312</th><td><u>#define <dfn class="macro" id="_M/QI_PSTRM_RESP_TYPE" data-ref="_M/QI_PSTRM_RESP_TYPE">QI_PSTRM_RESP_TYPE</dfn>	0xa</u></td></tr>
+<tr><th id="313">313</th><td></td></tr>
+<tr><th id="314">314</th><td><u>#define <dfn class="macro" id="_M/QI_IEC_SELECTIVE" data-ref="_M/QI_IEC_SELECTIVE">QI_IEC_SELECTIVE</dfn>	(((u64)1) &lt;&lt; 4)</u></td></tr>
+<tr><th id="315">315</th><td><u>#define <dfn class="macro" id="_M/QI_IEC_IIDEX" data-ref="_M/QI_IEC_IIDEX">QI_IEC_IIDEX</dfn>(idx)	(((u64)(idx &amp; 0xffff) &lt;&lt; 32))</u></td></tr>
+<tr><th id="316">316</th><td><u>#define <dfn class="macro" id="_M/QI_IEC_IM" data-ref="_M/QI_IEC_IM">QI_IEC_IM</dfn>(m)		(((u64)(m &amp; 0x1f) &lt;&lt; 27))</u></td></tr>
+<tr><th id="317">317</th><td></td></tr>
+<tr><th id="318">318</th><td><u>#define <dfn class="macro" id="_M/QI_IWD_STATUS_DATA" data-ref="_M/QI_IWD_STATUS_DATA">QI_IWD_STATUS_DATA</dfn>(d)	(((u64)d) &lt;&lt; 32)</u></td></tr>
+<tr><th id="319">319</th><td><u>#define <dfn class="macro" id="_M/QI_IWD_STATUS_WRITE" data-ref="_M/QI_IWD_STATUS_WRITE">QI_IWD_STATUS_WRITE</dfn>	(((u64)1) &lt;&lt; 5)</u></td></tr>
+<tr><th id="320">320</th><td></td></tr>
+<tr><th id="321">321</th><td><u>#define <dfn class="macro" id="_M/QI_IOTLB_DID" data-ref="_M/QI_IOTLB_DID">QI_IOTLB_DID</dfn>(did) 	(((u64)did) &lt;&lt; 16)</u></td></tr>
+<tr><th id="322">322</th><td><u>#define <dfn class="macro" id="_M/QI_IOTLB_DR" data-ref="_M/QI_IOTLB_DR">QI_IOTLB_DR</dfn>(dr) 	(((u64)dr) &lt;&lt; 7)</u></td></tr>
+<tr><th id="323">323</th><td><u>#define <dfn class="macro" id="_M/QI_IOTLB_DW" data-ref="_M/QI_IOTLB_DW">QI_IOTLB_DW</dfn>(dw) 	(((u64)dw) &lt;&lt; 6)</u></td></tr>
+<tr><th id="324">324</th><td><u>#define <dfn class="macro" id="_M/QI_IOTLB_GRAN" data-ref="_M/QI_IOTLB_GRAN">QI_IOTLB_GRAN</dfn>(gran) 	(((u64)gran) &gt;&gt; (DMA_TLB_FLUSH_GRANU_OFFSET-4))</u></td></tr>
+<tr><th id="325">325</th><td><u>#define <dfn class="macro" id="_M/QI_IOTLB_ADDR" data-ref="_M/QI_IOTLB_ADDR">QI_IOTLB_ADDR</dfn>(addr)	(((u64)addr) &amp; VTD_PAGE_MASK)</u></td></tr>
+<tr><th id="326">326</th><td><u>#define <dfn class="macro" id="_M/QI_IOTLB_IH" data-ref="_M/QI_IOTLB_IH">QI_IOTLB_IH</dfn>(ih)		(((u64)ih) &lt;&lt; 6)</u></td></tr>
+<tr><th id="327">327</th><td><u>#define <dfn class="macro" id="_M/QI_IOTLB_AM" data-ref="_M/QI_IOTLB_AM">QI_IOTLB_AM</dfn>(am)		(((u8)am))</u></td></tr>
+<tr><th id="328">328</th><td></td></tr>
+<tr><th id="329">329</th><td><u>#define <dfn class="macro" id="_M/QI_CC_FM" data-ref="_M/QI_CC_FM">QI_CC_FM</dfn>(fm)		(((u64)fm) &lt;&lt; 48)</u></td></tr>
+<tr><th id="330">330</th><td><u>#define <dfn class="macro" id="_M/QI_CC_SID" data-ref="_M/QI_CC_SID">QI_CC_SID</dfn>(sid)		(((u64)sid) &lt;&lt; 32)</u></td></tr>
+<tr><th id="331">331</th><td><u>#define <dfn class="macro" id="_M/QI_CC_DID" data-ref="_M/QI_CC_DID">QI_CC_DID</dfn>(did)		(((u64)did) &lt;&lt; 16)</u></td></tr>
+<tr><th id="332">332</th><td><u>#define <dfn class="macro" id="_M/QI_CC_GRAN" data-ref="_M/QI_CC_GRAN">QI_CC_GRAN</dfn>(gran)	(((u64)gran) &gt;&gt; (DMA_CCMD_INVL_GRANU_OFFSET-4))</u></td></tr>
+<tr><th id="333">333</th><td></td></tr>
+<tr><th id="334">334</th><td><u>#define <dfn class="macro" id="_M/QI_DEV_IOTLB_SID" data-ref="_M/QI_DEV_IOTLB_SID">QI_DEV_IOTLB_SID</dfn>(sid)	((u64)((sid) &amp; 0xffff) &lt;&lt; 32)</u></td></tr>
+<tr><th id="335">335</th><td><u>#define <dfn class="macro" id="_M/QI_DEV_IOTLB_QDEP" data-ref="_M/QI_DEV_IOTLB_QDEP">QI_DEV_IOTLB_QDEP</dfn>(qdep)	(((qdep) &amp; 0x1f) &lt;&lt; 16)</u></td></tr>
+<tr><th id="336">336</th><td><u>#define <dfn class="macro" id="_M/QI_DEV_IOTLB_ADDR" data-ref="_M/QI_DEV_IOTLB_ADDR">QI_DEV_IOTLB_ADDR</dfn>(addr)	((u64)(addr) &amp; VTD_PAGE_MASK)</u></td></tr>
+<tr><th id="337">337</th><td><u>#define <dfn class="macro" id="_M/QI_DEV_IOTLB_PFSID" data-ref="_M/QI_DEV_IOTLB_PFSID">QI_DEV_IOTLB_PFSID</dfn>(pfsid) (((u64)(pfsid &amp; 0xf) &lt;&lt; 12) | ((u64)(pfsid &amp; 0xfff) &lt;&lt; 52))</u></td></tr>
+<tr><th id="338">338</th><td><u>#define <dfn class="macro" id="_M/QI_DEV_IOTLB_SIZE" data-ref="_M/QI_DEV_IOTLB_SIZE">QI_DEV_IOTLB_SIZE</dfn>	1</u></td></tr>
+<tr><th id="339">339</th><td><u>#define <dfn class="macro" id="_M/QI_DEV_IOTLB_MAX_INVS" data-ref="_M/QI_DEV_IOTLB_MAX_INVS">QI_DEV_IOTLB_MAX_INVS</dfn>	32</u></td></tr>
+<tr><th id="340">340</th><td></td></tr>
+<tr><th id="341">341</th><td><u>#define <dfn class="macro" id="_M/QI_PC_PASID" data-ref="_M/QI_PC_PASID">QI_PC_PASID</dfn>(pasid)	(((u64)pasid) &lt;&lt; 32)</u></td></tr>
+<tr><th id="342">342</th><td><u>#define <dfn class="macro" id="_M/QI_PC_DID" data-ref="_M/QI_PC_DID">QI_PC_DID</dfn>(did)		(((u64)did) &lt;&lt; 16)</u></td></tr>
+<tr><th id="343">343</th><td><u>#define <dfn class="macro" id="_M/QI_PC_GRAN" data-ref="_M/QI_PC_GRAN">QI_PC_GRAN</dfn>(gran)	(((u64)gran) &lt;&lt; 4)</u></td></tr>
+<tr><th id="344">344</th><td></td></tr>
+<tr><th id="345">345</th><td><u>#define <dfn class="macro" id="_M/QI_PC_ALL_PASIDS" data-ref="_M/QI_PC_ALL_PASIDS">QI_PC_ALL_PASIDS</dfn>	(QI_PC_TYPE | QI_PC_GRAN(0))</u></td></tr>
+<tr><th id="346">346</th><td><u>#define <dfn class="macro" id="_M/QI_PC_PASID_SEL" data-ref="_M/QI_PC_PASID_SEL">QI_PC_PASID_SEL</dfn>		(QI_PC_TYPE | QI_PC_GRAN(1))</u></td></tr>
+<tr><th id="347">347</th><td></td></tr>
+<tr><th id="348">348</th><td><u>#define <dfn class="macro" id="_M/QI_EIOTLB_ADDR" data-ref="_M/QI_EIOTLB_ADDR">QI_EIOTLB_ADDR</dfn>(addr)	((u64)(addr) &amp; VTD_PAGE_MASK)</u></td></tr>
+<tr><th id="349">349</th><td><u>#define <dfn class="macro" id="_M/QI_EIOTLB_IH" data-ref="_M/QI_EIOTLB_IH">QI_EIOTLB_IH</dfn>(ih)	(((u64)ih) &lt;&lt; 6)</u></td></tr>
+<tr><th id="350">350</th><td><u>#define <dfn class="macro" id="_M/QI_EIOTLB_AM" data-ref="_M/QI_EIOTLB_AM">QI_EIOTLB_AM</dfn>(am)	(((u64)am))</u></td></tr>
+<tr><th id="351">351</th><td><u>#define <dfn class="macro" id="_M/QI_EIOTLB_PASID" data-ref="_M/QI_EIOTLB_PASID">QI_EIOTLB_PASID</dfn>(pasid) 	(((u64)pasid) &lt;&lt; 32)</u></td></tr>
+<tr><th id="352">352</th><td><u>#define <dfn class="macro" id="_M/QI_EIOTLB_DID" data-ref="_M/QI_EIOTLB_DID">QI_EIOTLB_DID</dfn>(did)	(((u64)did) &lt;&lt; 16)</u></td></tr>
+<tr><th id="353">353</th><td><u>#define <dfn class="macro" id="_M/QI_EIOTLB_GRAN" data-ref="_M/QI_EIOTLB_GRAN">QI_EIOTLB_GRAN</dfn>(gran) 	(((u64)gran) &lt;&lt; 4)</u></td></tr>
+<tr><th id="354">354</th><td></td></tr>
+<tr><th id="355">355</th><td><u>#define <dfn class="macro" id="_M/QI_DEV_EIOTLB_ADDR" data-ref="_M/QI_DEV_EIOTLB_ADDR">QI_DEV_EIOTLB_ADDR</dfn>(a)	((u64)(a) &amp; VTD_PAGE_MASK)</u></td></tr>
+<tr><th id="356">356</th><td><u>#define <dfn class="macro" id="_M/QI_DEV_EIOTLB_SIZE" data-ref="_M/QI_DEV_EIOTLB_SIZE">QI_DEV_EIOTLB_SIZE</dfn>	(((u64)1) &lt;&lt; 11)</u></td></tr>
+<tr><th id="357">357</th><td><u>#define <dfn class="macro" id="_M/QI_DEV_EIOTLB_GLOB" data-ref="_M/QI_DEV_EIOTLB_GLOB">QI_DEV_EIOTLB_GLOB</dfn>(g)	((u64)g)</u></td></tr>
+<tr><th id="358">358</th><td><u>#define <dfn class="macro" id="_M/QI_DEV_EIOTLB_PASID" data-ref="_M/QI_DEV_EIOTLB_PASID">QI_DEV_EIOTLB_PASID</dfn>(p)	(((u64)p) &lt;&lt; 32)</u></td></tr>
+<tr><th id="359">359</th><td><u>#define <dfn class="macro" id="_M/QI_DEV_EIOTLB_SID" data-ref="_M/QI_DEV_EIOTLB_SID">QI_DEV_EIOTLB_SID</dfn>(sid)	((u64)((sid) &amp; 0xffff) &lt;&lt; 16)</u></td></tr>
+<tr><th id="360">360</th><td><u>#define <dfn class="macro" id="_M/QI_DEV_EIOTLB_QDEP" data-ref="_M/QI_DEV_EIOTLB_QDEP">QI_DEV_EIOTLB_QDEP</dfn>(qd)	((u64)((qd) &amp; 0x1f) &lt;&lt; 4)</u></td></tr>
+<tr><th id="361">361</th><td><u>#define <dfn class="macro" id="_M/QI_DEV_EIOTLB_PFSID" data-ref="_M/QI_DEV_EIOTLB_PFSID">QI_DEV_EIOTLB_PFSID</dfn>(pfsid) (((u64)(pfsid &amp; 0xf) &lt;&lt; 12) | ((u64)(pfsid &amp; 0xfff) &lt;&lt; 52))</u></td></tr>
+<tr><th id="362">362</th><td><u>#define <dfn class="macro" id="_M/QI_DEV_EIOTLB_MAX_INVS" data-ref="_M/QI_DEV_EIOTLB_MAX_INVS">QI_DEV_EIOTLB_MAX_INVS</dfn>	32</u></td></tr>
+<tr><th id="363">363</th><td></td></tr>
+<tr><th id="364">364</th><td><i>/* Page group response descriptor QW0 */</i></td></tr>
+<tr><th id="365">365</th><td><u>#define <dfn class="macro" id="_M/QI_PGRP_PASID_P" data-ref="_M/QI_PGRP_PASID_P">QI_PGRP_PASID_P</dfn>(p)	(((u64)(p)) &lt;&lt; 4)</u></td></tr>
+<tr><th id="366">366</th><td><u>#define <dfn class="macro" id="_M/QI_PGRP_PDP" data-ref="_M/QI_PGRP_PDP">QI_PGRP_PDP</dfn>(p)		(((u64)(p)) &lt;&lt; 5)</u></td></tr>
+<tr><th id="367">367</th><td><u>#define <dfn class="macro" id="_M/QI_PGRP_RESP_CODE" data-ref="_M/QI_PGRP_RESP_CODE">QI_PGRP_RESP_CODE</dfn>(res)	(((u64)(res)) &lt;&lt; 12)</u></td></tr>
+<tr><th id="368">368</th><td><u>#define <dfn class="macro" id="_M/QI_PGRP_DID" data-ref="_M/QI_PGRP_DID">QI_PGRP_DID</dfn>(rid)	(((u64)(rid)) &lt;&lt; 16)</u></td></tr>
+<tr><th id="369">369</th><td><u>#define <dfn class="macro" id="_M/QI_PGRP_PASID" data-ref="_M/QI_PGRP_PASID">QI_PGRP_PASID</dfn>(pasid)	(((u64)(pasid)) &lt;&lt; 32)</u></td></tr>
+<tr><th id="370">370</th><td></td></tr>
+<tr><th id="371">371</th><td><i>/* Page group response descriptor QW1 */</i></td></tr>
+<tr><th id="372">372</th><td><u>#define <dfn class="macro" id="_M/QI_PGRP_LPIG" data-ref="_M/QI_PGRP_LPIG">QI_PGRP_LPIG</dfn>(x)		(((u64)(x)) &lt;&lt; 2)</u></td></tr>
+<tr><th id="373">373</th><td><u>#define <dfn class="macro" id="_M/QI_PGRP_IDX" data-ref="_M/QI_PGRP_IDX">QI_PGRP_IDX</dfn>(idx)	(((u64)(idx)) &lt;&lt; 3)</u></td></tr>
+<tr><th id="374">374</th><td></td></tr>
+<tr><th id="375">375</th><td></td></tr>
+<tr><th id="376">376</th><td><u>#define <dfn class="macro" id="_M/QI_RESP_SUCCESS" data-ref="_M/QI_RESP_SUCCESS">QI_RESP_SUCCESS</dfn>		0x0</u></td></tr>
+<tr><th id="377">377</th><td><u>#define <dfn class="macro" id="_M/QI_RESP_INVALID" data-ref="_M/QI_RESP_INVALID">QI_RESP_INVALID</dfn>		0x1</u></td></tr>
+<tr><th id="378">378</th><td><u>#define <dfn class="macro" id="_M/QI_RESP_FAILURE" data-ref="_M/QI_RESP_FAILURE">QI_RESP_FAILURE</dfn>		0xf</u></td></tr>
+<tr><th id="379">379</th><td></td></tr>
+<tr><th id="380">380</th><td><u>#define <dfn class="macro" id="_M/QI_GRAN_NONG_PASID" data-ref="_M/QI_GRAN_NONG_PASID">QI_GRAN_NONG_PASID</dfn>		2</u></td></tr>
+<tr><th id="381">381</th><td><u>#define <dfn class="macro" id="_M/QI_GRAN_PSI_PASID" data-ref="_M/QI_GRAN_PSI_PASID">QI_GRAN_PSI_PASID</dfn>		3</u></td></tr>
+<tr><th id="382">382</th><td></td></tr>
+<tr><th id="383">383</th><td><u>#define <dfn class="macro" id="_M/qi_shift" data-ref="_M/qi_shift">qi_shift</dfn>(iommu)		(DMAR_IQ_SHIFT + !!ecap_smts((iommu)-&gt;ecap))</u></td></tr>
+<tr><th id="384">384</th><td></td></tr>
+<tr><th id="385">385</th><td><b>struct</b> <dfn class="type def" id="qi_desc" title='qi_desc' data-ref="qi_desc" data-ref-filename="qi_desc">qi_desc</dfn> {</td></tr>
+<tr><th id="386">386</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="decl field" id="qi_desc::qw0" title='qi_desc::qw0' data-ref="qi_desc::qw0" data-ref-filename="qi_desc..qw0">qw0</dfn>;</td></tr>
+<tr><th id="387">387</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="decl field" id="qi_desc::qw1" title='qi_desc::qw1' data-ref="qi_desc::qw1" data-ref-filename="qi_desc..qw1">qw1</dfn>;</td></tr>
+<tr><th id="388">388</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="decl field" id="qi_desc::qw2" title='qi_desc::qw2' data-ref="qi_desc::qw2" data-ref-filename="qi_desc..qw2">qw2</dfn>;</td></tr>
+<tr><th id="389">389</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="decl field" id="qi_desc::qw3" title='qi_desc::qw3' data-ref="qi_desc::qw3" data-ref-filename="qi_desc..qw3">qw3</dfn>;</td></tr>
+<tr><th id="390">390</th><td>};</td></tr>
+<tr><th id="391">391</th><td></td></tr>
+<tr><th id="392">392</th><td><b>struct</b> <dfn class="type def" id="q_inval" title='q_inval' data-ref="q_inval" data-ref-filename="q_inval">q_inval</dfn> {</td></tr>
+<tr><th id="393">393</th><td>	<a class="typedef" href="spinlock_types.h.html#raw_spinlock_t" title='raw_spinlock_t' data-type='struct raw_spinlock' data-ref="raw_spinlock_t" data-ref-filename="raw_spinlock_t">raw_spinlock_t</a>  <dfn class="decl field" id="q_inval::q_lock" title='q_inval::q_lock' data-ref="q_inval::q_lock" data-ref-filename="q_inval..q_lock">q_lock</dfn>;</td></tr>
+<tr><th id="394">394</th><td>	<em>void</em>		*<dfn class="decl field" id="q_inval::desc" title='q_inval::desc' data-ref="q_inval::desc" data-ref-filename="q_inval..desc">desc</dfn>;          <i>/* invalidation queue */</i></td></tr>
+<tr><th id="395">395</th><td>	<em>int</em>             *<dfn class="decl field" id="q_inval::desc_status" title='q_inval::desc_status' data-ref="q_inval::desc_status" data-ref-filename="q_inval..desc_status">desc_status</dfn>;   <i>/* desc status */</i></td></tr>
+<tr><th id="396">396</th><td>	<em>int</em>             <dfn class="decl field" id="q_inval::free_head" title='q_inval::free_head' data-ref="q_inval::free_head" data-ref-filename="q_inval..free_head">free_head</dfn>;      <i>/* first free entry */</i></td></tr>
+<tr><th id="397">397</th><td>	<em>int</em>             <dfn class="decl field" id="q_inval::free_tail" title='q_inval::free_tail' data-ref="q_inval::free_tail" data-ref-filename="q_inval..free_tail">free_tail</dfn>;      <i>/* last free entry */</i></td></tr>
+<tr><th id="398">398</th><td>	<em>int</em>             <dfn class="decl field" id="q_inval::free_cnt" title='q_inval::free_cnt' data-ref="q_inval::free_cnt" data-ref-filename="q_inval..free_cnt">free_cnt</dfn>;</td></tr>
+<tr><th id="399">399</th><td>};</td></tr>
+<tr><th id="400">400</th><td></td></tr>
+<tr><th id="401">401</th><td><u>#<span data-ppcond="401">ifdef</span> <span class="macro" data-ref="_M/CONFIG_IRQ_REMAP">CONFIG_IRQ_REMAP</span></u></td></tr>
+<tr><th id="402">402</th><td><i>/* 1MB - maximum possible interrupt remapping table size */</i></td></tr>
+<tr><th id="403">403</th><td><u>#define INTR_REMAP_PAGE_ORDER	8</u></td></tr>
+<tr><th id="404">404</th><td><u>#define INTR_REMAP_TABLE_REG_SIZE	0xf</u></td></tr>
+<tr><th id="405">405</th><td><u>#define INTR_REMAP_TABLE_REG_SIZE_MASK  0xf</u></td></tr>
+<tr><th id="406">406</th><td></td></tr>
+<tr><th id="407">407</th><td><u>#define INTR_REMAP_TABLE_ENTRIES	65536</u></td></tr>
+<tr><th id="408">408</th><td></td></tr>
+<tr><th id="409">409</th><td><b>struct</b> irq_domain;</td></tr>
+<tr><th id="410">410</th><td></td></tr>
+<tr><th id="411">411</th><td><b>struct</b> ir_table {</td></tr>
+<tr><th id="412">412</th><td>	<b>struct</b> irte *base;</td></tr>
+<tr><th id="413">413</th><td>	<em>unsigned</em> <em>long</em> *bitmap;</td></tr>
+<tr><th id="414">414</th><td>};</td></tr>
+<tr><th id="415">415</th><td><u>#<span data-ppcond="401">endif</span></u></td></tr>
+<tr><th id="416">416</th><td></td></tr>
+<tr><th id="417">417</th><td><b>struct</b> <dfn class="type def" id="iommu_flush" title='iommu_flush' data-ref="iommu_flush" data-ref-filename="iommu_flush">iommu_flush</dfn> {</td></tr>
+<tr><th id="418">418</th><td>	<em>void</em> (*<dfn class="decl field" id="iommu_flush::flush_context" title='iommu_flush::flush_context' data-ref="iommu_flush::flush_context" data-ref-filename="iommu_flush..flush_context">flush_context</dfn>)(<b>struct</b> <a class="type" href="#intel_iommu" title='intel_iommu' data-ref="intel_iommu" data-ref-filename="intel_iommu">intel_iommu</a> *<dfn class="local col7 decl" id="1027iommu" title='iommu' data-type='struct intel_iommu *' data-ref="1027iommu" data-ref-filename="1027iommu">iommu</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col8 decl" id="1028did" title='did' data-type='u16' data-ref="1028did" data-ref-filename="1028did">did</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col9 decl" id="1029sid" title='sid' data-type='u16' data-ref="1029sid" data-ref-filename="1029sid">sid</dfn>,</td></tr>
+<tr><th id="419">419</th><td>			      <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="local col0 decl" id="1030fm" title='fm' data-type='u8' data-ref="1030fm" data-ref-filename="1030fm">fm</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col1 decl" id="1031type" title='type' data-type='u64' data-ref="1031type" data-ref-filename="1031type">type</dfn>);</td></tr>
+<tr><th id="420">420</th><td>	<em>void</em> (*<dfn class="decl field" id="iommu_flush::flush_iotlb" title='iommu_flush::flush_iotlb' data-ref="iommu_flush::flush_iotlb" data-ref-filename="iommu_flush..flush_iotlb">flush_iotlb</dfn>)(<b>struct</b> <a class="type" href="#intel_iommu" title='intel_iommu' data-ref="intel_iommu" data-ref-filename="intel_iommu">intel_iommu</a> *<dfn class="local col2 decl" id="1032iommu" title='iommu' data-type='struct intel_iommu *' data-ref="1032iommu" data-ref-filename="1032iommu">iommu</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col3 decl" id="1033did" title='did' data-type='u16' data-ref="1033did" data-ref-filename="1033did">did</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col4 decl" id="1034addr" title='addr' data-type='u64' data-ref="1034addr" data-ref-filename="1034addr">addr</dfn>,</td></tr>
+<tr><th id="421">421</th><td>			    <em>unsigned</em> <em>int</em> <dfn class="local col5 decl" id="1035size_order" title='size_order' data-type='unsigned int' data-ref="1035size_order" data-ref-filename="1035size_order">size_order</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col6 decl" id="1036type" title='type' data-type='u64' data-ref="1036type" data-ref-filename="1036type">type</dfn>);</td></tr>
+<tr><th id="422">422</th><td>};</td></tr>
+<tr><th id="423">423</th><td></td></tr>
+<tr><th id="424">424</th><td><b>enum</b> {</td></tr>
+<tr><th id="425">425</th><td>	<dfn class="enum" id="SR_DMAR_FECTL_REG" title='SR_DMAR_FECTL_REG' data-ref="SR_DMAR_FECTL_REG" data-ref-filename="SR_DMAR_FECTL_REG">SR_DMAR_FECTL_REG</dfn>,</td></tr>
+<tr><th id="426">426</th><td>	<dfn class="enum" id="SR_DMAR_FEDATA_REG" title='SR_DMAR_FEDATA_REG' data-ref="SR_DMAR_FEDATA_REG" data-ref-filename="SR_DMAR_FEDATA_REG">SR_DMAR_FEDATA_REG</dfn>,</td></tr>
+<tr><th id="427">427</th><td>	<dfn class="enum" id="SR_DMAR_FEADDR_REG" title='SR_DMAR_FEADDR_REG' data-ref="SR_DMAR_FEADDR_REG" data-ref-filename="SR_DMAR_FEADDR_REG">SR_DMAR_FEADDR_REG</dfn>,</td></tr>
+<tr><th id="428">428</th><td>	<dfn class="enum" id="SR_DMAR_FEUADDR_REG" title='SR_DMAR_FEUADDR_REG' data-ref="SR_DMAR_FEUADDR_REG" data-ref-filename="SR_DMAR_FEUADDR_REG">SR_DMAR_FEUADDR_REG</dfn>,</td></tr>
+<tr><th id="429">429</th><td>	<dfn class="enum" id="MAX_SR_DMAR_REGS" title='MAX_SR_DMAR_REGS' data-ref="MAX_SR_DMAR_REGS" data-ref-filename="MAX_SR_DMAR_REGS">MAX_SR_DMAR_REGS</dfn></td></tr>
+<tr><th id="430">430</th><td>};</td></tr>
+<tr><th id="431">431</th><td></td></tr>
+<tr><th id="432">432</th><td><u>#define <dfn class="macro" id="_M/VTD_FLAG_TRANS_PRE_ENABLED" data-ref="_M/VTD_FLAG_TRANS_PRE_ENABLED">VTD_FLAG_TRANS_PRE_ENABLED</dfn>	(1 &lt;&lt; 0)</u></td></tr>
+<tr><th id="433">433</th><td><u>#define <dfn class="macro" id="_M/VTD_FLAG_IRQ_REMAP_PRE_ENABLED" data-ref="_M/VTD_FLAG_IRQ_REMAP_PRE_ENABLED">VTD_FLAG_IRQ_REMAP_PRE_ENABLED</dfn>	(1 &lt;&lt; 1)</u></td></tr>
+<tr><th id="434">434</th><td></td></tr>
+<tr><th id="435">435</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="intel_iommu_sm" title='intel_iommu_sm' data-ref="intel_iommu_sm" data-ref-filename="intel_iommu_sm">intel_iommu_sm</dfn>;</td></tr>
+<tr><th id="436">436</th><td></td></tr>
+<tr><th id="437">437</th><td><u>#define <dfn class="macro" id="_M/sm_supported" data-ref="_M/sm_supported">sm_supported</dfn>(iommu)	(intel_iommu_sm &amp;&amp; ecap_smts((iommu)-&gt;ecap))</u></td></tr>
+<tr><th id="438">438</th><td><u>#define <dfn class="macro" id="_M/pasid_supported" data-ref="_M/pasid_supported">pasid_supported</dfn>(iommu)	(sm_supported(iommu) &amp;&amp;			\</u></td></tr>
+<tr><th id="439">439</th><td><u>				 ecap_pasid((iommu)-&gt;ecap))</u></td></tr>
+<tr><th id="440">440</th><td></td></tr>
+<tr><th id="441">441</th><td><b>struct</b> <dfn class="type" id="pasid_entry" title='pasid_entry' data-ref="pasid_entry" data-ref-filename="pasid_entry">pasid_entry</dfn>;</td></tr>
+<tr><th id="442">442</th><td><b>struct</b> <dfn class="type" id="pasid_state_entry" title='pasid_state_entry' data-ref="pasid_state_entry" data-ref-filename="pasid_state_entry">pasid_state_entry</dfn>;</td></tr>
+<tr><th id="443">443</th><td><b>struct</b> <dfn class="type" id="page_req_dsc" title='page_req_dsc' data-ref="page_req_dsc" data-ref-filename="page_req_dsc">page_req_dsc</dfn>;</td></tr>
+<tr><th id="444">444</th><td></td></tr>
+<tr><th id="445">445</th><td><i>/*</i></td></tr>
+<tr><th id="446">446</th><td><i> * 0: Present</i></td></tr>
+<tr><th id="447">447</th><td><i> * 1-11: Reserved</i></td></tr>
+<tr><th id="448">448</th><td><i> * 12-63: Context Ptr (12 - (haw-1))</i></td></tr>
+<tr><th id="449">449</th><td><i> * 64-127: Reserved</i></td></tr>
+<tr><th id="450">450</th><td><i> */</i></td></tr>
+<tr><th id="451">451</th><td><b>struct</b> <dfn class="type def" id="root_entry" title='root_entry' data-ref="root_entry" data-ref-filename="root_entry">root_entry</dfn> {</td></tr>
+<tr><th id="452">452</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a>     <dfn class="decl field" id="root_entry::lo" title='root_entry::lo' data-ref="root_entry::lo" data-ref-filename="root_entry..lo">lo</dfn>;</td></tr>
+<tr><th id="453">453</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a>     <dfn class="decl field" id="root_entry::hi" title='root_entry::hi' data-ref="root_entry::hi" data-ref-filename="root_entry..hi">hi</dfn>;</td></tr>
+<tr><th id="454">454</th><td>};</td></tr>
+<tr><th id="455">455</th><td></td></tr>
+<tr><th id="456">456</th><td><i>/*</i></td></tr>
+<tr><th id="457">457</th><td><i> * low 64 bits:</i></td></tr>
+<tr><th id="458">458</th><td><i> * 0: present</i></td></tr>
+<tr><th id="459">459</th><td><i> * 1: fault processing disable</i></td></tr>
+<tr><th id="460">460</th><td><i> * 2-3: translation type</i></td></tr>
+<tr><th id="461">461</th><td><i> * 12-63: address space root</i></td></tr>
+<tr><th id="462">462</th><td><i> * high 64 bits:</i></td></tr>
+<tr><th id="463">463</th><td><i> * 0-2: address width</i></td></tr>
+<tr><th id="464">464</th><td><i> * 3-6: aval</i></td></tr>
+<tr><th id="465">465</th><td><i> * 8-23: domain id</i></td></tr>
+<tr><th id="466">466</th><td><i> */</i></td></tr>
+<tr><th id="467">467</th><td><b>struct</b> <dfn class="type def" id="context_entry" title='context_entry' data-ref="context_entry" data-ref-filename="context_entry">context_entry</dfn> {</td></tr>
+<tr><th id="468">468</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="decl field" id="context_entry::lo" title='context_entry::lo' data-ref="context_entry::lo" data-ref-filename="context_entry..lo">lo</dfn>;</td></tr>
+<tr><th id="469">469</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="decl field" id="context_entry::hi" title='context_entry::hi' data-ref="context_entry::hi" data-ref-filename="context_entry..hi">hi</dfn>;</td></tr>
+<tr><th id="470">470</th><td>};</td></tr>
+<tr><th id="471">471</th><td></td></tr>
+<tr><th id="472">472</th><td><b>struct</b> <dfn class="type def" id="dmar_domain" title='dmar_domain' data-ref="dmar_domain" data-ref-filename="dmar_domain">dmar_domain</dfn> {</td></tr>
+<tr><th id="473">473</th><td>	<em>int</em>	<dfn class="decl field" id="dmar_domain::nid" title='dmar_domain::nid' data-ref="dmar_domain::nid" data-ref-filename="dmar_domain..nid">nid</dfn>;			<i>/* node id */</i></td></tr>
+<tr><th id="474">474</th><td></td></tr>
+<tr><th id="475">475</th><td>	<em>unsigned</em>	<dfn class="decl field" id="dmar_domain::iommu_refcnt" title='dmar_domain::iommu_refcnt' data-ref="dmar_domain::iommu_refcnt" data-ref-filename="dmar_domain..iommu_refcnt">iommu_refcnt</dfn>[<a class="macro" href="dmar.h.html#22" title="128" data-ref="_M/DMAR_UNITS_SUPPORTED">DMAR_UNITS_SUPPORTED</a>];</td></tr>
+<tr><th id="476">476</th><td>					<i>/* Refcount of devices per iommu */</i></td></tr>
+<tr><th id="477">477</th><td></td></tr>
+<tr><th id="478">478</th><td></td></tr>
+<tr><th id="479">479</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a>		<dfn class="decl field" id="dmar_domain::iommu_did" title='dmar_domain::iommu_did' data-ref="dmar_domain::iommu_did" data-ref-filename="dmar_domain..iommu_did">iommu_did</dfn>[<a class="macro" href="dmar.h.html#22" title="128" data-ref="_M/DMAR_UNITS_SUPPORTED">DMAR_UNITS_SUPPORTED</a>];</td></tr>
+<tr><th id="480">480</th><td>					<i>/* Domain ids per IOMMU. Use u16 since</i></td></tr>
+<tr><th id="481">481</th><td><i>					 * domain ids are 16 bit wide according</i></td></tr>
+<tr><th id="482">482</th><td><i>					 * to VT-d spec, section 9.3 */</i></td></tr>
+<tr><th id="483">483</th><td>	<em>unsigned</em> <em>int</em>	<dfn class="decl field" id="dmar_domain::auxd_refcnt" title='dmar_domain::auxd_refcnt' data-ref="dmar_domain::auxd_refcnt" data-ref-filename="dmar_domain..auxd_refcnt">auxd_refcnt</dfn>;	<i>/* Refcount of auxiliary attaching */</i></td></tr>
+<tr><th id="484">484</th><td></td></tr>
+<tr><th id="485">485</th><td>	<a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="dmar_domain::has_iotlb_device" title='dmar_domain::has_iotlb_device' data-ref="dmar_domain::has_iotlb_device" data-ref-filename="dmar_domain..has_iotlb_device">has_iotlb_device</dfn>;</td></tr>
+<tr><th id="486">486</th><td>	<b>struct</b> <a class="type" href="types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="dmar_domain::devices" title='dmar_domain::devices' data-ref="dmar_domain::devices" data-ref-filename="dmar_domain..devices">devices</dfn>;	<i>/* all devices' list */</i></td></tr>
+<tr><th id="487">487</th><td>	<b>struct</b> <a class="type" href="types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="dmar_domain::auxd" title='dmar_domain::auxd' data-ref="dmar_domain::auxd" data-ref-filename="dmar_domain..auxd">auxd</dfn>;		<i>/* link to device's auxiliary list */</i></td></tr>
+<tr><th id="488">488</th><td>	<b>struct</b> <a class="type" href="iova.h.html#iova_domain" title='iova_domain' data-ref="iova_domain" data-ref-filename="iova_domain">iova_domain</a> <dfn class="decl field" id="dmar_domain::iovad" title='dmar_domain::iovad' data-ref="dmar_domain::iovad" data-ref-filename="dmar_domain..iovad">iovad</dfn>;	<i>/* iova's that belong to this domain */</i></td></tr>
+<tr><th id="489">489</th><td></td></tr>
+<tr><th id="490">490</th><td>	<b>struct</b> <a class="type" href="#dma_pte" title='dma_pte' data-ref="dma_pte" data-ref-filename="dma_pte">dma_pte</a>	*<dfn class="decl field" id="dmar_domain::pgd" title='dmar_domain::pgd' data-ref="dmar_domain::pgd" data-ref-filename="dmar_domain..pgd">pgd</dfn>;		<i>/* virtual address */</i></td></tr>
+<tr><th id="491">491</th><td>	<em>int</em>		<dfn class="decl field" id="dmar_domain::gaw" title='dmar_domain::gaw' data-ref="dmar_domain::gaw" data-ref-filename="dmar_domain..gaw">gaw</dfn>;		<i>/* max guest address width */</i></td></tr>
+<tr><th id="492">492</th><td></td></tr>
+<tr><th id="493">493</th><td>	<i>/* adjusted guest address width, 0 is level 2 30-bit */</i></td></tr>
+<tr><th id="494">494</th><td>	<em>int</em>		<dfn class="decl field" id="dmar_domain::agaw" title='dmar_domain::agaw' data-ref="dmar_domain::agaw" data-ref-filename="dmar_domain..agaw">agaw</dfn>;</td></tr>
+<tr><th id="495">495</th><td></td></tr>
+<tr><th id="496">496</th><td>	<em>int</em>		<dfn class="decl field" id="dmar_domain::flags" title='dmar_domain::flags' data-ref="dmar_domain::flags" data-ref-filename="dmar_domain..flags">flags</dfn>;		<i>/* flags to find out type of domain */</i></td></tr>
+<tr><th id="497">497</th><td></td></tr>
+<tr><th id="498">498</th><td>	<em>int</em>		<dfn class="decl field" id="dmar_domain::iommu_coherency" title='dmar_domain::iommu_coherency' data-ref="dmar_domain::iommu_coherency" data-ref-filename="dmar_domain..iommu_coherency">iommu_coherency</dfn>;<i>/* indicate coherency of iommu access */</i></td></tr>
+<tr><th id="499">499</th><td>	<em>int</em>		<dfn class="decl field" id="dmar_domain::iommu_snooping" title='dmar_domain::iommu_snooping' data-ref="dmar_domain::iommu_snooping" data-ref-filename="dmar_domain..iommu_snooping">iommu_snooping</dfn>; <i>/* indicate snooping control feature*/</i></td></tr>
+<tr><th id="500">500</th><td>	<em>int</em>		<dfn class="decl field" id="dmar_domain::iommu_count" title='dmar_domain::iommu_count' data-ref="dmar_domain::iommu_count" data-ref-filename="dmar_domain..iommu_count">iommu_count</dfn>;	<i>/* reference count of iommu */</i></td></tr>
+<tr><th id="501">501</th><td>	<em>int</em>		<dfn class="decl field" id="dmar_domain::iommu_superpage" title='dmar_domain::iommu_superpage' data-ref="dmar_domain::iommu_superpage" data-ref-filename="dmar_domain..iommu_superpage">iommu_superpage</dfn>;<i>/* Level of superpages supported:</i></td></tr>
+<tr><th id="502">502</th><td><i>					   0 == 4KiB (no superpages), 1 == 2MiB,</i></td></tr>
+<tr><th id="503">503</th><td><i>					   2 == 1GiB, 3 == 512GiB, 4 == 1TiB */</i></td></tr>
+<tr><th id="504">504</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a>		<dfn class="decl field" id="dmar_domain::max_addr" title='dmar_domain::max_addr' data-ref="dmar_domain::max_addr" data-ref-filename="dmar_domain..max_addr">max_addr</dfn>;	<i>/* maximum mapped address */</i></td></tr>
+<tr><th id="505">505</th><td></td></tr>
+<tr><th id="506">506</th><td>	<em>int</em>		<dfn class="decl field" id="dmar_domain::default_pasid" title='dmar_domain::default_pasid' data-ref="dmar_domain::default_pasid" data-ref-filename="dmar_domain..default_pasid">default_pasid</dfn>;	<i>/*</i></td></tr>
+<tr><th id="507">507</th><td><i>					 * The default pasid used for non-SVM</i></td></tr>
+<tr><th id="508">508</th><td><i>					 * traffic on mediated devices.</i></td></tr>
+<tr><th id="509">509</th><td><i>					 */</i></td></tr>
+<tr><th id="510">510</th><td></td></tr>
+<tr><th id="511">511</th><td>	<b>struct</b> <a class="type" href="iommu.h.html#iommu_domain" title='iommu_domain' data-ref="iommu_domain" data-ref-filename="iommu_domain">iommu_domain</a> <dfn class="decl field" id="dmar_domain::domain" title='dmar_domain::domain' data-ref="dmar_domain::domain" data-ref-filename="dmar_domain..domain">domain</dfn>;	<i>/* generic domain data structure for</i></td></tr>
+<tr><th id="512">512</th><td><i>					   iommu core */</i></td></tr>
+<tr><th id="513">513</th><td>};</td></tr>
+<tr><th id="514">514</th><td></td></tr>
+<tr><th id="515">515</th><td><b>struct</b> <dfn class="type def" id="intel_iommu" title='intel_iommu' data-ref="intel_iommu" data-ref-filename="intel_iommu">intel_iommu</dfn> {</td></tr>
+<tr><th id="516">516</th><td>	<em>void</em> <a class="macro" href="compiler_types.h.html#36" title="" data-ref="_M/__iomem">__iomem</a>	*<dfn class="decl field" id="intel_iommu::reg" title='intel_iommu::reg' data-ref="intel_iommu::reg" data-ref-filename="intel_iommu..reg">reg</dfn>; <i>/* Pointer to hardware regs, virtual addr */</i></td></tr>
+<tr><th id="517">517</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> 		<dfn class="decl field" id="intel_iommu::reg_phys" title='intel_iommu::reg_phys' data-ref="intel_iommu::reg_phys" data-ref-filename="intel_iommu..reg_phys">reg_phys</dfn>; <i>/* physical address of hw register set */</i></td></tr>
+<tr><th id="518">518</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a>		<dfn class="decl field" id="intel_iommu::reg_size" title='intel_iommu::reg_size' data-ref="intel_iommu::reg_size" data-ref-filename="intel_iommu..reg_size">reg_size</dfn>; <i>/* size of hw register set */</i></td></tr>
+<tr><th id="519">519</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a>		<dfn class="decl field" id="intel_iommu::cap" title='intel_iommu::cap' data-ref="intel_iommu::cap" data-ref-filename="intel_iommu..cap">cap</dfn>;</td></tr>
+<tr><th id="520">520</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a>		<dfn class="decl field" id="intel_iommu::ecap" title='intel_iommu::ecap' data-ref="intel_iommu::ecap" data-ref-filename="intel_iommu..ecap">ecap</dfn>;</td></tr>
+<tr><th id="521">521</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>		<dfn class="decl field" id="intel_iommu::gcmd" title='intel_iommu::gcmd' data-ref="intel_iommu::gcmd" data-ref-filename="intel_iommu..gcmd">gcmd</dfn>; <i>/* Holds TE, EAFL. Don't need SRTP, SFL, WBF */</i></td></tr>
+<tr><th id="522">522</th><td>	<a class="typedef" href="spinlock_types.h.html#raw_spinlock_t" title='raw_spinlock_t' data-type='struct raw_spinlock' data-ref="raw_spinlock_t" data-ref-filename="raw_spinlock_t">raw_spinlock_t</a>	<dfn class="decl field" id="intel_iommu::register_lock" title='intel_iommu::register_lock' data-ref="intel_iommu::register_lock" data-ref-filename="intel_iommu..register_lock">register_lock</dfn>; <i>/* protect register handling */</i></td></tr>
+<tr><th id="523">523</th><td>	<em>int</em>		<dfn class="decl field" id="intel_iommu::seq_id" title='intel_iommu::seq_id' data-ref="intel_iommu::seq_id" data-ref-filename="intel_iommu..seq_id">seq_id</dfn>;	<i>/* sequence id of the iommu */</i></td></tr>
+<tr><th id="524">524</th><td>	<em>int</em>		<dfn class="decl field" id="intel_iommu::agaw" title='intel_iommu::agaw' data-ref="intel_iommu::agaw" data-ref-filename="intel_iommu..agaw">agaw</dfn>; <i>/* agaw of this iommu */</i></td></tr>
+<tr><th id="525">525</th><td>	<em>int</em>		<dfn class="decl field" id="intel_iommu::msagaw" title='intel_iommu::msagaw' data-ref="intel_iommu::msagaw" data-ref-filename="intel_iommu..msagaw">msagaw</dfn>; <i>/* max sagaw of this iommu */</i></td></tr>
+<tr><th id="526">526</th><td>	<em>unsigned</em> <em>int</em> 	<dfn class="decl field" id="intel_iommu::irq" title='intel_iommu::irq' data-ref="intel_iommu::irq" data-ref-filename="intel_iommu..irq">irq</dfn>, <dfn class="decl field" id="intel_iommu::pr_irq" title='intel_iommu::pr_irq' data-ref="intel_iommu::pr_irq" data-ref-filename="intel_iommu..pr_irq">pr_irq</dfn>;</td></tr>
+<tr><th id="527">527</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a>		<dfn class="decl field" id="intel_iommu::segment" title='intel_iommu::segment' data-ref="intel_iommu::segment" data-ref-filename="intel_iommu..segment">segment</dfn>;     <i>/* PCI segment# */</i></td></tr>
+<tr><th id="528">528</th><td>	<em>unsigned</em> <em>char</em> 	<dfn class="decl field" id="intel_iommu::name" title='intel_iommu::name' data-ref="intel_iommu::name" data-ref-filename="intel_iommu..name">name</dfn>[<var>13</var>];    <i>/* Device Name */</i></td></tr>
+<tr><th id="529">529</th><td></td></tr>
+<tr><th id="530">530</th><td><u>#<span data-ppcond="530">ifdef</span> <a class="macro" href="../generated/autoconf.h.html#1208" data-ref="_M/CONFIG_INTEL_IOMMU">CONFIG_INTEL_IOMMU</a></u></td></tr>
+<tr><th id="531">531</th><td>	<em>unsigned</em> <em>long</em> 	*<dfn class="decl field" id="intel_iommu::domain_ids" title='intel_iommu::domain_ids' data-ref="intel_iommu::domain_ids" data-ref-filename="intel_iommu..domain_ids">domain_ids</dfn>; <i>/* bitmap of domains */</i></td></tr>
+<tr><th id="532">532</th><td>	<b>struct</b> <a class="type" href="#dmar_domain" title='dmar_domain' data-ref="dmar_domain" data-ref-filename="dmar_domain">dmar_domain</a> ***<dfn class="decl field" id="intel_iommu::domains" title='intel_iommu::domains' data-ref="intel_iommu::domains" data-ref-filename="intel_iommu..domains">domains</dfn>; <i>/* ptr to domains */</i></td></tr>
+<tr><th id="533">533</th><td>	<a class="typedef" href="spinlock_types.h.html#spinlock_t" title='spinlock_t' data-type='struct spinlock' data-ref="spinlock_t" data-ref-filename="spinlock_t">spinlock_t</a>	<dfn class="decl field" id="intel_iommu::lock" title='intel_iommu::lock' data-ref="intel_iommu::lock" data-ref-filename="intel_iommu..lock">lock</dfn>; <i>/* protect context, domain ids */</i></td></tr>
+<tr><th id="534">534</th><td>	<b>struct</b> <a class="type" href="#root_entry" title='root_entry' data-ref="root_entry" data-ref-filename="root_entry">root_entry</a> *<dfn class="decl field" id="intel_iommu::root_entry" title='intel_iommu::root_entry' data-ref="intel_iommu::root_entry" data-ref-filename="intel_iommu..root_entry">root_entry</dfn>; <i>/* virtual address */</i></td></tr>
+<tr><th id="535">535</th><td></td></tr>
+<tr><th id="536">536</th><td>	<b>struct</b> <a class="type" href="#iommu_flush" title='iommu_flush' data-ref="iommu_flush" data-ref-filename="iommu_flush">iommu_flush</a> <dfn class="decl field" id="intel_iommu::flush" title='intel_iommu::flush' data-ref="intel_iommu::flush" data-ref-filename="intel_iommu..flush">flush</dfn>;</td></tr>
+<tr><th id="537">537</th><td><u>#<span data-ppcond="530">endif</span></u></td></tr>
+<tr><th id="538">538</th><td><u>#<span data-ppcond="538">ifdef</span> <span class="macro" data-ref="_M/CONFIG_INTEL_IOMMU_SVM">CONFIG_INTEL_IOMMU_SVM</span></u></td></tr>
+<tr><th id="539">539</th><td>	<b>struct</b> page_req_dsc *prq;</td></tr>
+<tr><th id="540">540</th><td>	<em>unsigned</em> <em>char</em> prq_name[<var>16</var>];    <i>/* Name for PRQ interrupt */</i></td></tr>
+<tr><th id="541">541</th><td><u>#<span data-ppcond="538">endif</span></u></td></tr>
+<tr><th id="542">542</th><td>	<b>struct</b> <a class="type" href="#q_inval" title='q_inval' data-ref="q_inval" data-ref-filename="q_inval">q_inval</a>  *<dfn class="decl field" id="intel_iommu::qi" title='intel_iommu::qi' data-ref="intel_iommu::qi" data-ref-filename="intel_iommu..qi">qi</dfn>;            <i>/* Queued invalidation info */</i></td></tr>
+<tr><th id="543">543</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> *<dfn class="decl field" id="intel_iommu::iommu_state" title='intel_iommu::iommu_state' data-ref="intel_iommu::iommu_state" data-ref-filename="intel_iommu..iommu_state">iommu_state</dfn>; <i>/* Store iommu states between suspend and resume.*/</i></td></tr>
+<tr><th id="544">544</th><td></td></tr>
+<tr><th id="545">545</th><td><u>#<span data-ppcond="545">ifdef</span> <span class="macro" data-ref="_M/CONFIG_IRQ_REMAP">CONFIG_IRQ_REMAP</span></u></td></tr>
+<tr><th id="546">546</th><td>	<b>struct</b> ir_table *ir_table;	<i>/* Interrupt remapping info */</i></td></tr>
+<tr><th id="547">547</th><td>	<b>struct</b> irq_domain *ir_domain;</td></tr>
+<tr><th id="548">548</th><td>	<b>struct</b> irq_domain *ir_msi_domain;</td></tr>
+<tr><th id="549">549</th><td><u>#<span data-ppcond="545">endif</span></u></td></tr>
+<tr><th id="550">550</th><td>	<b>struct</b> <a class="type" href="iommu.h.html#iommu_device" title='iommu_device' data-ref="iommu_device" data-ref-filename="iommu_device">iommu_device</a> <dfn class="decl field" id="intel_iommu::iommu" title='intel_iommu::iommu' data-ref="intel_iommu::iommu" data-ref-filename="intel_iommu..iommu">iommu</dfn>;  <i>/* IOMMU core code handle */</i></td></tr>
+<tr><th id="551">551</th><td>	<em>int</em>		<dfn class="decl field" id="intel_iommu::node" title='intel_iommu::node' data-ref="intel_iommu::node" data-ref-filename="intel_iommu..node">node</dfn>;</td></tr>
+<tr><th id="552">552</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>		<dfn class="decl field" id="intel_iommu::flags" title='intel_iommu::flags' data-ref="intel_iommu::flags" data-ref-filename="intel_iommu..flags">flags</dfn>;      <i>/* Software defined flags */</i></td></tr>
+<tr><th id="553">553</th><td>};</td></tr>
+<tr><th id="554">554</th><td></td></tr>
+<tr><th id="555">555</th><td><i>/* PCI domain-device relationship */</i></td></tr>
+<tr><th id="556">556</th><td><b>struct</b> <dfn class="type def" id="device_domain_info" title='device_domain_info' data-ref="device_domain_info" data-ref-filename="device_domain_info">device_domain_info</dfn> {</td></tr>
+<tr><th id="557">557</th><td>	<b>struct</b> <a class="type" href="types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="device_domain_info::link" title='device_domain_info::link' data-ref="device_domain_info::link" data-ref-filename="device_domain_info..link">link</dfn>;	<i>/* link to domain siblings */</i></td></tr>
+<tr><th id="558">558</th><td>	<b>struct</b> <a class="type" href="types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="device_domain_info::global" title='device_domain_info::global' data-ref="device_domain_info::global" data-ref-filename="device_domain_info..global">global</dfn>; <i>/* link to global list */</i></td></tr>
+<tr><th id="559">559</th><td>	<b>struct</b> <a class="type" href="types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="device_domain_info::table" title='device_domain_info::table' data-ref="device_domain_info::table" data-ref-filename="device_domain_info..table">table</dfn>;	<i>/* link to pasid table */</i></td></tr>
+<tr><th id="560">560</th><td>	<b>struct</b> <a class="type" href="types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="device_domain_info::auxiliary_domains" title='device_domain_info::auxiliary_domains' data-ref="device_domain_info::auxiliary_domains" data-ref-filename="device_domain_info..auxiliary_domains">auxiliary_domains</dfn>; <i>/* auxiliary domains</i></td></tr>
+<tr><th id="561">561</th><td><i>					     * attached to this device</i></td></tr>
+<tr><th id="562">562</th><td><i>					     */</i></td></tr>
+<tr><th id="563">563</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="decl field" id="device_domain_info::bus" title='device_domain_info::bus' data-ref="device_domain_info::bus" data-ref-filename="device_domain_info..bus">bus</dfn>;			<i>/* PCI bus number */</i></td></tr>
+<tr><th id="564">564</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="decl field" id="device_domain_info::devfn" title='device_domain_info::devfn' data-ref="device_domain_info::devfn" data-ref-filename="device_domain_info..devfn">devfn</dfn>;		<i>/* PCI devfn number */</i></td></tr>
+<tr><th id="565">565</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="decl field" id="device_domain_info::pfsid" title='device_domain_info::pfsid' data-ref="device_domain_info::pfsid" data-ref-filename="device_domain_info..pfsid">pfsid</dfn>;		<i>/* SRIOV physical function source ID */</i></td></tr>
+<tr><th id="566">566</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="decl field" id="device_domain_info::pasid_supported" title='device_domain_info::pasid_supported' data-ref="device_domain_info::pasid_supported" data-ref-filename="device_domain_info..pasid_supported">pasid_supported</dfn>:<var>3</var>;</td></tr>
+<tr><th id="567">567</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="decl field" id="device_domain_info::pasid_enabled" title='device_domain_info::pasid_enabled' data-ref="device_domain_info::pasid_enabled" data-ref-filename="device_domain_info..pasid_enabled">pasid_enabled</dfn>:<var>1</var>;</td></tr>
+<tr><th id="568">568</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="decl field" id="device_domain_info::pri_supported" title='device_domain_info::pri_supported' data-ref="device_domain_info::pri_supported" data-ref-filename="device_domain_info..pri_supported">pri_supported</dfn>:<var>1</var>;</td></tr>
+<tr><th id="569">569</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="decl field" id="device_domain_info::pri_enabled" title='device_domain_info::pri_enabled' data-ref="device_domain_info::pri_enabled" data-ref-filename="device_domain_info..pri_enabled">pri_enabled</dfn>:<var>1</var>;</td></tr>
+<tr><th id="570">570</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="decl field" id="device_domain_info::ats_supported" title='device_domain_info::ats_supported' data-ref="device_domain_info::ats_supported" data-ref-filename="device_domain_info..ats_supported">ats_supported</dfn>:<var>1</var>;</td></tr>
+<tr><th id="571">571</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="decl field" id="device_domain_info::ats_enabled" title='device_domain_info::ats_enabled' data-ref="device_domain_info::ats_enabled" data-ref-filename="device_domain_info..ats_enabled">ats_enabled</dfn>:<var>1</var>;</td></tr>
+<tr><th id="572">572</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="decl field" id="device_domain_info::auxd_enabled" title='device_domain_info::auxd_enabled' data-ref="device_domain_info::auxd_enabled" data-ref-filename="device_domain_info..auxd_enabled">auxd_enabled</dfn>:<var>1</var>;	<i>/* Multiple domains per device */</i></td></tr>
+<tr><th id="573">573</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="decl field" id="device_domain_info::ats_qdep" title='device_domain_info::ats_qdep' data-ref="device_domain_info::ats_qdep" data-ref-filename="device_domain_info..ats_qdep">ats_qdep</dfn>;</td></tr>
+<tr><th id="574">574</th><td>	<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="decl field" id="device_domain_info::dev" title='device_domain_info::dev' data-ref="device_domain_info::dev" data-ref-filename="device_domain_info..dev">dev</dfn>; <i>/* it's NULL for PCIe-to-PCI bridge */</i></td></tr>
+<tr><th id="575">575</th><td>	<b>struct</b> <a class="type" href="#intel_iommu" title='intel_iommu' data-ref="intel_iommu" data-ref-filename="intel_iommu">intel_iommu</a> *<dfn class="decl field" id="device_domain_info::iommu" title='device_domain_info::iommu' data-ref="device_domain_info::iommu" data-ref-filename="device_domain_info..iommu">iommu</dfn>; <i>/* IOMMU used by this device */</i></td></tr>
+<tr><th id="576">576</th><td>	<b>struct</b> <a class="type" href="#dmar_domain" title='dmar_domain' data-ref="dmar_domain" data-ref-filename="dmar_domain">dmar_domain</a> *<dfn class="decl field" id="device_domain_info::domain" title='device_domain_info::domain' data-ref="device_domain_info::domain" data-ref-filename="device_domain_info..domain">domain</dfn>; <i>/* pointer to domain */</i></td></tr>
+<tr><th id="577">577</th><td>	<b>struct</b> <dfn class="type" id="pasid_table" title='pasid_table' data-ref="pasid_table" data-ref-filename="pasid_table"><a class="type" href="#pasid_table" title='pasid_table' data-ref="pasid_table" data-ref-filename="pasid_table">pasid_table</a></dfn> *<dfn class="decl field" id="device_domain_info::pasid_table" title='device_domain_info::pasid_table' data-ref="device_domain_info::pasid_table" data-ref-filename="device_domain_info..pasid_table">pasid_table</dfn>; <i>/* pasid table */</i></td></tr>
+<tr><th id="578">578</th><td>};</td></tr>
+<tr><th id="579">579</th><td></td></tr>
+<tr><th id="580">580</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="__iommu_flush_cache" title='__iommu_flush_cache' data-ref="__iommu_flush_cache" data-ref-filename="__iommu_flush_cache">__iommu_flush_cache</dfn>(</td></tr>
+<tr><th id="581">581</th><td>	<b>struct</b> <a class="type" href="#intel_iommu" title='intel_iommu' data-ref="intel_iommu" data-ref-filename="intel_iommu">intel_iommu</a> *<dfn class="local col7 decl" id="1037iommu" title='iommu' data-type='struct intel_iommu *' data-ref="1037iommu" data-ref-filename="1037iommu">iommu</dfn>, <em>void</em> *<dfn class="local col8 decl" id="1038addr" title='addr' data-type='void *' data-ref="1038addr" data-ref-filename="1038addr">addr</dfn>, <em>int</em> <dfn class="local col9 decl" id="1039size" title='size' data-type='int' data-ref="1039size" data-ref-filename="1039size">size</dfn>)</td></tr>
+<tr><th id="582">582</th><td>{</td></tr>
+<tr><th id="583">583</th><td>	<b>if</b> (!<a class="macro" href="#180" title="((iommu-&gt;ecap) &amp; 0x1)" data-ref="_M/ecap_coherent">ecap_coherent</a>(<a class="local col7 ref" href="#1037iommu" title='iommu' data-ref="1037iommu" data-ref-filename="1037iommu">iommu</a>-&gt;<a class="ref field" href="#intel_iommu::ecap" title='intel_iommu::ecap' data-ref="intel_iommu::ecap" data-ref-filename="intel_iommu..ecap">ecap</a>))</td></tr>
+<tr><th id="584">584</th><td>		<a class="ref fn" href="../../arch/x86/include/asm/cacheflush.h.html#clflush_cache_range" title='clflush_cache_range' data-ref="clflush_cache_range" data-ref-filename="clflush_cache_range">clflush_cache_range</a>(<a class="local col8 ref" href="#1038addr" title='addr' data-ref="1038addr" data-ref-filename="1038addr">addr</a>, <a class="local col9 ref" href="#1039size" title='size' data-ref="1039size" data-ref-filename="1039size">size</a>);</td></tr>
+<tr><th id="585">585</th><td>}</td></tr>
+<tr><th id="586">586</th><td></td></tr>
+<tr><th id="587">587</th><td><i>/*</i></td></tr>
+<tr><th id="588">588</th><td><i> * 0: readable</i></td></tr>
+<tr><th id="589">589</th><td><i> * 1: writable</i></td></tr>
+<tr><th id="590">590</th><td><i> * 2-6: reserved</i></td></tr>
+<tr><th id="591">591</th><td><i> * 7: super page</i></td></tr>
+<tr><th id="592">592</th><td><i> * 8-10: available</i></td></tr>
+<tr><th id="593">593</th><td><i> * 11: snoop behavior</i></td></tr>
+<tr><th id="594">594</th><td><i> * 12-63: Host physcial address</i></td></tr>
+<tr><th id="595">595</th><td><i> */</i></td></tr>
+<tr><th id="596">596</th><td><b>struct</b> <dfn class="type def" id="dma_pte" title='dma_pte' data-ref="dma_pte" data-ref-filename="dma_pte">dma_pte</dfn> {</td></tr>
+<tr><th id="597">597</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="decl field" id="dma_pte::val" title='dma_pte::val' data-ref="dma_pte::val" data-ref-filename="dma_pte..val">val</dfn>;</td></tr>
+<tr><th id="598">598</th><td>};</td></tr>
+<tr><th id="599">599</th><td></td></tr>
+<tr><th id="600">600</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="dma_clear_pte" title='dma_clear_pte' data-ref="dma_clear_pte" data-ref-filename="dma_clear_pte">dma_clear_pte</dfn>(<b>struct</b> <a class="type" href="#dma_pte" title='dma_pte' data-ref="dma_pte" data-ref-filename="dma_pte">dma_pte</a> *<dfn class="local col0 decl" id="1040pte" title='pte' data-type='struct dma_pte *' data-ref="1040pte" data-ref-filename="1040pte">pte</dfn>)</td></tr>
+<tr><th id="601">601</th><td>{</td></tr>
+<tr><th id="602">602</th><td>	<a class="local col0 ref" href="#1040pte" title='pte' data-ref="1040pte" data-ref-filename="1040pte">pte</a>-&gt;<a class="ref field" href="#dma_pte::val" title='dma_pte::val' data-ref="dma_pte::val" data-ref-filename="dma_pte..val">val</a> = <var>0</var>;</td></tr>
+<tr><th id="603">603</th><td>}</td></tr>
+<tr><th id="604">604</th><td></td></tr>
+<tr><th id="605">605</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="decl def fn" id="dma_pte_addr" title='dma_pte_addr' data-ref="dma_pte_addr" data-ref-filename="dma_pte_addr">dma_pte_addr</dfn>(<b>struct</b> <a class="type" href="#dma_pte" title='dma_pte' data-ref="dma_pte" data-ref-filename="dma_pte">dma_pte</a> *<dfn class="local col1 decl" id="1041pte" title='pte' data-type='struct dma_pte *' data-ref="1041pte" data-ref-filename="1041pte">pte</dfn>)</td></tr>
+<tr><th id="606">606</th><td>{</td></tr>
+<tr><th id="607">607</th><td><u>#<span data-ppcond="607">ifdef</span> <a class="macro" href="../generated/autoconf.h.html#1284" data-ref="_M/CONFIG_64BIT">CONFIG_64BIT</a></u></td></tr>
+<tr><th id="608">608</th><td>	<b>return</b> <a class="local col1 ref" href="#1041pte" title='pte' data-ref="1041pte" data-ref-filename="1041pte">pte</a>-&gt;<a class="ref field" href="#dma_pte::val" title='dma_pte::val' data-ref="dma_pte::val" data-ref-filename="dma_pte..val">val</a> &amp; <a class="macro" href="#31" title="(((u64)-1) &lt;&lt; (12))" data-ref="_M/VTD_PAGE_MASK">VTD_PAGE_MASK</a>;</td></tr>
+<tr><th id="609">609</th><td><u>#<span data-ppcond="607">else</span></u></td></tr>
+<tr><th id="610">610</th><td>	<i>/* Must have a full atomic 64-bit read */</i></td></tr>
+<tr><th id="611">611</th><td>	<b>return</b>  __cmpxchg64(&amp;pte-&gt;val, <var>0ULL</var>, <var>0ULL</var>) &amp; VTD_PAGE_MASK;</td></tr>
+<tr><th id="612">612</th><td><u>#<span data-ppcond="607">endif</span></u></td></tr>
+<tr><th id="613">613</th><td>}</td></tr>
+<tr><th id="614">614</th><td></td></tr>
+<tr><th id="615">615</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="dma_pte_present" title='dma_pte_present' data-ref="dma_pte_present" data-ref-filename="dma_pte_present">dma_pte_present</dfn>(<b>struct</b> <a class="type" href="#dma_pte" title='dma_pte' data-ref="dma_pte" data-ref-filename="dma_pte">dma_pte</a> *<dfn class="local col2 decl" id="1042pte" title='pte' data-type='struct dma_pte *' data-ref="1042pte" data-ref-filename="1042pte">pte</dfn>)</td></tr>
+<tr><th id="616">616</th><td>{</td></tr>
+<tr><th id="617">617</th><td>	<b>return</b> (<a class="local col2 ref" href="#1042pte" title='pte' data-ref="1042pte" data-ref-filename="1042pte">pte</a>-&gt;<a class="ref field" href="#dma_pte::val" title='dma_pte::val' data-ref="dma_pte::val" data-ref-filename="dma_pte..val">val</a> &amp; <var>3</var>) != <var>0</var>;</td></tr>
+<tr><th id="618">618</th><td>}</td></tr>
+<tr><th id="619">619</th><td></td></tr>
+<tr><th id="620">620</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="dma_pte_superpage" title='dma_pte_superpage' data-ref="dma_pte_superpage" data-ref-filename="dma_pte_superpage">dma_pte_superpage</dfn>(<b>struct</b> <a class="type" href="#dma_pte" title='dma_pte' data-ref="dma_pte" data-ref-filename="dma_pte">dma_pte</a> *<dfn class="local col3 decl" id="1043pte" title='pte' data-type='struct dma_pte *' data-ref="1043pte" data-ref-filename="1043pte">pte</dfn>)</td></tr>
+<tr><th id="621">621</th><td>{</td></tr>
+<tr><th id="622">622</th><td>	<b>return</b> (<a class="local col3 ref" href="#1043pte" title='pte' data-ref="1043pte" data-ref-filename="1043pte">pte</a>-&gt;<a class="ref field" href="#dma_pte::val" title='dma_pte::val' data-ref="dma_pte::val" data-ref-filename="dma_pte..val">val</a> &amp; <a class="macro" href="#39" title="(1 &lt;&lt; 7)" data-ref="_M/DMA_PTE_LARGE_PAGE">DMA_PTE_LARGE_PAGE</a>);</td></tr>
+<tr><th id="623">623</th><td>}</td></tr>
+<tr><th id="624">624</th><td></td></tr>
+<tr><th id="625">625</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="first_pte_in_page" title='first_pte_in_page' data-ref="first_pte_in_page" data-ref-filename="first_pte_in_page">first_pte_in_page</dfn>(<b>struct</b> <a class="type" href="#dma_pte" title='dma_pte' data-ref="dma_pte" data-ref-filename="dma_pte">dma_pte</a> *<dfn class="local col4 decl" id="1044pte" title='pte' data-type='struct dma_pte *' data-ref="1044pte" data-ref-filename="1044pte">pte</dfn>)</td></tr>
+<tr><th id="626">626</th><td>{</td></tr>
+<tr><th id="627">627</th><td>	<b>return</b> !((<em>unsigned</em> <em>long</em>)<a class="local col4 ref" href="#1044pte" title='pte' data-ref="1044pte" data-ref-filename="1044pte">pte</a> &amp; ~<a class="macro" href="#31" title="(((u64)-1) &lt;&lt; (12))" data-ref="_M/VTD_PAGE_MASK">VTD_PAGE_MASK</a>);</td></tr>
+<tr><th id="628">628</th><td>}</td></tr>
+<tr><th id="629">629</th><td></td></tr>
+<tr><th id="630">630</th><td><b>extern</b> <b>struct</b> <a class="type" href="dmar.h.html#dmar_drhd_unit" title='dmar_drhd_unit' data-ref="dmar_drhd_unit" data-ref-filename="dmar_drhd_unit">dmar_drhd_unit</a> * <dfn class="decl fn" id="dmar_find_matched_drhd_unit" title='dmar_find_matched_drhd_unit' data-ref="dmar_find_matched_drhd_unit" data-ref-filename="dmar_find_matched_drhd_unit">dmar_find_matched_drhd_unit</dfn>(<b>struct</b> <a class="type" href="pci.h.html#pci_dev" title='pci_dev' data-ref="pci_dev" data-ref-filename="pci_dev">pci_dev</a> *<dfn class="local col5 decl" id="1045dev" title='dev' data-type='struct pci_dev *' data-ref="1045dev" data-ref-filename="1045dev">dev</dfn>);</td></tr>
+<tr><th id="631">631</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="dmar_find_matched_atsr_unit" title='dmar_find_matched_atsr_unit' data-ref="dmar_find_matched_atsr_unit" data-ref-filename="dmar_find_matched_atsr_unit">dmar_find_matched_atsr_unit</dfn>(<b>struct</b> <a class="type" href="pci.h.html#pci_dev" title='pci_dev' data-ref="pci_dev" data-ref-filename="pci_dev">pci_dev</a> *<dfn class="local col6 decl" id="1046dev" title='dev' data-type='struct pci_dev *' data-ref="1046dev" data-ref-filename="1046dev">dev</dfn>);</td></tr>
+<tr><th id="632">632</th><td></td></tr>
+<tr><th id="633">633</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="dmar_enable_qi" title='dmar_enable_qi' data-ref="dmar_enable_qi" data-ref-filename="dmar_enable_qi">dmar_enable_qi</dfn>(<b>struct</b> <a class="type" href="#intel_iommu" title='intel_iommu' data-ref="intel_iommu" data-ref-filename="intel_iommu">intel_iommu</a> *<dfn class="local col7 decl" id="1047iommu" title='iommu' data-type='struct intel_iommu *' data-ref="1047iommu" data-ref-filename="1047iommu">iommu</dfn>);</td></tr>
+<tr><th id="634">634</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="dmar_disable_qi" title='dmar_disable_qi' data-ref="dmar_disable_qi" data-ref-filename="dmar_disable_qi">dmar_disable_qi</dfn>(<b>struct</b> <a class="type" href="#intel_iommu" title='intel_iommu' data-ref="intel_iommu" data-ref-filename="intel_iommu">intel_iommu</a> *<dfn class="local col8 decl" id="1048iommu" title='iommu' data-type='struct intel_iommu *' data-ref="1048iommu" data-ref-filename="1048iommu">iommu</dfn>);</td></tr>
+<tr><th id="635">635</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="dmar_reenable_qi" title='dmar_reenable_qi' data-ref="dmar_reenable_qi" data-ref-filename="dmar_reenable_qi">dmar_reenable_qi</dfn>(<b>struct</b> <a class="type" href="#intel_iommu" title='intel_iommu' data-ref="intel_iommu" data-ref-filename="intel_iommu">intel_iommu</a> *<dfn class="local col9 decl" id="1049iommu" title='iommu' data-type='struct intel_iommu *' data-ref="1049iommu" data-ref-filename="1049iommu">iommu</dfn>);</td></tr>
+<tr><th id="636">636</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="qi_global_iec" title='qi_global_iec' data-ref="qi_global_iec" data-ref-filename="qi_global_iec">qi_global_iec</dfn>(<b>struct</b> <a class="type" href="#intel_iommu" title='intel_iommu' data-ref="intel_iommu" data-ref-filename="intel_iommu">intel_iommu</a> *<dfn class="local col0 decl" id="1050iommu" title='iommu' data-type='struct intel_iommu *' data-ref="1050iommu" data-ref-filename="1050iommu">iommu</dfn>);</td></tr>
+<tr><th id="637">637</th><td></td></tr>
+<tr><th id="638">638</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="qi_flush_context" title='qi_flush_context' data-ref="qi_flush_context" data-ref-filename="qi_flush_context">qi_flush_context</dfn>(<b>struct</b> <a class="type" href="#intel_iommu" title='intel_iommu' data-ref="intel_iommu" data-ref-filename="intel_iommu">intel_iommu</a> *<dfn class="local col1 decl" id="1051iommu" title='iommu' data-type='struct intel_iommu *' data-ref="1051iommu" data-ref-filename="1051iommu">iommu</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col2 decl" id="1052did" title='did' data-type='u16' data-ref="1052did" data-ref-filename="1052did">did</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col3 decl" id="1053sid" title='sid' data-type='u16' data-ref="1053sid" data-ref-filename="1053sid">sid</dfn>,</td></tr>
+<tr><th id="639">639</th><td>			     <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="local col4 decl" id="1054fm" title='fm' data-type='u8' data-ref="1054fm" data-ref-filename="1054fm">fm</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col5 decl" id="1055type" title='type' data-type='u64' data-ref="1055type" data-ref-filename="1055type">type</dfn>);</td></tr>
+<tr><th id="640">640</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="qi_flush_iotlb" title='qi_flush_iotlb' data-ref="qi_flush_iotlb" data-ref-filename="qi_flush_iotlb">qi_flush_iotlb</dfn>(<b>struct</b> <a class="type" href="#intel_iommu" title='intel_iommu' data-ref="intel_iommu" data-ref-filename="intel_iommu">intel_iommu</a> *<dfn class="local col6 decl" id="1056iommu" title='iommu' data-type='struct intel_iommu *' data-ref="1056iommu" data-ref-filename="1056iommu">iommu</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col7 decl" id="1057did" title='did' data-type='u16' data-ref="1057did" data-ref-filename="1057did">did</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col8 decl" id="1058addr" title='addr' data-type='u64' data-ref="1058addr" data-ref-filename="1058addr">addr</dfn>,</td></tr>
+<tr><th id="641">641</th><td>			  <em>unsigned</em> <em>int</em> <dfn class="local col9 decl" id="1059size_order" title='size_order' data-type='unsigned int' data-ref="1059size_order" data-ref-filename="1059size_order">size_order</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col0 decl" id="1060type" title='type' data-type='u64' data-ref="1060type" data-ref-filename="1060type">type</dfn>);</td></tr>
+<tr><th id="642">642</th><td><b>extern</b> <em>void</em> <dfn class="decl fn" id="qi_flush_dev_iotlb" title='qi_flush_dev_iotlb' data-ref="qi_flush_dev_iotlb" data-ref-filename="qi_flush_dev_iotlb">qi_flush_dev_iotlb</dfn>(<b>struct</b> <a class="type" href="#intel_iommu" title='intel_iommu' data-ref="intel_iommu" data-ref-filename="intel_iommu">intel_iommu</a> *<dfn class="local col1 decl" id="1061iommu" title='iommu' data-type='struct intel_iommu *' data-ref="1061iommu" data-ref-filename="1061iommu">iommu</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col2 decl" id="1062sid" title='sid' data-type='u16' data-ref="1062sid" data-ref-filename="1062sid">sid</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col3 decl" id="1063pfsid" title='pfsid' data-type='u16' data-ref="1063pfsid" data-ref-filename="1063pfsid">pfsid</dfn>,</td></tr>
+<tr><th id="643">643</th><td>			<a class="typedef" href="../asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col4 decl" id="1064qdep" title='qdep' data-type='u16' data-ref="1064qdep" data-ref-filename="1064qdep">qdep</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col5 decl" id="1065addr" title='addr' data-type='u64' data-ref="1065addr" data-ref-filename="1065addr">addr</dfn>, <em>unsigned</em> <dfn class="local col6 decl" id="1066mask" title='mask' data-type='unsigned int' data-ref="1066mask" data-ref-filename="1066mask">mask</dfn>);</td></tr>
+<tr><th id="644">644</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="qi_submit_sync" title='qi_submit_sync' data-ref="qi_submit_sync" data-ref-filename="qi_submit_sync">qi_submit_sync</dfn>(<b>struct</b> <a class="type" href="#qi_desc" title='qi_desc' data-ref="qi_desc" data-ref-filename="qi_desc">qi_desc</a> *<dfn class="local col7 decl" id="1067desc" title='desc' data-type='struct qi_desc *' data-ref="1067desc" data-ref-filename="1067desc">desc</dfn>, <b>struct</b> <a class="type" href="#intel_iommu" title='intel_iommu' data-ref="intel_iommu" data-ref-filename="intel_iommu">intel_iommu</a> *<dfn class="local col8 decl" id="1068iommu" title='iommu' data-type='struct intel_iommu *' data-ref="1068iommu" data-ref-filename="1068iommu">iommu</dfn>);</td></tr>
+<tr><th id="645">645</th><td></td></tr>
+<tr><th id="646">646</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="dmar_ir_support" title='dmar_ir_support' data-ref="dmar_ir_support" data-ref-filename="dmar_ir_support">dmar_ir_support</dfn>(<em>void</em>);</td></tr>
+<tr><th id="647">647</th><td></td></tr>
+<tr><th id="648">648</th><td><em>void</em> *<dfn class="decl fn" id="alloc_pgtable_page" title='alloc_pgtable_page' data-ref="alloc_pgtable_page" data-ref-filename="alloc_pgtable_page">alloc_pgtable_page</dfn>(<em>int</em> <dfn class="local col9 decl" id="1069node" title='node' data-type='int' data-ref="1069node" data-ref-filename="1069node">node</dfn>);</td></tr>
+<tr><th id="649">649</th><td><em>void</em> <dfn class="decl fn" id="free_pgtable_page" title='free_pgtable_page' data-ref="free_pgtable_page" data-ref-filename="free_pgtable_page">free_pgtable_page</dfn>(<em>void</em> *<dfn class="local col0 decl" id="1070vaddr" title='vaddr' data-type='void *' data-ref="1070vaddr" data-ref-filename="1070vaddr">vaddr</dfn>);</td></tr>
+<tr><th id="650">650</th><td><b>struct</b> <a class="type" href="#intel_iommu" title='intel_iommu' data-ref="intel_iommu" data-ref-filename="intel_iommu">intel_iommu</a> *<dfn class="decl fn" id="domain_get_iommu" title='domain_get_iommu' data-ref="domain_get_iommu" data-ref-filename="domain_get_iommu">domain_get_iommu</dfn>(<b>struct</b> <a class="type" href="#dmar_domain" title='dmar_domain' data-ref="dmar_domain" data-ref-filename="dmar_domain">dmar_domain</a> *<dfn class="local col1 decl" id="1071domain" title='domain' data-type='struct dmar_domain *' data-ref="1071domain" data-ref-filename="1071domain">domain</dfn>);</td></tr>
+<tr><th id="651">651</th><td><em>int</em> <dfn class="decl fn" id="for_each_device_domain" title='for_each_device_domain' data-ref="for_each_device_domain" data-ref-filename="for_each_device_domain">for_each_device_domain</dfn>(<em>int</em> (*<dfn class="local col2 decl" id="1072fn" title='fn' data-type='int (*)(struct device_domain_info *, void *)' data-ref="1072fn" data-ref-filename="1072fn">fn</dfn>)(<b>struct</b> <a class="type" href="#device_domain_info" title='device_domain_info' data-ref="device_domain_info" data-ref-filename="device_domain_info">device_domain_info</a> *<dfn class="local col3 decl" id="1073info" title='info' data-type='struct device_domain_info *' data-ref="1073info" data-ref-filename="1073info">info</dfn>,</td></tr>
+<tr><th id="652">652</th><td>				     <em>void</em> *<dfn class="local col4 decl" id="1074data" title='data' data-type='void *' data-ref="1074data" data-ref-filename="1074data">data</dfn>), <em>void</em> *<dfn class="local col5 decl" id="1075data" title='data' data-type='void *' data-ref="1075data" data-ref-filename="1075data">data</dfn>);</td></tr>
+<tr><th id="653">653</th><td><em>void</em> <dfn class="decl fn" id="iommu_flush_write_buffer" title='iommu_flush_write_buffer' data-ref="iommu_flush_write_buffer" data-ref-filename="iommu_flush_write_buffer">iommu_flush_write_buffer</dfn>(<b>struct</b> <a class="type" href="#intel_iommu" title='intel_iommu' data-ref="intel_iommu" data-ref-filename="intel_iommu">intel_iommu</a> *<dfn class="local col6 decl" id="1076iommu" title='iommu' data-type='struct intel_iommu *' data-ref="1076iommu" data-ref-filename="1076iommu">iommu</dfn>);</td></tr>
+<tr><th id="654">654</th><td><em>int</em> <dfn class="decl fn" id="intel_iommu_enable_pasid" title='intel_iommu_enable_pasid' data-ref="intel_iommu_enable_pasid" data-ref-filename="intel_iommu_enable_pasid">intel_iommu_enable_pasid</dfn>(<b>struct</b> <a class="type" href="#intel_iommu" title='intel_iommu' data-ref="intel_iommu" data-ref-filename="intel_iommu">intel_iommu</a> *<dfn class="local col7 decl" id="1077iommu" title='iommu' data-type='struct intel_iommu *' data-ref="1077iommu" data-ref-filename="1077iommu">iommu</dfn>, <b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col8 decl" id="1078dev" title='dev' data-type='struct device *' data-ref="1078dev" data-ref-filename="1078dev">dev</dfn>);</td></tr>
+<tr><th id="655">655</th><td></td></tr>
+<tr><th id="656">656</th><td><u>#<span data-ppcond="656">ifdef</span> <span class="macro" data-ref="_M/CONFIG_INTEL_IOMMU_SVM">CONFIG_INTEL_IOMMU_SVM</span></u></td></tr>
+<tr><th id="657">657</th><td><em>int</em> intel_svm_init(<b>struct</b> intel_iommu *iommu);</td></tr>
+<tr><th id="658">658</th><td><b>extern</b> <em>int</em> intel_svm_enable_prq(<b>struct</b> intel_iommu *iommu);</td></tr>
+<tr><th id="659">659</th><td><b>extern</b> <em>int</em> intel_svm_finish_prq(<b>struct</b> intel_iommu *iommu);</td></tr>
+<tr><th id="660">660</th><td></td></tr>
+<tr><th id="661">661</th><td><b>struct</b> svm_dev_ops;</td></tr>
+<tr><th id="662">662</th><td></td></tr>
+<tr><th id="663">663</th><td><b>struct</b> intel_svm_dev {</td></tr>
+<tr><th id="664">664</th><td>	<b>struct</b> list_head list;</td></tr>
+<tr><th id="665">665</th><td>	<b>struct</b> rcu_head rcu;</td></tr>
+<tr><th id="666">666</th><td>	<b>struct</b> device *dev;</td></tr>
+<tr><th id="667">667</th><td>	<b>struct</b> svm_dev_ops *ops;</td></tr>
+<tr><th id="668">668</th><td>	<em>int</em> users;</td></tr>
+<tr><th id="669">669</th><td>	u16 did;</td></tr>
+<tr><th id="670">670</th><td>	u16 dev_iotlb:<var>1</var>;</td></tr>
+<tr><th id="671">671</th><td>	u16 sid, qdep;</td></tr>
+<tr><th id="672">672</th><td>};</td></tr>
+<tr><th id="673">673</th><td></td></tr>
+<tr><th id="674">674</th><td><b>struct</b> intel_svm {</td></tr>
+<tr><th id="675">675</th><td>	<b>struct</b> mmu_notifier notifier;</td></tr>
+<tr><th id="676">676</th><td>	<b>struct</b> mm_struct *mm;</td></tr>
+<tr><th id="677">677</th><td>	<b>struct</b> intel_iommu *iommu;</td></tr>
+<tr><th id="678">678</th><td>	<em>int</em> flags;</td></tr>
+<tr><th id="679">679</th><td>	<em>int</em> pasid;</td></tr>
+<tr><th id="680">680</th><td>	<b>struct</b> list_head devs;</td></tr>
+<tr><th id="681">681</th><td>	<b>struct</b> list_head list;</td></tr>
+<tr><th id="682">682</th><td>};</td></tr>
+<tr><th id="683">683</th><td></td></tr>
+<tr><th id="684">684</th><td><b>extern</b> <b>struct</b> intel_iommu *intel_svm_device_to_iommu(<b>struct</b> device *dev);</td></tr>
+<tr><th id="685">685</th><td><u>#<span data-ppcond="656">endif</span></u></td></tr>
+<tr><th id="686">686</th><td></td></tr>
+<tr><th id="687">687</th><td><u>#<span data-ppcond="687">ifdef</span> <span class="macro" data-ref="_M/CONFIG_INTEL_IOMMU_DEBUGFS">CONFIG_INTEL_IOMMU_DEBUGFS</span></u></td></tr>
+<tr><th id="688">688</th><td><em>void</em> intel_iommu_debugfs_init(<em>void</em>);</td></tr>
+<tr><th id="689">689</th><td><u>#<span data-ppcond="687">else</span></u></td></tr>
+<tr><th id="690">690</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="intel_iommu_debugfs_init" title='intel_iommu_debugfs_init' data-ref="intel_iommu_debugfs_init" data-ref-filename="intel_iommu_debugfs_init">intel_iommu_debugfs_init</dfn>(<em>void</em>) {}</td></tr>
+<tr><th id="691">691</th><td><u>#<span data-ppcond="687">endif</span> /* CONFIG_INTEL_IOMMU_DEBUGFS */</u></td></tr>
+<tr><th id="692">692</th><td></td></tr>
+<tr><th id="693">693</th><td><b>extern</b> <em>const</em> <b>struct</b> <a class="type" href="sysfs.h.html#attribute_group" title='attribute_group' data-ref="attribute_group" data-ref-filename="attribute_group">attribute_group</a> *<dfn class="decl" id="intel_iommu_groups" title='intel_iommu_groups' data-ref="intel_iommu_groups" data-ref-filename="intel_iommu_groups">intel_iommu_groups</dfn>[];</td></tr>
+<tr><th id="694">694</th><td><a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl fn" id="context_present" title='context_present' data-ref="context_present" data-ref-filename="context_present">context_present</dfn>(<b>struct</b> <a class="type" href="#context_entry" title='context_entry' data-ref="context_entry" data-ref-filename="context_entry">context_entry</a> *<dfn class="local col9 decl" id="1079context" title='context' data-type='struct context_entry *' data-ref="1079context" data-ref-filename="1079context">context</dfn>);</td></tr>
+<tr><th id="695">695</th><td><b>struct</b> <a class="type" href="#context_entry" title='context_entry' data-ref="context_entry" data-ref-filename="context_entry">context_entry</a> *<dfn class="decl fn" id="iommu_context_addr" title='iommu_context_addr' data-ref="iommu_context_addr" data-ref-filename="iommu_context_addr">iommu_context_addr</dfn>(<b>struct</b> <a class="type" href="#intel_iommu" title='intel_iommu' data-ref="intel_iommu" data-ref-filename="intel_iommu">intel_iommu</a> *<dfn class="local col0 decl" id="1080iommu" title='iommu' data-type='struct intel_iommu *' data-ref="1080iommu" data-ref-filename="1080iommu">iommu</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="local col1 decl" id="1081bus" title='bus' data-type='u8' data-ref="1081bus" data-ref-filename="1081bus">bus</dfn>,</td></tr>
+<tr><th id="696">696</th><td>					 <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="local col2 decl" id="1082devfn" title='devfn' data-type='u8' data-ref="1082devfn" data-ref-filename="1082devfn">devfn</dfn>, <em>int</em> <dfn class="local col3 decl" id="1083alloc" title='alloc' data-type='int' data-ref="1083alloc" data-ref-filename="1083alloc">alloc</dfn>);</td></tr>
+<tr><th id="697">697</th><td></td></tr>
+<tr><th id="698">698</th><td><u>#<span data-ppcond="698">ifdef</span> <a class="macro" href="../generated/autoconf.h.html#1208" data-ref="_M/CONFIG_INTEL_IOMMU">CONFIG_INTEL_IOMMU</a></u></td></tr>
+<tr><th id="699">699</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="iommu_calculate_agaw" title='iommu_calculate_agaw' data-ref="iommu_calculate_agaw" data-ref-filename="iommu_calculate_agaw">iommu_calculate_agaw</dfn>(<b>struct</b> <a class="type" href="#intel_iommu" title='intel_iommu' data-ref="intel_iommu" data-ref-filename="intel_iommu">intel_iommu</a> *<dfn class="local col4 decl" id="1084iommu" title='iommu' data-type='struct intel_iommu *' data-ref="1084iommu" data-ref-filename="1084iommu">iommu</dfn>);</td></tr>
+<tr><th id="700">700</th><td><b>extern</b> <em>int</em> <dfn class="decl fn" id="iommu_calculate_max_sagaw" title='iommu_calculate_max_sagaw' data-ref="iommu_calculate_max_sagaw" data-ref-filename="iommu_calculate_max_sagaw">iommu_calculate_max_sagaw</dfn>(<b>struct</b> <a class="type" href="#intel_iommu" title='intel_iommu' data-ref="intel_iommu" data-ref-filename="intel_iommu">intel_iommu</a> *<dfn class="local col5 decl" id="1085iommu" title='iommu' data-type='struct intel_iommu *' data-ref="1085iommu" data-ref-filename="1085iommu">iommu</dfn>);</td></tr>
+<tr><th id="701">701</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="dmar_disabled" title='dmar_disabled' data-ref="dmar_disabled" data-ref-filename="dmar_disabled">dmar_disabled</dfn>;</td></tr>
+<tr><th id="702">702</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="intel_iommu_enabled" title='intel_iommu_enabled' data-ref="intel_iommu_enabled" data-ref-filename="intel_iommu_enabled">intel_iommu_enabled</dfn>;</td></tr>
+<tr><th id="703">703</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="intel_iommu_tboot_noforce" title='intel_iommu_tboot_noforce' data-ref="intel_iommu_tboot_noforce" data-ref-filename="intel_iommu_tboot_noforce">intel_iommu_tboot_noforce</dfn>;</td></tr>
+<tr><th id="704">704</th><td><u>#<span data-ppcond="698">else</span></u></td></tr>
+<tr><th id="705">705</th><td><em>static</em> <b>inline</b> <em>int</em> iommu_calculate_agaw(<b>struct</b> intel_iommu *iommu)</td></tr>
+<tr><th id="706">706</th><td>{</td></tr>
+<tr><th id="707">707</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="708">708</th><td>}</td></tr>
+<tr><th id="709">709</th><td><em>static</em> <b>inline</b> <em>int</em> iommu_calculate_max_sagaw(<b>struct</b> intel_iommu *iommu)</td></tr>
+<tr><th id="710">710</th><td>{</td></tr>
+<tr><th id="711">711</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="712">712</th><td>}</td></tr>
+<tr><th id="713">713</th><td><u>#define dmar_disabled	(1)</u></td></tr>
+<tr><th id="714">714</th><td><u>#define intel_iommu_enabled (0)</u></td></tr>
+<tr><th id="715">715</th><td><u>#<span data-ppcond="698">endif</span></u></td></tr>
+<tr><th id="716">716</th><td></td></tr>
+<tr><th id="717">717</th><td><u>#<span data-ppcond="10">endif</span></u></td></tr>
+<tr><th id="718">718</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../drivers/gpu/drm/i915/display/dvo_ch7017.c.html'>linux-5.3.1/drivers/gpu/drm/i915/display/dvo_ch7017.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

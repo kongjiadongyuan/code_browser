@@ -1,0 +1,33 @@
+<dec f='linux-5.3.1/include/net/sch_generic.h' l='101' type='struct qdisc_skb_head'/>
+<use f='linux-5.3.1/include/net/sch_generic.h' l='153' u='m' c='qdisc_is_empty'/>
+<use f='linux-5.3.1/include/net/sch_generic.h' l='488' u='m' c='qdisc_qlen'/>
+<use f='linux-5.3.1/include/net/sch_generic.h' l='500' u='m' c='qdisc_qlen_sum'/>
+<use f='linux-5.3.1/include/net/sch_generic.h' l='513' u='m' c='qdisc_lock'/>
+<use f='linux-5.3.1/include/net/sch_generic.h' l='997' u='a' c='qdisc_enqueue_tail'/>
+<use f='linux-5.3.1/include/net/sch_generic.h' l='1030' u='a' c='qdisc_dequeue_head'/>
+<use f='linux-5.3.1/include/net/sch_generic.h' l='1079' u='a' c='qdisc_queue_drop_head'/>
+<use f='linux-5.3.1/include/net/sch_generic.h' l='1084' u='a' c='qdisc_peek_head'/>
+<use f='linux-5.3.1/include/net/sch_generic.h' l='1102' u='m' c='qdisc_peek_dequeued'/>
+<use f='linux-5.3.1/include/net/sch_generic.h' l='1119' u='m' c='qdisc_update_stats_at_dequeue'/>
+<use f='linux-5.3.1/include/net/sch_generic.h' l='1131' u='m' c='qdisc_update_stats_at_enqueue'/>
+<use f='linux-5.3.1/include/net/sch_generic.h' l='1147' u='m' c='qdisc_dequeue_peeked'/>
+<use f='linux-5.3.1/include/net/sch_generic.h' l='1174' u='a' c='qdisc_reset_queue'/>
+<offset>1216</offset>
+<use f='linux-5.3.1/net/sched/sch_api.c' l='781' u='m' c='qdisc_tree_reduce_backlog'/>
+<use f='linux-5.3.1/net/sched/sch_api.c' l='794' u='m' c='qdisc_tree_reduce_backlog'/>
+<use f='linux-5.3.1/net/sched/sch_fifo.c' l='30' u='m' c='pfifo_enqueue'/>
+<use f='linux-5.3.1/net/sched/sch_fifo.c' l='41' u='m' c='pfifo_tail_enqueue'/>
+<use f='linux-5.3.1/net/sched/sch_fifo.c' l='46' u='a' c='pfifo_tail_enqueue'/>
+<use f='linux-5.3.1/net/sched/sch_generic.c' l='73' u='m' c='__skb_dequeue_bad_txq'/>
+<use f='linux-5.3.1/net/sched/sch_generic.c' l='113' u='m' c='qdisc_enqueue_skb_bad_txq'/>
+<use f='linux-5.3.1/net/sched/sch_generic.c' l='142' u='m' c='dev_requeue_skb'/>
+<use f='linux-5.3.1/net/sched/sch_generic.c' l='241' u='m' c='dequeue_skb'/>
+<use f='linux-5.3.1/net/sched/sch_generic.c' l='329' u='m' c='sch_direct_xmit'/>
+<use f='linux-5.3.1/net/sched/sch_generic.c' l='558' u='w'/>
+<use f='linux-5.3.1/net/sched/sch_generic.c' l='840' u='a' c='qdisc_alloc'/>
+<use f='linux-5.3.1/net/sched/sch_generic.c' l='841' u='m' c='qdisc_alloc'/>
+<use f='linux-5.3.1/net/sched/sch_generic.c' l='841' u='m' c='qdisc_alloc'/>
+<use f='linux-5.3.1/net/sched/sch_generic.c' l='932' u='m' c='qdisc_reset'/>
+<use f='linux-5.3.1/net/sched/sch_mq.c' l='135' u='m' c='mq_dump'/>
+<use f='linux-5.3.1/net/sched/sch_mq.c' l='157' u='m' c='mq_dump'/>
+<use f='linux-5.3.1/net/sched/sch_mq.c' l='157' u='m' c='mq_dump'/>

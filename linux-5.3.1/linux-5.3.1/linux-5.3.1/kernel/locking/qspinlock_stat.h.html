@@ -1,0 +1,160 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>qspinlock_stat.h source code [linux-5.3.1/kernel/locking/qspinlock_stat.h] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/kernel/locking/qspinlock_stat.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>kernel</a>/<a href='./'>locking</a>/<a href='qspinlock_stat.h.html'>qspinlock_stat.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0-or-later */</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> *</i></td></tr>
+<tr><th id="4">4</th><td><i> * Authors: Waiman Long &lt;longman@redhat.com&gt;</i></td></tr>
+<tr><th id="5">5</th><td><i> */</i></td></tr>
+<tr><th id="6">6</th><td></td></tr>
+<tr><th id="7">7</th><td><u>#include <a href="lock_events.h.html">"lock_events.h"</a></u></td></tr>
+<tr><th id="8">8</th><td></td></tr>
+<tr><th id="9">9</th><td><u>#<span data-ppcond="9">ifdef</span> <span class="macro" data-ref="_M/CONFIG_LOCK_EVENT_COUNTS">CONFIG_LOCK_EVENT_COUNTS</span></u></td></tr>
+<tr><th id="10">10</th><td><u>#ifdef CONFIG_PARAVIRT_SPINLOCKS</u></td></tr>
+<tr><th id="11">11</th><td><i>/*</i></td></tr>
+<tr><th id="12">12</th><td><i> * Collect pvqspinlock locking event counts</i></td></tr>
+<tr><th id="13">13</th><td><i> */</i></td></tr>
+<tr><th id="14">14</th><td><u>#include &lt;linux/sched.h&gt;</u></td></tr>
+<tr><th id="15">15</th><td><u>#include &lt;linux/sched/clock.h&gt;</u></td></tr>
+<tr><th id="16">16</th><td><u>#include &lt;linux/fs.h&gt;</u></td></tr>
+<tr><th id="17">17</th><td></td></tr>
+<tr><th id="18">18</th><td><u>#define EVENT_COUNT(ev)	lockevents[LOCKEVENT_ ## ev]</u></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><i>/*</i></td></tr>
+<tr><th id="21">21</th><td><i> * PV specific per-cpu counter</i></td></tr>
+<tr><th id="22">22</th><td><i> */</i></td></tr>
+<tr><th id="23">23</th><td><em>static</em> DEFINE_PER_CPU(u64, pv_kick_time);</td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><i>/*</i></td></tr>
+<tr><th id="26">26</th><td><i> * Function to read and return the PV qspinlock counts.</i></td></tr>
+<tr><th id="27">27</th><td><i> *</i></td></tr>
+<tr><th id="28">28</th><td><i> * The following counters are handled specially:</i></td></tr>
+<tr><th id="29">29</th><td><i> * 1. pv_latency_kick</i></td></tr>
+<tr><th id="30">30</th><td><i> *    Average kick latency (ns) = pv_latency_kick/pv_kick_unlock</i></td></tr>
+<tr><th id="31">31</th><td><i> * 2. pv_latency_wake</i></td></tr>
+<tr><th id="32">32</th><td><i> *    Average wake latency (ns) = pv_latency_wake/pv_kick_wake</i></td></tr>
+<tr><th id="33">33</th><td><i> * 3. pv_hash_hops</i></td></tr>
+<tr><th id="34">34</th><td><i> *    Average hops/hash = pv_hash_hops/pv_kick_unlock</i></td></tr>
+<tr><th id="35">35</th><td><i> */</i></td></tr>
+<tr><th id="36">36</th><td>ssize_t lockevent_read(<b>struct</b> file *file, <em>char</em> __user *user_buf,</td></tr>
+<tr><th id="37">37</th><td>		       size_t count, loff_t *ppos)</td></tr>
+<tr><th id="38">38</th><td>{</td></tr>
+<tr><th id="39">39</th><td>	<em>char</em> buf[<var>64</var>];</td></tr>
+<tr><th id="40">40</th><td>	<em>int</em> cpu, id, len;</td></tr>
+<tr><th id="41">41</th><td>	u64 sum = <var>0</var>, kicks = <var>0</var>;</td></tr>
+<tr><th id="42">42</th><td></td></tr>
+<tr><th id="43">43</th><td>	<i>/*</i></td></tr>
+<tr><th id="44">44</th><td><i>	 * Get the counter ID stored in file-&gt;f_inode-&gt;i_private</i></td></tr>
+<tr><th id="45">45</th><td><i>	 */</i></td></tr>
+<tr><th id="46">46</th><td>	id = (<em>long</em>)file_inode(file)-&gt;i_private;</td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td>	<b>if</b> (id &gt;= lockevent_num)</td></tr>
+<tr><th id="49">49</th><td>		<b>return</b> -EBADF;</td></tr>
+<tr><th id="50">50</th><td></td></tr>
+<tr><th id="51">51</th><td>	for_each_possible_cpu(cpu) {</td></tr>
+<tr><th id="52">52</th><td>		sum += per_cpu(lockevents[id], cpu);</td></tr>
+<tr><th id="53">53</th><td>		<i>/*</i></td></tr>
+<tr><th id="54">54</th><td><i>		 * Need to sum additional counters for some of them</i></td></tr>
+<tr><th id="55">55</th><td><i>		 */</i></td></tr>
+<tr><th id="56">56</th><td>		<b>switch</b> (id) {</td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td>		<b>case</b> LOCKEVENT_pv_latency_kick:</td></tr>
+<tr><th id="59">59</th><td>		<b>case</b> LOCKEVENT_pv_hash_hops:</td></tr>
+<tr><th id="60">60</th><td>			kicks += per_cpu(EVENT_COUNT(pv_kick_unlock), cpu);</td></tr>
+<tr><th id="61">61</th><td>			<b>break</b>;</td></tr>
+<tr><th id="62">62</th><td></td></tr>
+<tr><th id="63">63</th><td>		<b>case</b> LOCKEVENT_pv_latency_wake:</td></tr>
+<tr><th id="64">64</th><td>			kicks += per_cpu(EVENT_COUNT(pv_kick_wake), cpu);</td></tr>
+<tr><th id="65">65</th><td>			<b>break</b>;</td></tr>
+<tr><th id="66">66</th><td>		}</td></tr>
+<tr><th id="67">67</th><td>	}</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td>	<b>if</b> (id == LOCKEVENT_pv_hash_hops) {</td></tr>
+<tr><th id="70">70</th><td>		u64 frac = <var>0</var>;</td></tr>
+<tr><th id="71">71</th><td></td></tr>
+<tr><th id="72">72</th><td>		<b>if</b> (kicks) {</td></tr>
+<tr><th id="73">73</th><td>			frac = <var>100ULL</var> * do_div(sum, kicks);</td></tr>
+<tr><th id="74">74</th><td>			frac = DIV_ROUND_CLOSEST_ULL(frac, kicks);</td></tr>
+<tr><th id="75">75</th><td>		}</td></tr>
+<tr><th id="76">76</th><td></td></tr>
+<tr><th id="77">77</th><td>		<i>/*</i></td></tr>
+<tr><th id="78">78</th><td><i>		 * Return a X.XX decimal number</i></td></tr>
+<tr><th id="79">79</th><td><i>		 */</i></td></tr>
+<tr><th id="80">80</th><td>		len = snprintf(buf, <b>sizeof</b>(buf) - <var>1</var>, <q>"%llu.%02llu\n"</q>,</td></tr>
+<tr><th id="81">81</th><td>			       sum, frac);</td></tr>
+<tr><th id="82">82</th><td>	} <b>else</b> {</td></tr>
+<tr><th id="83">83</th><td>		<i>/*</i></td></tr>
+<tr><th id="84">84</th><td><i>		 * Round to the nearest ns</i></td></tr>
+<tr><th id="85">85</th><td><i>		 */</i></td></tr>
+<tr><th id="86">86</th><td>		<b>if</b> ((id == LOCKEVENT_pv_latency_kick) ||</td></tr>
+<tr><th id="87">87</th><td>		    (id == LOCKEVENT_pv_latency_wake)) {</td></tr>
+<tr><th id="88">88</th><td>			<b>if</b> (kicks)</td></tr>
+<tr><th id="89">89</th><td>				sum = DIV_ROUND_CLOSEST_ULL(sum, kicks);</td></tr>
+<tr><th id="90">90</th><td>		}</td></tr>
+<tr><th id="91">91</th><td>		len = snprintf(buf, <b>sizeof</b>(buf) - <var>1</var>, <q>"%llu\n"</q>, sum);</td></tr>
+<tr><th id="92">92</th><td>	}</td></tr>
+<tr><th id="93">93</th><td></td></tr>
+<tr><th id="94">94</th><td>	<b>return</b> simple_read_from_buffer(user_buf, count, ppos, buf, len);</td></tr>
+<tr><th id="95">95</th><td>}</td></tr>
+<tr><th id="96">96</th><td></td></tr>
+<tr><th id="97">97</th><td><i>/*</i></td></tr>
+<tr><th id="98">98</th><td><i> * PV hash hop count</i></td></tr>
+<tr><th id="99">99</th><td><i> */</i></td></tr>
+<tr><th id="100">100</th><td><em>static</em> <b>inline</b> <em>void</em> lockevent_pv_hop(<em>int</em> hopcnt)</td></tr>
+<tr><th id="101">101</th><td>{</td></tr>
+<tr><th id="102">102</th><td>	this_cpu_add(EVENT_COUNT(pv_hash_hops), hopcnt);</td></tr>
+<tr><th id="103">103</th><td>}</td></tr>
+<tr><th id="104">104</th><td></td></tr>
+<tr><th id="105">105</th><td><i>/*</i></td></tr>
+<tr><th id="106">106</th><td><i> * Replacement function for pv_kick()</i></td></tr>
+<tr><th id="107">107</th><td><i> */</i></td></tr>
+<tr><th id="108">108</th><td><em>static</em> <b>inline</b> <em>void</em> __pv_kick(<em>int</em> cpu)</td></tr>
+<tr><th id="109">109</th><td>{</td></tr>
+<tr><th id="110">110</th><td>	u64 start = sched_clock();</td></tr>
+<tr><th id="111">111</th><td></td></tr>
+<tr><th id="112">112</th><td>	per_cpu(pv_kick_time, cpu) = start;</td></tr>
+<tr><th id="113">113</th><td>	pv_kick(cpu);</td></tr>
+<tr><th id="114">114</th><td>	this_cpu_add(EVENT_COUNT(pv_latency_kick), sched_clock() - start);</td></tr>
+<tr><th id="115">115</th><td>}</td></tr>
+<tr><th id="116">116</th><td></td></tr>
+<tr><th id="117">117</th><td><i>/*</i></td></tr>
+<tr><th id="118">118</th><td><i> * Replacement function for pv_wait()</i></td></tr>
+<tr><th id="119">119</th><td><i> */</i></td></tr>
+<tr><th id="120">120</th><td><em>static</em> <b>inline</b> <em>void</em> __pv_wait(u8 *ptr, u8 val)</td></tr>
+<tr><th id="121">121</th><td>{</td></tr>
+<tr><th id="122">122</th><td>	u64 *pkick_time = this_cpu_ptr(&amp;pv_kick_time);</td></tr>
+<tr><th id="123">123</th><td></td></tr>
+<tr><th id="124">124</th><td>	*pkick_time = <var>0</var>;</td></tr>
+<tr><th id="125">125</th><td>	pv_wait(ptr, val);</td></tr>
+<tr><th id="126">126</th><td>	<b>if</b> (*pkick_time) {</td></tr>
+<tr><th id="127">127</th><td>		this_cpu_add(EVENT_COUNT(pv_latency_wake),</td></tr>
+<tr><th id="128">128</th><td>			     sched_clock() - *pkick_time);</td></tr>
+<tr><th id="129">129</th><td>		lockevent_inc(pv_kick_wake);</td></tr>
+<tr><th id="130">130</th><td>	}</td></tr>
+<tr><th id="131">131</th><td>}</td></tr>
+<tr><th id="132">132</th><td></td></tr>
+<tr><th id="133">133</th><td><u>#define pv_kick(c)	__pv_kick(c)</u></td></tr>
+<tr><th id="134">134</th><td><u>#define pv_wait(p, v)	__pv_wait(p, v)</u></td></tr>
+<tr><th id="135">135</th><td></td></tr>
+<tr><th id="136">136</th><td><u>#endif /* CONFIG_PARAVIRT_SPINLOCKS */</u></td></tr>
+<tr><th id="137">137</th><td></td></tr>
+<tr><th id="138">138</th><td><u>#<span data-ppcond="9">else</span> /* CONFIG_LOCK_EVENT_COUNTS */</u></td></tr>
+<tr><th id="139">139</th><td></td></tr>
+<tr><th id="140">140</th><td><em>static</em> <a class="macro" href="../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="lockevent_pv_hop" title='lockevent_pv_hop' data-ref="lockevent_pv_hop" data-ref-filename="lockevent_pv_hop">lockevent_pv_hop</dfn>(<em>int</em> <dfn class="local col1 decl" id="1hopcnt" title='hopcnt' data-type='int' data-ref="1hopcnt" data-ref-filename="1hopcnt">hopcnt</dfn>)	{ }</td></tr>
+<tr><th id="141">141</th><td></td></tr>
+<tr><th id="142">142</th><td><u>#<span data-ppcond="9">endif</span> /* CONFIG_LOCK_EVENT_COUNTS */</u></td></tr>
+<tr><th id="143">143</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='qspinlock.c.html'>linux-5.3.1/kernel/locking/qspinlock.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

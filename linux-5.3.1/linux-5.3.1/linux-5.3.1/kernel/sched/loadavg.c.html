@@ -1,0 +1,403 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>loadavg.c source code [linux-5.3.1/kernel/sched/loadavg.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/kernel/sched/loadavg.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>kernel</a>/<a href='./'>sched</a>/<a href='loadavg.c.html'>loadavg.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * kernel/sched/loadavg.c</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * This file contains the magic bits required to compute the global loadavg</i></td></tr>
+<tr><th id="6">6</th><td><i> * figure. Its a silly number but people think its important. We go through</i></td></tr>
+<tr><th id="7">7</th><td><i> * great pains to make it work on big machines and tickless kernels.</i></td></tr>
+<tr><th id="8">8</th><td><i> */</i></td></tr>
+<tr><th id="9">9</th><td><u>#include <a href="sched.h.html">"sched.h"</a></u></td></tr>
+<tr><th id="10">10</th><td></td></tr>
+<tr><th id="11">11</th><td><i>/*</i></td></tr>
+<tr><th id="12">12</th><td><i> * Global load-average calculations</i></td></tr>
+<tr><th id="13">13</th><td><i> *</i></td></tr>
+<tr><th id="14">14</th><td><i> * We take a distributed and async approach to calculating the global load-avg</i></td></tr>
+<tr><th id="15">15</th><td><i> * in order to minimize overhead.</i></td></tr>
+<tr><th id="16">16</th><td><i> *</i></td></tr>
+<tr><th id="17">17</th><td><i> * The global load average is an exponentially decaying average of nr_running +</i></td></tr>
+<tr><th id="18">18</th><td><i> * nr_uninterruptible.</i></td></tr>
+<tr><th id="19">19</th><td><i> *</i></td></tr>
+<tr><th id="20">20</th><td><i> * Once every LOAD_FREQ:</i></td></tr>
+<tr><th id="21">21</th><td><i> *</i></td></tr>
+<tr><th id="22">22</th><td><i> *   nr_active = 0;</i></td></tr>
+<tr><th id="23">23</th><td><i> *   for_each_possible_cpu(cpu)</i></td></tr>
+<tr><th id="24">24</th><td><i> *	nr_active += cpu_of(cpu)-&gt;nr_running + cpu_of(cpu)-&gt;nr_uninterruptible;</i></td></tr>
+<tr><th id="25">25</th><td><i> *</i></td></tr>
+<tr><th id="26">26</th><td><i> *   avenrun[n] = avenrun[0] * exp_n + nr_active * (1 - exp_n)</i></td></tr>
+<tr><th id="27">27</th><td><i> *</i></td></tr>
+<tr><th id="28">28</th><td><i> * Due to a number of reasons the above turns in the mess below:</i></td></tr>
+<tr><th id="29">29</th><td><i> *</i></td></tr>
+<tr><th id="30">30</th><td><i> *  - for_each_possible_cpu() is prohibitively expensive on machines with</i></td></tr>
+<tr><th id="31">31</th><td><i> *    serious number of CPUs, therefore we need to take a distributed approach</i></td></tr>
+<tr><th id="32">32</th><td><i> *    to calculating nr_active.</i></td></tr>
+<tr><th id="33">33</th><td><i> *</i></td></tr>
+<tr><th id="34">34</th><td><i> *        \Sum_i x_i(t) = \Sum_i x_i(t) - x_i(t_0) | x_i(t_0) := 0</i></td></tr>
+<tr><th id="35">35</th><td><i> *                      = \Sum_i { \Sum_j=1 x_i(t_j) - x_i(t_j-1) }</i></td></tr>
+<tr><th id="36">36</th><td><i> *</i></td></tr>
+<tr><th id="37">37</th><td><i> *    So assuming nr_active := 0 when we start out -- true per definition, we</i></td></tr>
+<tr><th id="38">38</th><td><i> *    can simply take per-CPU deltas and fold those into a global accumulate</i></td></tr>
+<tr><th id="39">39</th><td><i> *    to obtain the same result. See calc_load_fold_active().</i></td></tr>
+<tr><th id="40">40</th><td><i> *</i></td></tr>
+<tr><th id="41">41</th><td><i> *    Furthermore, in order to avoid synchronizing all per-CPU delta folding</i></td></tr>
+<tr><th id="42">42</th><td><i> *    across the machine, we assume 10 ticks is sufficient time for every</i></td></tr>
+<tr><th id="43">43</th><td><i> *    CPU to have completed this task.</i></td></tr>
+<tr><th id="44">44</th><td><i> *</i></td></tr>
+<tr><th id="45">45</th><td><i> *    This places an upper-bound on the IRQ-off latency of the machine. Then</i></td></tr>
+<tr><th id="46">46</th><td><i> *    again, being late doesn't loose the delta, just wrecks the sample.</i></td></tr>
+<tr><th id="47">47</th><td><i> *</i></td></tr>
+<tr><th id="48">48</th><td><i> *  - cpu_rq()-&gt;nr_uninterruptible isn't accurately tracked per-CPU because</i></td></tr>
+<tr><th id="49">49</th><td><i> *    this would add another cross-CPU cacheline miss and atomic operation</i></td></tr>
+<tr><th id="50">50</th><td><i> *    to the wakeup path. Instead we increment on whatever CPU the task ran</i></td></tr>
+<tr><th id="51">51</th><td><i> *    when it went into uninterruptible state and decrement on whatever CPU</i></td></tr>
+<tr><th id="52">52</th><td><i> *    did the wakeup. This means that only the sum of nr_uninterruptible over</i></td></tr>
+<tr><th id="53">53</th><td><i> *    all CPUs yields the correct result.</i></td></tr>
+<tr><th id="54">54</th><td><i> *</i></td></tr>
+<tr><th id="55">55</th><td><i> *  This covers the NO_HZ=n code, for extra head-aches, see the comment below.</i></td></tr>
+<tr><th id="56">56</th><td><i> */</i></td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td><i>/* Variables and functions for calc_load */</i></td></tr>
+<tr><th id="59">59</th><td><a class="typedef" href="../../include/asm-generic/atomic-long.h.html#atomic_long_t" title='atomic_long_t' data-type='atomic64_t' data-ref="atomic_long_t" data-ref-filename="atomic_long_t">atomic_long_t</a> <dfn class="decl def" id="calc_load_tasks" title='calc_load_tasks' data-ref="calc_load_tasks" data-ref-filename="calc_load_tasks">calc_load_tasks</dfn>;</td></tr>
+<tr><th id="60">60</th><td><em>unsigned</em> <em>long</em> <dfn class="decl def" id="calc_load_update" title='calc_load_update' data-ref="calc_load_update" data-ref-filename="calc_load_update">calc_load_update</dfn>;</td></tr>
+<tr><th id="61">61</th><td><em>unsigned</em> <em>long</em> <dfn class="decl def" id="avenrun" title='avenrun' data-ref="avenrun" data-ref-filename="avenrun">avenrun</dfn>[<var>3</var>];</td></tr>
+<tr><th id="62">62</th><td><a class="macro" href="../../include/linux/export.h.html#123" title="extern typeof(avenrun) avenrun; static const char __kstrtab_avenrun[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;avenrun&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_avenrun62 = (void *)&amp;avenrun; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;&quot; &quot;+&quot; &quot;avenrun&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;avenrun&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;avenrun&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;avenrun&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL">EXPORT_SYMBOL</a>(<a class="decl" href="../../include/linux/sched/loadavg.h.html#avenrun" title='avenrun' data-ref="avenrun" data-ref-filename="avenrun" id="avenrun"><a class="ref" href="../../include/linux/sched/loadavg.h.html#avenrun" title='avenrun' data-ref="avenrun" data-ref-filename="avenrun"><a class="ref" href="../../include/linux/sched/loadavg.h.html#avenrun" title='avenrun' data-ref="avenrun" data-ref-filename="avenrun">avenrun</a></a></a>); <i>/* should be removed */</i></td></tr>
+<tr><th id="63">63</th><td></td></tr>
+<tr><th id="64">64</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="65">65</th><td><i class="doc"> * get_avenrun - get the load average array</i></td></tr>
+<tr><th id="66">66</th><td><i class="doc"> *<span class="command"> @loads</span>:	pointer to dest load array</i></td></tr>
+<tr><th id="67">67</th><td><i class="doc"> *<span class="command"> @offset</span>:	offset to add</i></td></tr>
+<tr><th id="68">68</th><td><i class="doc"> *<span class="command"> @shift</span>:	shift count to shift the result left</i></td></tr>
+<tr><th id="69">69</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="70">70</th><td><i class="doc"> * These values are estimates at best, so no need for locking.</i></td></tr>
+<tr><th id="71">71</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="72">72</th><td><em>void</em> <dfn class="decl def fn" id="get_avenrun" title='get_avenrun' data-ref="get_avenrun" data-ref-filename="get_avenrun">get_avenrun</dfn>(<em>unsigned</em> <em>long</em> *<dfn class="local col1 decl" id="1loads" title='loads' data-type='unsigned long *' data-ref="1loads" data-ref-filename="1loads">loads</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col2 decl" id="2offset" title='offset' data-type='unsigned long' data-ref="2offset" data-ref-filename="2offset">offset</dfn>, <em>int</em> <dfn class="local col3 decl" id="3shift" title='shift' data-type='int' data-ref="3shift" data-ref-filename="3shift">shift</dfn>)</td></tr>
+<tr><th id="73">73</th><td>{</td></tr>
+<tr><th id="74">74</th><td>	<a class="local col1 ref" href="#1loads" title='loads' data-ref="1loads" data-ref-filename="1loads">loads</a>[<var>0</var>] = (<a class="ref" href="../../include/linux/sched/loadavg.h.html#avenrun" title='avenrun' data-ref="avenrun" data-ref-filename="avenrun">avenrun</a>[<var>0</var>] + <a class="local col2 ref" href="#2offset" title='offset' data-ref="2offset" data-ref-filename="2offset">offset</a>) &lt;&lt; <a class="local col3 ref" href="#3shift" title='shift' data-ref="3shift" data-ref-filename="3shift">shift</a>;</td></tr>
+<tr><th id="75">75</th><td>	<a class="local col1 ref" href="#1loads" title='loads' data-ref="1loads" data-ref-filename="1loads">loads</a>[<var>1</var>] = (<a class="ref" href="../../include/linux/sched/loadavg.h.html#avenrun" title='avenrun' data-ref="avenrun" data-ref-filename="avenrun">avenrun</a>[<var>1</var>] + <a class="local col2 ref" href="#2offset" title='offset' data-ref="2offset" data-ref-filename="2offset">offset</a>) &lt;&lt; <a class="local col3 ref" href="#3shift" title='shift' data-ref="3shift" data-ref-filename="3shift">shift</a>;</td></tr>
+<tr><th id="76">76</th><td>	<a class="local col1 ref" href="#1loads" title='loads' data-ref="1loads" data-ref-filename="1loads">loads</a>[<var>2</var>] = (<a class="ref" href="../../include/linux/sched/loadavg.h.html#avenrun" title='avenrun' data-ref="avenrun" data-ref-filename="avenrun">avenrun</a>[<var>2</var>] + <a class="local col2 ref" href="#2offset" title='offset' data-ref="2offset" data-ref-filename="2offset">offset</a>) &lt;&lt; <a class="local col3 ref" href="#3shift" title='shift' data-ref="3shift" data-ref-filename="3shift">shift</a>;</td></tr>
+<tr><th id="77">77</th><td>}</td></tr>
+<tr><th id="78">78</th><td></td></tr>
+<tr><th id="79">79</th><td><em>long</em> <dfn class="decl def fn" id="calc_load_fold_active" title='calc_load_fold_active' data-ref="calc_load_fold_active" data-ref-filename="calc_load_fold_active">calc_load_fold_active</dfn>(<b>struct</b> <a class="type" href="sched.h.html#rq" title='rq' data-ref="rq" data-ref-filename="rq">rq</a> *<dfn class="local col4 decl" id="4this_rq" title='this_rq' data-type='struct rq *' data-ref="4this_rq" data-ref-filename="4this_rq">this_rq</dfn>, <em>long</em> <dfn class="local col5 decl" id="5adjust" title='adjust' data-type='long' data-ref="5adjust" data-ref-filename="5adjust">adjust</dfn>)</td></tr>
+<tr><th id="80">80</th><td>{</td></tr>
+<tr><th id="81">81</th><td>	<em>long</em> <dfn class="local col6 decl" id="6nr_active" title='nr_active' data-type='long' data-ref="6nr_active" data-ref-filename="6nr_active">nr_active</dfn>, <dfn class="local col7 decl" id="7delta" title='delta' data-type='long' data-ref="7delta" data-ref-filename="7delta">delta</dfn> = <var>0</var>;</td></tr>
+<tr><th id="82">82</th><td></td></tr>
+<tr><th id="83">83</th><td>	<a class="local col6 ref" href="#6nr_active" title='nr_active' data-ref="6nr_active" data-ref-filename="6nr_active">nr_active</a> = <a class="local col4 ref" href="#4this_rq" title='this_rq' data-ref="4this_rq" data-ref-filename="4this_rq">this_rq</a>-&gt;<a class="ref field" href="sched.h.html#rq::nr_running" title='rq::nr_running' data-ref="rq::nr_running" data-ref-filename="rq..nr_running">nr_running</a> - <a class="local col5 ref" href="#5adjust" title='adjust' data-ref="5adjust" data-ref-filename="5adjust">adjust</a>;</td></tr>
+<tr><th id="84">84</th><td>	<a class="local col6 ref" href="#6nr_active" title='nr_active' data-ref="6nr_active" data-ref-filename="6nr_active">nr_active</a> += (<em>long</em>)<a class="local col4 ref" href="#4this_rq" title='this_rq' data-ref="4this_rq" data-ref-filename="4this_rq">this_rq</a>-&gt;<a class="ref field" href="sched.h.html#rq::nr_uninterruptible" title='rq::nr_uninterruptible' data-ref="rq::nr_uninterruptible" data-ref-filename="rq..nr_uninterruptible">nr_uninterruptible</a>;</td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td>	<b>if</b> (<a class="local col6 ref" href="#6nr_active" title='nr_active' data-ref="6nr_active" data-ref-filename="6nr_active">nr_active</a> != <a class="local col4 ref" href="#4this_rq" title='this_rq' data-ref="4this_rq" data-ref-filename="4this_rq">this_rq</a>-&gt;<a class="ref field" href="sched.h.html#rq::calc_load_active" title='rq::calc_load_active' data-ref="rq::calc_load_active" data-ref-filename="rq..calc_load_active">calc_load_active</a>) {</td></tr>
+<tr><th id="87">87</th><td>		<a class="local col7 ref" href="#7delta" title='delta' data-ref="7delta" data-ref-filename="7delta">delta</a> = <a class="local col6 ref" href="#6nr_active" title='nr_active' data-ref="6nr_active" data-ref-filename="6nr_active">nr_active</a> - <a class="local col4 ref" href="#4this_rq" title='this_rq' data-ref="4this_rq" data-ref-filename="4this_rq">this_rq</a>-&gt;<a class="ref field" href="sched.h.html#rq::calc_load_active" title='rq::calc_load_active' data-ref="rq::calc_load_active" data-ref-filename="rq..calc_load_active">calc_load_active</a>;</td></tr>
+<tr><th id="88">88</th><td>		<a class="local col4 ref" href="#4this_rq" title='this_rq' data-ref="4this_rq" data-ref-filename="4this_rq">this_rq</a>-&gt;<a class="ref field" href="sched.h.html#rq::calc_load_active" title='rq::calc_load_active' data-ref="rq::calc_load_active" data-ref-filename="rq..calc_load_active">calc_load_active</a> = <a class="local col6 ref" href="#6nr_active" title='nr_active' data-ref="6nr_active" data-ref-filename="6nr_active">nr_active</a>;</td></tr>
+<tr><th id="89">89</th><td>	}</td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td>	<b>return</b> <a class="local col7 ref" href="#7delta" title='delta' data-ref="7delta" data-ref-filename="7delta">delta</a>;</td></tr>
+<tr><th id="92">92</th><td>}</td></tr>
+<tr><th id="93">93</th><td></td></tr>
+<tr><th id="94">94</th><td><i class="doc" data-doc="fixed_power_int">/**</i></td></tr>
+<tr><th id="95">95</th><td><i class="doc" data-doc="fixed_power_int"> * fixed_power_int - compute: x^n, in O(log n) time</i></td></tr>
+<tr><th id="96">96</th><td><i class="doc" data-doc="fixed_power_int"> *</i></td></tr>
+<tr><th id="97">97</th><td><i class="doc" data-doc="fixed_power_int"> *<span class="command"> @x</span>:         base of the power</i></td></tr>
+<tr><th id="98">98</th><td><i class="doc" data-doc="fixed_power_int"> *<span class="command"> @frac</span>_bits: fractional bits of<span class="command"> @x</span></i></td></tr>
+<tr><th id="99">99</th><td><i class="doc" data-doc="fixed_power_int"> *<span class="command"> @n</span>:         power to raise<span class="command"> @x</span> to.</i></td></tr>
+<tr><th id="100">100</th><td><i class="doc" data-doc="fixed_power_int"> *</i></td></tr>
+<tr><th id="101">101</th><td><i class="doc" data-doc="fixed_power_int"> * By exploiting the relation between the definition of the natural power</i></td></tr>
+<tr><th id="102">102</th><td><i class="doc" data-doc="fixed_power_int"> * function: x^n := x*x*...*x (x multiplied by itself for n times), and</i></td></tr>
+<tr><th id="103">103</th><td><i class="doc" data-doc="fixed_power_int"> * the binary encoding of numbers used by computers: n :=<span class="command"> \Sum</span> n_i * 2^i,</i></td></tr>
+<tr><th id="104">104</th><td><i class="doc" data-doc="fixed_power_int"> * (where: n_i<span class="command"> \elem</span> {0, 1}, the binary vector representing n),</i></td></tr>
+<tr><th id="105">105</th><td><i class="doc" data-doc="fixed_power_int"> * we find: x^n := x^<span class="command">(\Sum</span> n_i * 2^i) :=<span class="command"> \Prod</span> x^(n_i * 2^i), which is</i></td></tr>
+<tr><th id="106">106</th><td><i class="doc" data-doc="fixed_power_int"> * of course trivially computable in O(log_2 n), the length of our binary</i></td></tr>
+<tr><th id="107">107</th><td><i class="doc" data-doc="fixed_power_int"> * vector.</i></td></tr>
+<tr><th id="108">108</th><td><i class="doc" data-doc="fixed_power_int"> */</i></td></tr>
+<tr><th id="109">109</th><td><em>static</em> <em>unsigned</em> <em>long</em></td></tr>
+<tr><th id="110">110</th><td><dfn class="tu decl def fn" id="fixed_power_int" title='fixed_power_int' data-type='unsigned long fixed_power_int(unsigned long x, unsigned int frac_bits, unsigned int n)' data-ref="fixed_power_int" data-ref-filename="fixed_power_int">fixed_power_int</dfn>(<em>unsigned</em> <em>long</em> <dfn class="local col8 decl" id="8x" title='x' data-type='unsigned long' data-ref="8x" data-ref-filename="8x">x</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col9 decl" id="9frac_bits" title='frac_bits' data-type='unsigned int' data-ref="9frac_bits" data-ref-filename="9frac_bits">frac_bits</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col0 decl" id="10n" title='n' data-type='unsigned int' data-ref="10n" data-ref-filename="10n">n</dfn>)</td></tr>
+<tr><th id="111">111</th><td>{</td></tr>
+<tr><th id="112">112</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col1 decl" id="11result" title='result' data-type='unsigned long' data-ref="11result" data-ref-filename="11result">result</dfn> = <var>1UL</var> &lt;&lt; <a class="local col9 ref" href="#9frac_bits" title='frac_bits' data-ref="9frac_bits" data-ref-filename="9frac_bits">frac_bits</a>;</td></tr>
+<tr><th id="113">113</th><td></td></tr>
+<tr><th id="114">114</th><td>	<b>if</b> (<a class="local col0 ref" href="#10n" title='n' data-ref="10n" data-ref-filename="10n">n</a>) {</td></tr>
+<tr><th id="115">115</th><td>		<b>for</b> (;;) {</td></tr>
+<tr><th id="116">116</th><td>			<b>if</b> (<a class="local col0 ref" href="#10n" title='n' data-ref="10n" data-ref-filename="10n">n</a> &amp; <var>1</var>) {</td></tr>
+<tr><th id="117">117</th><td>				<a class="local col1 ref" href="#11result" title='result' data-ref="11result" data-ref-filename="11result">result</a> *= <a class="local col8 ref" href="#8x" title='x' data-ref="8x" data-ref-filename="8x">x</a>;</td></tr>
+<tr><th id="118">118</th><td>				<a class="local col1 ref" href="#11result" title='result' data-ref="11result" data-ref-filename="11result">result</a> += <var>1UL</var> &lt;&lt; (<a class="local col9 ref" href="#9frac_bits" title='frac_bits' data-ref="9frac_bits" data-ref-filename="9frac_bits">frac_bits</a> - <var>1</var>);</td></tr>
+<tr><th id="119">119</th><td>				<a class="local col1 ref" href="#11result" title='result' data-ref="11result" data-ref-filename="11result">result</a> &gt;&gt;= <a class="local col9 ref" href="#9frac_bits" title='frac_bits' data-ref="9frac_bits" data-ref-filename="9frac_bits">frac_bits</a>;</td></tr>
+<tr><th id="120">120</th><td>			}</td></tr>
+<tr><th id="121">121</th><td>			<a class="local col0 ref" href="#10n" title='n' data-ref="10n" data-ref-filename="10n">n</a> &gt;&gt;= <var>1</var>;</td></tr>
+<tr><th id="122">122</th><td>			<b>if</b> (!<a class="local col0 ref" href="#10n" title='n' data-ref="10n" data-ref-filename="10n">n</a>)</td></tr>
+<tr><th id="123">123</th><td>				<b>break</b>;</td></tr>
+<tr><th id="124">124</th><td>			<a class="local col8 ref" href="#8x" title='x' data-ref="8x" data-ref-filename="8x">x</a> *= <a class="local col8 ref" href="#8x" title='x' data-ref="8x" data-ref-filename="8x">x</a>;</td></tr>
+<tr><th id="125">125</th><td>			<a class="local col8 ref" href="#8x" title='x' data-ref="8x" data-ref-filename="8x">x</a> += <var>1UL</var> &lt;&lt; (<a class="local col9 ref" href="#9frac_bits" title='frac_bits' data-ref="9frac_bits" data-ref-filename="9frac_bits">frac_bits</a> - <var>1</var>);</td></tr>
+<tr><th id="126">126</th><td>			<a class="local col8 ref" href="#8x" title='x' data-ref="8x" data-ref-filename="8x">x</a> &gt;&gt;= <a class="local col9 ref" href="#9frac_bits" title='frac_bits' data-ref="9frac_bits" data-ref-filename="9frac_bits">frac_bits</a>;</td></tr>
+<tr><th id="127">127</th><td>		}</td></tr>
+<tr><th id="128">128</th><td>	}</td></tr>
+<tr><th id="129">129</th><td></td></tr>
+<tr><th id="130">130</th><td>	<b>return</b> <a class="local col1 ref" href="#11result" title='result' data-ref="11result" data-ref-filename="11result">result</a>;</td></tr>
+<tr><th id="131">131</th><td>}</td></tr>
+<tr><th id="132">132</th><td></td></tr>
+<tr><th id="133">133</th><td><i>/*</i></td></tr>
+<tr><th id="134">134</th><td><i> * a1 = a0 * e + a * (1 - e)</i></td></tr>
+<tr><th id="135">135</th><td><i> *</i></td></tr>
+<tr><th id="136">136</th><td><i> * a2 = a1 * e + a * (1 - e)</i></td></tr>
+<tr><th id="137">137</th><td><i> *    = (a0 * e + a * (1 - e)) * e + a * (1 - e)</i></td></tr>
+<tr><th id="138">138</th><td><i> *    = a0 * e^2 + a * (1 - e) * (1 + e)</i></td></tr>
+<tr><th id="139">139</th><td><i> *</i></td></tr>
+<tr><th id="140">140</th><td><i> * a3 = a2 * e + a * (1 - e)</i></td></tr>
+<tr><th id="141">141</th><td><i> *    = (a0 * e^2 + a * (1 - e) * (1 + e)) * e + a * (1 - e)</i></td></tr>
+<tr><th id="142">142</th><td><i> *    = a0 * e^3 + a * (1 - e) * (1 + e + e^2)</i></td></tr>
+<tr><th id="143">143</th><td><i> *</i></td></tr>
+<tr><th id="144">144</th><td><i> *  ...</i></td></tr>
+<tr><th id="145">145</th><td><i> *</i></td></tr>
+<tr><th id="146">146</th><td><i> * an = a0 * e^n + a * (1 - e) * (1 + e + ... + e^n-1) [1]</i></td></tr>
+<tr><th id="147">147</th><td><i> *    = a0 * e^n + a * (1 - e) * (1 - e^n)/(1 - e)</i></td></tr>
+<tr><th id="148">148</th><td><i> *    = a0 * e^n + a * (1 - e^n)</i></td></tr>
+<tr><th id="149">149</th><td><i> *</i></td></tr>
+<tr><th id="150">150</th><td><i> * [1] application of the geometric series:</i></td></tr>
+<tr><th id="151">151</th><td><i> *</i></td></tr>
+<tr><th id="152">152</th><td><i> *              n         1 - x^(n+1)</i></td></tr>
+<tr><th id="153">153</th><td><i> *     S_n := \Sum x^i = -------------</i></td></tr>
+<tr><th id="154">154</th><td><i> *             i=0          1 - x</i></td></tr>
+<tr><th id="155">155</th><td><i> */</i></td></tr>
+<tr><th id="156">156</th><td><em>unsigned</em> <em>long</em></td></tr>
+<tr><th id="157">157</th><td><dfn class="decl def fn" id="calc_load_n" title='calc_load_n' data-ref="calc_load_n" data-ref-filename="calc_load_n">calc_load_n</dfn>(<em>unsigned</em> <em>long</em> <dfn class="local col2 decl" id="12load" title='load' data-type='unsigned long' data-ref="12load" data-ref-filename="12load">load</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col3 decl" id="13exp" title='exp' data-type='unsigned long' data-ref="13exp" data-ref-filename="13exp">exp</dfn>,</td></tr>
+<tr><th id="158">158</th><td>	    <em>unsigned</em> <em>long</em> <dfn class="local col4 decl" id="14active" title='active' data-type='unsigned long' data-ref="14active" data-ref-filename="14active">active</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col5 decl" id="15n" title='n' data-type='unsigned int' data-ref="15n" data-ref-filename="15n">n</dfn>)</td></tr>
+<tr><th id="159">159</th><td>{</td></tr>
+<tr><th id="160">160</th><td>	<b>return</b> <a class="ref fn" href="../../include/linux/sched/loadavg.h.html#calc_load" title='calc_load' data-ref="calc_load" data-ref-filename="calc_load">calc_load</a>(<a class="local col2 ref" href="#12load" title='load' data-ref="12load" data-ref-filename="12load">load</a>, <a class="tu ref fn" href="#fixed_power_int" title='fixed_power_int' data-use='c' data-ref="fixed_power_int" data-ref-filename="fixed_power_int">fixed_power_int</a>(<a class="local col3 ref" href="#13exp" title='exp' data-ref="13exp" data-ref-filename="13exp">exp</a>, <a class="macro" href="../../include/linux/sched/loadavg.h.html#18" title="11" data-ref="_M/FSHIFT">FSHIFT</a>, <a class="local col5 ref" href="#15n" title='n' data-ref="15n" data-ref-filename="15n">n</a>), <a class="local col4 ref" href="#14active" title='active' data-ref="14active" data-ref-filename="14active">active</a>);</td></tr>
+<tr><th id="161">161</th><td>}</td></tr>
+<tr><th id="162">162</th><td></td></tr>
+<tr><th id="163">163</th><td><u>#<span data-ppcond="163">ifdef</span> <a class="macro" href="../../include/generated/autoconf.h.html#558" data-ref="_M/CONFIG_NO_HZ_COMMON">CONFIG_NO_HZ_COMMON</a></u></td></tr>
+<tr><th id="164">164</th><td><i  data-doc="calc_load_nohz">/*</i></td></tr>
+<tr><th id="165">165</th><td><i  data-doc="calc_load_nohz"> * Handle NO_HZ for the global load-average.</i></td></tr>
+<tr><th id="166">166</th><td><i  data-doc="calc_load_nohz"> *</i></td></tr>
+<tr><th id="167">167</th><td><i  data-doc="calc_load_nohz"> * Since the above described distributed algorithm to compute the global</i></td></tr>
+<tr><th id="168">168</th><td><i  data-doc="calc_load_nohz"> * load-average relies on per-CPU sampling from the tick, it is affected by</i></td></tr>
+<tr><th id="169">169</th><td><i  data-doc="calc_load_nohz"> * NO_HZ.</i></td></tr>
+<tr><th id="170">170</th><td><i  data-doc="calc_load_nohz"> *</i></td></tr>
+<tr><th id="171">171</th><td><i  data-doc="calc_load_nohz"> * The basic idea is to fold the nr_active delta into a global NO_HZ-delta upon</i></td></tr>
+<tr><th id="172">172</th><td><i  data-doc="calc_load_nohz"> * entering NO_HZ state such that we can include this as an 'extra' CPU delta</i></td></tr>
+<tr><th id="173">173</th><td><i  data-doc="calc_load_nohz"> * when we read the global state.</i></td></tr>
+<tr><th id="174">174</th><td><i  data-doc="calc_load_nohz"> *</i></td></tr>
+<tr><th id="175">175</th><td><i  data-doc="calc_load_nohz"> * Obviously reality has to ruin such a delightfully simple scheme:</i></td></tr>
+<tr><th id="176">176</th><td><i  data-doc="calc_load_nohz"> *</i></td></tr>
+<tr><th id="177">177</th><td><i  data-doc="calc_load_nohz"> *  - When we go NO_HZ idle during the window, we can negate our sample</i></td></tr>
+<tr><th id="178">178</th><td><i  data-doc="calc_load_nohz"> *    contribution, causing under-accounting.</i></td></tr>
+<tr><th id="179">179</th><td><i  data-doc="calc_load_nohz"> *</i></td></tr>
+<tr><th id="180">180</th><td><i  data-doc="calc_load_nohz"> *    We avoid this by keeping two NO_HZ-delta counters and flipping them</i></td></tr>
+<tr><th id="181">181</th><td><i  data-doc="calc_load_nohz"> *    when the window starts, thus separating old and new NO_HZ load.</i></td></tr>
+<tr><th id="182">182</th><td><i  data-doc="calc_load_nohz"> *</i></td></tr>
+<tr><th id="183">183</th><td><i  data-doc="calc_load_nohz"> *    The only trick is the slight shift in index flip for read vs write.</i></td></tr>
+<tr><th id="184">184</th><td><i  data-doc="calc_load_nohz"> *</i></td></tr>
+<tr><th id="185">185</th><td><i  data-doc="calc_load_nohz"> *        0s            5s            10s           15s</i></td></tr>
+<tr><th id="186">186</th><td><i  data-doc="calc_load_nohz"> *          +10           +10           +10           +10</i></td></tr>
+<tr><th id="187">187</th><td><i  data-doc="calc_load_nohz"> *        |-|-----------|-|-----------|-|-----------|-|</i></td></tr>
+<tr><th id="188">188</th><td><i  data-doc="calc_load_nohz"> *    r:0 0 1           1 0           0 1           1 0</i></td></tr>
+<tr><th id="189">189</th><td><i  data-doc="calc_load_nohz"> *    w:0 1 1           0 0           1 1           0 0</i></td></tr>
+<tr><th id="190">190</th><td><i  data-doc="calc_load_nohz"> *</i></td></tr>
+<tr><th id="191">191</th><td><i  data-doc="calc_load_nohz"> *    This ensures we'll fold the old NO_HZ contribution in this window while</i></td></tr>
+<tr><th id="192">192</th><td><i  data-doc="calc_load_nohz"> *    accumlating the new one.</i></td></tr>
+<tr><th id="193">193</th><td><i  data-doc="calc_load_nohz"> *</i></td></tr>
+<tr><th id="194">194</th><td><i  data-doc="calc_load_nohz"> *  - When we wake up from NO_HZ during the window, we push up our</i></td></tr>
+<tr><th id="195">195</th><td><i  data-doc="calc_load_nohz"> *    contribution, since we effectively move our sample point to a known</i></td></tr>
+<tr><th id="196">196</th><td><i  data-doc="calc_load_nohz"> *    busy state.</i></td></tr>
+<tr><th id="197">197</th><td><i  data-doc="calc_load_nohz"> *</i></td></tr>
+<tr><th id="198">198</th><td><i  data-doc="calc_load_nohz"> *    This is solved by pushing the window forward, and thus skipping the</i></td></tr>
+<tr><th id="199">199</th><td><i  data-doc="calc_load_nohz"> *    sample, for this CPU (effectively using the NO_HZ-delta for this CPU which</i></td></tr>
+<tr><th id="200">200</th><td><i  data-doc="calc_load_nohz"> *    was in effect at the time the window opened). This also solves the issue</i></td></tr>
+<tr><th id="201">201</th><td><i  data-doc="calc_load_nohz"> *    of having to deal with a CPU having been in NO_HZ for multiple LOAD_FREQ</i></td></tr>
+<tr><th id="202">202</th><td><i  data-doc="calc_load_nohz"> *    intervals.</i></td></tr>
+<tr><th id="203">203</th><td><i  data-doc="calc_load_nohz"> *</i></td></tr>
+<tr><th id="204">204</th><td><i  data-doc="calc_load_nohz"> * When making the ILB scale, we should try to pull this in as well.</i></td></tr>
+<tr><th id="205">205</th><td><i  data-doc="calc_load_nohz"> */</i></td></tr>
+<tr><th id="206">206</th><td><em>static</em> <a class="typedef" href="../../include/asm-generic/atomic-long.h.html#atomic_long_t" title='atomic_long_t' data-type='atomic64_t' data-ref="atomic_long_t" data-ref-filename="atomic_long_t">atomic_long_t</a> <dfn class="tu decl def" id="calc_load_nohz" title='calc_load_nohz' data-type='atomic_long_t [2]' data-ref="calc_load_nohz" data-ref-filename="calc_load_nohz">calc_load_nohz</dfn>[<var>2</var>];</td></tr>
+<tr><th id="207">207</th><td><em>static</em> <em>int</em> <dfn class="tu decl def" id="calc_load_idx" title='calc_load_idx' data-type='int' data-ref="calc_load_idx" data-ref-filename="calc_load_idx">calc_load_idx</dfn>;</td></tr>
+<tr><th id="208">208</th><td></td></tr>
+<tr><th id="209">209</th><td><em>static</em> <a class="macro" href="../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="tu decl def fn" id="calc_load_write_idx" title='calc_load_write_idx' data-type='int calc_load_write_idx()' data-ref="calc_load_write_idx" data-ref-filename="calc_load_write_idx">calc_load_write_idx</dfn>(<em>void</em>)</td></tr>
+<tr><th id="210">210</th><td>{</td></tr>
+<tr><th id="211">211</th><td>	<em>int</em> <dfn class="local col6 decl" id="16idx" title='idx' data-type='int' data-ref="16idx" data-ref-filename="16idx">idx</dfn> = <a class="tu ref" href="#calc_load_idx" title='calc_load_idx' data-use='r' data-ref="calc_load_idx" data-ref-filename="calc_load_idx">calc_load_idx</a>;</td></tr>
+<tr><th id="212">212</th><td></td></tr>
+<tr><th id="213">213</th><td>	<i>/*</i></td></tr>
+<tr><th id="214">214</th><td><i>	 * See calc_global_nohz(), if we observe the new index, we also</i></td></tr>
+<tr><th id="215">215</th><td><i>	 * need to observe the new update time.</i></td></tr>
+<tr><th id="216">216</th><td><i>	 */</i></td></tr>
+<tr><th id="217">217</th><td>	<a class="macro" href="../../include/asm-generic/barrier.h.html#76" title="__asm__ __volatile__(&quot;&quot; : : : &quot;memory&quot;)" data-ref="_M/smp_rmb">smp_rmb</a>();</td></tr>
+<tr><th id="218">218</th><td></td></tr>
+<tr><th id="219">219</th><td>	<i>/*</i></td></tr>
+<tr><th id="220">220</th><td><i>	 * If the folding window started, make sure we start writing in the</i></td></tr>
+<tr><th id="221">221</th><td><i>	 * next NO_HZ-delta.</i></td></tr>
+<tr><th id="222">222</th><td><i>	 */</i></td></tr>
+<tr><th id="223">223</th><td>	<b>if</b> (!<a class="macro" href="../../include/linux/jiffies.h.html#109" title="(({ unsigned long __dummy; typeof(({ union { typeof(calc_load_update) __val; char __c[1]; } __u; if (1) __read_once_size(&amp;(calc_load_update), __u.__c, sizeof(calc_load_update)); else __read_once_size_nocheck(&amp;(calc_load_update), __u.__c, sizeof(calc_load_update)); do { } while (0); __u.__val; })) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }) &amp;&amp; ({ unsigned long __dummy; typeof(jiffies) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }) &amp;&amp; ((long)((jiffies) - (({ union { typeof(calc_load_update) __val; char __c[1]; } __u; if (1) __read_once_size(&amp;(calc_load_update), __u.__c, sizeof(calc_load_update)); else __read_once_size_nocheck(&amp;(calc_load_update), __u.__c, sizeof(calc_load_update)); do { } while (0); __u.__val; }))) &lt; 0))" data-ref="_M/time_before">time_before</a>(<a class="ref" href="../../include/linux/jiffies.h.html#jiffies" title='jiffies' data-ref="jiffies" data-ref-filename="jiffies">jiffies</a>, <a class="macro" href="../../include/linux/compiler.h.html#269" title="({ union { typeof(calc_load_update) __val; char __c[1]; } __u; if (1) __read_once_size(&amp;(calc_load_update), __u.__c, sizeof(calc_load_update)); else __read_once_size_nocheck(&amp;(calc_load_update), __u.__c, sizeof(calc_load_update)); do { } while (0); __u.__val; })" data-ref="_M/READ_ONCE">READ_ONCE</a>(<a class="ref" href="sched.h.html#calc_load_update" title='calc_load_update' data-ref="calc_load_update" data-ref-filename="calc_load_update">calc_load_update</a>)))</td></tr>
+<tr><th id="224">224</th><td>		<a class="local col6 ref" href="#16idx" title='idx' data-ref="16idx" data-ref-filename="16idx">idx</a>++;</td></tr>
+<tr><th id="225">225</th><td></td></tr>
+<tr><th id="226">226</th><td>	<b>return</b> <a class="local col6 ref" href="#16idx" title='idx' data-ref="16idx" data-ref-filename="16idx">idx</a> &amp; <var>1</var>;</td></tr>
+<tr><th id="227">227</th><td>}</td></tr>
+<tr><th id="228">228</th><td></td></tr>
+<tr><th id="229">229</th><td><em>static</em> <a class="macro" href="../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="tu decl def fn" id="calc_load_read_idx" title='calc_load_read_idx' data-type='int calc_load_read_idx()' data-ref="calc_load_read_idx" data-ref-filename="calc_load_read_idx">calc_load_read_idx</dfn>(<em>void</em>)</td></tr>
+<tr><th id="230">230</th><td>{</td></tr>
+<tr><th id="231">231</th><td>	<b>return</b> <a class="tu ref" href="#calc_load_idx" title='calc_load_idx' data-use='r' data-ref="calc_load_idx" data-ref-filename="calc_load_idx">calc_load_idx</a> &amp; <var>1</var>;</td></tr>
+<tr><th id="232">232</th><td>}</td></tr>
+<tr><th id="233">233</th><td></td></tr>
+<tr><th id="234">234</th><td><em>void</em> <dfn class="decl def fn" id="calc_load_nohz_start" title='calc_load_nohz_start' data-ref="calc_load_nohz_start" data-ref-filename="calc_load_nohz_start">calc_load_nohz_start</dfn>(<em>void</em>)</td></tr>
+<tr><th id="235">235</th><td>{</td></tr>
+<tr><th id="236">236</th><td>	<b>struct</b> <a class="type" href="sched.h.html#rq" title='rq' data-ref="rq" data-ref-filename="rq">rq</a> *<dfn class="local col7 decl" id="17this_rq" title='this_rq' data-type='struct rq *' data-ref="17this_rq" data-ref-filename="17this_rq">this_rq</dfn> = <a class="macro" href="sched.h.html#1038" title="({ do { const void *__vpp_verify = (typeof((&amp;runqueues) + 0))((void *)0); (void)__vpp_verify; } while (0); ({ unsigned long tcp_ptr__; asm volatile(&quot;add &quot; &quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot; &quot;, %0&quot; : &quot;=r&quot; (tcp_ptr__) : &quot;m&quot; (this_cpu_off), &quot;0&quot; (&amp;runqueues)); (typeof(*(&amp;runqueues)) *)tcp_ptr__; }); })" data-ref="_M/this_rq">this_rq</a>();</td></tr>
+<tr><th id="237">237</th><td>	<em>long</em> <dfn class="local col8 decl" id="18delta" title='delta' data-type='long' data-ref="18delta" data-ref-filename="18delta">delta</dfn>;</td></tr>
+<tr><th id="238">238</th><td></td></tr>
+<tr><th id="239">239</th><td>	<i>/*</i></td></tr>
+<tr><th id="240">240</th><td><i>	 * We're going into NO_HZ mode, if there's any pending delta, fold it</i></td></tr>
+<tr><th id="241">241</th><td><i>	 * into the pending NO_HZ delta.</i></td></tr>
+<tr><th id="242">242</th><td><i>	 */</i></td></tr>
+<tr><th id="243">243</th><td>	<a class="local col8 ref" href="#18delta" title='delta' data-ref="18delta" data-ref-filename="18delta">delta</a> = <a class="ref fn" href="#calc_load_fold_active" title='calc_load_fold_active' data-ref="calc_load_fold_active" data-ref-filename="calc_load_fold_active">calc_load_fold_active</a>(<a class="local col7 ref" href="#17this_rq" title='this_rq' data-ref="17this_rq" data-ref-filename="17this_rq">this_rq</a>, <var>0</var>);</td></tr>
+<tr><th id="244">244</th><td>	<b>if</b> (<a class="local col8 ref" href="#18delta" title='delta' data-ref="18delta" data-ref-filename="18delta">delta</a>) {</td></tr>
+<tr><th id="245">245</th><td>		<em>int</em> <dfn class="local col9 decl" id="19idx" title='idx' data-type='int' data-ref="19idx" data-ref-filename="19idx">idx</dfn> = <a class="tu ref fn" href="#calc_load_write_idx" title='calc_load_write_idx' data-use='c' data-ref="calc_load_write_idx" data-ref-filename="calc_load_write_idx">calc_load_write_idx</a>();</td></tr>
+<tr><th id="246">246</th><td></td></tr>
+<tr><th id="247">247</th><td>		<a class="ref fn" href="../../include/asm-generic/atomic-long.h.html#atomic_long_add" title='atomic_long_add' data-ref="atomic_long_add" data-ref-filename="atomic_long_add">atomic_long_add</a>(<a class="local col8 ref" href="#18delta" title='delta' data-ref="18delta" data-ref-filename="18delta">delta</a>, &amp;<a class="tu ref" href="#calc_load_nohz" title='calc_load_nohz' data-use='a' data-ref="calc_load_nohz" data-ref-filename="calc_load_nohz">calc_load_nohz</a>[<a class="local col9 ref" href="#19idx" title='idx' data-ref="19idx" data-ref-filename="19idx">idx</a>]);</td></tr>
+<tr><th id="248">248</th><td>	}</td></tr>
+<tr><th id="249">249</th><td>}</td></tr>
+<tr><th id="250">250</th><td></td></tr>
+<tr><th id="251">251</th><td><em>void</em> <dfn class="decl def fn" id="calc_load_nohz_stop" title='calc_load_nohz_stop' data-ref="calc_load_nohz_stop" data-ref-filename="calc_load_nohz_stop">calc_load_nohz_stop</dfn>(<em>void</em>)</td></tr>
+<tr><th id="252">252</th><td>{</td></tr>
+<tr><th id="253">253</th><td>	<b>struct</b> <a class="type" href="sched.h.html#rq" title='rq' data-ref="rq" data-ref-filename="rq">rq</a> *<dfn class="local col0 decl" id="20this_rq" title='this_rq' data-type='struct rq *' data-ref="20this_rq" data-ref-filename="20this_rq">this_rq</dfn> = <a class="macro" href="sched.h.html#1038" title="({ do { const void *__vpp_verify = (typeof((&amp;runqueues) + 0))((void *)0); (void)__vpp_verify; } while (0); ({ unsigned long tcp_ptr__; asm volatile(&quot;add &quot; &quot;%%&quot;&quot;gs&quot;&quot;:&quot; &quot;%&quot; &quot;1&quot; &quot;, %0&quot; : &quot;=r&quot; (tcp_ptr__) : &quot;m&quot; (this_cpu_off), &quot;0&quot; (&amp;runqueues)); (typeof(*(&amp;runqueues)) *)tcp_ptr__; }); })" data-ref="_M/this_rq">this_rq</a>();</td></tr>
+<tr><th id="254">254</th><td></td></tr>
+<tr><th id="255">255</th><td>	<i>/*</i></td></tr>
+<tr><th id="256">256</th><td><i>	 * If we're still before the pending sample window, we're done.</i></td></tr>
+<tr><th id="257">257</th><td><i>	 */</i></td></tr>
+<tr><th id="258">258</th><td>	<a class="local col0 ref" href="#20this_rq" title='this_rq' data-ref="20this_rq" data-ref-filename="20this_rq">this_rq</a>-&gt;<a class="ref field" href="sched.h.html#rq::calc_load_update" title='rq::calc_load_update' data-ref="rq::calc_load_update" data-ref-filename="rq..calc_load_update">calc_load_update</a> = <a class="macro" href="../../include/linux/compiler.h.html#269" title="({ union { typeof(calc_load_update) __val; char __c[1]; } __u; if (1) __read_once_size(&amp;(calc_load_update), __u.__c, sizeof(calc_load_update)); else __read_once_size_nocheck(&amp;(calc_load_update), __u.__c, sizeof(calc_load_update)); do { } while (0); __u.__val; })" data-ref="_M/READ_ONCE">READ_ONCE</a>(<a class="ref" href="sched.h.html#calc_load_update" title='calc_load_update' data-ref="calc_load_update" data-ref-filename="calc_load_update">calc_load_update</a>);</td></tr>
+<tr><th id="259">259</th><td>	<b>if</b> (<a class="macro" href="../../include/linux/jiffies.h.html#109" title="(({ unsigned long __dummy; typeof(this_rq-&gt;calc_load_update) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }) &amp;&amp; ({ unsigned long __dummy; typeof(jiffies) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }) &amp;&amp; ((long)((jiffies) - (this_rq-&gt;calc_load_update)) &lt; 0))" data-ref="_M/time_before">time_before</a>(<a class="ref" href="../../include/linux/jiffies.h.html#jiffies" title='jiffies' data-ref="jiffies" data-ref-filename="jiffies">jiffies</a>, <a class="local col0 ref" href="#20this_rq" title='this_rq' data-ref="20this_rq" data-ref-filename="20this_rq">this_rq</a>-&gt;<a class="ref field" href="sched.h.html#rq::calc_load_update" title='rq::calc_load_update' data-ref="rq::calc_load_update" data-ref-filename="rq..calc_load_update">calc_load_update</a>))</td></tr>
+<tr><th id="260">260</th><td>		<b>return</b>;</td></tr>
+<tr><th id="261">261</th><td></td></tr>
+<tr><th id="262">262</th><td>	<i>/*</i></td></tr>
+<tr><th id="263">263</th><td><i>	 * We woke inside or after the sample window, this means we're already</i></td></tr>
+<tr><th id="264">264</th><td><i>	 * accounted through the nohz accounting, so skip the entire deal and</i></td></tr>
+<tr><th id="265">265</th><td><i>	 * sync up for the next window.</i></td></tr>
+<tr><th id="266">266</th><td><i>	 */</i></td></tr>
+<tr><th id="267">267</th><td>	<b>if</b> (<a class="macro" href="../../include/linux/jiffies.h.html#109" title="(({ unsigned long __dummy; typeof(this_rq-&gt;calc_load_update + 10) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }) &amp;&amp; ({ unsigned long __dummy; typeof(jiffies) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }) &amp;&amp; ((long)((jiffies) - (this_rq-&gt;calc_load_update + 10)) &lt; 0))" data-ref="_M/time_before">time_before</a>(<a class="ref" href="../../include/linux/jiffies.h.html#jiffies" title='jiffies' data-ref="jiffies" data-ref-filename="jiffies">jiffies</a>, <a class="local col0 ref" href="#20this_rq" title='this_rq' data-ref="20this_rq" data-ref-filename="20this_rq">this_rq</a>-&gt;<a class="ref field" href="sched.h.html#rq::calc_load_update" title='rq::calc_load_update' data-ref="rq::calc_load_update" data-ref-filename="rq..calc_load_update">calc_load_update</a> + <var>10</var>))</td></tr>
+<tr><th id="268">268</th><td>		<a class="local col0 ref" href="#20this_rq" title='this_rq' data-ref="20this_rq" data-ref-filename="20this_rq">this_rq</a>-&gt;<a class="ref field" href="sched.h.html#rq::calc_load_update" title='rq::calc_load_update' data-ref="rq::calc_load_update" data-ref-filename="rq..calc_load_update">calc_load_update</a> += <a class="macro" href="../../include/linux/sched/loadavg.h.html#20" title="(5*1000+1)" data-ref="_M/LOAD_FREQ">LOAD_FREQ</a>;</td></tr>
+<tr><th id="269">269</th><td>}</td></tr>
+<tr><th id="270">270</th><td></td></tr>
+<tr><th id="271">271</th><td><em>static</em> <em>long</em> <dfn class="tu decl def fn" id="calc_load_nohz_fold" title='calc_load_nohz_fold' data-type='long calc_load_nohz_fold()' data-ref="calc_load_nohz_fold" data-ref-filename="calc_load_nohz_fold">calc_load_nohz_fold</dfn>(<em>void</em>)</td></tr>
+<tr><th id="272">272</th><td>{</td></tr>
+<tr><th id="273">273</th><td>	<em>int</em> <dfn class="local col1 decl" id="21idx" title='idx' data-type='int' data-ref="21idx" data-ref-filename="21idx">idx</dfn> = <a class="tu ref fn" href="#calc_load_read_idx" title='calc_load_read_idx' data-use='c' data-ref="calc_load_read_idx" data-ref-filename="calc_load_read_idx">calc_load_read_idx</a>();</td></tr>
+<tr><th id="274">274</th><td>	<em>long</em> <dfn class="local col2 decl" id="22delta" title='delta' data-type='long' data-ref="22delta" data-ref-filename="22delta">delta</dfn> = <var>0</var>;</td></tr>
+<tr><th id="275">275</th><td></td></tr>
+<tr><th id="276">276</th><td>	<b>if</b> (<a class="ref fn" href="../../include/asm-generic/atomic-long.h.html#atomic_long_read" title='atomic_long_read' data-ref="atomic_long_read" data-ref-filename="atomic_long_read">atomic_long_read</a>(&amp;<a class="tu ref" href="#calc_load_nohz" title='calc_load_nohz' data-use='a' data-ref="calc_load_nohz" data-ref-filename="calc_load_nohz">calc_load_nohz</a>[<a class="local col1 ref" href="#21idx" title='idx' data-ref="21idx" data-ref-filename="21idx">idx</a>]))</td></tr>
+<tr><th id="277">277</th><td>		<a class="local col2 ref" href="#22delta" title='delta' data-ref="22delta" data-ref-filename="22delta">delta</a> = <a class="ref fn" href="../../include/asm-generic/atomic-long.h.html#atomic_long_xchg" title='atomic_long_xchg' data-ref="atomic_long_xchg" data-ref-filename="atomic_long_xchg">atomic_long_xchg</a>(&amp;<a class="tu ref" href="#calc_load_nohz" title='calc_load_nohz' data-use='a' data-ref="calc_load_nohz" data-ref-filename="calc_load_nohz">calc_load_nohz</a>[<a class="local col1 ref" href="#21idx" title='idx' data-ref="21idx" data-ref-filename="21idx">idx</a>], <var>0</var>);</td></tr>
+<tr><th id="278">278</th><td></td></tr>
+<tr><th id="279">279</th><td>	<b>return</b> <a class="local col2 ref" href="#22delta" title='delta' data-ref="22delta" data-ref-filename="22delta">delta</a>;</td></tr>
+<tr><th id="280">280</th><td>}</td></tr>
+<tr><th id="281">281</th><td></td></tr>
+<tr><th id="282">282</th><td><i  data-doc="calc_global_nohz">/*</i></td></tr>
+<tr><th id="283">283</th><td><i  data-doc="calc_global_nohz"> * NO_HZ can leave us missing all per-CPU ticks calling</i></td></tr>
+<tr><th id="284">284</th><td><i  data-doc="calc_global_nohz"> * calc_load_fold_active(), but since a NO_HZ CPU folds its delta into</i></td></tr>
+<tr><th id="285">285</th><td><i  data-doc="calc_global_nohz"> * calc_load_nohz per calc_load_nohz_start(), all we need to do is fold</i></td></tr>
+<tr><th id="286">286</th><td><i  data-doc="calc_global_nohz"> * in the pending NO_HZ delta if our NO_HZ period crossed a load cycle boundary.</i></td></tr>
+<tr><th id="287">287</th><td><i  data-doc="calc_global_nohz"> *</i></td></tr>
+<tr><th id="288">288</th><td><i  data-doc="calc_global_nohz"> * Once we've updated the global active value, we need to apply the exponential</i></td></tr>
+<tr><th id="289">289</th><td><i  data-doc="calc_global_nohz"> * weights adjusted to the number of cycles missed.</i></td></tr>
+<tr><th id="290">290</th><td><i  data-doc="calc_global_nohz"> */</i></td></tr>
+<tr><th id="291">291</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="calc_global_nohz" title='calc_global_nohz' data-type='void calc_global_nohz()' data-ref="calc_global_nohz" data-ref-filename="calc_global_nohz">calc_global_nohz</dfn>(<em>void</em>)</td></tr>
+<tr><th id="292">292</th><td>{</td></tr>
+<tr><th id="293">293</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col3 decl" id="23sample_window" title='sample_window' data-type='unsigned long' data-ref="23sample_window" data-ref-filename="23sample_window">sample_window</dfn>;</td></tr>
+<tr><th id="294">294</th><td>	<em>long</em> <dfn class="local col4 decl" id="24delta" title='delta' data-type='long' data-ref="24delta" data-ref-filename="24delta">delta</dfn>, <dfn class="local col5 decl" id="25active" title='active' data-type='long' data-ref="25active" data-ref-filename="25active">active</dfn>, <dfn class="local col6 decl" id="26n" title='n' data-type='long' data-ref="26n" data-ref-filename="26n">n</dfn>;</td></tr>
+<tr><th id="295">295</th><td></td></tr>
+<tr><th id="296">296</th><td>	<a class="local col3 ref" href="#23sample_window" title='sample_window' data-ref="23sample_window" data-ref-filename="23sample_window">sample_window</a> = <a class="macro" href="../../include/linux/compiler.h.html#269" title="({ union { typeof(calc_load_update) __val; char __c[1]; } __u; if (1) __read_once_size(&amp;(calc_load_update), __u.__c, sizeof(calc_load_update)); else __read_once_size_nocheck(&amp;(calc_load_update), __u.__c, sizeof(calc_load_update)); do { } while (0); __u.__val; })" data-ref="_M/READ_ONCE">READ_ONCE</a>(<a class="ref" href="sched.h.html#calc_load_update" title='calc_load_update' data-ref="calc_load_update" data-ref-filename="calc_load_update">calc_load_update</a>);</td></tr>
+<tr><th id="297">297</th><td>	<b>if</b> (!<a class="macro" href="../../include/linux/jiffies.h.html#109" title="(({ unsigned long __dummy; typeof(sample_window + 10) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }) &amp;&amp; ({ unsigned long __dummy; typeof(jiffies) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }) &amp;&amp; ((long)((jiffies) - (sample_window + 10)) &lt; 0))" data-ref="_M/time_before">time_before</a>(<a class="ref" href="../../include/linux/jiffies.h.html#jiffies" title='jiffies' data-ref="jiffies" data-ref-filename="jiffies">jiffies</a>, <a class="local col3 ref" href="#23sample_window" title='sample_window' data-ref="23sample_window" data-ref-filename="23sample_window">sample_window</a> + <var>10</var>)) {</td></tr>
+<tr><th id="298">298</th><td>		<i>/*</i></td></tr>
+<tr><th id="299">299</th><td><i>		 * Catch-up, fold however many we are behind still</i></td></tr>
+<tr><th id="300">300</th><td><i>		 */</i></td></tr>
+<tr><th id="301">301</th><td>		<a class="local col4 ref" href="#24delta" title='delta' data-ref="24delta" data-ref-filename="24delta">delta</a> = <a class="ref" href="../../include/linux/jiffies.h.html#jiffies" title='jiffies' data-ref="jiffies" data-ref-filename="jiffies">jiffies</a> - <a class="local col3 ref" href="#23sample_window" title='sample_window' data-ref="23sample_window" data-ref-filename="23sample_window">sample_window</a> - <var>10</var>;</td></tr>
+<tr><th id="302">302</th><td>		<a class="local col6 ref" href="#26n" title='n' data-ref="26n" data-ref-filename="26n">n</a> = <var>1</var> + (<a class="local col4 ref" href="#24delta" title='delta' data-ref="24delta" data-ref-filename="24delta">delta</a> / <a class="macro" href="../../include/linux/sched/loadavg.h.html#20" title="(5*1000+1)" data-ref="_M/LOAD_FREQ">LOAD_FREQ</a>);</td></tr>
+<tr><th id="303">303</th><td></td></tr>
+<tr><th id="304">304</th><td>		<a class="local col5 ref" href="#25active" title='active' data-ref="25active" data-ref-filename="25active">active</a> = <a class="ref fn" href="../../include/asm-generic/atomic-long.h.html#atomic_long_read" title='atomic_long_read' data-ref="atomic_long_read" data-ref-filename="atomic_long_read">atomic_long_read</a>(&amp;<a class="ref" href="sched.h.html#calc_load_tasks" title='calc_load_tasks' data-ref="calc_load_tasks" data-ref-filename="calc_load_tasks">calc_load_tasks</a>);</td></tr>
+<tr><th id="305">305</th><td>		<a class="local col5 ref" href="#25active" title='active' data-ref="25active" data-ref-filename="25active">active</a> = <a class="local col5 ref" href="#25active" title='active' data-ref="25active" data-ref-filename="25active">active</a> &gt; <var>0</var> ? <a class="local col5 ref" href="#25active" title='active' data-ref="25active" data-ref-filename="25active">active</a> * <a class="macro" href="../../include/linux/sched/loadavg.h.html#19" title="(1&lt;&lt;11)" data-ref="_M/FIXED_1">FIXED_1</a> : <var>0</var>;</td></tr>
+<tr><th id="306">306</th><td></td></tr>
+<tr><th id="307">307</th><td>		<a class="ref" href="../../include/linux/sched/loadavg.h.html#avenrun" title='avenrun' data-ref="avenrun" data-ref-filename="avenrun">avenrun</a>[<var>0</var>] = <a class="ref fn" href="#calc_load_n" title='calc_load_n' data-ref="calc_load_n" data-ref-filename="calc_load_n">calc_load_n</a>(<a class="ref" href="../../include/linux/sched/loadavg.h.html#avenrun" title='avenrun' data-ref="avenrun" data-ref-filename="avenrun">avenrun</a>[<var>0</var>], <a class="macro" href="../../include/linux/sched/loadavg.h.html#21" title="1884" data-ref="_M/EXP_1">EXP_1</a>, <a class="local col5 ref" href="#25active" title='active' data-ref="25active" data-ref-filename="25active">active</a>, <a class="local col6 ref" href="#26n" title='n' data-ref="26n" data-ref-filename="26n">n</a>);</td></tr>
+<tr><th id="308">308</th><td>		<a class="ref" href="../../include/linux/sched/loadavg.h.html#avenrun" title='avenrun' data-ref="avenrun" data-ref-filename="avenrun">avenrun</a>[<var>1</var>] = <a class="ref fn" href="#calc_load_n" title='calc_load_n' data-ref="calc_load_n" data-ref-filename="calc_load_n">calc_load_n</a>(<a class="ref" href="../../include/linux/sched/loadavg.h.html#avenrun" title='avenrun' data-ref="avenrun" data-ref-filename="avenrun">avenrun</a>[<var>1</var>], <a class="macro" href="../../include/linux/sched/loadavg.h.html#22" title="2014" data-ref="_M/EXP_5">EXP_5</a>, <a class="local col5 ref" href="#25active" title='active' data-ref="25active" data-ref-filename="25active">active</a>, <a class="local col6 ref" href="#26n" title='n' data-ref="26n" data-ref-filename="26n">n</a>);</td></tr>
+<tr><th id="309">309</th><td>		<a class="ref" href="../../include/linux/sched/loadavg.h.html#avenrun" title='avenrun' data-ref="avenrun" data-ref-filename="avenrun">avenrun</a>[<var>2</var>] = <a class="ref fn" href="#calc_load_n" title='calc_load_n' data-ref="calc_load_n" data-ref-filename="calc_load_n">calc_load_n</a>(<a class="ref" href="../../include/linux/sched/loadavg.h.html#avenrun" title='avenrun' data-ref="avenrun" data-ref-filename="avenrun">avenrun</a>[<var>2</var>], <a class="macro" href="../../include/linux/sched/loadavg.h.html#23" title="2037" data-ref="_M/EXP_15">EXP_15</a>, <a class="local col5 ref" href="#25active" title='active' data-ref="25active" data-ref-filename="25active">active</a>, <a class="local col6 ref" href="#26n" title='n' data-ref="26n" data-ref-filename="26n">n</a>);</td></tr>
+<tr><th id="310">310</th><td></td></tr>
+<tr><th id="311">311</th><td>		<a class="macro" href="../../include/linux/compiler.h.html#284" title="({ union { typeof(calc_load_update) __val; char __c[1]; } __u = { .__val = ( typeof(calc_load_update)) (sample_window + n * (5*1000+1)) }; __write_once_size(&amp;(calc_load_update), __u.__c, sizeof(calc_load_update)); __u.__val; })" data-ref="_M/WRITE_ONCE">WRITE_ONCE</a>(<a class="ref" href="sched.h.html#calc_load_update" title='calc_load_update' data-ref="calc_load_update" data-ref-filename="calc_load_update">calc_load_update</a>, <a class="local col3 ref" href="#23sample_window" title='sample_window' data-ref="23sample_window" data-ref-filename="23sample_window">sample_window</a> + <a class="local col6 ref" href="#26n" title='n' data-ref="26n" data-ref-filename="26n">n</a> * <a class="macro" href="../../include/linux/sched/loadavg.h.html#20" title="(5*1000+1)" data-ref="_M/LOAD_FREQ">LOAD_FREQ</a>);</td></tr>
+<tr><th id="312">312</th><td>	}</td></tr>
+<tr><th id="313">313</th><td></td></tr>
+<tr><th id="314">314</th><td>	<i>/*</i></td></tr>
+<tr><th id="315">315</th><td><i>	 * Flip the NO_HZ index...</i></td></tr>
+<tr><th id="316">316</th><td><i>	 *</i></td></tr>
+<tr><th id="317">317</th><td><i>	 * Make sure we first write the new time then flip the index, so that</i></td></tr>
+<tr><th id="318">318</th><td><i>	 * calc_load_write_idx() will see the new time when it reads the new</i></td></tr>
+<tr><th id="319">319</th><td><i>	 * index, this avoids a double flip messing things up.</i></td></tr>
+<tr><th id="320">320</th><td><i>	 */</i></td></tr>
+<tr><th id="321">321</th><td>	<a class="macro" href="../../include/asm-generic/barrier.h.html#80" title="__asm__ __volatile__(&quot;&quot; : : : &quot;memory&quot;)" data-ref="_M/smp_wmb">smp_wmb</a>();</td></tr>
+<tr><th id="322">322</th><td>	<a class="tu ref" href="#calc_load_idx" title='calc_load_idx' data-use='w' data-ref="calc_load_idx" data-ref-filename="calc_load_idx">calc_load_idx</a>++;</td></tr>
+<tr><th id="323">323</th><td>}</td></tr>
+<tr><th id="324">324</th><td><u>#<span data-ppcond="163">else</span> /* !CONFIG_NO_HZ_COMMON */</u></td></tr>
+<tr><th id="325">325</th><td></td></tr>
+<tr><th id="326">326</th><td><em>static</em> <b>inline</b> <em>long</em> calc_load_nohz_fold(<em>void</em>) { <b>return</b> <var>0</var>; }</td></tr>
+<tr><th id="327">327</th><td><em>static</em> <b>inline</b> <em>void</em> calc_global_nohz(<em>void</em>) { }</td></tr>
+<tr><th id="328">328</th><td></td></tr>
+<tr><th id="329">329</th><td><u>#<span data-ppcond="163">endif</span> /* CONFIG_NO_HZ_COMMON */</u></td></tr>
+<tr><th id="330">330</th><td></td></tr>
+<tr><th id="331">331</th><td><i>/*</i></td></tr>
+<tr><th id="332">332</th><td><i> * calc_load - update the avenrun load estimates 10 ticks after the</i></td></tr>
+<tr><th id="333">333</th><td><i> * CPUs have updated calc_load_tasks.</i></td></tr>
+<tr><th id="334">334</th><td><i> *</i></td></tr>
+<tr><th id="335">335</th><td><i> * Called from the global timer code.</i></td></tr>
+<tr><th id="336">336</th><td><i> */</i></td></tr>
+<tr><th id="337">337</th><td><em>void</em> <dfn class="decl def fn" id="calc_global_load" title='calc_global_load' data-ref="calc_global_load" data-ref-filename="calc_global_load">calc_global_load</dfn>(<em>unsigned</em> <em>long</em> <dfn class="local col7 decl" id="27ticks" title='ticks' data-type='unsigned long' data-ref="27ticks" data-ref-filename="27ticks">ticks</dfn>)</td></tr>
+<tr><th id="338">338</th><td>{</td></tr>
+<tr><th id="339">339</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col8 decl" id="28sample_window" title='sample_window' data-type='unsigned long' data-ref="28sample_window" data-ref-filename="28sample_window">sample_window</dfn>;</td></tr>
+<tr><th id="340">340</th><td>	<em>long</em> <dfn class="local col9 decl" id="29active" title='active' data-type='long' data-ref="29active" data-ref-filename="29active">active</dfn>, <dfn class="local col0 decl" id="30delta" title='delta' data-type='long' data-ref="30delta" data-ref-filename="30delta">delta</dfn>;</td></tr>
+<tr><th id="341">341</th><td></td></tr>
+<tr><th id="342">342</th><td>	<a class="local col8 ref" href="#28sample_window" title='sample_window' data-ref="28sample_window" data-ref-filename="28sample_window">sample_window</a> = <a class="macro" href="../../include/linux/compiler.h.html#269" title="({ union { typeof(calc_load_update) __val; char __c[1]; } __u; if (1) __read_once_size(&amp;(calc_load_update), __u.__c, sizeof(calc_load_update)); else __read_once_size_nocheck(&amp;(calc_load_update), __u.__c, sizeof(calc_load_update)); do { } while (0); __u.__val; })" data-ref="_M/READ_ONCE">READ_ONCE</a>(<a class="ref" href="sched.h.html#calc_load_update" title='calc_load_update' data-ref="calc_load_update" data-ref-filename="calc_load_update">calc_load_update</a>);</td></tr>
+<tr><th id="343">343</th><td>	<b>if</b> (<a class="macro" href="../../include/linux/jiffies.h.html#109" title="(({ unsigned long __dummy; typeof(sample_window + 10) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }) &amp;&amp; ({ unsigned long __dummy; typeof(jiffies) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }) &amp;&amp; ((long)((jiffies) - (sample_window + 10)) &lt; 0))" data-ref="_M/time_before">time_before</a>(<a class="ref" href="../../include/linux/jiffies.h.html#jiffies" title='jiffies' data-ref="jiffies" data-ref-filename="jiffies">jiffies</a>, <a class="local col8 ref" href="#28sample_window" title='sample_window' data-ref="28sample_window" data-ref-filename="28sample_window">sample_window</a> + <var>10</var>))</td></tr>
+<tr><th id="344">344</th><td>		<b>return</b>;</td></tr>
+<tr><th id="345">345</th><td></td></tr>
+<tr><th id="346">346</th><td>	<i>/*</i></td></tr>
+<tr><th id="347">347</th><td><i>	 * Fold the 'old' NO_HZ-delta to include all NO_HZ CPUs.</i></td></tr>
+<tr><th id="348">348</th><td><i>	 */</i></td></tr>
+<tr><th id="349">349</th><td>	<a class="local col0 ref" href="#30delta" title='delta' data-ref="30delta" data-ref-filename="30delta">delta</a> = <a class="tu ref fn" href="#calc_load_nohz_fold" title='calc_load_nohz_fold' data-use='c' data-ref="calc_load_nohz_fold" data-ref-filename="calc_load_nohz_fold">calc_load_nohz_fold</a>();</td></tr>
+<tr><th id="350">350</th><td>	<b>if</b> (<a class="local col0 ref" href="#30delta" title='delta' data-ref="30delta" data-ref-filename="30delta">delta</a>)</td></tr>
+<tr><th id="351">351</th><td>		<a class="ref fn" href="../../include/asm-generic/atomic-long.h.html#atomic_long_add" title='atomic_long_add' data-ref="atomic_long_add" data-ref-filename="atomic_long_add">atomic_long_add</a>(<a class="local col0 ref" href="#30delta" title='delta' data-ref="30delta" data-ref-filename="30delta">delta</a>, &amp;<a class="ref" href="sched.h.html#calc_load_tasks" title='calc_load_tasks' data-ref="calc_load_tasks" data-ref-filename="calc_load_tasks">calc_load_tasks</a>);</td></tr>
+<tr><th id="352">352</th><td></td></tr>
+<tr><th id="353">353</th><td>	<a class="local col9 ref" href="#29active" title='active' data-ref="29active" data-ref-filename="29active">active</a> = <a class="ref fn" href="../../include/asm-generic/atomic-long.h.html#atomic_long_read" title='atomic_long_read' data-ref="atomic_long_read" data-ref-filename="atomic_long_read">atomic_long_read</a>(&amp;<a class="ref" href="sched.h.html#calc_load_tasks" title='calc_load_tasks' data-ref="calc_load_tasks" data-ref-filename="calc_load_tasks">calc_load_tasks</a>);</td></tr>
+<tr><th id="354">354</th><td>	<a class="local col9 ref" href="#29active" title='active' data-ref="29active" data-ref-filename="29active">active</a> = <a class="local col9 ref" href="#29active" title='active' data-ref="29active" data-ref-filename="29active">active</a> &gt; <var>0</var> ? <a class="local col9 ref" href="#29active" title='active' data-ref="29active" data-ref-filename="29active">active</a> * <a class="macro" href="../../include/linux/sched/loadavg.h.html#19" title="(1&lt;&lt;11)" data-ref="_M/FIXED_1">FIXED_1</a> : <var>0</var>;</td></tr>
+<tr><th id="355">355</th><td></td></tr>
+<tr><th id="356">356</th><td>	<a class="ref" href="../../include/linux/sched/loadavg.h.html#avenrun" title='avenrun' data-ref="avenrun" data-ref-filename="avenrun">avenrun</a>[<var>0</var>] = <a class="ref fn" href="../../include/linux/sched/loadavg.h.html#calc_load" title='calc_load' data-ref="calc_load" data-ref-filename="calc_load">calc_load</a>(<a class="ref" href="../../include/linux/sched/loadavg.h.html#avenrun" title='avenrun' data-ref="avenrun" data-ref-filename="avenrun">avenrun</a>[<var>0</var>], <a class="macro" href="../../include/linux/sched/loadavg.h.html#21" title="1884" data-ref="_M/EXP_1">EXP_1</a>, <a class="local col9 ref" href="#29active" title='active' data-ref="29active" data-ref-filename="29active">active</a>);</td></tr>
+<tr><th id="357">357</th><td>	<a class="ref" href="../../include/linux/sched/loadavg.h.html#avenrun" title='avenrun' data-ref="avenrun" data-ref-filename="avenrun">avenrun</a>[<var>1</var>] = <a class="ref fn" href="../../include/linux/sched/loadavg.h.html#calc_load" title='calc_load' data-ref="calc_load" data-ref-filename="calc_load">calc_load</a>(<a class="ref" href="../../include/linux/sched/loadavg.h.html#avenrun" title='avenrun' data-ref="avenrun" data-ref-filename="avenrun">avenrun</a>[<var>1</var>], <a class="macro" href="../../include/linux/sched/loadavg.h.html#22" title="2014" data-ref="_M/EXP_5">EXP_5</a>, <a class="local col9 ref" href="#29active" title='active' data-ref="29active" data-ref-filename="29active">active</a>);</td></tr>
+<tr><th id="358">358</th><td>	<a class="ref" href="../../include/linux/sched/loadavg.h.html#avenrun" title='avenrun' data-ref="avenrun" data-ref-filename="avenrun">avenrun</a>[<var>2</var>] = <a class="ref fn" href="../../include/linux/sched/loadavg.h.html#calc_load" title='calc_load' data-ref="calc_load" data-ref-filename="calc_load">calc_load</a>(<a class="ref" href="../../include/linux/sched/loadavg.h.html#avenrun" title='avenrun' data-ref="avenrun" data-ref-filename="avenrun">avenrun</a>[<var>2</var>], <a class="macro" href="../../include/linux/sched/loadavg.h.html#23" title="2037" data-ref="_M/EXP_15">EXP_15</a>, <a class="local col9 ref" href="#29active" title='active' data-ref="29active" data-ref-filename="29active">active</a>);</td></tr>
+<tr><th id="359">359</th><td></td></tr>
+<tr><th id="360">360</th><td>	<a class="macro" href="../../include/linux/compiler.h.html#284" title="({ union { typeof(calc_load_update) __val; char __c[1]; } __u = { .__val = ( typeof(calc_load_update)) (sample_window + (5*1000+1)) }; __write_once_size(&amp;(calc_load_update), __u.__c, sizeof(calc_load_update)); __u.__val; })" data-ref="_M/WRITE_ONCE">WRITE_ONCE</a>(<a class="ref" href="sched.h.html#calc_load_update" title='calc_load_update' data-ref="calc_load_update" data-ref-filename="calc_load_update">calc_load_update</a>, <a class="local col8 ref" href="#28sample_window" title='sample_window' data-ref="28sample_window" data-ref-filename="28sample_window">sample_window</a> + <a class="macro" href="../../include/linux/sched/loadavg.h.html#20" title="(5*1000+1)" data-ref="_M/LOAD_FREQ">LOAD_FREQ</a>);</td></tr>
+<tr><th id="361">361</th><td></td></tr>
+<tr><th id="362">362</th><td>	<i>/*</i></td></tr>
+<tr><th id="363">363</th><td><i>	 * In case we went to NO_HZ for multiple LOAD_FREQ intervals</i></td></tr>
+<tr><th id="364">364</th><td><i>	 * catch up in bulk.</i></td></tr>
+<tr><th id="365">365</th><td><i>	 */</i></td></tr>
+<tr><th id="366">366</th><td>	<a class="tu ref fn" href="#calc_global_nohz" title='calc_global_nohz' data-use='c' data-ref="calc_global_nohz" data-ref-filename="calc_global_nohz">calc_global_nohz</a>();</td></tr>
+<tr><th id="367">367</th><td>}</td></tr>
+<tr><th id="368">368</th><td></td></tr>
+<tr><th id="369">369</th><td><i>/*</i></td></tr>
+<tr><th id="370">370</th><td><i> * Called from scheduler_tick() to periodically update this CPU's</i></td></tr>
+<tr><th id="371">371</th><td><i> * active count.</i></td></tr>
+<tr><th id="372">372</th><td><i> */</i></td></tr>
+<tr><th id="373">373</th><td><em>void</em> <dfn class="decl def fn" id="calc_global_load_tick" title='calc_global_load_tick' data-ref="calc_global_load_tick" data-ref-filename="calc_global_load_tick">calc_global_load_tick</dfn>(<b>struct</b> <a class="type" href="sched.h.html#rq" title='rq' data-ref="rq" data-ref-filename="rq">rq</a> *<dfn class="local col1 decl" id="31this_rq" title='this_rq' data-type='struct rq *' data-ref="31this_rq" data-ref-filename="31this_rq">this_rq</dfn>)</td></tr>
+<tr><th id="374">374</th><td>{</td></tr>
+<tr><th id="375">375</th><td>	<em>long</em> <dfn class="local col2 decl" id="32delta" title='delta' data-type='long' data-ref="32delta" data-ref-filename="32delta">delta</dfn>;</td></tr>
+<tr><th id="376">376</th><td></td></tr>
+<tr><th id="377">377</th><td>	<b>if</b> (<a class="macro" href="../../include/linux/jiffies.h.html#109" title="(({ unsigned long __dummy; typeof(this_rq-&gt;calc_load_update) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }) &amp;&amp; ({ unsigned long __dummy; typeof(jiffies) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }) &amp;&amp; ((long)((jiffies) - (this_rq-&gt;calc_load_update)) &lt; 0))" data-ref="_M/time_before">time_before</a>(<a class="ref" href="../../include/linux/jiffies.h.html#jiffies" title='jiffies' data-ref="jiffies" data-ref-filename="jiffies">jiffies</a>, <a class="local col1 ref" href="#31this_rq" title='this_rq' data-ref="31this_rq" data-ref-filename="31this_rq">this_rq</a>-&gt;<a class="ref field" href="sched.h.html#rq::calc_load_update" title='rq::calc_load_update' data-ref="rq::calc_load_update" data-ref-filename="rq..calc_load_update">calc_load_update</a>))</td></tr>
+<tr><th id="378">378</th><td>		<b>return</b>;</td></tr>
+<tr><th id="379">379</th><td></td></tr>
+<tr><th id="380">380</th><td>	<a class="local col2 ref" href="#32delta" title='delta' data-ref="32delta" data-ref-filename="32delta">delta</a>  = <a class="ref fn" href="#calc_load_fold_active" title='calc_load_fold_active' data-ref="calc_load_fold_active" data-ref-filename="calc_load_fold_active">calc_load_fold_active</a>(<a class="local col1 ref" href="#31this_rq" title='this_rq' data-ref="31this_rq" data-ref-filename="31this_rq">this_rq</a>, <var>0</var>);</td></tr>
+<tr><th id="381">381</th><td>	<b>if</b> (<a class="local col2 ref" href="#32delta" title='delta' data-ref="32delta" data-ref-filename="32delta">delta</a>)</td></tr>
+<tr><th id="382">382</th><td>		<a class="ref fn" href="../../include/asm-generic/atomic-long.h.html#atomic_long_add" title='atomic_long_add' data-ref="atomic_long_add" data-ref-filename="atomic_long_add">atomic_long_add</a>(<a class="local col2 ref" href="#32delta" title='delta' data-ref="32delta" data-ref-filename="32delta">delta</a>, &amp;<a class="ref" href="sched.h.html#calc_load_tasks" title='calc_load_tasks' data-ref="calc_load_tasks" data-ref-filename="calc_load_tasks">calc_load_tasks</a>);</td></tr>
+<tr><th id="383">383</th><td></td></tr>
+<tr><th id="384">384</th><td>	<a class="local col1 ref" href="#31this_rq" title='this_rq' data-ref="31this_rq" data-ref-filename="31this_rq">this_rq</a>-&gt;<a class="ref field" href="sched.h.html#rq::calc_load_update" title='rq::calc_load_update' data-ref="rq::calc_load_update" data-ref-filename="rq..calc_load_update">calc_load_update</a> += <a class="macro" href="../../include/linux/sched/loadavg.h.html#20" title="(5*1000+1)" data-ref="_M/LOAD_FREQ">LOAD_FREQ</a>;</td></tr>
+<tr><th id="385">385</th><td>}</td></tr>
+<tr><th id="386">386</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

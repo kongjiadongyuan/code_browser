@@ -1,0 +1,190 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>dns_query.c source code [linux-5.3.1/net/dns_resolver/dns_query.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/net/dns_resolver/dns_query.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>net</a>/<a href='./'>dns_resolver</a>/<a href='dns_query.c.html'>dns_query.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* Upcall routine, designed to work as a key type and working through</i></td></tr>
+<tr><th id="2">2</th><td><i> * /sbin/request-key to contact userspace when handling DNS queries.</i></td></tr>
+<tr><th id="3">3</th><td><i> *</i></td></tr>
+<tr><th id="4">4</th><td><i> * See Documentation/networking/dns_resolver.txt</i></td></tr>
+<tr><th id="5">5</th><td><i> *</i></td></tr>
+<tr><th id="6">6</th><td><i> *   Copyright (c) 2007 Igor Mammedov</i></td></tr>
+<tr><th id="7">7</th><td><i> *   Author(s): Igor Mammedov (niallain@gmail.com)</i></td></tr>
+<tr><th id="8">8</th><td><i> *              Steve French (sfrench@us.ibm.com)</i></td></tr>
+<tr><th id="9">9</th><td><i> *              Wang Lei (wang840925@gmail.com)</i></td></tr>
+<tr><th id="10">10</th><td><i> *		David Howells (dhowells@redhat.com)</i></td></tr>
+<tr><th id="11">11</th><td><i> *</i></td></tr>
+<tr><th id="12">12</th><td><i> *   The upcall wrapper used to make an arbitrary DNS query.</i></td></tr>
+<tr><th id="13">13</th><td><i> *</i></td></tr>
+<tr><th id="14">14</th><td><i> *   This function requires the appropriate userspace tool dns.upcall to be</i></td></tr>
+<tr><th id="15">15</th><td><i> *   installed and something like the following lines should be added to the</i></td></tr>
+<tr><th id="16">16</th><td><i> *   /etc/request-key.conf file:</i></td></tr>
+<tr><th id="17">17</th><td><i> *</i></td></tr>
+<tr><th id="18">18</th><td><i> *	create dns_resolver * * /sbin/dns.upcall %k</i></td></tr>
+<tr><th id="19">19</th><td><i> *</i></td></tr>
+<tr><th id="20">20</th><td><i> *   For example to use this module to query AFSDB RR:</i></td></tr>
+<tr><th id="21">21</th><td><i> *</i></td></tr>
+<tr><th id="22">22</th><td><i> *	create dns_resolver afsdb:* * /sbin/dns.afsdb %k</i></td></tr>
+<tr><th id="23">23</th><td><i> *</i></td></tr>
+<tr><th id="24">24</th><td><i> *   This library is free software; you can redistribute it and/or modify</i></td></tr>
+<tr><th id="25">25</th><td><i> *   it under the terms of the GNU Lesser General Public License as published</i></td></tr>
+<tr><th id="26">26</th><td><i> *   by the Free Software Foundation; either version 2.1 of the License, or</i></td></tr>
+<tr><th id="27">27</th><td><i> *   (at your option) any later version.</i></td></tr>
+<tr><th id="28">28</th><td><i> *</i></td></tr>
+<tr><th id="29">29</th><td><i> *   This library is distributed in the hope that it will be useful,</i></td></tr>
+<tr><th id="30">30</th><td><i> *   but WITHOUT ANY WARRANTY; without even the implied warranty of</i></td></tr>
+<tr><th id="31">31</th><td><i> *   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See</i></td></tr>
+<tr><th id="32">32</th><td><i> *   the GNU Lesser General Public License for more details.</i></td></tr>
+<tr><th id="33">33</th><td><i> *</i></td></tr>
+<tr><th id="34">34</th><td><i> *   You should have received a copy of the GNU Lesser General Public License</i></td></tr>
+<tr><th id="35">35</th><td><i> *   along with this library; if not, see &lt;<a href="http://www.gnu.org/licenses/">http://www.gnu.org/licenses/</a>&gt;.</i></td></tr>
+<tr><th id="36">36</th><td><i> */</i></td></tr>
+<tr><th id="37">37</th><td></td></tr>
+<tr><th id="38">38</th><td><u>#include <a href="../../include/linux/module.h.html">&lt;linux/module.h&gt;</a></u></td></tr>
+<tr><th id="39">39</th><td><u>#include <a href="../../include/linux/slab.h.html">&lt;linux/slab.h&gt;</a></u></td></tr>
+<tr><th id="40">40</th><td><u>#include <a href="../../include/linux/cred.h.html">&lt;linux/cred.h&gt;</a></u></td></tr>
+<tr><th id="41">41</th><td><u>#include <a href="../../include/linux/dns_resolver.h.html">&lt;linux/dns_resolver.h&gt;</a></u></td></tr>
+<tr><th id="42">42</th><td><u>#include <a href="../../include/linux/err.h.html">&lt;linux/err.h&gt;</a></u></td></tr>
+<tr><th id="43">43</th><td><u>#include <a href="../../include/net/net_namespace.h.html">&lt;net/net_namespace.h&gt;</a></u></td></tr>
+<tr><th id="44">44</th><td></td></tr>
+<tr><th id="45">45</th><td><u>#include <a href="../../include/keys/dns_resolver-type.h.html">&lt;keys/dns_resolver-type.h&gt;</a></u></td></tr>
+<tr><th id="46">46</th><td><u>#include <a href="../../include/keys/user-type.h.html">&lt;keys/user-type.h&gt;</a></u></td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td><u>#include <a href="internal.h.html">"internal.h"</a></u></td></tr>
+<tr><th id="49">49</th><td></td></tr>
+<tr><th id="50">50</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="51">51</th><td><i class="doc"> * dns_query - Query the DNS</i></td></tr>
+<tr><th id="52">52</th><td><i class="doc"> *<span class="command"> @net</span>: The network namespace to operate in.</i></td></tr>
+<tr><th id="53">53</th><td><i class="doc"> *<span class="command"> @type</span>: Query type (or NULL for straight host-&gt;IP lookup)</i></td></tr>
+<tr><th id="54">54</th><td><i class="doc"> * <span class="command">@name</span>:<span class="verb"> Name to look up</span></i></td></tr>
+<tr><th id="55">55</th><td><i class="doc"> *<span class="command"> @namelen</span>: Length of name</i></td></tr>
+<tr><th id="56">56</th><td><i class="doc"> *<span class="command"> @options</span>: Request options (or NULL if no options)</i></td></tr>
+<tr><th id="57">57</th><td><i class="doc"> * @_result: Where to place the returned data (or NULL)</i></td></tr>
+<tr><th id="58">58</th><td><i class="doc"> * @_expiry: Where to store the result expiry time (or NULL)</i></td></tr>
+<tr><th id="59">59</th><td><i class="doc"> *<span class="command"> @invalidate</span>: Always invalidate the key after use</i></td></tr>
+<tr><th id="60">60</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="61">61</th><td><i class="doc"> * The data will be returned in the pointer at *result, if provided, and the</i></td></tr>
+<tr><th id="62">62</th><td><i class="doc"> * caller is responsible for freeing it.</i></td></tr>
+<tr><th id="63">63</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="64">64</th><td><i class="doc"> * The description should be of the form "[&lt;query_type&gt;:]&lt;domain_name&gt;", and</i></td></tr>
+<tr><th id="65">65</th><td><i class="doc"> * the options need to be appropriate for the query type requested.  If no</i></td></tr>
+<tr><th id="66">66</th><td><i class="doc"> * query_type is given, then the query is a straight hostname to IP address</i></td></tr>
+<tr><th id="67">67</th><td><i class="doc"> * lookup.</i></td></tr>
+<tr><th id="68">68</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="69">69</th><td><i class="doc"> * The DNS resolution lookup is performed by upcalling to userspace by way of</i></td></tr>
+<tr><th id="70">70</th><td><i class="doc"> * requesting a key of type dns_resolver.</i></td></tr>
+<tr><th id="71">71</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="72">72</th><td><i class="doc"> * Returns the size of the result on success, -ve error code otherwise.</i></td></tr>
+<tr><th id="73">73</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="74">74</th><td><em>int</em> <dfn class="decl def fn" id="dns_query" title='dns_query' data-ref="dns_query" data-ref-filename="dns_query">dns_query</dfn>(<b>struct</b> <a class="type" href="../../include/net/net_namespace.h.html#net" title='net' data-ref="net" data-ref-filename="net">net</a> *<dfn class="local col1 decl" id="1net" title='net' data-type='struct net *' data-ref="1net" data-ref-filename="1net">net</dfn>,</td></tr>
+<tr><th id="75">75</th><td>	      <em>const</em> <em>char</em> *<dfn class="local col2 decl" id="2type" title='type' data-type='const char *' data-ref="2type" data-ref-filename="2type">type</dfn>, <em>const</em> <em>char</em> *<dfn class="local col3 decl" id="3name" title='name' data-type='const char *' data-ref="3name" data-ref-filename="3name">name</dfn>, <a class="typedef" href="../../include/linux/types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col4 decl" id="4namelen" title='namelen' data-type='size_t' data-ref="4namelen" data-ref-filename="4namelen">namelen</dfn>,</td></tr>
+<tr><th id="76">76</th><td>	      <em>const</em> <em>char</em> *<dfn class="local col5 decl" id="5options" title='options' data-type='const char *' data-ref="5options" data-ref-filename="5options">options</dfn>, <em>char</em> **<dfn class="local col6 decl" id="6_result" title='_result' data-type='char **' data-ref="6_result" data-ref-filename="6_result">_result</dfn>, <a class="typedef" href="../../include/linux/time64.h.html#time64_t" title='time64_t' data-type='__s64' data-ref="time64_t" data-ref-filename="time64_t">time64_t</a> *<dfn class="local col7 decl" id="7_expiry" title='_expiry' data-type='time64_t *' data-ref="7_expiry" data-ref-filename="7_expiry">_expiry</dfn>,</td></tr>
+<tr><th id="77">77</th><td>	      <a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col8 decl" id="8invalidate" title='invalidate' data-type='bool' data-ref="8invalidate" data-ref-filename="8invalidate">invalidate</dfn>)</td></tr>
+<tr><th id="78">78</th><td>{</td></tr>
+<tr><th id="79">79</th><td>	<b>struct</b> <a class="type" href="../../include/linux/key.h.html#key" title='key' data-ref="key" data-ref-filename="key">key</a> *<dfn class="local col9 decl" id="9rkey" title='rkey' data-type='struct key *' data-ref="9rkey" data-ref-filename="9rkey">rkey</dfn>;</td></tr>
+<tr><th id="80">80</th><td>	<b>struct</b> <a class="type" href="../../include/keys/user-type.h.html#user_key_payload" title='user_key_payload' data-ref="user_key_payload" data-ref-filename="user_key_payload">user_key_payload</a> *<dfn class="local col0 decl" id="10upayload" title='upayload' data-type='struct user_key_payload *' data-ref="10upayload" data-ref-filename="10upayload">upayload</dfn>;</td></tr>
+<tr><th id="81">81</th><td>	<em>const</em> <b>struct</b> <a class="type" href="../../include/linux/cred.h.html#cred" title='cred' data-ref="cred" data-ref-filename="cred">cred</a> *<dfn class="local col1 decl" id="11saved_cred" title='saved_cred' data-type='const struct cred *' data-ref="11saved_cred" data-ref-filename="11saved_cred">saved_cred</dfn>;</td></tr>
+<tr><th id="82">82</th><td>	<a class="typedef" href="../../include/linux/types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col2 decl" id="12typelen" title='typelen' data-type='size_t' data-ref="12typelen" data-ref-filename="12typelen">typelen</dfn>, <dfn class="local col3 decl" id="13desclen" title='desclen' data-type='size_t' data-ref="13desclen" data-ref-filename="13desclen">desclen</dfn>;</td></tr>
+<tr><th id="83">83</th><td>	<em>char</em> *<dfn class="local col4 decl" id="14desc" title='desc' data-type='char *' data-ref="14desc" data-ref-filename="14desc">desc</dfn>, *<dfn class="local col5 decl" id="15cp" title='cp' data-type='char *' data-ref="15cp" data-ref-filename="15cp">cp</dfn>;</td></tr>
+<tr><th id="84">84</th><td>	<em>int</em> <dfn class="local col6 decl" id="16ret" title='ret' data-type='int' data-ref="16ret" data-ref-filename="16ret">ret</dfn>, <dfn class="local col7 decl" id="17len" title='len' data-type='int' data-ref="17len" data-ref-filename="17len">len</dfn>;</td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td>	<a class="macro" href="internal.h.html#50" title="do { if (__builtin_expect(!!(dns_resolver_debug), 0)) printk(&quot;\001&quot; &quot;7&quot; &quot;[%-6.6s] &quot;&quot;==&gt; %s(&quot;&quot;%s,%*.*s,%zu,%s&quot;&quot;)&quot;&quot;\n&quot;, get_current()-&gt;comm, __func__, type, (int)namelen, (int)namelen, name, namelen, options); } while (0)" data-ref="_M/kenter">kenter</a>(<q>"%s,%*.*s,%zu,%s"</q>,</td></tr>
+<tr><th id="87">87</th><td>	       <a class="local col2 ref" href="#2type" title='type' data-ref="2type" data-ref-filename="2type">type</a>, (<em>int</em>)<a class="local col4 ref" href="#4namelen" title='namelen' data-ref="4namelen" data-ref-filename="4namelen">namelen</a>, (<em>int</em>)<a class="local col4 ref" href="#4namelen" title='namelen' data-ref="4namelen" data-ref-filename="4namelen">namelen</a>, <a class="local col3 ref" href="#3name" title='name' data-ref="3name" data-ref-filename="3name">name</a>, <a class="local col4 ref" href="#4namelen" title='namelen' data-ref="4namelen" data-ref-filename="4namelen">namelen</a>, <a class="local col5 ref" href="#5options" title='options' data-ref="5options" data-ref-filename="5options">options</a>);</td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td>	<b>if</b> (!<a class="local col3 ref" href="#3name" title='name' data-ref="3name" data-ref-filename="3name">name</a> || <a class="local col4 ref" href="#4namelen" title='namelen' data-ref="4namelen" data-ref-filename="4namelen">namelen</a> == <var>0</var>)</td></tr>
+<tr><th id="90">90</th><td>		<b>return</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="91">91</th><td></td></tr>
+<tr><th id="92">92</th><td>	<i>/* construct the query key description as "[&lt;type&gt;:]&lt;name&gt;" */</i></td></tr>
+<tr><th id="93">93</th><td>	<a class="local col2 ref" href="#12typelen" title='typelen' data-ref="12typelen" data-ref-filename="12typelen">typelen</a> = <var>0</var>;</td></tr>
+<tr><th id="94">94</th><td>	<a class="local col3 ref" href="#13desclen" title='desclen' data-ref="13desclen" data-ref-filename="13desclen">desclen</a> = <var>0</var>;</td></tr>
+<tr><th id="95">95</th><td>	<b>if</b> (<a class="local col2 ref" href="#2type" title='type' data-ref="2type" data-ref-filename="2type">type</a>) {</td></tr>
+<tr><th id="96">96</th><td>		<a class="local col2 ref" href="#12typelen" title='typelen' data-ref="12typelen" data-ref-filename="12typelen">typelen</a> = <a class="ref fn" href="../../arch/x86/include/asm/string_64.h.html#strlen" title='strlen' data-ref="strlen" data-ref-filename="strlen">strlen</a>(<a class="local col2 ref" href="#2type" title='type' data-ref="2type" data-ref-filename="2type">type</a>);</td></tr>
+<tr><th id="97">97</th><td>		<b>if</b> (<a class="local col2 ref" href="#12typelen" title='typelen' data-ref="12typelen" data-ref-filename="12typelen">typelen</a> &lt; <var>1</var>)</td></tr>
+<tr><th id="98">98</th><td>			<b>return</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="99">99</th><td>		<a class="local col3 ref" href="#13desclen" title='desclen' data-ref="13desclen" data-ref-filename="13desclen">desclen</a> += <a class="local col2 ref" href="#12typelen" title='typelen' data-ref="12typelen" data-ref-filename="12typelen">typelen</a> + <var>1</var>;</td></tr>
+<tr><th id="100">100</th><td>	}</td></tr>
+<tr><th id="101">101</th><td></td></tr>
+<tr><th id="102">102</th><td>	<b>if</b> (<a class="local col4 ref" href="#4namelen" title='namelen' data-ref="4namelen" data-ref-filename="4namelen">namelen</a> &lt; <var>3</var> || <a class="local col4 ref" href="#4namelen" title='namelen' data-ref="4namelen" data-ref-filename="4namelen">namelen</a> &gt; <var>255</var>)</td></tr>
+<tr><th id="103">103</th><td>		<b>return</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="104">104</th><td>	<a class="local col3 ref" href="#13desclen" title='desclen' data-ref="13desclen" data-ref-filename="13desclen">desclen</a> += <a class="local col4 ref" href="#4namelen" title='namelen' data-ref="4namelen" data-ref-filename="4namelen">namelen</a> + <var>1</var>;</td></tr>
+<tr><th id="105">105</th><td></td></tr>
+<tr><th id="106">106</th><td>	<a class="local col4 ref" href="#14desc" title='desc' data-ref="14desc" data-ref-filename="14desc">desc</a> = <a class="ref fn" href="../../include/linux/slab.h.html#kmalloc" title='kmalloc' data-ref="kmalloc" data-ref-filename="kmalloc">kmalloc</a>(<a class="local col3 ref" href="#13desclen" title='desclen' data-ref="13desclen" data-ref-filename="13desclen">desclen</a>, <a class="macro" href="../../include/linux/gfp.h.html#290" title="((( gfp_t)(0x400u|0x800u)) | (( gfp_t)0x40u) | (( gfp_t)0x80u))" data-ref="_M/GFP_KERNEL">GFP_KERNEL</a>);</td></tr>
+<tr><th id="107">107</th><td>	<b>if</b> (!<a class="local col4 ref" href="#14desc" title='desc' data-ref="14desc" data-ref-filename="14desc">desc</a>)</td></tr>
+<tr><th id="108">108</th><td>		<b>return</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#16" title="12" data-ref="_M/ENOMEM">ENOMEM</a>;</td></tr>
+<tr><th id="109">109</th><td></td></tr>
+<tr><th id="110">110</th><td>	<a class="local col5 ref" href="#15cp" title='cp' data-ref="15cp" data-ref-filename="15cp">cp</a> = <a class="local col4 ref" href="#14desc" title='desc' data-ref="14desc" data-ref-filename="14desc">desc</a>;</td></tr>
+<tr><th id="111">111</th><td>	<b>if</b> (<a class="local col2 ref" href="#2type" title='type' data-ref="2type" data-ref-filename="2type">type</a>) {</td></tr>
+<tr><th id="112">112</th><td>		<a class="ref fn" href="../../arch/x86/include/asm/string_64.h.html#memcpy" title='memcpy' data-ref="memcpy" data-ref-filename="memcpy">memcpy</a>(<a class="local col5 ref" href="#15cp" title='cp' data-ref="15cp" data-ref-filename="15cp">cp</a>, <a class="local col2 ref" href="#2type" title='type' data-ref="2type" data-ref-filename="2type">type</a>, <a class="local col2 ref" href="#12typelen" title='typelen' data-ref="12typelen" data-ref-filename="12typelen">typelen</a>);</td></tr>
+<tr><th id="113">113</th><td>		<a class="local col5 ref" href="#15cp" title='cp' data-ref="15cp" data-ref-filename="15cp">cp</a> += <a class="local col2 ref" href="#12typelen" title='typelen' data-ref="12typelen" data-ref-filename="12typelen">typelen</a>;</td></tr>
+<tr><th id="114">114</th><td>		*<a class="local col5 ref" href="#15cp" title='cp' data-ref="15cp" data-ref-filename="15cp">cp</a>++ = <kbd>':'</kbd>;</td></tr>
+<tr><th id="115">115</th><td>	}</td></tr>
+<tr><th id="116">116</th><td>	<a class="ref fn" href="../../arch/x86/include/asm/string_64.h.html#memcpy" title='memcpy' data-ref="memcpy" data-ref-filename="memcpy">memcpy</a>(<a class="local col5 ref" href="#15cp" title='cp' data-ref="15cp" data-ref-filename="15cp">cp</a>, <a class="local col3 ref" href="#3name" title='name' data-ref="3name" data-ref-filename="3name">name</a>, <a class="local col4 ref" href="#4namelen" title='namelen' data-ref="4namelen" data-ref-filename="4namelen">namelen</a>);</td></tr>
+<tr><th id="117">117</th><td>	<a class="local col5 ref" href="#15cp" title='cp' data-ref="15cp" data-ref-filename="15cp">cp</a> += <a class="local col4 ref" href="#4namelen" title='namelen' data-ref="4namelen" data-ref-filename="4namelen">namelen</a>;</td></tr>
+<tr><th id="118">118</th><td>	*<a class="local col5 ref" href="#15cp" title='cp' data-ref="15cp" data-ref-filename="15cp">cp</a> = <kbd>'\0'</kbd>;</td></tr>
+<tr><th id="119">119</th><td></td></tr>
+<tr><th id="120">120</th><td>	<b>if</b> (!<a class="local col5 ref" href="#5options" title='options' data-ref="5options" data-ref-filename="5options">options</a>)</td></tr>
+<tr><th id="121">121</th><td>		<a class="local col5 ref" href="#5options" title='options' data-ref="5options" data-ref-filename="5options">options</a> = <q>""</q>;</td></tr>
+<tr><th id="122">122</th><td>	<a class="macro" href="internal.h.html#43" title="do { if (__builtin_expect(!!(dns_resolver_debug), 0)) printk(&quot;\001&quot; &quot;7&quot; &quot;[%-6.6s] &quot;&quot;call request_key(,%s,%s)&quot;&quot;\n&quot;, get_current()-&gt;comm, desc, options); } while (0)" data-ref="_M/kdebug">kdebug</a>(<q>"call request_key(,%s,%s)"</q>, <a class="local col4 ref" href="#14desc" title='desc' data-ref="14desc" data-ref-filename="14desc">desc</a>, <a class="local col5 ref" href="#5options" title='options' data-ref="5options" data-ref-filename="5options">options</a>);</td></tr>
+<tr><th id="123">123</th><td></td></tr>
+<tr><th id="124">124</th><td>	<i>/* make the upcall, using special credentials to prevent the use of</i></td></tr>
+<tr><th id="125">125</th><td><i>	 * add_key() to preinstall malicious redirections</i></td></tr>
+<tr><th id="126">126</th><td><i>	 */</i></td></tr>
+<tr><th id="127">127</th><td>	<a class="local col1 ref" href="#11saved_cred" title='saved_cred' data-ref="11saved_cred" data-ref-filename="11saved_cred">saved_cred</a> = <a class="ref fn" href="../../include/linux/cred.h.html#override_creds" title='override_creds' data-ref="override_creds" data-ref-filename="override_creds">override_creds</a>(<a class="ref" href="internal.h.html#dns_resolver_cache" title='dns_resolver_cache' data-ref="dns_resolver_cache" data-ref-filename="dns_resolver_cache">dns_resolver_cache</a>);</td></tr>
+<tr><th id="128">128</th><td>	<a class="local col9 ref" href="#9rkey" title='rkey' data-ref="9rkey" data-ref-filename="9rkey">rkey</a> = <a class="macro" href="../../include/linux/key.h.html#342" title="request_key_tag(&amp;key_type_dns_resolver, desc, net-&gt;key_domain, options);" data-ref="_M/request_key_net">request_key_net</a>(&amp;<a class="ref" href="../../include/keys/dns_resolver-type.h.html#key_type_dns_resolver" title='key_type_dns_resolver' data-ref="key_type_dns_resolver" data-ref-filename="key_type_dns_resolver">key_type_dns_resolver</a>, <a class="local col4 ref" href="#14desc" title='desc' data-ref="14desc" data-ref-filename="14desc">desc</a>, <a class="local col1 ref" href="#1net" title='net' data-ref="1net" data-ref-filename="1net">net</a>, <a class="local col5 ref" href="#5options" title='options' data-ref="5options" data-ref-filename="5options">options</a>);</td></tr>
+<tr><th id="129">129</th><td>	<a class="ref fn" href="../../include/linux/cred.h.html#revert_creds" title='revert_creds' data-ref="revert_creds" data-ref-filename="revert_creds">revert_creds</a>(<a class="local col1 ref" href="#11saved_cred" title='saved_cred' data-ref="11saved_cred" data-ref-filename="11saved_cred">saved_cred</a>);</td></tr>
+<tr><th id="130">130</th><td>	<a class="ref fn" href="../../include/linux/slab.h.html#kfree" title='kfree' data-ref="kfree" data-ref-filename="kfree">kfree</a>(<a class="local col4 ref" href="#14desc" title='desc' data-ref="14desc" data-ref-filename="14desc">desc</a>);</td></tr>
+<tr><th id="131">131</th><td>	<b>if</b> (<a class="ref fn" href="../../include/linux/err.h.html#IS_ERR" title='IS_ERR' data-ref="IS_ERR" data-ref-filename="IS_ERR">IS_ERR</a>(<a class="local col9 ref" href="#9rkey" title='rkey' data-ref="9rkey" data-ref-filename="9rkey">rkey</a>)) {</td></tr>
+<tr><th id="132">132</th><td>		<a class="local col6 ref" href="#16ret" title='ret' data-ref="16ret" data-ref-filename="16ret">ret</a> = <a class="ref fn" href="../../include/linux/err.h.html#PTR_ERR" title='PTR_ERR' data-ref="PTR_ERR" data-ref-filename="PTR_ERR">PTR_ERR</a>(<a class="local col9 ref" href="#9rkey" title='rkey' data-ref="9rkey" data-ref-filename="9rkey">rkey</a>);</td></tr>
+<tr><th id="133">133</th><td>		<b>goto</b> <a class="lbl" href="#18out" data-ref="18out" data-ref-filename="18out">out</a>;</td></tr>
+<tr><th id="134">134</th><td>	}</td></tr>
+<tr><th id="135">135</th><td></td></tr>
+<tr><th id="136">136</th><td>	<a class="ref fn" href="../../include/linux/rwsem.h.html#down_read" title='down_read' data-ref="down_read" data-ref-filename="down_read">down_read</a>(&amp;<a class="local col9 ref" href="#9rkey" title='rkey' data-ref="9rkey" data-ref-filename="9rkey">rkey</a>-&gt;<a class="ref field" href="../../include/linux/key.h.html#key::sem" title='key::sem' data-ref="key::sem" data-ref-filename="key..sem">sem</a>);</td></tr>
+<tr><th id="137">137</th><td>	<a class="ref fn" href="../../include/asm-generic/bitops-instrumented.h.html#set_bit" title='set_bit' data-ref="set_bit" data-ref-filename="set_bit">set_bit</a>(<a class="macro" href="../../include/linux/key.h.html#210" title="7" data-ref="_M/KEY_FLAG_ROOT_CAN_INVAL">KEY_FLAG_ROOT_CAN_INVAL</a>, &amp;<a class="local col9 ref" href="#9rkey" title='rkey' data-ref="9rkey" data-ref-filename="9rkey">rkey</a>-&gt;<a class="ref field" href="../../include/linux/key.h.html#key::flags" title='key::flags' data-ref="key::flags" data-ref-filename="key..flags">flags</a>);</td></tr>
+<tr><th id="138">138</th><td>	<a class="local col9 ref" href="#9rkey" title='rkey' data-ref="9rkey" data-ref-filename="9rkey">rkey</a>-&gt;<a class="ref field" href="../../include/linux/key.h.html#key::perm" title='key::perm' data-ref="key::perm" data-ref-filename="key..perm">perm</a> |= <a class="macro" href="../../include/linux/key.h.html#48" title="0x00010000" data-ref="_M/KEY_USR_VIEW">KEY_USR_VIEW</a>;</td></tr>
+<tr><th id="139">139</th><td></td></tr>
+<tr><th id="140">140</th><td>	<a class="local col6 ref" href="#16ret" title='ret' data-ref="16ret" data-ref-filename="16ret">ret</a> = <a class="ref fn" href="../../include/linux/key.h.html#key_validate" title='key_validate' data-ref="key_validate" data-ref-filename="key_validate">key_validate</a>(<a class="local col9 ref" href="#9rkey" title='rkey' data-ref="9rkey" data-ref-filename="9rkey">rkey</a>);</td></tr>
+<tr><th id="141">141</th><td>	<b>if</b> (<a class="local col6 ref" href="#16ret" title='ret' data-ref="16ret" data-ref-filename="16ret">ret</a> &lt; <var>0</var>)</td></tr>
+<tr><th id="142">142</th><td>		<b>goto</b> <a class="lbl" href="#19put" data-ref="19put" data-ref-filename="19put">put</a>;</td></tr>
+<tr><th id="143">143</th><td></td></tr>
+<tr><th id="144">144</th><td>	<i>/* If the DNS server gave an error, return that to the caller */</i></td></tr>
+<tr><th id="145">145</th><td>	<a class="local col6 ref" href="#16ret" title='ret' data-ref="16ret" data-ref-filename="16ret">ret</a> = <a class="ref fn" href="../../include/linux/err.h.html#PTR_ERR" title='PTR_ERR' data-ref="PTR_ERR" data-ref-filename="PTR_ERR">PTR_ERR</a>(<a class="local col9 ref" href="#9rkey" title='rkey' data-ref="9rkey" data-ref-filename="9rkey">rkey</a>-&gt;<a class="ref field" href="../../include/linux/key.h.html#key::(anonymous)::payload" title='key::(anonymous union)::payload' data-ref="key::(anonymous)::payload" data-ref-filename="key..(anonymous)..payload">payload</a>.<a class="ref field" href="../../include/linux/key.h.html#key_payload::data" title='key_payload::data' data-ref="key_payload::data" data-ref-filename="key_payload..data">data</a>[<a class="enum" href="internal.h.html#dns_key_error" title='dns_key_error' data-ref="dns_key_error" data-ref-filename="dns_key_error">dns_key_error</a>]);</td></tr>
+<tr><th id="146">146</th><td>	<b>if</b> (<a class="local col6 ref" href="#16ret" title='ret' data-ref="16ret" data-ref-filename="16ret">ret</a>)</td></tr>
+<tr><th id="147">147</th><td>		<b>goto</b> <a class="lbl" href="#19put" data-ref="19put" data-ref-filename="19put">put</a>;</td></tr>
+<tr><th id="148">148</th><td></td></tr>
+<tr><th id="149">149</th><td>	<a class="local col0 ref" href="#10upayload" title='upayload' data-ref="10upayload" data-ref-filename="10upayload">upayload</a> = <a class="ref fn" href="../../include/keys/user-type.h.html#user_key_payload_locked" title='user_key_payload_locked' data-ref="user_key_payload_locked" data-ref-filename="user_key_payload_locked">user_key_payload_locked</a>(<a class="local col9 ref" href="#9rkey" title='rkey' data-ref="9rkey" data-ref-filename="9rkey">rkey</a>);</td></tr>
+<tr><th id="150">150</th><td>	<a class="local col7 ref" href="#17len" title='len' data-ref="17len" data-ref-filename="17len">len</a> = <a class="local col0 ref" href="#10upayload" title='upayload' data-ref="10upayload" data-ref-filename="10upayload">upayload</a>-&gt;<a class="ref field" href="../../include/keys/user-type.h.html#user_key_payload::datalen" title='user_key_payload::datalen' data-ref="user_key_payload::datalen" data-ref-filename="user_key_payload..datalen">datalen</a>;</td></tr>
+<tr><th id="151">151</th><td></td></tr>
+<tr><th id="152">152</th><td>	<b>if</b> (<a class="local col6 ref" href="#6_result" title='_result' data-ref="6_result" data-ref-filename="6_result">_result</a>) {</td></tr>
+<tr><th id="153">153</th><td>		<a class="local col6 ref" href="#16ret" title='ret' data-ref="16ret" data-ref-filename="16ret">ret</a> = -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#16" title="12" data-ref="_M/ENOMEM">ENOMEM</a>;</td></tr>
+<tr><th id="154">154</th><td>		*<a class="local col6 ref" href="#6_result" title='_result' data-ref="6_result" data-ref-filename="6_result">_result</a> = <a class="ref fn" href="../../include/linux/string.h.html#kmemdup_nul" title='kmemdup_nul' data-ref="kmemdup_nul" data-ref-filename="kmemdup_nul">kmemdup_nul</a>(<a class="local col0 ref" href="#10upayload" title='upayload' data-ref="10upayload" data-ref-filename="10upayload">upayload</a>-&gt;<a class="ref field" href="../../include/keys/user-type.h.html#user_key_payload::data" title='user_key_payload::data' data-ref="user_key_payload::data" data-ref-filename="user_key_payload..data">data</a>, <a class="local col7 ref" href="#17len" title='len' data-ref="17len" data-ref-filename="17len">len</a>, <a class="macro" href="../../include/linux/gfp.h.html#290" title="((( gfp_t)(0x400u|0x800u)) | (( gfp_t)0x40u) | (( gfp_t)0x80u))" data-ref="_M/GFP_KERNEL">GFP_KERNEL</a>);</td></tr>
+<tr><th id="155">155</th><td>		<b>if</b> (!*<a class="local col6 ref" href="#6_result" title='_result' data-ref="6_result" data-ref-filename="6_result">_result</a>)</td></tr>
+<tr><th id="156">156</th><td>			<b>goto</b> <a class="lbl" href="#19put" data-ref="19put" data-ref-filename="19put">put</a>;</td></tr>
+<tr><th id="157">157</th><td>	}</td></tr>
+<tr><th id="158">158</th><td></td></tr>
+<tr><th id="159">159</th><td>	<b>if</b> (<a class="local col7 ref" href="#7_expiry" title='_expiry' data-ref="7_expiry" data-ref-filename="7_expiry">_expiry</a>)</td></tr>
+<tr><th id="160">160</th><td>		*<a class="local col7 ref" href="#7_expiry" title='_expiry' data-ref="7_expiry" data-ref-filename="7_expiry">_expiry</a> = <a class="local col9 ref" href="#9rkey" title='rkey' data-ref="9rkey" data-ref-filename="9rkey">rkey</a>-&gt;<a class="ref field" href="../../include/linux/key.h.html#key::(anonymous)::expiry" title='key::(anonymous union)::expiry' data-ref="key::(anonymous)::expiry" data-ref-filename="key..(anonymous)..expiry">expiry</a>;</td></tr>
+<tr><th id="161">161</th><td></td></tr>
+<tr><th id="162">162</th><td>	<a class="local col6 ref" href="#16ret" title='ret' data-ref="16ret" data-ref-filename="16ret">ret</a> = <a class="local col7 ref" href="#17len" title='len' data-ref="17len" data-ref-filename="17len">len</a>;</td></tr>
+<tr><th id="163">163</th><td><dfn class="lbl" id="19put" data-ref="19put" data-ref-filename="19put">put</dfn>:</td></tr>
+<tr><th id="164">164</th><td>	<a class="ref fn" href="../../include/linux/rwsem.h.html#up_read" title='up_read' data-ref="up_read" data-ref-filename="up_read">up_read</a>(&amp;<a class="local col9 ref" href="#9rkey" title='rkey' data-ref="9rkey" data-ref-filename="9rkey">rkey</a>-&gt;<a class="ref field" href="../../include/linux/key.h.html#key::sem" title='key::sem' data-ref="key::sem" data-ref-filename="key..sem">sem</a>);</td></tr>
+<tr><th id="165">165</th><td>	<b>if</b> (<a class="local col8 ref" href="#8invalidate" title='invalidate' data-ref="8invalidate" data-ref-filename="8invalidate">invalidate</a>)</td></tr>
+<tr><th id="166">166</th><td>		<a class="ref fn" href="../../include/linux/key.h.html#key_invalidate" title='key_invalidate' data-ref="key_invalidate" data-ref-filename="key_invalidate">key_invalidate</a>(<a class="local col9 ref" href="#9rkey" title='rkey' data-ref="9rkey" data-ref-filename="9rkey">rkey</a>);</td></tr>
+<tr><th id="167">167</th><td>	<a class="ref fn" href="../../include/linux/key.h.html#key_put" title='key_put' data-ref="key_put" data-ref-filename="key_put">key_put</a>(<a class="local col9 ref" href="#9rkey" title='rkey' data-ref="9rkey" data-ref-filename="9rkey">rkey</a>);</td></tr>
+<tr><th id="168">168</th><td><dfn class="lbl" id="18out" data-ref="18out" data-ref-filename="18out">out</dfn>:</td></tr>
+<tr><th id="169">169</th><td>	<a class="macro" href="internal.h.html#51" title="do { if (__builtin_expect(!!(dns_resolver_debug), 0)) printk(&quot;\001&quot; &quot;7&quot; &quot;[%-6.6s] &quot;&quot;&lt;== %s()&quot;&quot; = %d&quot;&quot;&quot;&quot;\n&quot;, get_current()-&gt;comm, __func__, ret); } while (0)" data-ref="_M/kleave">kleave</a>(<q>" = %d"</q>, <a class="local col6 ref" href="#16ret" title='ret' data-ref="16ret" data-ref-filename="16ret">ret</a>);</td></tr>
+<tr><th id="170">170</th><td>	<b>return</b> <a class="local col6 ref" href="#16ret" title='ret' data-ref="16ret" data-ref-filename="16ret">ret</a>;</td></tr>
+<tr><th id="171">171</th><td>}</td></tr>
+<tr><th id="172">172</th><td><a class="macro" href="../../include/linux/export.h.html#123" title="extern typeof(dns_query) dns_query; static const char __kstrtab_dns_query[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;dns_query&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_dns_query172 = (void *)&amp;dns_query; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;&quot; &quot;+&quot; &quot;dns_query&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;dns_query&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;dns_query&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;dns_query&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL">EXPORT_SYMBOL</a>(<a class="decl fn" href="#dns_query" title='dns_query' data-ref="dns_query" data-ref-filename="dns_query"><a class="ref fn" href="#dns_query" title='dns_query' data-ref="dns_query" data-ref-filename="dns_query"><a class="ref fn" href="#dns_query" title='dns_query' data-ref="dns_query" data-ref-filename="dns_query">dns_query</a></a></a>);</td></tr>
+<tr><th id="173">173</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

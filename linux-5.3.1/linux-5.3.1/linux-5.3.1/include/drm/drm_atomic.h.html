@@ -1,0 +1,994 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>drm_atomic.h source code [linux-5.3.1/include/drm/drm_atomic.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="__drm_connnectors_state,__drm_crtcs_state,__drm_planes_state,__drm_private_objs_state,drm_atomic_state,drm_crtc_commit,drm_private_obj,drm_private_state,drm_private_state_funcs "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/include/drm/drm_atomic.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>include</a>/<a href='./'>drm</a>/<a href='drm_atomic.h.html'>drm_atomic.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*</i></td></tr>
+<tr><th id="2">2</th><td><i> * Copyright (C) 2014 Red Hat</i></td></tr>
+<tr><th id="3">3</th><td><i> * Copyright (C) 2014 Intel Corp.</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * Permission is hereby granted, free of charge, to any person obtaining a</i></td></tr>
+<tr><th id="6">6</th><td><i> * copy of this software and associated documentation files (the "Software"),</i></td></tr>
+<tr><th id="7">7</th><td><i> * to deal in the Software without restriction, including without limitation</i></td></tr>
+<tr><th id="8">8</th><td><i> * the rights to use, copy, modify, merge, publish, distribute, sublicense,</i></td></tr>
+<tr><th id="9">9</th><td><i> * and/or sell copies of the Software, and to permit persons to whom the</i></td></tr>
+<tr><th id="10">10</th><td><i> * Software is furnished to do so, subject to the following conditions:</i></td></tr>
+<tr><th id="11">11</th><td><i> *</i></td></tr>
+<tr><th id="12">12</th><td><i> * The above copyright notice and this permission notice shall be included in</i></td></tr>
+<tr><th id="13">13</th><td><i> * all copies or substantial portions of the Software.</i></td></tr>
+<tr><th id="14">14</th><td><i> *</i></td></tr>
+<tr><th id="15">15</th><td><i> * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR</i></td></tr>
+<tr><th id="16">16</th><td><i> * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,</i></td></tr>
+<tr><th id="17">17</th><td><i> * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL</i></td></tr>
+<tr><th id="18">18</th><td><i> * THE COPYRIGHT HOLDER(S) OR AUTHOR(S) BE LIABLE FOR ANY CLAIM, DAMAGES OR</i></td></tr>
+<tr><th id="19">19</th><td><i> * OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,</i></td></tr>
+<tr><th id="20">20</th><td><i> * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR</i></td></tr>
+<tr><th id="21">21</th><td><i> * OTHER DEALINGS IN THE SOFTWARE.</i></td></tr>
+<tr><th id="22">22</th><td><i> *</i></td></tr>
+<tr><th id="23">23</th><td><i> * Authors:</i></td></tr>
+<tr><th id="24">24</th><td><i> * Rob Clark &lt;robdclark@gmail.com&gt;</i></td></tr>
+<tr><th id="25">25</th><td><i> * Daniel Vetter &lt;daniel.vetter@ffwll.ch&gt;</i></td></tr>
+<tr><th id="26">26</th><td><i> */</i></td></tr>
+<tr><th id="27">27</th><td></td></tr>
+<tr><th id="28">28</th><td><u>#<span data-ppcond="28">ifndef</span> <span class="macro" data-ref="_M/DRM_ATOMIC_H_">DRM_ATOMIC_H_</span></u></td></tr>
+<tr><th id="29">29</th><td><u>#define <dfn class="macro" id="_M/DRM_ATOMIC_H_" data-ref="_M/DRM_ATOMIC_H_">DRM_ATOMIC_H_</dfn></u></td></tr>
+<tr><th id="30">30</th><td></td></tr>
+<tr><th id="31">31</th><td><u>#include <a href="drm_crtc.h.html">&lt;drm/drm_crtc.h&gt;</a></u></td></tr>
+<tr><th id="32">32</th><td><u>#include <a href="drm_util.h.html">&lt;drm/drm_util.h&gt;</a></u></td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="35">35</th><td><i class="doc"> * struct drm_crtc_commit - track modeset commits on a CRTC</i></td></tr>
+<tr><th id="36">36</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="37">37</th><td><i class="doc"> * This structure is used to track pending modeset changes and atomic commit on</i></td></tr>
+<tr><th id="38">38</th><td><i class="doc"> * a per-CRTC basis. Since updating the list should never block this structure</i></td></tr>
+<tr><th id="39">39</th><td><i class="doc"> * is reference counted to allow waiters to safely wait on an event to complete,</i></td></tr>
+<tr><th id="40">40</th><td><i class="doc"> * without holding any locks.</i></td></tr>
+<tr><th id="41">41</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="42">42</th><td><i class="doc"> * It has 3 different events in total to allow a fine-grained synchronization</i></td></tr>
+<tr><th id="43">43</th><td><i class="doc"> * between outstanding updates::</i></td></tr>
+<tr><th id="44">44</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="45">45</th><td><i class="doc"> *	atomic commit thread			hardware</i></td></tr>
+<tr><th id="46">46</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="47">47</th><td><i class="doc"> * 	write new state into hardware	----&gt;	...</i></td></tr>
+<tr><th id="48">48</th><td><i class="doc"> * 	signal hw_done</i></td></tr>
+<tr><th id="49">49</th><td><i class="doc"> * 						switch to new state on next</i></td></tr>
+<tr><th id="50">50</th><td><i class="doc"> * 	...					v/hblank</i></td></tr>
+<tr><th id="51">51</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="52">52</th><td><i class="doc"> *	wait for buffers to show up		...</i></td></tr>
+<tr><th id="53">53</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="54">54</th><td><i class="doc"> *	...					send completion irq</i></td></tr>
+<tr><th id="55">55</th><td><i class="doc"> *						irq handler signals flip_done</i></td></tr>
+<tr><th id="56">56</th><td><i class="doc"> *	cleanup old buffers</i></td></tr>
+<tr><th id="57">57</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="58">58</th><td><i class="doc"> * 	signal cleanup_done</i></td></tr>
+<tr><th id="59">59</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="60">60</th><td><i class="doc"> * 	wait for flip_done		&lt;----</i></td></tr>
+<tr><th id="61">61</th><td><i class="doc"> * 	clean up atomic state</i></td></tr>
+<tr><th id="62">62</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="63">63</th><td><i class="doc"> * The important bit to know is that cleanup_done is the terminal event, but the</i></td></tr>
+<tr><th id="64">64</th><td><i class="doc"> * ordering between flip_done and hw_done is entirely up to the specific driver</i></td></tr>
+<tr><th id="65">65</th><td><i class="doc"> * and modeset state change.</i></td></tr>
+<tr><th id="66">66</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="67">67</th><td><i class="doc"> * For an implementation of how to use this look at</i></td></tr>
+<tr><th id="68">68</th><td><i class="doc"> * drm_atomic_helper_setup_commit() from the atomic helper library.</i></td></tr>
+<tr><th id="69">69</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="70">70</th><td><b>struct</b> <dfn class="type def" id="drm_crtc_commit" title='drm_crtc_commit' data-ref="drm_crtc_commit" data-ref-filename="drm_crtc_commit">drm_crtc_commit</dfn> {</td></tr>
+<tr><th id="71">71</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="72">72</th><td><i class="doc">	 *<span class="command"> @crtc</span>:</i></td></tr>
+<tr><th id="73">73</th><td><i class="doc">	 *</i></td></tr>
+<tr><th id="74">74</th><td><i class="doc">	 * DRM CRTC for this commit.</i></td></tr>
+<tr><th id="75">75</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="76">76</th><td>	<b>struct</b> <a class="type" href="drm_crtc.h.html#drm_crtc" title='drm_crtc' data-ref="drm_crtc" data-ref-filename="drm_crtc">drm_crtc</a> *<dfn class="decl field" id="drm_crtc_commit::crtc" title='drm_crtc_commit::crtc' data-ref="drm_crtc_commit::crtc" data-ref-filename="drm_crtc_commit..crtc">crtc</dfn>;</td></tr>
+<tr><th id="77">77</th><td></td></tr>
+<tr><th id="78">78</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="79">79</th><td><i class="doc">	 * <span class="command">@ref</span>:</i></td></tr>
+<tr><th id="80">80</th><td><i class="doc">	 *</i></td></tr>
+<tr><th id="81">81</th><td><i class="doc">	 * Reference count for this structure. Needed to allow blocking on</i></td></tr>
+<tr><th id="82">82</th><td><i class="doc">	 * completions without the risk of the completion disappearing</i></td></tr>
+<tr><th id="83">83</th><td><i class="doc">	 * meanwhile.</i></td></tr>
+<tr><th id="84">84</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="85">85</th><td>	<b>struct</b> <a class="type" href="../linux/kref.h.html#kref" title='kref' data-ref="kref" data-ref-filename="kref">kref</a> <dfn class="decl field" id="drm_crtc_commit::ref" title='drm_crtc_commit::ref' data-ref="drm_crtc_commit::ref" data-ref-filename="drm_crtc_commit..ref">ref</dfn>;</td></tr>
+<tr><th id="86">86</th><td></td></tr>
+<tr><th id="87">87</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="88">88</th><td><i class="doc">	 *<span class="command"> @flip</span>_done:</i></td></tr>
+<tr><th id="89">89</th><td><i class="doc">	 *</i></td></tr>
+<tr><th id="90">90</th><td><i class="doc">	 * Will be signaled when the hardware has flipped to the new set of</i></td></tr>
+<tr><th id="91">91</th><td><i class="doc">	 * buffers. Signals at the same time as when the drm event for this</i></td></tr>
+<tr><th id="92">92</th><td><i class="doc">	 * commit is sent to userspace, or when an out-fence is singalled. Note</i></td></tr>
+<tr><th id="93">93</th><td><i class="doc">	 * that for most hardware, in most cases this happens after<span class="command"> @hw</span>_done is</i></td></tr>
+<tr><th id="94">94</th><td><i class="doc">	 * signalled.</i></td></tr>
+<tr><th id="95">95</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="96">96</th><td>	<b>struct</b> <a class="type" href="../linux/completion.h.html#completion" title='completion' data-ref="completion" data-ref-filename="completion">completion</a> <dfn class="decl field" id="drm_crtc_commit::flip_done" title='drm_crtc_commit::flip_done' data-ref="drm_crtc_commit::flip_done" data-ref-filename="drm_crtc_commit..flip_done">flip_done</dfn>;</td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="99">99</th><td><i class="doc">	 *<span class="command"> @hw</span>_done:</i></td></tr>
+<tr><th id="100">100</th><td><i class="doc">	 *</i></td></tr>
+<tr><th id="101">101</th><td><i class="doc">	 * Will be signalled when all hw register changes for this commit have</i></td></tr>
+<tr><th id="102">102</th><td><i class="doc">	 * been written out. Especially when disabling a pipe this can be much</i></td></tr>
+<tr><th id="103">103</th><td><i class="doc">	 * later than than<span class="command"> @flip</span>_done, since that can signal already when the</i></td></tr>
+<tr><th id="104">104</th><td><i class="doc">	 * screen goes black, whereas to fully shut down a pipe more register</i></td></tr>
+<tr><th id="105">105</th><td><i class="doc">	 * I/O is required.</i></td></tr>
+<tr><th id="106">106</th><td><i class="doc">	 *</i></td></tr>
+<tr><th id="107">107</th><td><i class="doc">	 * Note that this does not need to include separately reference-counted</i></td></tr>
+<tr><th id="108">108</th><td><i class="doc">	 * resources like backing storage buffer pinning, or runtime pm</i></td></tr>
+<tr><th id="109">109</th><td><i class="doc">	 * management.</i></td></tr>
+<tr><th id="110">110</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="111">111</th><td>	<b>struct</b> <a class="type" href="../linux/completion.h.html#completion" title='completion' data-ref="completion" data-ref-filename="completion">completion</a> <dfn class="decl field" id="drm_crtc_commit::hw_done" title='drm_crtc_commit::hw_done' data-ref="drm_crtc_commit::hw_done" data-ref-filename="drm_crtc_commit..hw_done">hw_done</dfn>;</td></tr>
+<tr><th id="112">112</th><td></td></tr>
+<tr><th id="113">113</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="114">114</th><td><i class="doc">	 *<span class="command"> @cleanup</span>_done:</i></td></tr>
+<tr><th id="115">115</th><td><i class="doc">	 *</i></td></tr>
+<tr><th id="116">116</th><td><i class="doc">	 * Will be signalled after old buffers have been cleaned up by calling</i></td></tr>
+<tr><th id="117">117</th><td><i class="doc">	 * drm_atomic_helper_cleanup_planes(). Since this can only happen after</i></td></tr>
+<tr><th id="118">118</th><td><i class="doc">	 * a vblank wait completed it might be a bit later. This completion is</i></td></tr>
+<tr><th id="119">119</th><td><i class="doc">	 * useful to throttle updates and avoid hardware updates getting ahead</i></td></tr>
+<tr><th id="120">120</th><td><i class="doc">	 * of the buffer cleanup too much.</i></td></tr>
+<tr><th id="121">121</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="122">122</th><td>	<b>struct</b> <a class="type" href="../linux/completion.h.html#completion" title='completion' data-ref="completion" data-ref-filename="completion">completion</a> <dfn class="decl field" id="drm_crtc_commit::cleanup_done" title='drm_crtc_commit::cleanup_done' data-ref="drm_crtc_commit::cleanup_done" data-ref-filename="drm_crtc_commit..cleanup_done">cleanup_done</dfn>;</td></tr>
+<tr><th id="123">123</th><td></td></tr>
+<tr><th id="124">124</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="125">125</th><td><i class="doc">	 *<span class="command"> @commit</span>_entry:</i></td></tr>
+<tr><th id="126">126</th><td><i class="doc">	 *</i></td></tr>
+<tr><th id="127">127</th><td><i class="doc">	 * Entry on the per-CRTC &amp;drm_crtc.commit_list. Protected by</i></td></tr>
+<tr><th id="128">128</th><td><i class="doc">	 * $drm_crtc.commit_lock.</i></td></tr>
+<tr><th id="129">129</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="130">130</th><td>	<b>struct</b> <a class="type" href="../linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="drm_crtc_commit::commit_entry" title='drm_crtc_commit::commit_entry' data-ref="drm_crtc_commit::commit_entry" data-ref-filename="drm_crtc_commit..commit_entry">commit_entry</dfn>;</td></tr>
+<tr><th id="131">131</th><td></td></tr>
+<tr><th id="132">132</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="133">133</th><td><i class="doc">	 *<span class="command"> @event</span>:</i></td></tr>
+<tr><th id="134">134</th><td><i class="doc">	 *</i></td></tr>
+<tr><th id="135">135</th><td><i class="doc">	 * &amp;drm_pending_vblank_event pointer to clean up private events.</i></td></tr>
+<tr><th id="136">136</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="137">137</th><td>	<b>struct</b> <a class="type" href="drm_crtc.h.html#drm_pending_vblank_event" title='drm_pending_vblank_event' data-ref="drm_pending_vblank_event" data-ref-filename="drm_pending_vblank_event">drm_pending_vblank_event</a> *<dfn class="decl field" id="drm_crtc_commit::event" title='drm_crtc_commit::event' data-ref="drm_crtc_commit::event" data-ref-filename="drm_crtc_commit..event">event</dfn>;</td></tr>
+<tr><th id="138">138</th><td></td></tr>
+<tr><th id="139">139</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="140">140</th><td><i class="doc">	 *<span class="command"> @abort</span>_completion:</i></td></tr>
+<tr><th id="141">141</th><td><i class="doc">	 *</i></td></tr>
+<tr><th id="142">142</th><td><i class="doc">	 * A flag that's set after drm_atomic_helper_setup_commit() takes a</i></td></tr>
+<tr><th id="143">143</th><td><i class="doc">	 * second reference for the completion of $drm_crtc_state.event. It's</i></td></tr>
+<tr><th id="144">144</th><td><i class="doc">	 * used by the free code to remove the second reference if commit fails.</i></td></tr>
+<tr><th id="145">145</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="146">146</th><td>	<a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="drm_crtc_commit::abort_completion" title='drm_crtc_commit::abort_completion' data-ref="drm_crtc_commit::abort_completion" data-ref-filename="drm_crtc_commit..abort_completion">abort_completion</dfn>;</td></tr>
+<tr><th id="147">147</th><td>};</td></tr>
+<tr><th id="148">148</th><td></td></tr>
+<tr><th id="149">149</th><td><b>struct</b> <dfn class="type def" id="__drm_planes_state" title='__drm_planes_state' data-ref="__drm_planes_state" data-ref-filename="__drm_planes_state">__drm_planes_state</dfn> {</td></tr>
+<tr><th id="150">150</th><td>	<b>struct</b> <a class="type" href="drm_plane.h.html#drm_plane" title='drm_plane' data-ref="drm_plane" data-ref-filename="drm_plane">drm_plane</a> *<dfn class="decl field" id="__drm_planes_state::ptr" title='__drm_planes_state::ptr' data-ref="__drm_planes_state::ptr" data-ref-filename="__drm_planes_state..ptr">ptr</dfn>;</td></tr>
+<tr><th id="151">151</th><td>	<b>struct</b> <a class="type" href="drm_plane.h.html#drm_plane_state" title='drm_plane_state' data-ref="drm_plane_state" data-ref-filename="drm_plane_state">drm_plane_state</a> *<dfn class="decl field" id="__drm_planes_state::state" title='__drm_planes_state::state' data-ref="__drm_planes_state::state" data-ref-filename="__drm_planes_state..state">state</dfn>, *<dfn class="decl field" id="__drm_planes_state::old_state" title='__drm_planes_state::old_state' data-ref="__drm_planes_state::old_state" data-ref-filename="__drm_planes_state..old_state">old_state</dfn>, *<dfn class="decl field" id="__drm_planes_state::new_state" title='__drm_planes_state::new_state' data-ref="__drm_planes_state::new_state" data-ref-filename="__drm_planes_state..new_state">new_state</dfn>;</td></tr>
+<tr><th id="152">152</th><td>};</td></tr>
+<tr><th id="153">153</th><td></td></tr>
+<tr><th id="154">154</th><td><b>struct</b> <dfn class="type def" id="__drm_crtcs_state" title='__drm_crtcs_state' data-ref="__drm_crtcs_state" data-ref-filename="__drm_crtcs_state">__drm_crtcs_state</dfn> {</td></tr>
+<tr><th id="155">155</th><td>	<b>struct</b> <a class="type" href="drm_crtc.h.html#drm_crtc" title='drm_crtc' data-ref="drm_crtc" data-ref-filename="drm_crtc">drm_crtc</a> *<dfn class="decl field" id="__drm_crtcs_state::ptr" title='__drm_crtcs_state::ptr' data-ref="__drm_crtcs_state::ptr" data-ref-filename="__drm_crtcs_state..ptr">ptr</dfn>;</td></tr>
+<tr><th id="156">156</th><td>	<b>struct</b> <a class="type" href="drm_crtc.h.html#drm_crtc_state" title='drm_crtc_state' data-ref="drm_crtc_state" data-ref-filename="drm_crtc_state">drm_crtc_state</a> *<dfn class="decl field" id="__drm_crtcs_state::state" title='__drm_crtcs_state::state' data-ref="__drm_crtcs_state::state" data-ref-filename="__drm_crtcs_state..state">state</dfn>, *<dfn class="decl field" id="__drm_crtcs_state::old_state" title='__drm_crtcs_state::old_state' data-ref="__drm_crtcs_state::old_state" data-ref-filename="__drm_crtcs_state..old_state">old_state</dfn>, *<dfn class="decl field" id="__drm_crtcs_state::new_state" title='__drm_crtcs_state::new_state' data-ref="__drm_crtcs_state::new_state" data-ref-filename="__drm_crtcs_state..new_state">new_state</dfn>;</td></tr>
+<tr><th id="157">157</th><td></td></tr>
+<tr><th id="158">158</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="159">159</th><td><i class="doc">	 *<span class="command"> @commit</span>:</i></td></tr>
+<tr><th id="160">160</th><td><i class="doc">	 *</i></td></tr>
+<tr><th id="161">161</th><td><i class="doc">	 * A reference to the CRTC commit object that is kept for use by</i></td></tr>
+<tr><th id="162">162</th><td><i class="doc">	 * drm_atomic_helper_wait_for_flip_done() after</i></td></tr>
+<tr><th id="163">163</th><td><i class="doc">	 * drm_atomic_helper_commit_hw_done() is called. This ensures that a</i></td></tr>
+<tr><th id="164">164</th><td><i class="doc">	 * concurrent commit won't free a commit object that is still in use.</i></td></tr>
+<tr><th id="165">165</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="166">166</th><td>	<b>struct</b> <a class="type" href="#drm_crtc_commit" title='drm_crtc_commit' data-ref="drm_crtc_commit" data-ref-filename="drm_crtc_commit">drm_crtc_commit</a> *<dfn class="decl field" id="__drm_crtcs_state::commit" title='__drm_crtcs_state::commit' data-ref="__drm_crtcs_state::commit" data-ref-filename="__drm_crtcs_state..commit">commit</dfn>;</td></tr>
+<tr><th id="167">167</th><td></td></tr>
+<tr><th id="168">168</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#s32" title='s32' data-type='__s32' data-ref="s32" data-ref-filename="s32">s32</a> <a class="macro" href="../linux/compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *<dfn class="decl field" id="__drm_crtcs_state::out_fence_ptr" title='__drm_crtcs_state::out_fence_ptr' data-ref="__drm_crtcs_state::out_fence_ptr" data-ref-filename="__drm_crtcs_state..out_fence_ptr">out_fence_ptr</dfn>;</td></tr>
+<tr><th id="169">169</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="decl field" id="__drm_crtcs_state::last_vblank_count" title='__drm_crtcs_state::last_vblank_count' data-ref="__drm_crtcs_state::last_vblank_count" data-ref-filename="__drm_crtcs_state..last_vblank_count">last_vblank_count</dfn>;</td></tr>
+<tr><th id="170">170</th><td>};</td></tr>
+<tr><th id="171">171</th><td></td></tr>
+<tr><th id="172">172</th><td><b>struct</b> <dfn class="type def" id="__drm_connnectors_state" title='__drm_connnectors_state' data-ref="__drm_connnectors_state" data-ref-filename="__drm_connnectors_state">__drm_connnectors_state</dfn> {</td></tr>
+<tr><th id="173">173</th><td>	<b>struct</b> <a class="type" href="drm_connector.h.html#drm_connector" title='drm_connector' data-ref="drm_connector" data-ref-filename="drm_connector">drm_connector</a> *<dfn class="decl field" id="__drm_connnectors_state::ptr" title='__drm_connnectors_state::ptr' data-ref="__drm_connnectors_state::ptr" data-ref-filename="__drm_connnectors_state..ptr">ptr</dfn>;</td></tr>
+<tr><th id="174">174</th><td>	<b>struct</b> <a class="type" href="drm_connector.h.html#drm_connector_state" title='drm_connector_state' data-ref="drm_connector_state" data-ref-filename="drm_connector_state">drm_connector_state</a> *<dfn class="decl field" id="__drm_connnectors_state::state" title='__drm_connnectors_state::state' data-ref="__drm_connnectors_state::state" data-ref-filename="__drm_connnectors_state..state">state</dfn>, *<dfn class="decl field" id="__drm_connnectors_state::old_state" title='__drm_connnectors_state::old_state' data-ref="__drm_connnectors_state::old_state" data-ref-filename="__drm_connnectors_state..old_state">old_state</dfn>, *<dfn class="decl field" id="__drm_connnectors_state::new_state" title='__drm_connnectors_state::new_state' data-ref="__drm_connnectors_state::new_state" data-ref-filename="__drm_connnectors_state..new_state">new_state</dfn>;</td></tr>
+<tr><th id="175">175</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="176">176</th><td><i class="doc">	 *<span class="command"> @out</span>_fence_ptr:</i></td></tr>
+<tr><th id="177">177</th><td><i class="doc">	 *</i></td></tr>
+<tr><th id="178">178</th><td><i class="doc">	 * User-provided pointer which the kernel uses to return a sync_file</i></td></tr>
+<tr><th id="179">179</th><td><i class="doc">	 * file descriptor. Used by writeback connectors to signal completion of</i></td></tr>
+<tr><th id="180">180</th><td><i class="doc">	 * the writeback.</i></td></tr>
+<tr><th id="181">181</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="182">182</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#s32" title='s32' data-type='__s32' data-ref="s32" data-ref-filename="s32">s32</a> <a class="macro" href="../linux/compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *<dfn class="decl field" id="__drm_connnectors_state::out_fence_ptr" title='__drm_connnectors_state::out_fence_ptr' data-ref="__drm_connnectors_state::out_fence_ptr" data-ref-filename="__drm_connnectors_state..out_fence_ptr">out_fence_ptr</dfn>;</td></tr>
+<tr><th id="183">183</th><td>};</td></tr>
+<tr><th id="184">184</th><td></td></tr>
+<tr><th id="185">185</th><td><b>struct</b> <a class="type" href="#drm_private_obj" title='drm_private_obj' data-ref="drm_private_obj" data-ref-filename="drm_private_obj">drm_private_obj</a>;</td></tr>
+<tr><th id="186">186</th><td><b>struct</b> <a class="type" href="#drm_private_state" title='drm_private_state' data-ref="drm_private_state" data-ref-filename="drm_private_state">drm_private_state</a>;</td></tr>
+<tr><th id="187">187</th><td></td></tr>
+<tr><th id="188">188</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="189">189</th><td><i class="doc"> * struct drm_private_state_funcs - atomic state functions for private objects</i></td></tr>
+<tr><th id="190">190</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="191">191</th><td><i class="doc"> * These hooks are used by atomic helpers to create, swap and destroy states of</i></td></tr>
+<tr><th id="192">192</th><td><i class="doc"> * private objects. The structure itself is used as a vtable to identify the</i></td></tr>
+<tr><th id="193">193</th><td><i class="doc"> * associated private object type. Each private object type that needs to be</i></td></tr>
+<tr><th id="194">194</th><td><i class="doc"> * added to the atomic states is expected to have an implementation of these</i></td></tr>
+<tr><th id="195">195</th><td><i class="doc"> * hooks and pass a pointer to its drm_private_state_funcs struct to</i></td></tr>
+<tr><th id="196">196</th><td><i class="doc"> * drm_atomic_get_private_obj_state().</i></td></tr>
+<tr><th id="197">197</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="198">198</th><td><b>struct</b> <dfn class="type def" id="drm_private_state_funcs" title='drm_private_state_funcs' data-ref="drm_private_state_funcs" data-ref-filename="drm_private_state_funcs">drm_private_state_funcs</dfn> {</td></tr>
+<tr><th id="199">199</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="200">200</th><td><i class="doc">	 *<span class="command"> @atomic</span>_duplicate_state:</i></td></tr>
+<tr><th id="201">201</th><td><i class="doc">	 *</i></td></tr>
+<tr><th id="202">202</th><td><i class="doc">	 * Duplicate the current state of the private object and return it. It</i></td></tr>
+<tr><th id="203">203</th><td><i class="doc">	 * is an error to call this before obj-&gt;state has been initialized.</i></td></tr>
+<tr><th id="204">204</th><td><i class="doc">	 *</i></td></tr>
+<tr><th id="205">205</th><td><i class="doc">	 * RETURNS:</i></td></tr>
+<tr><th id="206">206</th><td><i class="doc">	 *</i></td></tr>
+<tr><th id="207">207</th><td><i class="doc">	 * Duplicated atomic state or NULL when obj-&gt;state is not</i></td></tr>
+<tr><th id="208">208</th><td><i class="doc">	 * initialized or allocation failed.</i></td></tr>
+<tr><th id="209">209</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="210">210</th><td>	<b>struct</b> <a class="type" href="#drm_private_state" title='drm_private_state' data-ref="drm_private_state" data-ref-filename="drm_private_state">drm_private_state</a> *(*<dfn class="decl field" id="drm_private_state_funcs::atomic_duplicate_state" title='drm_private_state_funcs::atomic_duplicate_state' data-ref="drm_private_state_funcs::atomic_duplicate_state" data-ref-filename="drm_private_state_funcs..atomic_duplicate_state">atomic_duplicate_state</dfn>)(<b>struct</b> <a class="type" href="#drm_private_obj" title='drm_private_obj' data-ref="drm_private_obj" data-ref-filename="drm_private_obj">drm_private_obj</a> *<dfn class="local col1 decl" id="1obj" title='obj' data-type='struct drm_private_obj *' data-ref="1obj" data-ref-filename="1obj">obj</dfn>);</td></tr>
+<tr><th id="211">211</th><td></td></tr>
+<tr><th id="212">212</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="213">213</th><td><i class="doc">	 *<span class="command"> @atomic</span>_destroy_state:</i></td></tr>
+<tr><th id="214">214</th><td><i class="doc">	 *</i></td></tr>
+<tr><th id="215">215</th><td><i class="doc">	 * Frees the private object state created with<span class="command"> @atomic</span>_duplicate_state.</i></td></tr>
+<tr><th id="216">216</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="217">217</th><td>	<em>void</em> (*<dfn class="decl field" id="drm_private_state_funcs::atomic_destroy_state" title='drm_private_state_funcs::atomic_destroy_state' data-ref="drm_private_state_funcs::atomic_destroy_state" data-ref-filename="drm_private_state_funcs..atomic_destroy_state">atomic_destroy_state</dfn>)(<b>struct</b> <a class="type" href="#drm_private_obj" title='drm_private_obj' data-ref="drm_private_obj" data-ref-filename="drm_private_obj">drm_private_obj</a> *<dfn class="local col2 decl" id="2obj" title='obj' data-type='struct drm_private_obj *' data-ref="2obj" data-ref-filename="2obj">obj</dfn>,</td></tr>
+<tr><th id="218">218</th><td>				     <b>struct</b> <a class="type" href="#drm_private_state" title='drm_private_state' data-ref="drm_private_state" data-ref-filename="drm_private_state">drm_private_state</a> *<dfn class="local col3 decl" id="3state" title='state' data-type='struct drm_private_state *' data-ref="3state" data-ref-filename="3state">state</dfn>);</td></tr>
+<tr><th id="219">219</th><td>};</td></tr>
+<tr><th id="220">220</th><td></td></tr>
+<tr><th id="221">221</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="222">222</th><td><i class="doc"> * struct drm_private_obj - base struct for driver private atomic object</i></td></tr>
+<tr><th id="223">223</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="224">224</th><td><i class="doc"> * A driver private object is initialized by calling</i></td></tr>
+<tr><th id="225">225</th><td><i class="doc"> * drm_atomic_private_obj_init() and cleaned up by calling</i></td></tr>
+<tr><th id="226">226</th><td><i class="doc"> * drm_atomic_private_obj_fini().</i></td></tr>
+<tr><th id="227">227</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="228">228</th><td><i class="doc"> * Currently only tracks the state update functions and the opaque driver</i></td></tr>
+<tr><th id="229">229</th><td><i class="doc"> * private state itself, but in the future might also track which</i></td></tr>
+<tr><th id="230">230</th><td><i class="doc"> * &amp;drm_modeset_lock is required to duplicate and update this object's state.</i></td></tr>
+<tr><th id="231">231</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="232">232</th><td><i class="doc"> * All private objects must be initialized before the DRM device they are</i></td></tr>
+<tr><th id="233">233</th><td><i class="doc"> * attached to is registered to the DRM subsystem (call to drm_dev_register())</i></td></tr>
+<tr><th id="234">234</th><td><i class="doc"> * and should stay around until this DRM device is unregistered (call to</i></td></tr>
+<tr><th id="235">235</th><td><i class="doc"> * drm_dev_unregister()). In other words, private objects lifetime is tied</i></td></tr>
+<tr><th id="236">236</th><td><i class="doc"> * to the DRM device lifetime. This implies that:</i></td></tr>
+<tr><th id="237">237</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="238">238</th><td><i class="doc"> * 1/ all calls to drm_atomic_private_obj_init() must be done before calling</i></td></tr>
+<tr><th id="239">239</th><td><i class="doc"> *    drm_dev_register()</i></td></tr>
+<tr><th id="240">240</th><td><i class="doc"> * 2/ all calls to drm_atomic_private_obj_fini() must be done after calling</i></td></tr>
+<tr><th id="241">241</th><td><i class="doc"> *    drm_dev_unregister()</i></td></tr>
+<tr><th id="242">242</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="243">243</th><td><b>struct</b> <dfn class="type def" id="drm_private_obj" title='drm_private_obj' data-ref="drm_private_obj" data-ref-filename="drm_private_obj">drm_private_obj</dfn> {</td></tr>
+<tr><th id="244">244</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="245">245</th><td><i class="doc">	 *<span class="command"> @head</span>: List entry used to attach a private object to a &amp;drm_device</i></td></tr>
+<tr><th id="246">246</th><td><i class="doc">	 * (queued to &amp;drm_mode_config.privobj_list).</i></td></tr>
+<tr><th id="247">247</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="248">248</th><td>	<b>struct</b> <a class="type" href="../linux/types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="drm_private_obj::head" title='drm_private_obj::head' data-ref="drm_private_obj::head" data-ref-filename="drm_private_obj..head">head</dfn>;</td></tr>
+<tr><th id="249">249</th><td></td></tr>
+<tr><th id="250">250</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="251">251</th><td><i class="doc">	 *<span class="command"> @lock</span>: Modeset lock to protect the state object.</i></td></tr>
+<tr><th id="252">252</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="253">253</th><td>	<b>struct</b> <a class="type" href="drm_modeset_lock.h.html#drm_modeset_lock" title='drm_modeset_lock' data-ref="drm_modeset_lock" data-ref-filename="drm_modeset_lock">drm_modeset_lock</a> <dfn class="decl field" id="drm_private_obj::lock" title='drm_private_obj::lock' data-ref="drm_private_obj::lock" data-ref-filename="drm_private_obj..lock">lock</dfn>;</td></tr>
+<tr><th id="254">254</th><td></td></tr>
+<tr><th id="255">255</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="256">256</th><td><i class="doc">	 *<span class="command"> @state</span>: Current atomic state for this driver private object.</i></td></tr>
+<tr><th id="257">257</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="258">258</th><td>	<b>struct</b> <a class="type" href="#drm_private_state" title='drm_private_state' data-ref="drm_private_state" data-ref-filename="drm_private_state">drm_private_state</a> *<dfn class="decl field" id="drm_private_obj::state" title='drm_private_obj::state' data-ref="drm_private_obj::state" data-ref-filename="drm_private_obj..state">state</dfn>;</td></tr>
+<tr><th id="259">259</th><td></td></tr>
+<tr><th id="260">260</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="261">261</th><td><i class="doc">	 *<span class="command"> @funcs</span>:</i></td></tr>
+<tr><th id="262">262</th><td><i class="doc">	 *</i></td></tr>
+<tr><th id="263">263</th><td><i class="doc">	 * Functions to manipulate the state of this driver private object, see</i></td></tr>
+<tr><th id="264">264</th><td><i class="doc">	 * &amp;drm_private_state_funcs.</i></td></tr>
+<tr><th id="265">265</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="266">266</th><td>	<em>const</em> <b>struct</b> <a class="type" href="#drm_private_state_funcs" title='drm_private_state_funcs' data-ref="drm_private_state_funcs" data-ref-filename="drm_private_state_funcs">drm_private_state_funcs</a> *<dfn class="decl field" id="drm_private_obj::funcs" title='drm_private_obj::funcs' data-ref="drm_private_obj::funcs" data-ref-filename="drm_private_obj..funcs">funcs</dfn>;</td></tr>
+<tr><th id="267">267</th><td>};</td></tr>
+<tr><th id="268">268</th><td></td></tr>
+<tr><th id="269">269</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="270">270</th><td><i class="doc"> * drm_for_each_privobj() - private object iterator</i></td></tr>
+<tr><th id="271">271</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="272">272</th><td><i class="doc"> *<span class="command"> @privobj</span>: pointer to the current private object. Updated after each</i></td></tr>
+<tr><th id="273">273</th><td><i class="doc"> *	     iteration</i></td></tr>
+<tr><th id="274">274</th><td><i class="doc"> * <span class="command">@dev</span>:<span class="verb"> the DRM device we want get private objects from</span></i></td></tr>
+<tr><th id="275">275</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="276">276</th><td><i class="doc"> * Allows one to iterate over all private objects attached to <span class="command">@dev</span></i></td></tr>
+<tr><th id="277">277</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="278">278</th><td><u>#define <dfn class="macro" id="_M/drm_for_each_privobj" data-ref="_M/drm_for_each_privobj">drm_for_each_privobj</dfn>(privobj, dev) \</u></td></tr>
+<tr><th id="279">279</th><td><u>	list_for_each_entry(privobj, &amp;(dev)-&gt;mode_config.privobj_list, head)</u></td></tr>
+<tr><th id="280">280</th><td></td></tr>
+<tr><th id="281">281</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="282">282</th><td><i class="doc"> * struct drm_private_state - base struct for driver private object state</i></td></tr>
+<tr><th id="283">283</th><td><i class="doc"> *<span class="command"> @state</span>: backpointer to global drm_atomic_state</i></td></tr>
+<tr><th id="284">284</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="285">285</th><td><i class="doc"> * Currently only contains a backpointer to the overall atomic update, but in</i></td></tr>
+<tr><th id="286">286</th><td><i class="doc"> * the future also might hold synchronization information similar to e.g.</i></td></tr>
+<tr><th id="287">287</th><td><i class="doc"> * &amp;drm_crtc.commit.</i></td></tr>
+<tr><th id="288">288</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="289">289</th><td><b>struct</b> <dfn class="type def" id="drm_private_state" title='drm_private_state' data-ref="drm_private_state" data-ref-filename="drm_private_state">drm_private_state</dfn> {</td></tr>
+<tr><th id="290">290</th><td>	<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="decl field" id="drm_private_state::state" title='drm_private_state::state' data-ref="drm_private_state::state" data-ref-filename="drm_private_state..state">state</dfn>;</td></tr>
+<tr><th id="291">291</th><td>};</td></tr>
+<tr><th id="292">292</th><td></td></tr>
+<tr><th id="293">293</th><td><b>struct</b> <dfn class="type def" id="__drm_private_objs_state" title='__drm_private_objs_state' data-ref="__drm_private_objs_state" data-ref-filename="__drm_private_objs_state">__drm_private_objs_state</dfn> {</td></tr>
+<tr><th id="294">294</th><td>	<b>struct</b> <a class="type" href="#drm_private_obj" title='drm_private_obj' data-ref="drm_private_obj" data-ref-filename="drm_private_obj">drm_private_obj</a> *<dfn class="decl field" id="__drm_private_objs_state::ptr" title='__drm_private_objs_state::ptr' data-ref="__drm_private_objs_state::ptr" data-ref-filename="__drm_private_objs_state..ptr">ptr</dfn>;</td></tr>
+<tr><th id="295">295</th><td>	<b>struct</b> <a class="type" href="#drm_private_state" title='drm_private_state' data-ref="drm_private_state" data-ref-filename="drm_private_state">drm_private_state</a> *<dfn class="decl field" id="__drm_private_objs_state::state" title='__drm_private_objs_state::state' data-ref="__drm_private_objs_state::state" data-ref-filename="__drm_private_objs_state..state">state</dfn>, *<dfn class="decl field" id="__drm_private_objs_state::old_state" title='__drm_private_objs_state::old_state' data-ref="__drm_private_objs_state::old_state" data-ref-filename="__drm_private_objs_state..old_state">old_state</dfn>, *<dfn class="decl field" id="__drm_private_objs_state::new_state" title='__drm_private_objs_state::new_state' data-ref="__drm_private_objs_state::new_state" data-ref-filename="__drm_private_objs_state..new_state">new_state</dfn>;</td></tr>
+<tr><th id="296">296</th><td>};</td></tr>
+<tr><th id="297">297</th><td></td></tr>
+<tr><th id="298">298</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="299">299</th><td><i class="doc"> * struct drm_atomic_state - the global state object for atomic updates</i></td></tr>
+<tr><th id="300">300</th><td><i class="doc"> * <span class="command">@ref</span>:<span class="verb"> count of all references to this state (will not be freed until zero)</span></i></td></tr>
+<tr><th id="301">301</th><td><i class="doc"> * <span class="command">@dev</span>:<span class="verb"> parent DRM device</span></i></td></tr>
+<tr><th id="302">302</th><td><i class="doc"> *<span class="command"> @legacy</span>_cursor_update: hint to enforce legacy cursor IOCTL semantics</i></td></tr>
+<tr><th id="303">303</th><td><i class="doc"> *<span class="command"> @async</span>_update: hint for asynchronous plane update</i></td></tr>
+<tr><th id="304">304</th><td><i class="doc"> *<span class="command"> @planes</span>: pointer to array of structures with per-plane data</i></td></tr>
+<tr><th id="305">305</th><td><i class="doc"> *<span class="command"> @crtcs</span>: pointer to array of CRTC pointers</i></td></tr>
+<tr><th id="306">306</th><td><i class="doc"> * <span class="command">@num_</span><span class="verb">connector: size of the @connectors and @connector_states arrays</span></i></td></tr>
+<tr><th id="307">307</th><td><i class="doc"> *<span class="command"> @connectors</span>: pointer to array of structures with per-connector data</i></td></tr>
+<tr><th id="308">308</th><td><i class="doc"> * <span class="command">@num_</span><span class="verb">private_objs: size of the @private_objs array</span></i></td></tr>
+<tr><th id="309">309</th><td><i class="doc"> *<span class="command"> @private</span>_objs: pointer to array of private object pointers</i></td></tr>
+<tr><th id="310">310</th><td><i class="doc"> *<span class="command"> @acquire</span>_ctx: acquire context for this atomic modeset state update</i></td></tr>
+<tr><th id="311">311</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="312">312</th><td><i class="doc"> * States are added to an atomic update by calling drm_atomic_get_crtc_state(),</i></td></tr>
+<tr><th id="313">313</th><td><i class="doc"> * drm_atomic_get_plane_state(), drm_atomic_get_connector_state(), or for</i></td></tr>
+<tr><th id="314">314</th><td><i class="doc"> * private state structures, drm_atomic_get_private_obj_state().</i></td></tr>
+<tr><th id="315">315</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="316">316</th><td><b>struct</b> <dfn class="type def" id="drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</dfn> {</td></tr>
+<tr><th id="317">317</th><td>	<b>struct</b> <a class="type" href="../linux/kref.h.html#kref" title='kref' data-ref="kref" data-ref-filename="kref">kref</a> <dfn class="decl field" id="drm_atomic_state::ref" title='drm_atomic_state::ref' data-ref="drm_atomic_state::ref" data-ref-filename="drm_atomic_state..ref">ref</dfn>;</td></tr>
+<tr><th id="318">318</th><td></td></tr>
+<tr><th id="319">319</th><td>	<b>struct</b> <a class="type" href="drm_device.h.html#drm_device" title='drm_device' data-ref="drm_device" data-ref-filename="drm_device">drm_device</a> *<dfn class="decl field" id="drm_atomic_state::dev" title='drm_atomic_state::dev' data-ref="drm_atomic_state::dev" data-ref-filename="drm_atomic_state..dev">dev</dfn>;</td></tr>
+<tr><th id="320">320</th><td></td></tr>
+<tr><th id="321">321</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="322">322</th><td><i class="doc">	 *<span class="command"> @allow</span>_modeset:</i></td></tr>
+<tr><th id="323">323</th><td><i class="doc">	 *</i></td></tr>
+<tr><th id="324">324</th><td><i class="doc">	 * Allow full modeset. This is used by the ATOMIC IOCTL handler to</i></td></tr>
+<tr><th id="325">325</th><td><i class="doc">	 * implement the DRM_MODE_ATOMIC_ALLOW_MODESET flag. Drivers should</i></td></tr>
+<tr><th id="326">326</th><td><i class="doc">	 * never consult this flag, instead looking at the output of</i></td></tr>
+<tr><th id="327">327</th><td><i class="doc">	 * drm_atomic_crtc_needs_modeset().</i></td></tr>
+<tr><th id="328">328</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="329">329</th><td>	<a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="drm_atomic_state::allow_modeset" title='drm_atomic_state::allow_modeset' data-ref="drm_atomic_state::allow_modeset" data-ref-filename="drm_atomic_state..allow_modeset">allow_modeset</dfn> : <var>1</var>;</td></tr>
+<tr><th id="330">330</th><td>	<a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="drm_atomic_state::legacy_cursor_update" title='drm_atomic_state::legacy_cursor_update' data-ref="drm_atomic_state::legacy_cursor_update" data-ref-filename="drm_atomic_state..legacy_cursor_update">legacy_cursor_update</dfn> : <var>1</var>;</td></tr>
+<tr><th id="331">331</th><td>	<a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="drm_atomic_state::async_update" title='drm_atomic_state::async_update' data-ref="drm_atomic_state::async_update" data-ref-filename="drm_atomic_state..async_update">async_update</dfn> : <var>1</var>;</td></tr>
+<tr><th id="332">332</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="333">333</th><td><i class="doc">	 *<span class="command"> @duplicated</span>:</i></td></tr>
+<tr><th id="334">334</th><td><i class="doc">	 *</i></td></tr>
+<tr><th id="335">335</th><td><i class="doc">	 * Indicates whether or not this atomic state was duplicated using</i></td></tr>
+<tr><th id="336">336</th><td><i class="doc">	 * drm_atomic_helper_duplicate_state(). Drivers and atomic helpers</i></td></tr>
+<tr><th id="337">337</th><td><i class="doc">	 * should use this to fixup normal  inconsistencies in duplicated</i></td></tr>
+<tr><th id="338">338</th><td><i class="doc">	 * states.</i></td></tr>
+<tr><th id="339">339</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="340">340</th><td>	<a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="drm_atomic_state::duplicated" title='drm_atomic_state::duplicated' data-ref="drm_atomic_state::duplicated" data-ref-filename="drm_atomic_state..duplicated">duplicated</dfn> : <var>1</var>;</td></tr>
+<tr><th id="341">341</th><td>	<b>struct</b> <a class="type" href="#__drm_planes_state" title='__drm_planes_state' data-ref="__drm_planes_state" data-ref-filename="__drm_planes_state">__drm_planes_state</a> *<dfn class="decl field" id="drm_atomic_state::planes" title='drm_atomic_state::planes' data-ref="drm_atomic_state::planes" data-ref-filename="drm_atomic_state..planes">planes</dfn>;</td></tr>
+<tr><th id="342">342</th><td>	<b>struct</b> <a class="type" href="#__drm_crtcs_state" title='__drm_crtcs_state' data-ref="__drm_crtcs_state" data-ref-filename="__drm_crtcs_state">__drm_crtcs_state</a> *<dfn class="decl field" id="drm_atomic_state::crtcs" title='drm_atomic_state::crtcs' data-ref="drm_atomic_state::crtcs" data-ref-filename="drm_atomic_state..crtcs">crtcs</dfn>;</td></tr>
+<tr><th id="343">343</th><td>	<em>int</em> <dfn class="decl field" id="drm_atomic_state::num_connector" title='drm_atomic_state::num_connector' data-ref="drm_atomic_state::num_connector" data-ref-filename="drm_atomic_state..num_connector">num_connector</dfn>;</td></tr>
+<tr><th id="344">344</th><td>	<b>struct</b> <a class="type" href="#__drm_connnectors_state" title='__drm_connnectors_state' data-ref="__drm_connnectors_state" data-ref-filename="__drm_connnectors_state">__drm_connnectors_state</a> *<dfn class="decl field" id="drm_atomic_state::connectors" title='drm_atomic_state::connectors' data-ref="drm_atomic_state::connectors" data-ref-filename="drm_atomic_state..connectors">connectors</dfn>;</td></tr>
+<tr><th id="345">345</th><td>	<em>int</em> <dfn class="decl field" id="drm_atomic_state::num_private_objs" title='drm_atomic_state::num_private_objs' data-ref="drm_atomic_state::num_private_objs" data-ref-filename="drm_atomic_state..num_private_objs">num_private_objs</dfn>;</td></tr>
+<tr><th id="346">346</th><td>	<b>struct</b> <a class="type" href="#__drm_private_objs_state" title='__drm_private_objs_state' data-ref="__drm_private_objs_state" data-ref-filename="__drm_private_objs_state">__drm_private_objs_state</a> *<dfn class="decl field" id="drm_atomic_state::private_objs" title='drm_atomic_state::private_objs' data-ref="drm_atomic_state::private_objs" data-ref-filename="drm_atomic_state..private_objs">private_objs</dfn>;</td></tr>
+<tr><th id="347">347</th><td></td></tr>
+<tr><th id="348">348</th><td>	<b>struct</b> <a class="type" href="drm_modeset_lock.h.html#drm_modeset_acquire_ctx" title='drm_modeset_acquire_ctx' data-ref="drm_modeset_acquire_ctx" data-ref-filename="drm_modeset_acquire_ctx">drm_modeset_acquire_ctx</a> *<dfn class="decl field" id="drm_atomic_state::acquire_ctx" title='drm_atomic_state::acquire_ctx' data-ref="drm_atomic_state::acquire_ctx" data-ref-filename="drm_atomic_state..acquire_ctx">acquire_ctx</dfn>;</td></tr>
+<tr><th id="349">349</th><td></td></tr>
+<tr><th id="350">350</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="351">351</th><td><i class="doc">	 *<span class="command"> @fake</span>_commit:</i></td></tr>
+<tr><th id="352">352</th><td><i class="doc">	 *</i></td></tr>
+<tr><th id="353">353</th><td><i class="doc">	 * Used for signaling unbound planes/connectors.</i></td></tr>
+<tr><th id="354">354</th><td><i class="doc">	 * When a connector or plane is not bound to any CRTC, it's still important</i></td></tr>
+<tr><th id="355">355</th><td><i class="doc">	 * to preserve linearity to prevent the atomic states from being freed to early.</i></td></tr>
+<tr><th id="356">356</th><td><i class="doc">	 *</i></td></tr>
+<tr><th id="357">357</th><td><i class="doc">	 * This commit (if set) is not bound to any crtc, but will be completed when</i></td></tr>
+<tr><th id="358">358</th><td><i class="doc">	 * drm_atomic_helper_commit_hw_done() is called.</i></td></tr>
+<tr><th id="359">359</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="360">360</th><td>	<b>struct</b> <a class="type" href="#drm_crtc_commit" title='drm_crtc_commit' data-ref="drm_crtc_commit" data-ref-filename="drm_crtc_commit">drm_crtc_commit</a> *<dfn class="decl field" id="drm_atomic_state::fake_commit" title='drm_atomic_state::fake_commit' data-ref="drm_atomic_state::fake_commit" data-ref-filename="drm_atomic_state..fake_commit">fake_commit</dfn>;</td></tr>
+<tr><th id="361">361</th><td></td></tr>
+<tr><th id="362">362</th><td>	<i class="doc">/**</i></td></tr>
+<tr><th id="363">363</th><td><i class="doc">	 *<span class="command"> @commit</span>_work:</i></td></tr>
+<tr><th id="364">364</th><td><i class="doc">	 *</i></td></tr>
+<tr><th id="365">365</th><td><i class="doc">	 * Work item which can be used by the driver or helpers to execute the</i></td></tr>
+<tr><th id="366">366</th><td><i class="doc">	 * commit without blocking.</i></td></tr>
+<tr><th id="367">367</th><td><i class="doc">	 */</i></td></tr>
+<tr><th id="368">368</th><td>	<b>struct</b> <a class="type" href="../linux/workqueue.h.html#work_struct" title='work_struct' data-ref="work_struct" data-ref-filename="work_struct">work_struct</a> <dfn class="decl field" id="drm_atomic_state::commit_work" title='drm_atomic_state::commit_work' data-ref="drm_atomic_state::commit_work" data-ref-filename="drm_atomic_state..commit_work">commit_work</dfn>;</td></tr>
+<tr><th id="369">369</th><td>};</td></tr>
+<tr><th id="370">370</th><td></td></tr>
+<tr><th id="371">371</th><td><em>void</em> <a class="decl fn" href="../../drivers/gpu/drm/drm_atomic.c.html#__drm_crtc_commit_free" title='__drm_crtc_commit_free' data-ref="__drm_crtc_commit_free" data-ref-filename="__drm_crtc_commit_free" id="__drm_crtc_commit_free">__drm_crtc_commit_free</a>(<b>struct</b> <a class="type" href="../linux/kref.h.html#kref" title='kref' data-ref="kref" data-ref-filename="kref">kref</a> *<dfn class="local col4 decl" id="4kref" title='kref' data-type='struct kref *' data-ref="4kref" data-ref-filename="4kref">kref</dfn>);</td></tr>
+<tr><th id="372">372</th><td></td></tr>
+<tr><th id="373">373</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="374">374</th><td><i class="doc"> * drm_crtc_commit_get - acquire a reference to the CRTC commit</i></td></tr>
+<tr><th id="375">375</th><td><i class="doc"> *<span class="command"> @commit</span>: CRTC commit</i></td></tr>
+<tr><th id="376">376</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="377">377</th><td><i class="doc"> * Increases the reference of<span class="command"> @commit</span>.</i></td></tr>
+<tr><th id="378">378</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="379">379</th><td><i class="doc"> * Returns:</i></td></tr>
+<tr><th id="380">380</th><td><i class="doc"> * The pointer to<span class="command"> @commit</span>, with reference increased.</i></td></tr>
+<tr><th id="381">381</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="382">382</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="#drm_crtc_commit" title='drm_crtc_commit' data-ref="drm_crtc_commit" data-ref-filename="drm_crtc_commit">drm_crtc_commit</a> *<dfn class="decl def fn" id="drm_crtc_commit_get" title='drm_crtc_commit_get' data-ref="drm_crtc_commit_get" data-ref-filename="drm_crtc_commit_get">drm_crtc_commit_get</dfn>(<b>struct</b> <a class="type" href="#drm_crtc_commit" title='drm_crtc_commit' data-ref="drm_crtc_commit" data-ref-filename="drm_crtc_commit">drm_crtc_commit</a> *<dfn class="local col5 decl" id="5commit" title='commit' data-type='struct drm_crtc_commit *' data-ref="5commit" data-ref-filename="5commit">commit</dfn>)</td></tr>
+<tr><th id="383">383</th><td>{</td></tr>
+<tr><th id="384">384</th><td>	<a class="ref fn" href="../linux/kref.h.html#kref_get" title='kref_get' data-ref="kref_get" data-ref-filename="kref_get">kref_get</a>(&amp;<a class="local col5 ref" href="#5commit" title='commit' data-ref="5commit" data-ref-filename="5commit">commit</a>-&gt;<a class="ref field" href="#drm_crtc_commit::ref" title='drm_crtc_commit::ref' data-ref="drm_crtc_commit::ref" data-ref-filename="drm_crtc_commit..ref">ref</a>);</td></tr>
+<tr><th id="385">385</th><td>	<b>return</b> <a class="local col5 ref" href="#5commit" title='commit' data-ref="5commit" data-ref-filename="5commit">commit</a>;</td></tr>
+<tr><th id="386">386</th><td>}</td></tr>
+<tr><th id="387">387</th><td></td></tr>
+<tr><th id="388">388</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="389">389</th><td><i class="doc"> * drm_crtc_commit_put - release a reference to the CRTC commmit</i></td></tr>
+<tr><th id="390">390</th><td><i class="doc"> *<span class="command"> @commit</span>: CRTC commit</i></td></tr>
+<tr><th id="391">391</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="392">392</th><td><i class="doc"> * This releases a reference to<span class="command"> @commit</span> which is freed after removing the</i></td></tr>
+<tr><th id="393">393</th><td><i class="doc"> * final reference. No locking required and callable from any context.</i></td></tr>
+<tr><th id="394">394</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="395">395</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="drm_crtc_commit_put" title='drm_crtc_commit_put' data-ref="drm_crtc_commit_put" data-ref-filename="drm_crtc_commit_put">drm_crtc_commit_put</dfn>(<b>struct</b> <a class="type" href="#drm_crtc_commit" title='drm_crtc_commit' data-ref="drm_crtc_commit" data-ref-filename="drm_crtc_commit">drm_crtc_commit</a> *<dfn class="local col6 decl" id="6commit" title='commit' data-type='struct drm_crtc_commit *' data-ref="6commit" data-ref-filename="6commit">commit</dfn>)</td></tr>
+<tr><th id="396">396</th><td>{</td></tr>
+<tr><th id="397">397</th><td>	<a class="ref fn" href="../linux/kref.h.html#kref_put" title='kref_put' data-ref="kref_put" data-ref-filename="kref_put">kref_put</a>(&amp;<a class="local col6 ref" href="#6commit" title='commit' data-ref="6commit" data-ref-filename="6commit">commit</a>-&gt;<a class="ref field" href="#drm_crtc_commit::ref" title='drm_crtc_commit::ref' data-ref="drm_crtc_commit::ref" data-ref-filename="drm_crtc_commit..ref">ref</a>, <a class="ref fn" href="../../drivers/gpu/drm/drm_atomic.c.html#__drm_crtc_commit_free" title='__drm_crtc_commit_free' data-ref="__drm_crtc_commit_free" data-ref-filename="__drm_crtc_commit_free">__drm_crtc_commit_free</a>);</td></tr>
+<tr><th id="398">398</th><td>}</td></tr>
+<tr><th id="399">399</th><td></td></tr>
+<tr><th id="400">400</th><td><b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> * <a class="macro" href="../linux/compiler_types.h.html#108" title="__attribute__((__warn_unused_result__))" data-ref="_M/__must_check">__must_check</a></td></tr>
+<tr><th id="401">401</th><td><a class="decl fn" href="../../drivers/gpu/drm/drm_atomic.c.html#drm_atomic_state_alloc" title='drm_atomic_state_alloc' data-ref="drm_atomic_state_alloc" data-ref-filename="drm_atomic_state_alloc" id="drm_atomic_state_alloc">drm_atomic_state_alloc</a>(<b>struct</b> <a class="type" href="drm_device.h.html#drm_device" title='drm_device' data-ref="drm_device" data-ref-filename="drm_device">drm_device</a> *<dfn class="local col7 decl" id="7dev" title='dev' data-type='struct drm_device *' data-ref="7dev" data-ref-filename="7dev">dev</dfn>);</td></tr>
+<tr><th id="402">402</th><td><em>void</em> <a class="decl fn" href="../../drivers/gpu/drm/drm_atomic.c.html#drm_atomic_state_clear" title='drm_atomic_state_clear' data-ref="drm_atomic_state_clear" data-ref-filename="drm_atomic_state_clear" id="drm_atomic_state_clear">drm_atomic_state_clear</a>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col8 decl" id="8state" title='state' data-type='struct drm_atomic_state *' data-ref="8state" data-ref-filename="8state">state</dfn>);</td></tr>
+<tr><th id="403">403</th><td></td></tr>
+<tr><th id="404">404</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="405">405</th><td><i class="doc"> * drm_atomic_state_get - acquire a reference to the atomic state</i></td></tr>
+<tr><th id="406">406</th><td><i class="doc"> *<span class="command"> @state</span>: The atomic state</i></td></tr>
+<tr><th id="407">407</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="408">408</th><td><i class="doc"> * Returns a new reference to the<span class="command"> @state</span></i></td></tr>
+<tr><th id="409">409</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="410">410</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *</td></tr>
+<tr><th id="411">411</th><td><dfn class="decl def fn" id="drm_atomic_state_get" title='drm_atomic_state_get' data-ref="drm_atomic_state_get" data-ref-filename="drm_atomic_state_get">drm_atomic_state_get</dfn>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col9 decl" id="9state" title='state' data-type='struct drm_atomic_state *' data-ref="9state" data-ref-filename="9state">state</dfn>)</td></tr>
+<tr><th id="412">412</th><td>{</td></tr>
+<tr><th id="413">413</th><td>	<a class="ref fn" href="../linux/kref.h.html#kref_get" title='kref_get' data-ref="kref_get" data-ref-filename="kref_get">kref_get</a>(&amp;<a class="local col9 ref" href="#9state" title='state' data-ref="9state" data-ref-filename="9state">state</a>-&gt;<a class="ref field" href="#drm_atomic_state::ref" title='drm_atomic_state::ref' data-ref="drm_atomic_state::ref" data-ref-filename="drm_atomic_state..ref">ref</a>);</td></tr>
+<tr><th id="414">414</th><td>	<b>return</b> <a class="local col9 ref" href="#9state" title='state' data-ref="9state" data-ref-filename="9state">state</a>;</td></tr>
+<tr><th id="415">415</th><td>}</td></tr>
+<tr><th id="416">416</th><td></td></tr>
+<tr><th id="417">417</th><td><em>void</em> <a class="decl fn" href="../../drivers/gpu/drm/drm_atomic.c.html#__drm_atomic_state_free" title='__drm_atomic_state_free' data-ref="__drm_atomic_state_free" data-ref-filename="__drm_atomic_state_free" id="__drm_atomic_state_free">__drm_atomic_state_free</a>(<b>struct</b> <a class="type" href="../linux/kref.h.html#kref" title='kref' data-ref="kref" data-ref-filename="kref">kref</a> *<dfn class="local col0 decl" id="10ref" title='ref' data-type='struct kref *' data-ref="10ref" data-ref-filename="10ref">ref</dfn>);</td></tr>
+<tr><th id="418">418</th><td></td></tr>
+<tr><th id="419">419</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="420">420</th><td><i class="doc"> * drm_atomic_state_put - release a reference to the atomic state</i></td></tr>
+<tr><th id="421">421</th><td><i class="doc"> *<span class="command"> @state</span>: The atomic state</i></td></tr>
+<tr><th id="422">422</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="423">423</th><td><i class="doc"> * This releases a reference to<span class="command"> @state</span> which is freed after removing the</i></td></tr>
+<tr><th id="424">424</th><td><i class="doc"> * final reference. No locking required and callable from any context.</i></td></tr>
+<tr><th id="425">425</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="426">426</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="drm_atomic_state_put" title='drm_atomic_state_put' data-ref="drm_atomic_state_put" data-ref-filename="drm_atomic_state_put">drm_atomic_state_put</dfn>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col1 decl" id="11state" title='state' data-type='struct drm_atomic_state *' data-ref="11state" data-ref-filename="11state">state</dfn>)</td></tr>
+<tr><th id="427">427</th><td>{</td></tr>
+<tr><th id="428">428</th><td>	<a class="ref fn" href="../linux/kref.h.html#kref_put" title='kref_put' data-ref="kref_put" data-ref-filename="kref_put">kref_put</a>(&amp;<a class="local col1 ref" href="#11state" title='state' data-ref="11state" data-ref-filename="11state">state</a>-&gt;<a class="ref field" href="#drm_atomic_state::ref" title='drm_atomic_state::ref' data-ref="drm_atomic_state::ref" data-ref-filename="drm_atomic_state..ref">ref</a>, <a class="ref fn" href="../../drivers/gpu/drm/drm_atomic.c.html#__drm_atomic_state_free" title='__drm_atomic_state_free' data-ref="__drm_atomic_state_free" data-ref-filename="__drm_atomic_state_free">__drm_atomic_state_free</a>);</td></tr>
+<tr><th id="429">429</th><td>}</td></tr>
+<tr><th id="430">430</th><td></td></tr>
+<tr><th id="431">431</th><td><em>int</em>  <a class="macro" href="../linux/compiler_types.h.html#108" title="__attribute__((__warn_unused_result__))" data-ref="_M/__must_check">__must_check</a></td></tr>
+<tr><th id="432">432</th><td><a class="decl fn" href="../../drivers/gpu/drm/drm_atomic.c.html#drm_atomic_state_init" title='drm_atomic_state_init' data-ref="drm_atomic_state_init" data-ref-filename="drm_atomic_state_init" id="drm_atomic_state_init">drm_atomic_state_init</a>(<b>struct</b> <a class="type" href="drm_device.h.html#drm_device" title='drm_device' data-ref="drm_device" data-ref-filename="drm_device">drm_device</a> *<dfn class="local col2 decl" id="12dev" title='dev' data-type='struct drm_device *' data-ref="12dev" data-ref-filename="12dev">dev</dfn>, <b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col3 decl" id="13state" title='state' data-type='struct drm_atomic_state *' data-ref="13state" data-ref-filename="13state">state</dfn>);</td></tr>
+<tr><th id="433">433</th><td><em>void</em> <a class="decl fn" href="../../drivers/gpu/drm/drm_atomic.c.html#drm_atomic_state_default_clear" title='drm_atomic_state_default_clear' data-ref="drm_atomic_state_default_clear" data-ref-filename="drm_atomic_state_default_clear" id="drm_atomic_state_default_clear">drm_atomic_state_default_clear</a>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col4 decl" id="14state" title='state' data-type='struct drm_atomic_state *' data-ref="14state" data-ref-filename="14state">state</dfn>);</td></tr>
+<tr><th id="434">434</th><td><em>void</em> <a class="decl fn" href="../../drivers/gpu/drm/drm_atomic.c.html#drm_atomic_state_default_release" title='drm_atomic_state_default_release' data-ref="drm_atomic_state_default_release" data-ref-filename="drm_atomic_state_default_release" id="drm_atomic_state_default_release">drm_atomic_state_default_release</a>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col5 decl" id="15state" title='state' data-type='struct drm_atomic_state *' data-ref="15state" data-ref-filename="15state">state</dfn>);</td></tr>
+<tr><th id="435">435</th><td></td></tr>
+<tr><th id="436">436</th><td><b>struct</b> <a class="type" href="drm_crtc.h.html#drm_crtc_state" title='drm_crtc_state' data-ref="drm_crtc_state" data-ref-filename="drm_crtc_state">drm_crtc_state</a> * <a class="macro" href="../linux/compiler_types.h.html#108" title="__attribute__((__warn_unused_result__))" data-ref="_M/__must_check">__must_check</a></td></tr>
+<tr><th id="437">437</th><td><a class="decl fn" href="../../drivers/gpu/drm/drm_atomic.c.html#drm_atomic_get_crtc_state" title='drm_atomic_get_crtc_state' data-ref="drm_atomic_get_crtc_state" data-ref-filename="drm_atomic_get_crtc_state" id="drm_atomic_get_crtc_state">drm_atomic_get_crtc_state</a>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col6 decl" id="16state" title='state' data-type='struct drm_atomic_state *' data-ref="16state" data-ref-filename="16state">state</dfn>,</td></tr>
+<tr><th id="438">438</th><td>			  <b>struct</b> <a class="type" href="drm_crtc.h.html#drm_crtc" title='drm_crtc' data-ref="drm_crtc" data-ref-filename="drm_crtc">drm_crtc</a> *<dfn class="local col7 decl" id="17crtc" title='crtc' data-type='struct drm_crtc *' data-ref="17crtc" data-ref-filename="17crtc">crtc</dfn>);</td></tr>
+<tr><th id="439">439</th><td><b>struct</b> <a class="type" href="drm_plane.h.html#drm_plane_state" title='drm_plane_state' data-ref="drm_plane_state" data-ref-filename="drm_plane_state">drm_plane_state</a> * <a class="macro" href="../linux/compiler_types.h.html#108" title="__attribute__((__warn_unused_result__))" data-ref="_M/__must_check">__must_check</a></td></tr>
+<tr><th id="440">440</th><td><a class="decl fn" href="../../drivers/gpu/drm/drm_atomic.c.html#drm_atomic_get_plane_state" title='drm_atomic_get_plane_state' data-ref="drm_atomic_get_plane_state" data-ref-filename="drm_atomic_get_plane_state" id="drm_atomic_get_plane_state">drm_atomic_get_plane_state</a>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col8 decl" id="18state" title='state' data-type='struct drm_atomic_state *' data-ref="18state" data-ref-filename="18state">state</dfn>,</td></tr>
+<tr><th id="441">441</th><td>			   <b>struct</b> <a class="type" href="drm_plane.h.html#drm_plane" title='drm_plane' data-ref="drm_plane" data-ref-filename="drm_plane">drm_plane</a> *<dfn class="local col9 decl" id="19plane" title='plane' data-type='struct drm_plane *' data-ref="19plane" data-ref-filename="19plane">plane</dfn>);</td></tr>
+<tr><th id="442">442</th><td><b>struct</b> <a class="type" href="drm_connector.h.html#drm_connector_state" title='drm_connector_state' data-ref="drm_connector_state" data-ref-filename="drm_connector_state">drm_connector_state</a> * <a class="macro" href="../linux/compiler_types.h.html#108" title="__attribute__((__warn_unused_result__))" data-ref="_M/__must_check">__must_check</a></td></tr>
+<tr><th id="443">443</th><td><a class="decl fn" href="../../drivers/gpu/drm/drm_atomic.c.html#drm_atomic_get_connector_state" title='drm_atomic_get_connector_state' data-ref="drm_atomic_get_connector_state" data-ref-filename="drm_atomic_get_connector_state" id="drm_atomic_get_connector_state">drm_atomic_get_connector_state</a>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col0 decl" id="20state" title='state' data-type='struct drm_atomic_state *' data-ref="20state" data-ref-filename="20state">state</dfn>,</td></tr>
+<tr><th id="444">444</th><td>			       <b>struct</b> <a class="type" href="drm_connector.h.html#drm_connector" title='drm_connector' data-ref="drm_connector" data-ref-filename="drm_connector">drm_connector</a> *<dfn class="local col1 decl" id="21connector" title='connector' data-type='struct drm_connector *' data-ref="21connector" data-ref-filename="21connector">connector</dfn>);</td></tr>
+<tr><th id="445">445</th><td></td></tr>
+<tr><th id="446">446</th><td><em>void</em> <a class="decl fn" href="../../drivers/gpu/drm/drm_atomic.c.html#drm_atomic_private_obj_init" title='drm_atomic_private_obj_init' data-ref="drm_atomic_private_obj_init" data-ref-filename="drm_atomic_private_obj_init" id="drm_atomic_private_obj_init">drm_atomic_private_obj_init</a>(<b>struct</b> <a class="type" href="drm_device.h.html#drm_device" title='drm_device' data-ref="drm_device" data-ref-filename="drm_device">drm_device</a> *<dfn class="local col2 decl" id="22dev" title='dev' data-type='struct drm_device *' data-ref="22dev" data-ref-filename="22dev">dev</dfn>,</td></tr>
+<tr><th id="447">447</th><td>				 <b>struct</b> <a class="type" href="#drm_private_obj" title='drm_private_obj' data-ref="drm_private_obj" data-ref-filename="drm_private_obj">drm_private_obj</a> *<dfn class="local col3 decl" id="23obj" title='obj' data-type='struct drm_private_obj *' data-ref="23obj" data-ref-filename="23obj">obj</dfn>,</td></tr>
+<tr><th id="448">448</th><td>				 <b>struct</b> <a class="type" href="#drm_private_state" title='drm_private_state' data-ref="drm_private_state" data-ref-filename="drm_private_state">drm_private_state</a> *<dfn class="local col4 decl" id="24state" title='state' data-type='struct drm_private_state *' data-ref="24state" data-ref-filename="24state">state</dfn>,</td></tr>
+<tr><th id="449">449</th><td>				 <em>const</em> <b>struct</b> <a class="type" href="#drm_private_state_funcs" title='drm_private_state_funcs' data-ref="drm_private_state_funcs" data-ref-filename="drm_private_state_funcs">drm_private_state_funcs</a> *<dfn class="local col5 decl" id="25funcs" title='funcs' data-type='const struct drm_private_state_funcs *' data-ref="25funcs" data-ref-filename="25funcs">funcs</dfn>);</td></tr>
+<tr><th id="450">450</th><td><em>void</em> <a class="decl fn" href="../../drivers/gpu/drm/drm_atomic.c.html#drm_atomic_private_obj_fini" title='drm_atomic_private_obj_fini' data-ref="drm_atomic_private_obj_fini" data-ref-filename="drm_atomic_private_obj_fini" id="drm_atomic_private_obj_fini">drm_atomic_private_obj_fini</a>(<b>struct</b> <a class="type" href="#drm_private_obj" title='drm_private_obj' data-ref="drm_private_obj" data-ref-filename="drm_private_obj">drm_private_obj</a> *<dfn class="local col6 decl" id="26obj" title='obj' data-type='struct drm_private_obj *' data-ref="26obj" data-ref-filename="26obj">obj</dfn>);</td></tr>
+<tr><th id="451">451</th><td></td></tr>
+<tr><th id="452">452</th><td><b>struct</b> <a class="type" href="#drm_private_state" title='drm_private_state' data-ref="drm_private_state" data-ref-filename="drm_private_state">drm_private_state</a> * <a class="macro" href="../linux/compiler_types.h.html#108" title="__attribute__((__warn_unused_result__))" data-ref="_M/__must_check">__must_check</a></td></tr>
+<tr><th id="453">453</th><td><a class="decl fn" href="../../drivers/gpu/drm/drm_atomic.c.html#drm_atomic_get_private_obj_state" title='drm_atomic_get_private_obj_state' data-ref="drm_atomic_get_private_obj_state" data-ref-filename="drm_atomic_get_private_obj_state" id="drm_atomic_get_private_obj_state">drm_atomic_get_private_obj_state</a>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col7 decl" id="27state" title='state' data-type='struct drm_atomic_state *' data-ref="27state" data-ref-filename="27state">state</dfn>,</td></tr>
+<tr><th id="454">454</th><td>				 <b>struct</b> <a class="type" href="#drm_private_obj" title='drm_private_obj' data-ref="drm_private_obj" data-ref-filename="drm_private_obj">drm_private_obj</a> *<dfn class="local col8 decl" id="28obj" title='obj' data-type='struct drm_private_obj *' data-ref="28obj" data-ref-filename="28obj">obj</dfn>);</td></tr>
+<tr><th id="455">455</th><td><b>struct</b> <a class="type" href="#drm_private_state" title='drm_private_state' data-ref="drm_private_state" data-ref-filename="drm_private_state">drm_private_state</a> *</td></tr>
+<tr><th id="456">456</th><td><a class="decl fn" href="../../drivers/gpu/drm/drm_atomic.c.html#drm_atomic_get_old_private_obj_state" title='drm_atomic_get_old_private_obj_state' data-ref="drm_atomic_get_old_private_obj_state" data-ref-filename="drm_atomic_get_old_private_obj_state" id="drm_atomic_get_old_private_obj_state">drm_atomic_get_old_private_obj_state</a>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col9 decl" id="29state" title='state' data-type='struct drm_atomic_state *' data-ref="29state" data-ref-filename="29state">state</dfn>,</td></tr>
+<tr><th id="457">457</th><td>				     <b>struct</b> <a class="type" href="#drm_private_obj" title='drm_private_obj' data-ref="drm_private_obj" data-ref-filename="drm_private_obj">drm_private_obj</a> *<dfn class="local col0 decl" id="30obj" title='obj' data-type='struct drm_private_obj *' data-ref="30obj" data-ref-filename="30obj">obj</dfn>);</td></tr>
+<tr><th id="458">458</th><td><b>struct</b> <a class="type" href="#drm_private_state" title='drm_private_state' data-ref="drm_private_state" data-ref-filename="drm_private_state">drm_private_state</a> *</td></tr>
+<tr><th id="459">459</th><td><a class="decl fn" href="../../drivers/gpu/drm/drm_atomic.c.html#drm_atomic_get_new_private_obj_state" title='drm_atomic_get_new_private_obj_state' data-ref="drm_atomic_get_new_private_obj_state" data-ref-filename="drm_atomic_get_new_private_obj_state" id="drm_atomic_get_new_private_obj_state">drm_atomic_get_new_private_obj_state</a>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col1 decl" id="31state" title='state' data-type='struct drm_atomic_state *' data-ref="31state" data-ref-filename="31state">state</dfn>,</td></tr>
+<tr><th id="460">460</th><td>				     <b>struct</b> <a class="type" href="#drm_private_obj" title='drm_private_obj' data-ref="drm_private_obj" data-ref-filename="drm_private_obj">drm_private_obj</a> *<dfn class="local col2 decl" id="32obj" title='obj' data-type='struct drm_private_obj *' data-ref="32obj" data-ref-filename="32obj">obj</dfn>);</td></tr>
+<tr><th id="461">461</th><td></td></tr>
+<tr><th id="462">462</th><td><b>struct</b> <a class="type" href="drm_connector.h.html#drm_connector" title='drm_connector' data-ref="drm_connector" data-ref-filename="drm_connector">drm_connector</a> *</td></tr>
+<tr><th id="463">463</th><td><a class="decl fn" href="../../drivers/gpu/drm/drm_atomic.c.html#drm_atomic_get_old_connector_for_encoder" title='drm_atomic_get_old_connector_for_encoder' data-ref="drm_atomic_get_old_connector_for_encoder" data-ref-filename="drm_atomic_get_old_connector_for_encoder" id="drm_atomic_get_old_connector_for_encoder">drm_atomic_get_old_connector_for_encoder</a>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col3 decl" id="33state" title='state' data-type='struct drm_atomic_state *' data-ref="33state" data-ref-filename="33state">state</dfn>,</td></tr>
+<tr><th id="464">464</th><td>					 <b>struct</b> <a class="type" href="drm_encoder.h.html#drm_encoder" title='drm_encoder' data-ref="drm_encoder" data-ref-filename="drm_encoder">drm_encoder</a> *<dfn class="local col4 decl" id="34encoder" title='encoder' data-type='struct drm_encoder *' data-ref="34encoder" data-ref-filename="34encoder">encoder</dfn>);</td></tr>
+<tr><th id="465">465</th><td><b>struct</b> <a class="type" href="drm_connector.h.html#drm_connector" title='drm_connector' data-ref="drm_connector" data-ref-filename="drm_connector">drm_connector</a> *</td></tr>
+<tr><th id="466">466</th><td><a class="decl fn" href="../../drivers/gpu/drm/drm_atomic.c.html#drm_atomic_get_new_connector_for_encoder" title='drm_atomic_get_new_connector_for_encoder' data-ref="drm_atomic_get_new_connector_for_encoder" data-ref-filename="drm_atomic_get_new_connector_for_encoder" id="drm_atomic_get_new_connector_for_encoder">drm_atomic_get_new_connector_for_encoder</a>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col5 decl" id="35state" title='state' data-type='struct drm_atomic_state *' data-ref="35state" data-ref-filename="35state">state</dfn>,</td></tr>
+<tr><th id="467">467</th><td>					 <b>struct</b> <a class="type" href="drm_encoder.h.html#drm_encoder" title='drm_encoder' data-ref="drm_encoder" data-ref-filename="drm_encoder">drm_encoder</a> *<dfn class="local col6 decl" id="36encoder" title='encoder' data-type='struct drm_encoder *' data-ref="36encoder" data-ref-filename="36encoder">encoder</dfn>);</td></tr>
+<tr><th id="468">468</th><td></td></tr>
+<tr><th id="469">469</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="470">470</th><td><i class="doc"> * drm_atomic_get_existing_crtc_state - get crtc state, if it exists</i></td></tr>
+<tr><th id="471">471</th><td><i class="doc"> *<span class="command"> @state</span>: global atomic state object</i></td></tr>
+<tr><th id="472">472</th><td><i class="doc"> *<span class="command"> @crtc</span>: crtc to grab</i></td></tr>
+<tr><th id="473">473</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="474">474</th><td><i class="doc"> * This function returns the crtc state for the given crtc, or NULL</i></td></tr>
+<tr><th id="475">475</th><td><i class="doc"> * if the crtc is not part of the global atomic state.</i></td></tr>
+<tr><th id="476">476</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="477">477</th><td><i class="doc"> * This function is deprecated,<span class="command"> @drm</span>_atomic_get_old_crtc_state or</i></td></tr>
+<tr><th id="478">478</th><td><i class="doc"> *<span class="command"> @drm</span>_atomic_get_new_crtc_state should be used instead.</i></td></tr>
+<tr><th id="479">479</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="480">480</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="drm_crtc.h.html#drm_crtc_state" title='drm_crtc_state' data-ref="drm_crtc_state" data-ref-filename="drm_crtc_state">drm_crtc_state</a> *</td></tr>
+<tr><th id="481">481</th><td><dfn class="decl def fn" id="drm_atomic_get_existing_crtc_state" title='drm_atomic_get_existing_crtc_state' data-ref="drm_atomic_get_existing_crtc_state" data-ref-filename="drm_atomic_get_existing_crtc_state">drm_atomic_get_existing_crtc_state</dfn>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col7 decl" id="37state" title='state' data-type='struct drm_atomic_state *' data-ref="37state" data-ref-filename="37state">state</dfn>,</td></tr>
+<tr><th id="482">482</th><td>				   <b>struct</b> <a class="type" href="drm_crtc.h.html#drm_crtc" title='drm_crtc' data-ref="drm_crtc" data-ref-filename="drm_crtc">drm_crtc</a> *<dfn class="local col8 decl" id="38crtc" title='crtc' data-type='struct drm_crtc *' data-ref="38crtc" data-ref-filename="38crtc">crtc</dfn>)</td></tr>
+<tr><th id="483">483</th><td>{</td></tr>
+<tr><th id="484">484</th><td>	<b>return</b> <a class="local col7 ref" href="#37state" title='state' data-ref="37state" data-ref-filename="37state">state</a>-&gt;<a class="ref field" href="#drm_atomic_state::crtcs" title='drm_atomic_state::crtcs' data-ref="drm_atomic_state::crtcs" data-ref-filename="drm_atomic_state..crtcs">crtcs</a>[<a class="ref fn" href="drm_crtc.h.html#drm_crtc_index" title='drm_crtc_index' data-ref="drm_crtc_index" data-ref-filename="drm_crtc_index">drm_crtc_index</a>(<a class="local col8 ref" href="#38crtc" title='crtc' data-ref="38crtc" data-ref-filename="38crtc">crtc</a>)].<a class="ref field" href="#__drm_crtcs_state::state" title='__drm_crtcs_state::state' data-ref="__drm_crtcs_state::state" data-ref-filename="__drm_crtcs_state..state">state</a>;</td></tr>
+<tr><th id="485">485</th><td>}</td></tr>
+<tr><th id="486">486</th><td></td></tr>
+<tr><th id="487">487</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="488">488</th><td><i class="doc"> * drm_atomic_get_old_crtc_state - get old crtc state, if it exists</i></td></tr>
+<tr><th id="489">489</th><td><i class="doc"> *<span class="command"> @state</span>: global atomic state object</i></td></tr>
+<tr><th id="490">490</th><td><i class="doc"> *<span class="command"> @crtc</span>: crtc to grab</i></td></tr>
+<tr><th id="491">491</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="492">492</th><td><i class="doc"> * This function returns the old crtc state for the given crtc, or</i></td></tr>
+<tr><th id="493">493</th><td><i class="doc"> * NULL if the crtc is not part of the global atomic state.</i></td></tr>
+<tr><th id="494">494</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="495">495</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="drm_crtc.h.html#drm_crtc_state" title='drm_crtc_state' data-ref="drm_crtc_state" data-ref-filename="drm_crtc_state">drm_crtc_state</a> *</td></tr>
+<tr><th id="496">496</th><td><dfn class="decl def fn" id="drm_atomic_get_old_crtc_state" title='drm_atomic_get_old_crtc_state' data-ref="drm_atomic_get_old_crtc_state" data-ref-filename="drm_atomic_get_old_crtc_state">drm_atomic_get_old_crtc_state</dfn>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col9 decl" id="39state" title='state' data-type='struct drm_atomic_state *' data-ref="39state" data-ref-filename="39state">state</dfn>,</td></tr>
+<tr><th id="497">497</th><td>			      <b>struct</b> <a class="type" href="drm_crtc.h.html#drm_crtc" title='drm_crtc' data-ref="drm_crtc" data-ref-filename="drm_crtc">drm_crtc</a> *<dfn class="local col0 decl" id="40crtc" title='crtc' data-type='struct drm_crtc *' data-ref="40crtc" data-ref-filename="40crtc">crtc</dfn>)</td></tr>
+<tr><th id="498">498</th><td>{</td></tr>
+<tr><th id="499">499</th><td>	<b>return</b> <a class="local col9 ref" href="#39state" title='state' data-ref="39state" data-ref-filename="39state">state</a>-&gt;<a class="ref field" href="#drm_atomic_state::crtcs" title='drm_atomic_state::crtcs' data-ref="drm_atomic_state::crtcs" data-ref-filename="drm_atomic_state..crtcs">crtcs</a>[<a class="ref fn" href="drm_crtc.h.html#drm_crtc_index" title='drm_crtc_index' data-ref="drm_crtc_index" data-ref-filename="drm_crtc_index">drm_crtc_index</a>(<a class="local col0 ref" href="#40crtc" title='crtc' data-ref="40crtc" data-ref-filename="40crtc">crtc</a>)].<a class="ref field" href="#__drm_crtcs_state::old_state" title='__drm_crtcs_state::old_state' data-ref="__drm_crtcs_state::old_state" data-ref-filename="__drm_crtcs_state..old_state">old_state</a>;</td></tr>
+<tr><th id="500">500</th><td>}</td></tr>
+<tr><th id="501">501</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="502">502</th><td><i class="doc"> * drm_atomic_get_new_crtc_state - get new crtc state, if it exists</i></td></tr>
+<tr><th id="503">503</th><td><i class="doc"> *<span class="command"> @state</span>: global atomic state object</i></td></tr>
+<tr><th id="504">504</th><td><i class="doc"> *<span class="command"> @crtc</span>: crtc to grab</i></td></tr>
+<tr><th id="505">505</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="506">506</th><td><i class="doc"> * This function returns the new crtc state for the given crtc, or</i></td></tr>
+<tr><th id="507">507</th><td><i class="doc"> * NULL if the crtc is not part of the global atomic state.</i></td></tr>
+<tr><th id="508">508</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="509">509</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="drm_crtc.h.html#drm_crtc_state" title='drm_crtc_state' data-ref="drm_crtc_state" data-ref-filename="drm_crtc_state">drm_crtc_state</a> *</td></tr>
+<tr><th id="510">510</th><td><dfn class="decl def fn" id="drm_atomic_get_new_crtc_state" title='drm_atomic_get_new_crtc_state' data-ref="drm_atomic_get_new_crtc_state" data-ref-filename="drm_atomic_get_new_crtc_state">drm_atomic_get_new_crtc_state</dfn>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col1 decl" id="41state" title='state' data-type='struct drm_atomic_state *' data-ref="41state" data-ref-filename="41state">state</dfn>,</td></tr>
+<tr><th id="511">511</th><td>			      <b>struct</b> <a class="type" href="drm_crtc.h.html#drm_crtc" title='drm_crtc' data-ref="drm_crtc" data-ref-filename="drm_crtc">drm_crtc</a> *<dfn class="local col2 decl" id="42crtc" title='crtc' data-type='struct drm_crtc *' data-ref="42crtc" data-ref-filename="42crtc">crtc</dfn>)</td></tr>
+<tr><th id="512">512</th><td>{</td></tr>
+<tr><th id="513">513</th><td>	<b>return</b> <a class="local col1 ref" href="#41state" title='state' data-ref="41state" data-ref-filename="41state">state</a>-&gt;<a class="ref field" href="#drm_atomic_state::crtcs" title='drm_atomic_state::crtcs' data-ref="drm_atomic_state::crtcs" data-ref-filename="drm_atomic_state..crtcs">crtcs</a>[<a class="ref fn" href="drm_crtc.h.html#drm_crtc_index" title='drm_crtc_index' data-ref="drm_crtc_index" data-ref-filename="drm_crtc_index">drm_crtc_index</a>(<a class="local col2 ref" href="#42crtc" title='crtc' data-ref="42crtc" data-ref-filename="42crtc">crtc</a>)].<a class="ref field" href="#__drm_crtcs_state::new_state" title='__drm_crtcs_state::new_state' data-ref="__drm_crtcs_state::new_state" data-ref-filename="__drm_crtcs_state..new_state">new_state</a>;</td></tr>
+<tr><th id="514">514</th><td>}</td></tr>
+<tr><th id="515">515</th><td></td></tr>
+<tr><th id="516">516</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="517">517</th><td><i class="doc"> * drm_atomic_get_existing_plane_state - get plane state, if it exists</i></td></tr>
+<tr><th id="518">518</th><td><i class="doc"> *<span class="command"> @state</span>: global atomic state object</i></td></tr>
+<tr><th id="519">519</th><td><i class="doc"> *<span class="command"> @plane</span>: plane to grab</i></td></tr>
+<tr><th id="520">520</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="521">521</th><td><i class="doc"> * This function returns the plane state for the given plane, or NULL</i></td></tr>
+<tr><th id="522">522</th><td><i class="doc"> * if the plane is not part of the global atomic state.</i></td></tr>
+<tr><th id="523">523</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="524">524</th><td><i class="doc"> * This function is deprecated,<span class="command"> @drm</span>_atomic_get_old_plane_state or</i></td></tr>
+<tr><th id="525">525</th><td><i class="doc"> *<span class="command"> @drm</span>_atomic_get_new_plane_state should be used instead.</i></td></tr>
+<tr><th id="526">526</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="527">527</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="drm_plane.h.html#drm_plane_state" title='drm_plane_state' data-ref="drm_plane_state" data-ref-filename="drm_plane_state">drm_plane_state</a> *</td></tr>
+<tr><th id="528">528</th><td><dfn class="decl def fn" id="drm_atomic_get_existing_plane_state" title='drm_atomic_get_existing_plane_state' data-ref="drm_atomic_get_existing_plane_state" data-ref-filename="drm_atomic_get_existing_plane_state">drm_atomic_get_existing_plane_state</dfn>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col3 decl" id="43state" title='state' data-type='struct drm_atomic_state *' data-ref="43state" data-ref-filename="43state">state</dfn>,</td></tr>
+<tr><th id="529">529</th><td>				    <b>struct</b> <a class="type" href="drm_plane.h.html#drm_plane" title='drm_plane' data-ref="drm_plane" data-ref-filename="drm_plane">drm_plane</a> *<dfn class="local col4 decl" id="44plane" title='plane' data-type='struct drm_plane *' data-ref="44plane" data-ref-filename="44plane">plane</dfn>)</td></tr>
+<tr><th id="530">530</th><td>{</td></tr>
+<tr><th id="531">531</th><td>	<b>return</b> <a class="local col3 ref" href="#43state" title='state' data-ref="43state" data-ref-filename="43state">state</a>-&gt;<a class="ref field" href="#drm_atomic_state::planes" title='drm_atomic_state::planes' data-ref="drm_atomic_state::planes" data-ref-filename="drm_atomic_state..planes">planes</a>[<a class="ref fn" href="drm_plane.h.html#drm_plane_index" title='drm_plane_index' data-ref="drm_plane_index" data-ref-filename="drm_plane_index">drm_plane_index</a>(<a class="local col4 ref" href="#44plane" title='plane' data-ref="44plane" data-ref-filename="44plane">plane</a>)].<a class="ref field" href="#__drm_planes_state::state" title='__drm_planes_state::state' data-ref="__drm_planes_state::state" data-ref-filename="__drm_planes_state..state">state</a>;</td></tr>
+<tr><th id="532">532</th><td>}</td></tr>
+<tr><th id="533">533</th><td></td></tr>
+<tr><th id="534">534</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="535">535</th><td><i class="doc"> * drm_atomic_get_old_plane_state - get plane state, if it exists</i></td></tr>
+<tr><th id="536">536</th><td><i class="doc"> *<span class="command"> @state</span>: global atomic state object</i></td></tr>
+<tr><th id="537">537</th><td><i class="doc"> *<span class="command"> @plane</span>: plane to grab</i></td></tr>
+<tr><th id="538">538</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="539">539</th><td><i class="doc"> * This function returns the old plane state for the given plane, or</i></td></tr>
+<tr><th id="540">540</th><td><i class="doc"> * NULL if the plane is not part of the global atomic state.</i></td></tr>
+<tr><th id="541">541</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="542">542</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="drm_plane.h.html#drm_plane_state" title='drm_plane_state' data-ref="drm_plane_state" data-ref-filename="drm_plane_state">drm_plane_state</a> *</td></tr>
+<tr><th id="543">543</th><td><dfn class="decl def fn" id="drm_atomic_get_old_plane_state" title='drm_atomic_get_old_plane_state' data-ref="drm_atomic_get_old_plane_state" data-ref-filename="drm_atomic_get_old_plane_state">drm_atomic_get_old_plane_state</dfn>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col5 decl" id="45state" title='state' data-type='struct drm_atomic_state *' data-ref="45state" data-ref-filename="45state">state</dfn>,</td></tr>
+<tr><th id="544">544</th><td>			       <b>struct</b> <a class="type" href="drm_plane.h.html#drm_plane" title='drm_plane' data-ref="drm_plane" data-ref-filename="drm_plane">drm_plane</a> *<dfn class="local col6 decl" id="46plane" title='plane' data-type='struct drm_plane *' data-ref="46plane" data-ref-filename="46plane">plane</dfn>)</td></tr>
+<tr><th id="545">545</th><td>{</td></tr>
+<tr><th id="546">546</th><td>	<b>return</b> <a class="local col5 ref" href="#45state" title='state' data-ref="45state" data-ref-filename="45state">state</a>-&gt;<a class="ref field" href="#drm_atomic_state::planes" title='drm_atomic_state::planes' data-ref="drm_atomic_state::planes" data-ref-filename="drm_atomic_state..planes">planes</a>[<a class="ref fn" href="drm_plane.h.html#drm_plane_index" title='drm_plane_index' data-ref="drm_plane_index" data-ref-filename="drm_plane_index">drm_plane_index</a>(<a class="local col6 ref" href="#46plane" title='plane' data-ref="46plane" data-ref-filename="46plane">plane</a>)].<a class="ref field" href="#__drm_planes_state::old_state" title='__drm_planes_state::old_state' data-ref="__drm_planes_state::old_state" data-ref-filename="__drm_planes_state..old_state">old_state</a>;</td></tr>
+<tr><th id="547">547</th><td>}</td></tr>
+<tr><th id="548">548</th><td></td></tr>
+<tr><th id="549">549</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="550">550</th><td><i class="doc"> * drm_atomic_get_new_plane_state - get plane state, if it exists</i></td></tr>
+<tr><th id="551">551</th><td><i class="doc"> *<span class="command"> @state</span>: global atomic state object</i></td></tr>
+<tr><th id="552">552</th><td><i class="doc"> *<span class="command"> @plane</span>: plane to grab</i></td></tr>
+<tr><th id="553">553</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="554">554</th><td><i class="doc"> * This function returns the new plane state for the given plane, or</i></td></tr>
+<tr><th id="555">555</th><td><i class="doc"> * NULL if the plane is not part of the global atomic state.</i></td></tr>
+<tr><th id="556">556</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="557">557</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="drm_plane.h.html#drm_plane_state" title='drm_plane_state' data-ref="drm_plane_state" data-ref-filename="drm_plane_state">drm_plane_state</a> *</td></tr>
+<tr><th id="558">558</th><td><dfn class="decl def fn" id="drm_atomic_get_new_plane_state" title='drm_atomic_get_new_plane_state' data-ref="drm_atomic_get_new_plane_state" data-ref-filename="drm_atomic_get_new_plane_state">drm_atomic_get_new_plane_state</dfn>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col7 decl" id="47state" title='state' data-type='struct drm_atomic_state *' data-ref="47state" data-ref-filename="47state">state</dfn>,</td></tr>
+<tr><th id="559">559</th><td>			       <b>struct</b> <a class="type" href="drm_plane.h.html#drm_plane" title='drm_plane' data-ref="drm_plane" data-ref-filename="drm_plane">drm_plane</a> *<dfn class="local col8 decl" id="48plane" title='plane' data-type='struct drm_plane *' data-ref="48plane" data-ref-filename="48plane">plane</dfn>)</td></tr>
+<tr><th id="560">560</th><td>{</td></tr>
+<tr><th id="561">561</th><td>	<b>return</b> <a class="local col7 ref" href="#47state" title='state' data-ref="47state" data-ref-filename="47state">state</a>-&gt;<a class="ref field" href="#drm_atomic_state::planes" title='drm_atomic_state::planes' data-ref="drm_atomic_state::planes" data-ref-filename="drm_atomic_state..planes">planes</a>[<a class="ref fn" href="drm_plane.h.html#drm_plane_index" title='drm_plane_index' data-ref="drm_plane_index" data-ref-filename="drm_plane_index">drm_plane_index</a>(<a class="local col8 ref" href="#48plane" title='plane' data-ref="48plane" data-ref-filename="48plane">plane</a>)].<a class="ref field" href="#__drm_planes_state::new_state" title='__drm_planes_state::new_state' data-ref="__drm_planes_state::new_state" data-ref-filename="__drm_planes_state..new_state">new_state</a>;</td></tr>
+<tr><th id="562">562</th><td>}</td></tr>
+<tr><th id="563">563</th><td></td></tr>
+<tr><th id="564">564</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="565">565</th><td><i class="doc"> * drm_atomic_get_existing_connector_state - get connector state, if it exists</i></td></tr>
+<tr><th id="566">566</th><td><i class="doc"> *<span class="command"> @state</span>: global atomic state object</i></td></tr>
+<tr><th id="567">567</th><td><i class="doc"> *<span class="command"> @connector</span>: connector to grab</i></td></tr>
+<tr><th id="568">568</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="569">569</th><td><i class="doc"> * This function returns the connector state for the given connector,</i></td></tr>
+<tr><th id="570">570</th><td><i class="doc"> * or NULL if the connector is not part of the global atomic state.</i></td></tr>
+<tr><th id="571">571</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="572">572</th><td><i class="doc"> * This function is deprecated,<span class="command"> @drm</span>_atomic_get_old_connector_state or</i></td></tr>
+<tr><th id="573">573</th><td><i class="doc"> *<span class="command"> @drm</span>_atomic_get_new_connector_state should be used instead.</i></td></tr>
+<tr><th id="574">574</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="575">575</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="drm_connector.h.html#drm_connector_state" title='drm_connector_state' data-ref="drm_connector_state" data-ref-filename="drm_connector_state">drm_connector_state</a> *</td></tr>
+<tr><th id="576">576</th><td><dfn class="decl def fn" id="drm_atomic_get_existing_connector_state" title='drm_atomic_get_existing_connector_state' data-ref="drm_atomic_get_existing_connector_state" data-ref-filename="drm_atomic_get_existing_connector_state">drm_atomic_get_existing_connector_state</dfn>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col9 decl" id="49state" title='state' data-type='struct drm_atomic_state *' data-ref="49state" data-ref-filename="49state">state</dfn>,</td></tr>
+<tr><th id="577">577</th><td>					<b>struct</b> <a class="type" href="drm_connector.h.html#drm_connector" title='drm_connector' data-ref="drm_connector" data-ref-filename="drm_connector">drm_connector</a> *<dfn class="local col0 decl" id="50connector" title='connector' data-type='struct drm_connector *' data-ref="50connector" data-ref-filename="50connector">connector</dfn>)</td></tr>
+<tr><th id="578">578</th><td>{</td></tr>
+<tr><th id="579">579</th><td>	<em>int</em> <dfn class="local col1 decl" id="51index" title='index' data-type='int' data-ref="51index" data-ref-filename="51index">index</dfn> = <a class="ref fn" href="drm_connector.h.html#drm_connector_index" title='drm_connector_index' data-ref="drm_connector_index" data-ref-filename="drm_connector_index">drm_connector_index</a>(<a class="local col0 ref" href="#50connector" title='connector' data-ref="50connector" data-ref-filename="50connector">connector</a>);</td></tr>
+<tr><th id="580">580</th><td></td></tr>
+<tr><th id="581">581</th><td>	<b>if</b> (<a class="local col1 ref" href="#51index" title='index' data-ref="51index" data-ref-filename="51index">index</a> &gt;= <a class="local col9 ref" href="#49state" title='state' data-ref="49state" data-ref-filename="49state">state</a>-&gt;<a class="ref field" href="#drm_atomic_state::num_connector" title='drm_atomic_state::num_connector' data-ref="drm_atomic_state::num_connector" data-ref-filename="drm_atomic_state..num_connector">num_connector</a>)</td></tr>
+<tr><th id="582">582</th><td>		<b>return</b> <a class="macro" href="../linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="583">583</th><td></td></tr>
+<tr><th id="584">584</th><td>	<b>return</b> <a class="local col9 ref" href="#49state" title='state' data-ref="49state" data-ref-filename="49state">state</a>-&gt;<a class="ref field" href="#drm_atomic_state::connectors" title='drm_atomic_state::connectors' data-ref="drm_atomic_state::connectors" data-ref-filename="drm_atomic_state..connectors">connectors</a>[<a class="local col1 ref" href="#51index" title='index' data-ref="51index" data-ref-filename="51index">index</a>].<a class="ref field" href="#__drm_connnectors_state::state" title='__drm_connnectors_state::state' data-ref="__drm_connnectors_state::state" data-ref-filename="__drm_connnectors_state..state">state</a>;</td></tr>
+<tr><th id="585">585</th><td>}</td></tr>
+<tr><th id="586">586</th><td></td></tr>
+<tr><th id="587">587</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="588">588</th><td><i class="doc"> * drm_atomic_get_old_connector_state - get connector state, if it exists</i></td></tr>
+<tr><th id="589">589</th><td><i class="doc"> *<span class="command"> @state</span>: global atomic state object</i></td></tr>
+<tr><th id="590">590</th><td><i class="doc"> *<span class="command"> @connector</span>: connector to grab</i></td></tr>
+<tr><th id="591">591</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="592">592</th><td><i class="doc"> * This function returns the old connector state for the given connector,</i></td></tr>
+<tr><th id="593">593</th><td><i class="doc"> * or NULL if the connector is not part of the global atomic state.</i></td></tr>
+<tr><th id="594">594</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="595">595</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="drm_connector.h.html#drm_connector_state" title='drm_connector_state' data-ref="drm_connector_state" data-ref-filename="drm_connector_state">drm_connector_state</a> *</td></tr>
+<tr><th id="596">596</th><td><dfn class="decl def fn" id="drm_atomic_get_old_connector_state" title='drm_atomic_get_old_connector_state' data-ref="drm_atomic_get_old_connector_state" data-ref-filename="drm_atomic_get_old_connector_state">drm_atomic_get_old_connector_state</dfn>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col2 decl" id="52state" title='state' data-type='struct drm_atomic_state *' data-ref="52state" data-ref-filename="52state">state</dfn>,</td></tr>
+<tr><th id="597">597</th><td>				   <b>struct</b> <a class="type" href="drm_connector.h.html#drm_connector" title='drm_connector' data-ref="drm_connector" data-ref-filename="drm_connector">drm_connector</a> *<dfn class="local col3 decl" id="53connector" title='connector' data-type='struct drm_connector *' data-ref="53connector" data-ref-filename="53connector">connector</dfn>)</td></tr>
+<tr><th id="598">598</th><td>{</td></tr>
+<tr><th id="599">599</th><td>	<em>int</em> <dfn class="local col4 decl" id="54index" title='index' data-type='int' data-ref="54index" data-ref-filename="54index">index</dfn> = <a class="ref fn" href="drm_connector.h.html#drm_connector_index" title='drm_connector_index' data-ref="drm_connector_index" data-ref-filename="drm_connector_index">drm_connector_index</a>(<a class="local col3 ref" href="#53connector" title='connector' data-ref="53connector" data-ref-filename="53connector">connector</a>);</td></tr>
+<tr><th id="600">600</th><td></td></tr>
+<tr><th id="601">601</th><td>	<b>if</b> (<a class="local col4 ref" href="#54index" title='index' data-ref="54index" data-ref-filename="54index">index</a> &gt;= <a class="local col2 ref" href="#52state" title='state' data-ref="52state" data-ref-filename="52state">state</a>-&gt;<a class="ref field" href="#drm_atomic_state::num_connector" title='drm_atomic_state::num_connector' data-ref="drm_atomic_state::num_connector" data-ref-filename="drm_atomic_state..num_connector">num_connector</a>)</td></tr>
+<tr><th id="602">602</th><td>		<b>return</b> <a class="macro" href="../linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="603">603</th><td></td></tr>
+<tr><th id="604">604</th><td>	<b>return</b> <a class="local col2 ref" href="#52state" title='state' data-ref="52state" data-ref-filename="52state">state</a>-&gt;<a class="ref field" href="#drm_atomic_state::connectors" title='drm_atomic_state::connectors' data-ref="drm_atomic_state::connectors" data-ref-filename="drm_atomic_state..connectors">connectors</a>[<a class="local col4 ref" href="#54index" title='index' data-ref="54index" data-ref-filename="54index">index</a>].<a class="ref field" href="#__drm_connnectors_state::old_state" title='__drm_connnectors_state::old_state' data-ref="__drm_connnectors_state::old_state" data-ref-filename="__drm_connnectors_state..old_state">old_state</a>;</td></tr>
+<tr><th id="605">605</th><td>}</td></tr>
+<tr><th id="606">606</th><td></td></tr>
+<tr><th id="607">607</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="608">608</th><td><i class="doc"> * drm_atomic_get_new_connector_state - get connector state, if it exists</i></td></tr>
+<tr><th id="609">609</th><td><i class="doc"> *<span class="command"> @state</span>: global atomic state object</i></td></tr>
+<tr><th id="610">610</th><td><i class="doc"> *<span class="command"> @connector</span>: connector to grab</i></td></tr>
+<tr><th id="611">611</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="612">612</th><td><i class="doc"> * This function returns the new connector state for the given connector,</i></td></tr>
+<tr><th id="613">613</th><td><i class="doc"> * or NULL if the connector is not part of the global atomic state.</i></td></tr>
+<tr><th id="614">614</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="615">615</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="drm_connector.h.html#drm_connector_state" title='drm_connector_state' data-ref="drm_connector_state" data-ref-filename="drm_connector_state">drm_connector_state</a> *</td></tr>
+<tr><th id="616">616</th><td><dfn class="decl def fn" id="drm_atomic_get_new_connector_state" title='drm_atomic_get_new_connector_state' data-ref="drm_atomic_get_new_connector_state" data-ref-filename="drm_atomic_get_new_connector_state">drm_atomic_get_new_connector_state</dfn>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col5 decl" id="55state" title='state' data-type='struct drm_atomic_state *' data-ref="55state" data-ref-filename="55state">state</dfn>,</td></tr>
+<tr><th id="617">617</th><td>				   <b>struct</b> <a class="type" href="drm_connector.h.html#drm_connector" title='drm_connector' data-ref="drm_connector" data-ref-filename="drm_connector">drm_connector</a> *<dfn class="local col6 decl" id="56connector" title='connector' data-type='struct drm_connector *' data-ref="56connector" data-ref-filename="56connector">connector</dfn>)</td></tr>
+<tr><th id="618">618</th><td>{</td></tr>
+<tr><th id="619">619</th><td>	<em>int</em> <dfn class="local col7 decl" id="57index" title='index' data-type='int' data-ref="57index" data-ref-filename="57index">index</dfn> = <a class="ref fn" href="drm_connector.h.html#drm_connector_index" title='drm_connector_index' data-ref="drm_connector_index" data-ref-filename="drm_connector_index">drm_connector_index</a>(<a class="local col6 ref" href="#56connector" title='connector' data-ref="56connector" data-ref-filename="56connector">connector</a>);</td></tr>
+<tr><th id="620">620</th><td></td></tr>
+<tr><th id="621">621</th><td>	<b>if</b> (<a class="local col7 ref" href="#57index" title='index' data-ref="57index" data-ref-filename="57index">index</a> &gt;= <a class="local col5 ref" href="#55state" title='state' data-ref="55state" data-ref-filename="55state">state</a>-&gt;<a class="ref field" href="#drm_atomic_state::num_connector" title='drm_atomic_state::num_connector' data-ref="drm_atomic_state::num_connector" data-ref-filename="drm_atomic_state..num_connector">num_connector</a>)</td></tr>
+<tr><th id="622">622</th><td>		<b>return</b> <a class="macro" href="../linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="623">623</th><td></td></tr>
+<tr><th id="624">624</th><td>	<b>return</b> <a class="local col5 ref" href="#55state" title='state' data-ref="55state" data-ref-filename="55state">state</a>-&gt;<a class="ref field" href="#drm_atomic_state::connectors" title='drm_atomic_state::connectors' data-ref="drm_atomic_state::connectors" data-ref-filename="drm_atomic_state..connectors">connectors</a>[<a class="local col7 ref" href="#57index" title='index' data-ref="57index" data-ref-filename="57index">index</a>].<a class="ref field" href="#__drm_connnectors_state::new_state" title='__drm_connnectors_state::new_state' data-ref="__drm_connnectors_state::new_state" data-ref-filename="__drm_connnectors_state..new_state">new_state</a>;</td></tr>
+<tr><th id="625">625</th><td>}</td></tr>
+<tr><th id="626">626</th><td></td></tr>
+<tr><th id="627">627</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="628">628</th><td><i class="doc"> * __drm_atomic_get_current_plane_state - get current plane state</i></td></tr>
+<tr><th id="629">629</th><td><i class="doc"> *<span class="command"> @state</span>: global atomic state object</i></td></tr>
+<tr><th id="630">630</th><td><i class="doc"> *<span class="command"> @plane</span>: plane to grab</i></td></tr>
+<tr><th id="631">631</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="632">632</th><td><i class="doc"> * This function returns the plane state for the given plane, either from</i></td></tr>
+<tr><th id="633">633</th><td><i class="doc"> *<span class="command"> @state</span>, or if the plane isn't part of the atomic state update, from<span class="command"> @plane</span>.</i></td></tr>
+<tr><th id="634">634</th><td><i class="doc"> * This is useful in atomic check callbacks, when drivers need to peek at, but</i></td></tr>
+<tr><th id="635">635</th><td><i class="doc"> * not change, state of other planes, since it avoids threading an error code</i></td></tr>
+<tr><th id="636">636</th><td><i class="doc"> * back up the call chain.</i></td></tr>
+<tr><th id="637">637</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="638">638</th><td><i class="doc"> * WARNING:</i></td></tr>
+<tr><th id="639">639</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="640">640</th><td><i class="doc"> * Note that this function is in general unsafe since it doesn't check for the</i></td></tr>
+<tr><th id="641">641</th><td><i class="doc"> * required locking for access state structures. Drivers must ensure that it is</i></td></tr>
+<tr><th id="642">642</th><td><i class="doc"> * safe to access the returned state structure through other means. One common</i></td></tr>
+<tr><th id="643">643</th><td><i class="doc"> * example is when planes are fixed to a single CRTC, and the driver knows that</i></td></tr>
+<tr><th id="644">644</th><td><i class="doc"> * the CRTC lock is held already. In that case holding the CRTC lock gives a</i></td></tr>
+<tr><th id="645">645</th><td><i class="doc"> * read-lock on all planes connected to that CRTC. But if planes can be</i></td></tr>
+<tr><th id="646">646</th><td><i class="doc"> * reassigned things get more tricky. In that case it's better to use</i></td></tr>
+<tr><th id="647">647</th><td><i class="doc"> * drm_atomic_get_plane_state and wire up full error handling.</i></td></tr>
+<tr><th id="648">648</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="649">649</th><td><i class="doc"> * Returns:</i></td></tr>
+<tr><th id="650">650</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="651">651</th><td><i class="doc"> * Read-only pointer to the current plane state.</i></td></tr>
+<tr><th id="652">652</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="653">653</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>const</em> <b>struct</b> <a class="type" href="drm_plane.h.html#drm_plane_state" title='drm_plane_state' data-ref="drm_plane_state" data-ref-filename="drm_plane_state">drm_plane_state</a> *</td></tr>
+<tr><th id="654">654</th><td><dfn class="decl def fn" id="__drm_atomic_get_current_plane_state" title='__drm_atomic_get_current_plane_state' data-ref="__drm_atomic_get_current_plane_state" data-ref-filename="__drm_atomic_get_current_plane_state">__drm_atomic_get_current_plane_state</dfn>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col8 decl" id="58state" title='state' data-type='struct drm_atomic_state *' data-ref="58state" data-ref-filename="58state">state</dfn>,</td></tr>
+<tr><th id="655">655</th><td>				     <b>struct</b> <a class="type" href="drm_plane.h.html#drm_plane" title='drm_plane' data-ref="drm_plane" data-ref-filename="drm_plane">drm_plane</a> *<dfn class="local col9 decl" id="59plane" title='plane' data-type='struct drm_plane *' data-ref="59plane" data-ref-filename="59plane">plane</dfn>)</td></tr>
+<tr><th id="656">656</th><td>{</td></tr>
+<tr><th id="657">657</th><td>	<b>if</b> (<a class="local col8 ref" href="#58state" title='state' data-ref="58state" data-ref-filename="58state">state</a>-&gt;<a class="ref field" href="#drm_atomic_state::planes" title='drm_atomic_state::planes' data-ref="drm_atomic_state::planes" data-ref-filename="drm_atomic_state..planes">planes</a>[<a class="ref fn" href="drm_plane.h.html#drm_plane_index" title='drm_plane_index' data-ref="drm_plane_index" data-ref-filename="drm_plane_index">drm_plane_index</a>(<a class="local col9 ref" href="#59plane" title='plane' data-ref="59plane" data-ref-filename="59plane">plane</a>)].<a class="ref field" href="#__drm_planes_state::state" title='__drm_planes_state::state' data-ref="__drm_planes_state::state" data-ref-filename="__drm_planes_state..state">state</a>)</td></tr>
+<tr><th id="658">658</th><td>		<b>return</b> <a class="local col8 ref" href="#58state" title='state' data-ref="58state" data-ref-filename="58state">state</a>-&gt;<a class="ref field" href="#drm_atomic_state::planes" title='drm_atomic_state::planes' data-ref="drm_atomic_state::planes" data-ref-filename="drm_atomic_state..planes">planes</a>[<a class="ref fn" href="drm_plane.h.html#drm_plane_index" title='drm_plane_index' data-ref="drm_plane_index" data-ref-filename="drm_plane_index">drm_plane_index</a>(<a class="local col9 ref" href="#59plane" title='plane' data-ref="59plane" data-ref-filename="59plane">plane</a>)].<a class="ref field" href="#__drm_planes_state::state" title='__drm_planes_state::state' data-ref="__drm_planes_state::state" data-ref-filename="__drm_planes_state..state">state</a>;</td></tr>
+<tr><th id="659">659</th><td></td></tr>
+<tr><th id="660">660</th><td>	<b>return</b> <a class="local col9 ref" href="#59plane" title='plane' data-ref="59plane" data-ref-filename="59plane">plane</a>-&gt;<a class="ref field" href="drm_plane.h.html#drm_plane::state" title='drm_plane::state' data-ref="drm_plane::state" data-ref-filename="drm_plane..state">state</a>;</td></tr>
+<tr><th id="661">661</th><td>}</td></tr>
+<tr><th id="662">662</th><td></td></tr>
+<tr><th id="663">663</th><td><em>int</em> <a class="macro" href="../linux/compiler_types.h.html#108" title="__attribute__((__warn_unused_result__))" data-ref="_M/__must_check">__must_check</a></td></tr>
+<tr><th id="664">664</th><td><a class="decl fn" href="../../drivers/gpu/drm/drm_atomic.c.html#drm_atomic_add_affected_connectors" title='drm_atomic_add_affected_connectors' data-ref="drm_atomic_add_affected_connectors" data-ref-filename="drm_atomic_add_affected_connectors" id="drm_atomic_add_affected_connectors">drm_atomic_add_affected_connectors</a>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col0 decl" id="60state" title='state' data-type='struct drm_atomic_state *' data-ref="60state" data-ref-filename="60state">state</dfn>,</td></tr>
+<tr><th id="665">665</th><td>				   <b>struct</b> <a class="type" href="drm_crtc.h.html#drm_crtc" title='drm_crtc' data-ref="drm_crtc" data-ref-filename="drm_crtc">drm_crtc</a> *<dfn class="local col1 decl" id="61crtc" title='crtc' data-type='struct drm_crtc *' data-ref="61crtc" data-ref-filename="61crtc">crtc</dfn>);</td></tr>
+<tr><th id="666">666</th><td><em>int</em> <a class="macro" href="../linux/compiler_types.h.html#108" title="__attribute__((__warn_unused_result__))" data-ref="_M/__must_check">__must_check</a></td></tr>
+<tr><th id="667">667</th><td><a class="decl fn" href="../../drivers/gpu/drm/drm_atomic.c.html#drm_atomic_add_affected_planes" title='drm_atomic_add_affected_planes' data-ref="drm_atomic_add_affected_planes" data-ref-filename="drm_atomic_add_affected_planes" id="drm_atomic_add_affected_planes">drm_atomic_add_affected_planes</a>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col2 decl" id="62state" title='state' data-type='struct drm_atomic_state *' data-ref="62state" data-ref-filename="62state">state</dfn>,</td></tr>
+<tr><th id="668">668</th><td>			       <b>struct</b> <a class="type" href="drm_crtc.h.html#drm_crtc" title='drm_crtc' data-ref="drm_crtc" data-ref-filename="drm_crtc">drm_crtc</a> *<dfn class="local col3 decl" id="63crtc" title='crtc' data-type='struct drm_crtc *' data-ref="63crtc" data-ref-filename="63crtc">crtc</dfn>);</td></tr>
+<tr><th id="669">669</th><td></td></tr>
+<tr><th id="670">670</th><td><em>int</em> <a class="macro" href="../linux/compiler_types.h.html#108" title="__attribute__((__warn_unused_result__))" data-ref="_M/__must_check">__must_check</a> <a class="decl fn" href="../../drivers/gpu/drm/drm_atomic.c.html#drm_atomic_check_only" title='drm_atomic_check_only' data-ref="drm_atomic_check_only" data-ref-filename="drm_atomic_check_only" id="drm_atomic_check_only">drm_atomic_check_only</a>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col4 decl" id="64state" title='state' data-type='struct drm_atomic_state *' data-ref="64state" data-ref-filename="64state">state</dfn>);</td></tr>
+<tr><th id="671">671</th><td><em>int</em> <a class="macro" href="../linux/compiler_types.h.html#108" title="__attribute__((__warn_unused_result__))" data-ref="_M/__must_check">__must_check</a> <a class="decl fn" href="../../drivers/gpu/drm/drm_atomic.c.html#drm_atomic_commit" title='drm_atomic_commit' data-ref="drm_atomic_commit" data-ref-filename="drm_atomic_commit" id="drm_atomic_commit">drm_atomic_commit</a>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col5 decl" id="65state" title='state' data-type='struct drm_atomic_state *' data-ref="65state" data-ref-filename="65state">state</dfn>);</td></tr>
+<tr><th id="672">672</th><td><em>int</em> <a class="macro" href="../linux/compiler_types.h.html#108" title="__attribute__((__warn_unused_result__))" data-ref="_M/__must_check">__must_check</a> <a class="decl fn" href="../../drivers/gpu/drm/drm_atomic.c.html#drm_atomic_nonblocking_commit" title='drm_atomic_nonblocking_commit' data-ref="drm_atomic_nonblocking_commit" data-ref-filename="drm_atomic_nonblocking_commit" id="drm_atomic_nonblocking_commit">drm_atomic_nonblocking_commit</a>(<b>struct</b> <a class="type" href="#drm_atomic_state" title='drm_atomic_state' data-ref="drm_atomic_state" data-ref-filename="drm_atomic_state">drm_atomic_state</a> *<dfn class="local col6 decl" id="66state" title='state' data-type='struct drm_atomic_state *' data-ref="66state" data-ref-filename="66state">state</dfn>);</td></tr>
+<tr><th id="673">673</th><td></td></tr>
+<tr><th id="674">674</th><td><em>void</em> <a class="decl fn" href="../../drivers/gpu/drm/drm_atomic.c.html#drm_state_dump" title='drm_state_dump' data-ref="drm_state_dump" data-ref-filename="drm_state_dump" id="drm_state_dump">drm_state_dump</a>(<b>struct</b> <a class="type" href="drm_device.h.html#drm_device" title='drm_device' data-ref="drm_device" data-ref-filename="drm_device">drm_device</a> *<dfn class="local col7 decl" id="67dev" title='dev' data-type='struct drm_device *' data-ref="67dev" data-ref-filename="67dev">dev</dfn>, <b>struct</b> <a class="type" href="drm_print.h.html#drm_printer" title='drm_printer' data-ref="drm_printer" data-ref-filename="drm_printer">drm_printer</a> *<dfn class="local col8 decl" id="68p" title='p' data-type='struct drm_printer *' data-ref="68p" data-ref-filename="68p">p</dfn>);</td></tr>
+<tr><th id="675">675</th><td></td></tr>
+<tr><th id="676">676</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="677">677</th><td><i class="doc"> * for_each_oldnew_connector_in_state - iterate over all connectors in an atomic update</i></td></tr>
+<tr><th id="678">678</th><td><i class="doc"> * @__state: &amp;struct drm_atomic_state pointer</i></td></tr>
+<tr><th id="679">679</th><td><i class="doc"> *<span class="command"> @connector</span>: &amp;struct drm_connector iteration cursor</i></td></tr>
+<tr><th id="680">680</th><td><i class="doc"> *<span class="command"> @old</span>_connector_state: &amp;struct drm_connector_state iteration cursor for the</i></td></tr>
+<tr><th id="681">681</th><td><i class="doc"> * 	old state</i></td></tr>
+<tr><th id="682">682</th><td><i class="doc"> *<span class="command"> @new</span>_connector_state: &amp;struct drm_connector_state iteration cursor for the</i></td></tr>
+<tr><th id="683">683</th><td><i class="doc"> * 	new state</i></td></tr>
+<tr><th id="684">684</th><td><i class="doc"> * @__i: int iteration cursor, for macro-internal use</i></td></tr>
+<tr><th id="685">685</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="686">686</th><td><i class="doc"> * This iterates over all connectors in an atomic update, tracking both old and</i></td></tr>
+<tr><th id="687">687</th><td><i class="doc"> * new state. This is useful in places where the state delta needs to be</i></td></tr>
+<tr><th id="688">688</th><td><i class="doc"> * considered, for example in atomic check functions.</i></td></tr>
+<tr><th id="689">689</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="690">690</th><td><u>#define <dfn class="macro" id="_M/for_each_oldnew_connector_in_state" data-ref="_M/for_each_oldnew_connector_in_state">for_each_oldnew_connector_in_state</dfn>(__state, connector, old_connector_state, new_connector_state, __i) \</u></td></tr>
+<tr><th id="691">691</th><td><u>	for ((__i) = 0;								\</u></td></tr>
+<tr><th id="692">692</th><td><u>	     (__i) &lt; (__state)-&gt;num_connector;					\</u></td></tr>
+<tr><th id="693">693</th><td><u>	     (__i)++)								\</u></td></tr>
+<tr><th id="694">694</th><td><u>		for_each_if ((__state)-&gt;connectors[__i].ptr &amp;&amp;			\</u></td></tr>
+<tr><th id="695">695</th><td><u>			     ((connector) = (__state)-&gt;connectors[__i].ptr,	\</u></td></tr>
+<tr><th id="696">696</th><td><u>			     (old_connector_state) = (__state)-&gt;connectors[__i].old_state,	\</u></td></tr>
+<tr><th id="697">697</th><td><u>			     (new_connector_state) = (__state)-&gt;connectors[__i].new_state, 1))</u></td></tr>
+<tr><th id="698">698</th><td></td></tr>
+<tr><th id="699">699</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="700">700</th><td><i class="doc"> * for_each_old_connector_in_state - iterate over all connectors in an atomic update</i></td></tr>
+<tr><th id="701">701</th><td><i class="doc"> * @__state: &amp;struct drm_atomic_state pointer</i></td></tr>
+<tr><th id="702">702</th><td><i class="doc"> *<span class="command"> @connector</span>: &amp;struct drm_connector iteration cursor</i></td></tr>
+<tr><th id="703">703</th><td><i class="doc"> *<span class="command"> @old</span>_connector_state: &amp;struct drm_connector_state iteration cursor for the</i></td></tr>
+<tr><th id="704">704</th><td><i class="doc"> * 	old state</i></td></tr>
+<tr><th id="705">705</th><td><i class="doc"> * @__i: int iteration cursor, for macro-internal use</i></td></tr>
+<tr><th id="706">706</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="707">707</th><td><i class="doc"> * This iterates over all connectors in an atomic update, tracking only the old</i></td></tr>
+<tr><th id="708">708</th><td><i class="doc"> * state. This is useful in disable functions, where we need the old state the</i></td></tr>
+<tr><th id="709">709</th><td><i class="doc"> * hardware is still in.</i></td></tr>
+<tr><th id="710">710</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="711">711</th><td><u>#define <dfn class="macro" id="_M/for_each_old_connector_in_state" data-ref="_M/for_each_old_connector_in_state">for_each_old_connector_in_state</dfn>(__state, connector, old_connector_state, __i) \</u></td></tr>
+<tr><th id="712">712</th><td><u>	for ((__i) = 0;								\</u></td></tr>
+<tr><th id="713">713</th><td><u>	     (__i) &lt; (__state)-&gt;num_connector;					\</u></td></tr>
+<tr><th id="714">714</th><td><u>	     (__i)++)								\</u></td></tr>
+<tr><th id="715">715</th><td><u>		for_each_if ((__state)-&gt;connectors[__i].ptr &amp;&amp;			\</u></td></tr>
+<tr><th id="716">716</th><td><u>			     ((connector) = (__state)-&gt;connectors[__i].ptr,	\</u></td></tr>
+<tr><th id="717">717</th><td><u>			     (old_connector_state) = (__state)-&gt;connectors[__i].old_state, 1))</u></td></tr>
+<tr><th id="718">718</th><td></td></tr>
+<tr><th id="719">719</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="720">720</th><td><i class="doc"> * for_each_new_connector_in_state - iterate over all connectors in an atomic update</i></td></tr>
+<tr><th id="721">721</th><td><i class="doc"> * @__state: &amp;struct drm_atomic_state pointer</i></td></tr>
+<tr><th id="722">722</th><td><i class="doc"> *<span class="command"> @connector</span>: &amp;struct drm_connector iteration cursor</i></td></tr>
+<tr><th id="723">723</th><td><i class="doc"> *<span class="command"> @new</span>_connector_state: &amp;struct drm_connector_state iteration cursor for the</i></td></tr>
+<tr><th id="724">724</th><td><i class="doc"> * 	new state</i></td></tr>
+<tr><th id="725">725</th><td><i class="doc"> * @__i: int iteration cursor, for macro-internal use</i></td></tr>
+<tr><th id="726">726</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="727">727</th><td><i class="doc"> * This iterates over all connectors in an atomic update, tracking only the new</i></td></tr>
+<tr><th id="728">728</th><td><i class="doc"> * state. This is useful in enable functions, where we need the new state the</i></td></tr>
+<tr><th id="729">729</th><td><i class="doc"> * hardware should be in when the atomic commit operation has completed.</i></td></tr>
+<tr><th id="730">730</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="731">731</th><td><u>#define <dfn class="macro" id="_M/for_each_new_connector_in_state" data-ref="_M/for_each_new_connector_in_state">for_each_new_connector_in_state</dfn>(__state, connector, new_connector_state, __i) \</u></td></tr>
+<tr><th id="732">732</th><td><u>	for ((__i) = 0;								\</u></td></tr>
+<tr><th id="733">733</th><td><u>	     (__i) &lt; (__state)-&gt;num_connector;					\</u></td></tr>
+<tr><th id="734">734</th><td><u>	     (__i)++)								\</u></td></tr>
+<tr><th id="735">735</th><td><u>		for_each_if ((__state)-&gt;connectors[__i].ptr &amp;&amp;			\</u></td></tr>
+<tr><th id="736">736</th><td><u>			     ((connector) = (__state)-&gt;connectors[__i].ptr,	\</u></td></tr>
+<tr><th id="737">737</th><td><u>			     (new_connector_state) = (__state)-&gt;connectors[__i].new_state, 1))</u></td></tr>
+<tr><th id="738">738</th><td></td></tr>
+<tr><th id="739">739</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="740">740</th><td><i class="doc"> * for_each_oldnew_crtc_in_state - iterate over all CRTCs in an atomic update</i></td></tr>
+<tr><th id="741">741</th><td><i class="doc"> * @__state: &amp;struct drm_atomic_state pointer</i></td></tr>
+<tr><th id="742">742</th><td><i class="doc"> *<span class="command"> @crtc</span>: &amp;struct drm_crtc iteration cursor</i></td></tr>
+<tr><th id="743">743</th><td><i class="doc"> *<span class="command"> @old</span>_crtc_state: &amp;struct drm_crtc_state iteration cursor for the old state</i></td></tr>
+<tr><th id="744">744</th><td><i class="doc"> *<span class="command"> @new</span>_crtc_state: &amp;struct drm_crtc_state iteration cursor for the new state</i></td></tr>
+<tr><th id="745">745</th><td><i class="doc"> * @__i: int iteration cursor, for macro-internal use</i></td></tr>
+<tr><th id="746">746</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="747">747</th><td><i class="doc"> * This iterates over all CRTCs in an atomic update, tracking both old and</i></td></tr>
+<tr><th id="748">748</th><td><i class="doc"> * new state. This is useful in places where the state delta needs to be</i></td></tr>
+<tr><th id="749">749</th><td><i class="doc"> * considered, for example in atomic check functions.</i></td></tr>
+<tr><th id="750">750</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="751">751</th><td><u>#define <dfn class="macro" id="_M/for_each_oldnew_crtc_in_state" data-ref="_M/for_each_oldnew_crtc_in_state">for_each_oldnew_crtc_in_state</dfn>(__state, crtc, old_crtc_state, new_crtc_state, __i) \</u></td></tr>
+<tr><th id="752">752</th><td><u>	for ((__i) = 0;							\</u></td></tr>
+<tr><th id="753">753</th><td><u>	     (__i) &lt; (__state)-&gt;dev-&gt;mode_config.num_crtc;		\</u></td></tr>
+<tr><th id="754">754</th><td><u>	     (__i)++)							\</u></td></tr>
+<tr><th id="755">755</th><td><u>		for_each_if ((__state)-&gt;crtcs[__i].ptr &amp;&amp;		\</u></td></tr>
+<tr><th id="756">756</th><td><u>			     ((crtc) = (__state)-&gt;crtcs[__i].ptr,	\</u></td></tr>
+<tr><th id="757">757</th><td><u>			     (old_crtc_state) = (__state)-&gt;crtcs[__i].old_state, \</u></td></tr>
+<tr><th id="758">758</th><td><u>			     (new_crtc_state) = (__state)-&gt;crtcs[__i].new_state, 1))</u></td></tr>
+<tr><th id="759">759</th><td></td></tr>
+<tr><th id="760">760</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="761">761</th><td><i class="doc"> * for_each_old_crtc_in_state - iterate over all CRTCs in an atomic update</i></td></tr>
+<tr><th id="762">762</th><td><i class="doc"> * @__state: &amp;struct drm_atomic_state pointer</i></td></tr>
+<tr><th id="763">763</th><td><i class="doc"> *<span class="command"> @crtc</span>: &amp;struct drm_crtc iteration cursor</i></td></tr>
+<tr><th id="764">764</th><td><i class="doc"> *<span class="command"> @old</span>_crtc_state: &amp;struct drm_crtc_state iteration cursor for the old state</i></td></tr>
+<tr><th id="765">765</th><td><i class="doc"> * @__i: int iteration cursor, for macro-internal use</i></td></tr>
+<tr><th id="766">766</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="767">767</th><td><i class="doc"> * This iterates over all CRTCs in an atomic update, tracking only the old</i></td></tr>
+<tr><th id="768">768</th><td><i class="doc"> * state. This is useful in disable functions, where we need the old state the</i></td></tr>
+<tr><th id="769">769</th><td><i class="doc"> * hardware is still in.</i></td></tr>
+<tr><th id="770">770</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="771">771</th><td><u>#define <dfn class="macro" id="_M/for_each_old_crtc_in_state" data-ref="_M/for_each_old_crtc_in_state">for_each_old_crtc_in_state</dfn>(__state, crtc, old_crtc_state, __i)	\</u></td></tr>
+<tr><th id="772">772</th><td><u>	for ((__i) = 0;							\</u></td></tr>
+<tr><th id="773">773</th><td><u>	     (__i) &lt; (__state)-&gt;dev-&gt;mode_config.num_crtc;		\</u></td></tr>
+<tr><th id="774">774</th><td><u>	     (__i)++)							\</u></td></tr>
+<tr><th id="775">775</th><td><u>		for_each_if ((__state)-&gt;crtcs[__i].ptr &amp;&amp;		\</u></td></tr>
+<tr><th id="776">776</th><td><u>			     ((crtc) = (__state)-&gt;crtcs[__i].ptr,	\</u></td></tr>
+<tr><th id="777">777</th><td><u>			     (old_crtc_state) = (__state)-&gt;crtcs[__i].old_state, 1))</u></td></tr>
+<tr><th id="778">778</th><td></td></tr>
+<tr><th id="779">779</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="780">780</th><td><i class="doc"> * for_each_new_crtc_in_state - iterate over all CRTCs in an atomic update</i></td></tr>
+<tr><th id="781">781</th><td><i class="doc"> * @__state: &amp;struct drm_atomic_state pointer</i></td></tr>
+<tr><th id="782">782</th><td><i class="doc"> *<span class="command"> @crtc</span>: &amp;struct drm_crtc iteration cursor</i></td></tr>
+<tr><th id="783">783</th><td><i class="doc"> *<span class="command"> @new</span>_crtc_state: &amp;struct drm_crtc_state iteration cursor for the new state</i></td></tr>
+<tr><th id="784">784</th><td><i class="doc"> * @__i: int iteration cursor, for macro-internal use</i></td></tr>
+<tr><th id="785">785</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="786">786</th><td><i class="doc"> * This iterates over all CRTCs in an atomic update, tracking only the new</i></td></tr>
+<tr><th id="787">787</th><td><i class="doc"> * state. This is useful in enable functions, where we need the new state the</i></td></tr>
+<tr><th id="788">788</th><td><i class="doc"> * hardware should be in when the atomic commit operation has completed.</i></td></tr>
+<tr><th id="789">789</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="790">790</th><td><u>#define <dfn class="macro" id="_M/for_each_new_crtc_in_state" data-ref="_M/for_each_new_crtc_in_state">for_each_new_crtc_in_state</dfn>(__state, crtc, new_crtc_state, __i)	\</u></td></tr>
+<tr><th id="791">791</th><td><u>	for ((__i) = 0;							\</u></td></tr>
+<tr><th id="792">792</th><td><u>	     (__i) &lt; (__state)-&gt;dev-&gt;mode_config.num_crtc;		\</u></td></tr>
+<tr><th id="793">793</th><td><u>	     (__i)++)							\</u></td></tr>
+<tr><th id="794">794</th><td><u>		for_each_if ((__state)-&gt;crtcs[__i].ptr &amp;&amp;		\</u></td></tr>
+<tr><th id="795">795</th><td><u>			     ((crtc) = (__state)-&gt;crtcs[__i].ptr,	\</u></td></tr>
+<tr><th id="796">796</th><td><u>			     (new_crtc_state) = (__state)-&gt;crtcs[__i].new_state, 1))</u></td></tr>
+<tr><th id="797">797</th><td></td></tr>
+<tr><th id="798">798</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="799">799</th><td><i class="doc"> * for_each_oldnew_plane_in_state - iterate over all planes in an atomic update</i></td></tr>
+<tr><th id="800">800</th><td><i class="doc"> * @__state: &amp;struct drm_atomic_state pointer</i></td></tr>
+<tr><th id="801">801</th><td><i class="doc"> *<span class="command"> @plane</span>: &amp;struct drm_plane iteration cursor</i></td></tr>
+<tr><th id="802">802</th><td><i class="doc"> *<span class="command"> @old</span>_plane_state: &amp;struct drm_plane_state iteration cursor for the old state</i></td></tr>
+<tr><th id="803">803</th><td><i class="doc"> *<span class="command"> @new</span>_plane_state: &amp;struct drm_plane_state iteration cursor for the new state</i></td></tr>
+<tr><th id="804">804</th><td><i class="doc"> * @__i: int iteration cursor, for macro-internal use</i></td></tr>
+<tr><th id="805">805</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="806">806</th><td><i class="doc"> * This iterates over all planes in an atomic update, tracking both old and</i></td></tr>
+<tr><th id="807">807</th><td><i class="doc"> * new state. This is useful in places where the state delta needs to be</i></td></tr>
+<tr><th id="808">808</th><td><i class="doc"> * considered, for example in atomic check functions.</i></td></tr>
+<tr><th id="809">809</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="810">810</th><td><u>#define <dfn class="macro" id="_M/for_each_oldnew_plane_in_state" data-ref="_M/for_each_oldnew_plane_in_state">for_each_oldnew_plane_in_state</dfn>(__state, plane, old_plane_state, new_plane_state, __i) \</u></td></tr>
+<tr><th id="811">811</th><td><u>	for ((__i) = 0;							\</u></td></tr>
+<tr><th id="812">812</th><td><u>	     (__i) &lt; (__state)-&gt;dev-&gt;mode_config.num_total_plane;	\</u></td></tr>
+<tr><th id="813">813</th><td><u>	     (__i)++)							\</u></td></tr>
+<tr><th id="814">814</th><td><u>		for_each_if ((__state)-&gt;planes[__i].ptr &amp;&amp;		\</u></td></tr>
+<tr><th id="815">815</th><td><u>			     ((plane) = (__state)-&gt;planes[__i].ptr,	\</u></td></tr>
+<tr><th id="816">816</th><td><u>			      (old_plane_state) = (__state)-&gt;planes[__i].old_state,\</u></td></tr>
+<tr><th id="817">817</th><td><u>			      (new_plane_state) = (__state)-&gt;planes[__i].new_state, 1))</u></td></tr>
+<tr><th id="818">818</th><td></td></tr>
+<tr><th id="819">819</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="820">820</th><td><i class="doc"> * for_each_oldnew_plane_in_state_reverse - iterate over all planes in an atomic</i></td></tr>
+<tr><th id="821">821</th><td><i class="doc"> * update in reverse order</i></td></tr>
+<tr><th id="822">822</th><td><i class="doc"> * @__state: &amp;struct drm_atomic_state pointer</i></td></tr>
+<tr><th id="823">823</th><td><i class="doc"> *<span class="command"> @plane</span>: &amp;struct drm_plane iteration cursor</i></td></tr>
+<tr><th id="824">824</th><td><i class="doc"> *<span class="command"> @old</span>_plane_state: &amp;struct drm_plane_state iteration cursor for the old state</i></td></tr>
+<tr><th id="825">825</th><td><i class="doc"> *<span class="command"> @new</span>_plane_state: &amp;struct drm_plane_state iteration cursor for the new state</i></td></tr>
+<tr><th id="826">826</th><td><i class="doc"> * @__i: int iteration cursor, for macro-internal use</i></td></tr>
+<tr><th id="827">827</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="828">828</th><td><i class="doc"> * This iterates over all planes in an atomic update in reverse order,</i></td></tr>
+<tr><th id="829">829</th><td><i class="doc"> * tracking both old and  new state. This is useful in places where the</i></td></tr>
+<tr><th id="830">830</th><td><i class="doc"> * state delta needs to be considered, for example in atomic check functions.</i></td></tr>
+<tr><th id="831">831</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="832">832</th><td><u>#define <dfn class="macro" id="_M/for_each_oldnew_plane_in_state_reverse" data-ref="_M/for_each_oldnew_plane_in_state_reverse">for_each_oldnew_plane_in_state_reverse</dfn>(__state, plane, old_plane_state, new_plane_state, __i) \</u></td></tr>
+<tr><th id="833">833</th><td><u>	for ((__i) = ((__state)-&gt;dev-&gt;mode_config.num_total_plane - 1);	\</u></td></tr>
+<tr><th id="834">834</th><td><u>	     (__i) &gt;= 0;						\</u></td></tr>
+<tr><th id="835">835</th><td><u>	     (__i)--)							\</u></td></tr>
+<tr><th id="836">836</th><td><u>		for_each_if ((__state)-&gt;planes[__i].ptr &amp;&amp;		\</u></td></tr>
+<tr><th id="837">837</th><td><u>			     ((plane) = (__state)-&gt;planes[__i].ptr,	\</u></td></tr>
+<tr><th id="838">838</th><td><u>			      (old_plane_state) = (__state)-&gt;planes[__i].old_state,\</u></td></tr>
+<tr><th id="839">839</th><td><u>			      (new_plane_state) = (__state)-&gt;planes[__i].new_state, 1))</u></td></tr>
+<tr><th id="840">840</th><td></td></tr>
+<tr><th id="841">841</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="842">842</th><td><i class="doc"> * for_each_old_plane_in_state - iterate over all planes in an atomic update</i></td></tr>
+<tr><th id="843">843</th><td><i class="doc"> * @__state: &amp;struct drm_atomic_state pointer</i></td></tr>
+<tr><th id="844">844</th><td><i class="doc"> *<span class="command"> @plane</span>: &amp;struct drm_plane iteration cursor</i></td></tr>
+<tr><th id="845">845</th><td><i class="doc"> *<span class="command"> @old</span>_plane_state: &amp;struct drm_plane_state iteration cursor for the old state</i></td></tr>
+<tr><th id="846">846</th><td><i class="doc"> * @__i: int iteration cursor, for macro-internal use</i></td></tr>
+<tr><th id="847">847</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="848">848</th><td><i class="doc"> * This iterates over all planes in an atomic update, tracking only the old</i></td></tr>
+<tr><th id="849">849</th><td><i class="doc"> * state. This is useful in disable functions, where we need the old state the</i></td></tr>
+<tr><th id="850">850</th><td><i class="doc"> * hardware is still in.</i></td></tr>
+<tr><th id="851">851</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="852">852</th><td><u>#define <dfn class="macro" id="_M/for_each_old_plane_in_state" data-ref="_M/for_each_old_plane_in_state">for_each_old_plane_in_state</dfn>(__state, plane, old_plane_state, __i) \</u></td></tr>
+<tr><th id="853">853</th><td><u>	for ((__i) = 0;							\</u></td></tr>
+<tr><th id="854">854</th><td><u>	     (__i) &lt; (__state)-&gt;dev-&gt;mode_config.num_total_plane;	\</u></td></tr>
+<tr><th id="855">855</th><td><u>	     (__i)++)							\</u></td></tr>
+<tr><th id="856">856</th><td><u>		for_each_if ((__state)-&gt;planes[__i].ptr &amp;&amp;		\</u></td></tr>
+<tr><th id="857">857</th><td><u>			     ((plane) = (__state)-&gt;planes[__i].ptr,	\</u></td></tr>
+<tr><th id="858">858</th><td><u>			      (old_plane_state) = (__state)-&gt;planes[__i].old_state, 1))</u></td></tr>
+<tr><th id="859">859</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="860">860</th><td><i class="doc"> * for_each_new_plane_in_state - iterate over all planes in an atomic update</i></td></tr>
+<tr><th id="861">861</th><td><i class="doc"> * @__state: &amp;struct drm_atomic_state pointer</i></td></tr>
+<tr><th id="862">862</th><td><i class="doc"> *<span class="command"> @plane</span>: &amp;struct drm_plane iteration cursor</i></td></tr>
+<tr><th id="863">863</th><td><i class="doc"> *<span class="command"> @new</span>_plane_state: &amp;struct drm_plane_state iteration cursor for the new state</i></td></tr>
+<tr><th id="864">864</th><td><i class="doc"> * @__i: int iteration cursor, for macro-internal use</i></td></tr>
+<tr><th id="865">865</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="866">866</th><td><i class="doc"> * This iterates over all planes in an atomic update, tracking only the new</i></td></tr>
+<tr><th id="867">867</th><td><i class="doc"> * state. This is useful in enable functions, where we need the new state the</i></td></tr>
+<tr><th id="868">868</th><td><i class="doc"> * hardware should be in when the atomic commit operation has completed.</i></td></tr>
+<tr><th id="869">869</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="870">870</th><td><u>#define <dfn class="macro" id="_M/for_each_new_plane_in_state" data-ref="_M/for_each_new_plane_in_state">for_each_new_plane_in_state</dfn>(__state, plane, new_plane_state, __i) \</u></td></tr>
+<tr><th id="871">871</th><td><u>	for ((__i) = 0;							\</u></td></tr>
+<tr><th id="872">872</th><td><u>	     (__i) &lt; (__state)-&gt;dev-&gt;mode_config.num_total_plane;	\</u></td></tr>
+<tr><th id="873">873</th><td><u>	     (__i)++)							\</u></td></tr>
+<tr><th id="874">874</th><td><u>		for_each_if ((__state)-&gt;planes[__i].ptr &amp;&amp;		\</u></td></tr>
+<tr><th id="875">875</th><td><u>			     ((plane) = (__state)-&gt;planes[__i].ptr,	\</u></td></tr>
+<tr><th id="876">876</th><td><u>			      (new_plane_state) = (__state)-&gt;planes[__i].new_state, 1))</u></td></tr>
+<tr><th id="877">877</th><td></td></tr>
+<tr><th id="878">878</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="879">879</th><td><i class="doc"> * for_each_oldnew_private_obj_in_state - iterate over all private objects in an atomic update</i></td></tr>
+<tr><th id="880">880</th><td><i class="doc"> * @__state: &amp;struct drm_atomic_state pointer</i></td></tr>
+<tr><th id="881">881</th><td><i class="doc"> *<span class="command"> @obj</span>: &amp;struct drm_private_obj iteration cursor</i></td></tr>
+<tr><th id="882">882</th><td><i class="doc"> *<span class="command"> @old</span>_obj_state: &amp;struct drm_private_state iteration cursor for the old state</i></td></tr>
+<tr><th id="883">883</th><td><i class="doc"> *<span class="command"> @new</span>_obj_state: &amp;struct drm_private_state iteration cursor for the new state</i></td></tr>
+<tr><th id="884">884</th><td><i class="doc"> * @__i: int iteration cursor, for macro-internal use</i></td></tr>
+<tr><th id="885">885</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="886">886</th><td><i class="doc"> * This iterates over all private objects in an atomic update, tracking both</i></td></tr>
+<tr><th id="887">887</th><td><i class="doc"> * old and new state. This is useful in places where the state delta needs</i></td></tr>
+<tr><th id="888">888</th><td><i class="doc"> * to be considered, for example in atomic check functions.</i></td></tr>
+<tr><th id="889">889</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="890">890</th><td><u>#define <dfn class="macro" id="_M/for_each_oldnew_private_obj_in_state" data-ref="_M/for_each_oldnew_private_obj_in_state">for_each_oldnew_private_obj_in_state</dfn>(__state, obj, old_obj_state, new_obj_state, __i) \</u></td></tr>
+<tr><th id="891">891</th><td><u>	for ((__i) = 0; \</u></td></tr>
+<tr><th id="892">892</th><td><u>	     (__i) &lt; (__state)-&gt;num_private_objs &amp;&amp; \</u></td></tr>
+<tr><th id="893">893</th><td><u>		     ((obj) = (__state)-&gt;private_objs[__i].ptr, \</u></td></tr>
+<tr><th id="894">894</th><td><u>		      (old_obj_state) = (__state)-&gt;private_objs[__i].old_state,	\</u></td></tr>
+<tr><th id="895">895</th><td><u>		      (new_obj_state) = (__state)-&gt;private_objs[__i].new_state, 1); \</u></td></tr>
+<tr><th id="896">896</th><td><u>	     (__i)++)</u></td></tr>
+<tr><th id="897">897</th><td></td></tr>
+<tr><th id="898">898</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="899">899</th><td><i class="doc"> * for_each_old_private_obj_in_state - iterate over all private objects in an atomic update</i></td></tr>
+<tr><th id="900">900</th><td><i class="doc"> * @__state: &amp;struct drm_atomic_state pointer</i></td></tr>
+<tr><th id="901">901</th><td><i class="doc"> *<span class="command"> @obj</span>: &amp;struct drm_private_obj iteration cursor</i></td></tr>
+<tr><th id="902">902</th><td><i class="doc"> *<span class="command"> @old</span>_obj_state: &amp;struct drm_private_state iteration cursor for the old state</i></td></tr>
+<tr><th id="903">903</th><td><i class="doc"> * @__i: int iteration cursor, for macro-internal use</i></td></tr>
+<tr><th id="904">904</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="905">905</th><td><i class="doc"> * This iterates over all private objects in an atomic update, tracking only</i></td></tr>
+<tr><th id="906">906</th><td><i class="doc"> * the old state. This is useful in disable functions, where we need the old</i></td></tr>
+<tr><th id="907">907</th><td><i class="doc"> * state the hardware is still in.</i></td></tr>
+<tr><th id="908">908</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="909">909</th><td><u>#define <dfn class="macro" id="_M/for_each_old_private_obj_in_state" data-ref="_M/for_each_old_private_obj_in_state">for_each_old_private_obj_in_state</dfn>(__state, obj, old_obj_state, __i) \</u></td></tr>
+<tr><th id="910">910</th><td><u>	for ((__i) = 0; \</u></td></tr>
+<tr><th id="911">911</th><td><u>	     (__i) &lt; (__state)-&gt;num_private_objs &amp;&amp; \</u></td></tr>
+<tr><th id="912">912</th><td><u>		     ((obj) = (__state)-&gt;private_objs[__i].ptr, \</u></td></tr>
+<tr><th id="913">913</th><td><u>		      (old_obj_state) = (__state)-&gt;private_objs[__i].old_state, 1); \</u></td></tr>
+<tr><th id="914">914</th><td><u>	     (__i)++)</u></td></tr>
+<tr><th id="915">915</th><td></td></tr>
+<tr><th id="916">916</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="917">917</th><td><i class="doc"> * for_each_new_private_obj_in_state - iterate over all private objects in an atomic update</i></td></tr>
+<tr><th id="918">918</th><td><i class="doc"> * @__state: &amp;struct drm_atomic_state pointer</i></td></tr>
+<tr><th id="919">919</th><td><i class="doc"> *<span class="command"> @obj</span>: &amp;struct drm_private_obj iteration cursor</i></td></tr>
+<tr><th id="920">920</th><td><i class="doc"> *<span class="command"> @new</span>_obj_state: &amp;struct drm_private_state iteration cursor for the new state</i></td></tr>
+<tr><th id="921">921</th><td><i class="doc"> * @__i: int iteration cursor, for macro-internal use</i></td></tr>
+<tr><th id="922">922</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="923">923</th><td><i class="doc"> * This iterates over all private objects in an atomic update, tracking only</i></td></tr>
+<tr><th id="924">924</th><td><i class="doc"> * the new state. This is useful in enable functions, where we need the new state the</i></td></tr>
+<tr><th id="925">925</th><td><i class="doc"> * hardware should be in when the atomic commit operation has completed.</i></td></tr>
+<tr><th id="926">926</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="927">927</th><td><u>#define <dfn class="macro" id="_M/for_each_new_private_obj_in_state" data-ref="_M/for_each_new_private_obj_in_state">for_each_new_private_obj_in_state</dfn>(__state, obj, new_obj_state, __i) \</u></td></tr>
+<tr><th id="928">928</th><td><u>	for ((__i) = 0; \</u></td></tr>
+<tr><th id="929">929</th><td><u>	     (__i) &lt; (__state)-&gt;num_private_objs &amp;&amp; \</u></td></tr>
+<tr><th id="930">930</th><td><u>		     ((obj) = (__state)-&gt;private_objs[__i].ptr, \</u></td></tr>
+<tr><th id="931">931</th><td><u>		      (new_obj_state) = (__state)-&gt;private_objs[__i].new_state, 1); \</u></td></tr>
+<tr><th id="932">932</th><td><u>	     (__i)++)</u></td></tr>
+<tr><th id="933">933</th><td></td></tr>
+<tr><th id="934">934</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="935">935</th><td><i class="doc"> * drm_atomic_crtc_needs_modeset - compute combined modeset need</i></td></tr>
+<tr><th id="936">936</th><td><i class="doc"> *<span class="command"> @state</span>: &amp;drm_crtc_state for the CRTC</i></td></tr>
+<tr><th id="937">937</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="938">938</th><td><i class="doc"> * To give drivers flexibility &amp;struct drm_crtc_state has 3 booleans to track</i></td></tr>
+<tr><th id="939">939</th><td><i class="doc"> * whether the state CRTC changed enough to need a full modeset cycle:</i></td></tr>
+<tr><th id="940">940</th><td><i class="doc"> * mode_changed, active_changed and connectors_changed. This helper simply</i></td></tr>
+<tr><th id="941">941</th><td><i class="doc"> * combines these three to compute the overall need for a modeset for<span class="command"> @state</span>.</i></td></tr>
+<tr><th id="942">942</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="943">943</th><td><i class="doc"> * The atomic helper code sets these booleans, but drivers can and should</i></td></tr>
+<tr><th id="944">944</th><td><i class="doc"> * change them appropriately to accurately represent whether a modeset is</i></td></tr>
+<tr><th id="945">945</th><td><i class="doc"> * really needed. In general, drivers should avoid full modesets whenever</i></td></tr>
+<tr><th id="946">946</th><td><i class="doc"> * possible.</i></td></tr>
+<tr><th id="947">947</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="948">948</th><td><i class="doc"> * For example if the CRTC mode has changed, and the hardware is able to enact</i></td></tr>
+<tr><th id="949">949</th><td><i class="doc"> * the requested mode change without going through a full modeset, the driver</i></td></tr>
+<tr><th id="950">950</th><td><i class="doc"> * should clear mode_changed in its &amp;drm_mode_config_funcs.atomic_check</i></td></tr>
+<tr><th id="951">951</th><td><i class="doc"> * implementation.</i></td></tr>
+<tr><th id="952">952</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="953">953</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a></td></tr>
+<tr><th id="954">954</th><td><dfn class="decl def fn" id="drm_atomic_crtc_needs_modeset" title='drm_atomic_crtc_needs_modeset' data-ref="drm_atomic_crtc_needs_modeset" data-ref-filename="drm_atomic_crtc_needs_modeset">drm_atomic_crtc_needs_modeset</dfn>(<em>const</em> <b>struct</b> <a class="type" href="drm_crtc.h.html#drm_crtc_state" title='drm_crtc_state' data-ref="drm_crtc_state" data-ref-filename="drm_crtc_state">drm_crtc_state</a> *<dfn class="local col9 decl" id="69state" title='state' data-type='const struct drm_crtc_state *' data-ref="69state" data-ref-filename="69state">state</dfn>)</td></tr>
+<tr><th id="955">955</th><td>{</td></tr>
+<tr><th id="956">956</th><td>	<b>return</b> <a class="local col9 ref" href="#69state" title='state' data-ref="69state" data-ref-filename="69state">state</a>-&gt;<a class="ref field" href="drm_crtc.h.html#drm_crtc_state::mode_changed" title='drm_crtc_state::mode_changed' data-ref="drm_crtc_state::mode_changed" data-ref-filename="drm_crtc_state..mode_changed">mode_changed</a> || <a class="local col9 ref" href="#69state" title='state' data-ref="69state" data-ref-filename="69state">state</a>-&gt;<a class="ref field" href="drm_crtc.h.html#drm_crtc_state::active_changed" title='drm_crtc_state::active_changed' data-ref="drm_crtc_state::active_changed" data-ref-filename="drm_crtc_state..active_changed">active_changed</a> ||</td></tr>
+<tr><th id="957">957</th><td>	       <a class="local col9 ref" href="#69state" title='state' data-ref="69state" data-ref-filename="69state">state</a>-&gt;<a class="ref field" href="drm_crtc.h.html#drm_crtc_state::connectors_changed" title='drm_crtc_state::connectors_changed' data-ref="drm_crtc_state::connectors_changed" data-ref-filename="drm_crtc_state..connectors_changed">connectors_changed</a>;</td></tr>
+<tr><th id="958">958</th><td>}</td></tr>
+<tr><th id="959">959</th><td></td></tr>
+<tr><th id="960">960</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="961">961</th><td><i class="doc"> * drm_atomic_crtc_effectively_active - compute whether crtc is actually active</i></td></tr>
+<tr><th id="962">962</th><td><i class="doc"> *<span class="command"> @state</span>: &amp;drm_crtc_state for the CRTC</i></td></tr>
+<tr><th id="963">963</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="964">964</th><td><i class="doc"> * When in self refresh mode, the crtc_state-&gt;active value will be false, since</i></td></tr>
+<tr><th id="965">965</th><td><i class="doc"> * the crtc is off. However in some cases we're interested in whether the crtc</i></td></tr>
+<tr><th id="966">966</th><td><i class="doc"> * is active, or effectively active (ie: it's connected to an active display).</i></td></tr>
+<tr><th id="967">967</th><td><i class="doc"> * In these cases, use this function instead of just checking active.</i></td></tr>
+<tr><th id="968">968</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="969">969</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a></td></tr>
+<tr><th id="970">970</th><td><dfn class="decl def fn" id="drm_atomic_crtc_effectively_active" title='drm_atomic_crtc_effectively_active' data-ref="drm_atomic_crtc_effectively_active" data-ref-filename="drm_atomic_crtc_effectively_active">drm_atomic_crtc_effectively_active</dfn>(<em>const</em> <b>struct</b> <a class="type" href="drm_crtc.h.html#drm_crtc_state" title='drm_crtc_state' data-ref="drm_crtc_state" data-ref-filename="drm_crtc_state">drm_crtc_state</a> *<dfn class="local col0 decl" id="70state" title='state' data-type='const struct drm_crtc_state *' data-ref="70state" data-ref-filename="70state">state</dfn>)</td></tr>
+<tr><th id="971">971</th><td>{</td></tr>
+<tr><th id="972">972</th><td>	<b>return</b> <a class="local col0 ref" href="#70state" title='state' data-ref="70state" data-ref-filename="70state">state</a>-&gt;<a class="ref field" href="drm_crtc.h.html#drm_crtc_state::active" title='drm_crtc_state::active' data-ref="drm_crtc_state::active" data-ref-filename="drm_crtc_state..active">active</a> || <a class="local col0 ref" href="#70state" title='state' data-ref="70state" data-ref-filename="70state">state</a>-&gt;<a class="ref field" href="drm_crtc.h.html#drm_crtc_state::self_refresh_active" title='drm_crtc_state::self_refresh_active' data-ref="drm_crtc_state::self_refresh_active" data-ref-filename="drm_crtc_state..self_refresh_active">self_refresh_active</a>;</td></tr>
+<tr><th id="973">973</th><td>}</td></tr>
+<tr><th id="974">974</th><td></td></tr>
+<tr><th id="975">975</th><td><u>#<span data-ppcond="28">endif</span> /* DRM_ATOMIC_H_ */</u></td></tr>
+<tr><th id="976">976</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../drivers/gpu/drm/drm_atomic.c.html'>linux-5.3.1/drivers/gpu/drm/drm_atomic.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

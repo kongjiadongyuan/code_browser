@@ -1,0 +1,308 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>generic.c source code [linux-5.3.1/drivers/usb/core/generic.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/drivers/usb/core/generic.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>linux-5.3.1</a>/<a href='../..'>drivers</a>/<a href='..'>usb</a>/<a href='./'>core</a>/<a href='generic.c.html'>generic.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * drivers/usb/generic.c - generic driver for USB devices (not interfaces)</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * (C) Copyright 2005 Greg Kroah-Hartman &lt;gregkh@suse.de&gt;</i></td></tr>
+<tr><th id="6">6</th><td><i> *</i></td></tr>
+<tr><th id="7">7</th><td><i> * based on drivers/usb/usb.c which had the following copyrights:</i></td></tr>
+<tr><th id="8">8</th><td><i> *	(C) Copyright Linus Torvalds 1999</i></td></tr>
+<tr><th id="9">9</th><td><i> *	(C) Copyright Johannes Erdfelt 1999-2001</i></td></tr>
+<tr><th id="10">10</th><td><i> *	(C) Copyright Andreas Gal 1999</i></td></tr>
+<tr><th id="11">11</th><td><i> *	(C) Copyright Gregory P. Smith 1999</i></td></tr>
+<tr><th id="12">12</th><td><i> *	(C) Copyright Deti Fliegl 1999 (new USB architecture)</i></td></tr>
+<tr><th id="13">13</th><td><i> *	(C) Copyright Randy Dunlap 2000</i></td></tr>
+<tr><th id="14">14</th><td><i> *	(C) Copyright David Brownell 2000-2004</i></td></tr>
+<tr><th id="15">15</th><td><i> *	(C) Copyright Yggdrasil Computing, Inc. 2000</i></td></tr>
+<tr><th id="16">16</th><td><i> *		(usb_device_id matching changes by Adam J. Richter)</i></td></tr>
+<tr><th id="17">17</th><td><i> *	(C) Copyright Greg Kroah-Hartman 2002-2003</i></td></tr>
+<tr><th id="18">18</th><td><i> *</i></td></tr>
+<tr><th id="19">19</th><td><i> * Released under the GPLv2 only.</i></td></tr>
+<tr><th id="20">20</th><td><i> */</i></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../../../include/linux/usb.h.html">&lt;linux/usb.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../../../include/linux/usb/hcd.h.html">&lt;linux/usb/hcd.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../../../include/uapi/linux/usb/audio.h.html">&lt;uapi/linux/usb/audio.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="usb.h.html">"usb.h"</a></u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>const</em> <em>char</em> *<dfn class="tu decl def fn" id="plural" title='plural' data-type='const char * plural(int n)' data-ref="plural" data-ref-filename="plural">plural</dfn>(<em>int</em> <dfn class="local col5 decl" id="35n" title='n' data-type='int' data-ref="35n" data-ref-filename="35n">n</dfn>)</td></tr>
+<tr><th id="28">28</th><td>{</td></tr>
+<tr><th id="29">29</th><td>	<b>return</b> (<a class="local col5 ref" href="#35n" title='n' data-ref="35n" data-ref-filename="35n">n</a> == <var>1</var> ? <q>""</q> : <q>"s"</q>);</td></tr>
+<tr><th id="30">30</th><td>}</td></tr>
+<tr><th id="31">31</th><td></td></tr>
+<tr><th id="32">32</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="is_rndis" title='is_rndis' data-type='int is_rndis(struct usb_interface_descriptor * desc)' data-ref="is_rndis" data-ref-filename="is_rndis">is_rndis</dfn>(<b>struct</b> <a class="type" href="../../../include/uapi/linux/usb/ch9.h.html#usb_interface_descriptor" title='usb_interface_descriptor' data-ref="usb_interface_descriptor" data-ref-filename="usb_interface_descriptor">usb_interface_descriptor</a> *<dfn class="local col6 decl" id="36desc" title='desc' data-type='struct usb_interface_descriptor *' data-ref="36desc" data-ref-filename="36desc">desc</dfn>)</td></tr>
+<tr><th id="33">33</th><td>{</td></tr>
+<tr><th id="34">34</th><td>	<b>return</b> <a class="local col6 ref" href="#36desc" title='desc' data-ref="36desc" data-ref-filename="36desc">desc</a>-&gt;<a class="ref field" href="../../../include/uapi/linux/usb/ch9.h.html#usb_interface_descriptor::bInterfaceClass" title='usb_interface_descriptor::bInterfaceClass' data-ref="usb_interface_descriptor::bInterfaceClass" data-ref-filename="usb_interface_descriptor..bInterfaceClass">bInterfaceClass</a> == <a class="macro" href="../../../include/uapi/linux/usb/ch9.h.html#317" title="2" data-ref="_M/USB_CLASS_COMM">USB_CLASS_COMM</a></td></tr>
+<tr><th id="35">35</th><td>		&amp;&amp; <a class="local col6 ref" href="#36desc" title='desc' data-ref="36desc" data-ref-filename="36desc">desc</a>-&gt;<a class="ref field" href="../../../include/uapi/linux/usb/ch9.h.html#usb_interface_descriptor::bInterfaceSubClass" title='usb_interface_descriptor::bInterfaceSubClass' data-ref="usb_interface_descriptor::bInterfaceSubClass" data-ref-filename="usb_interface_descriptor..bInterfaceSubClass">bInterfaceSubClass</a> == <var>2</var></td></tr>
+<tr><th id="36">36</th><td>		&amp;&amp; <a class="local col6 ref" href="#36desc" title='desc' data-ref="36desc" data-ref-filename="36desc">desc</a>-&gt;<a class="ref field" href="../../../include/uapi/linux/usb/ch9.h.html#usb_interface_descriptor::bInterfaceProtocol" title='usb_interface_descriptor::bInterfaceProtocol' data-ref="usb_interface_descriptor::bInterfaceProtocol" data-ref-filename="usb_interface_descriptor..bInterfaceProtocol">bInterfaceProtocol</a> == <var>0xff</var>;</td></tr>
+<tr><th id="37">37</th><td>}</td></tr>
+<tr><th id="38">38</th><td></td></tr>
+<tr><th id="39">39</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="is_activesync" title='is_activesync' data-type='int is_activesync(struct usb_interface_descriptor * desc)' data-ref="is_activesync" data-ref-filename="is_activesync">is_activesync</dfn>(<b>struct</b> <a class="type" href="../../../include/uapi/linux/usb/ch9.h.html#usb_interface_descriptor" title='usb_interface_descriptor' data-ref="usb_interface_descriptor" data-ref-filename="usb_interface_descriptor">usb_interface_descriptor</a> *<dfn class="local col7 decl" id="37desc" title='desc' data-type='struct usb_interface_descriptor *' data-ref="37desc" data-ref-filename="37desc">desc</dfn>)</td></tr>
+<tr><th id="40">40</th><td>{</td></tr>
+<tr><th id="41">41</th><td>	<b>return</b> <a class="local col7 ref" href="#37desc" title='desc' data-ref="37desc" data-ref-filename="37desc">desc</a>-&gt;<a class="ref field" href="../../../include/uapi/linux/usb/ch9.h.html#usb_interface_descriptor::bInterfaceClass" title='usb_interface_descriptor::bInterfaceClass' data-ref="usb_interface_descriptor::bInterfaceClass" data-ref-filename="usb_interface_descriptor..bInterfaceClass">bInterfaceClass</a> == <a class="macro" href="../../../include/uapi/linux/usb/ch9.h.html#329" title="0xef" data-ref="_M/USB_CLASS_MISC">USB_CLASS_MISC</a></td></tr>
+<tr><th id="42">42</th><td>		&amp;&amp; <a class="local col7 ref" href="#37desc" title='desc' data-ref="37desc" data-ref-filename="37desc">desc</a>-&gt;<a class="ref field" href="../../../include/uapi/linux/usb/ch9.h.html#usb_interface_descriptor::bInterfaceSubClass" title='usb_interface_descriptor::bInterfaceSubClass' data-ref="usb_interface_descriptor::bInterfaceSubClass" data-ref-filename="usb_interface_descriptor..bInterfaceSubClass">bInterfaceSubClass</a> == <var>1</var></td></tr>
+<tr><th id="43">43</th><td>		&amp;&amp; <a class="local col7 ref" href="#37desc" title='desc' data-ref="37desc" data-ref-filename="37desc">desc</a>-&gt;<a class="ref field" href="../../../include/uapi/linux/usb/ch9.h.html#usb_interface_descriptor::bInterfaceProtocol" title='usb_interface_descriptor::bInterfaceProtocol' data-ref="usb_interface_descriptor::bInterfaceProtocol" data-ref-filename="usb_interface_descriptor..bInterfaceProtocol">bInterfaceProtocol</a> == <var>1</var>;</td></tr>
+<tr><th id="44">44</th><td>}</td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td><em>static</em> <a class="typedef" href="../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="tu decl def fn" id="is_audio" title='is_audio' data-type='bool is_audio(struct usb_interface_descriptor * desc)' data-ref="is_audio" data-ref-filename="is_audio">is_audio</dfn>(<b>struct</b> <a class="type" href="../../../include/uapi/linux/usb/ch9.h.html#usb_interface_descriptor" title='usb_interface_descriptor' data-ref="usb_interface_descriptor" data-ref-filename="usb_interface_descriptor">usb_interface_descriptor</a> *<dfn class="local col8 decl" id="38desc" title='desc' data-type='struct usb_interface_descriptor *' data-ref="38desc" data-ref-filename="38desc">desc</dfn>)</td></tr>
+<tr><th id="47">47</th><td>{</td></tr>
+<tr><th id="48">48</th><td>	<b>return</b> <a class="local col8 ref" href="#38desc" title='desc' data-ref="38desc" data-ref-filename="38desc">desc</a>-&gt;<a class="ref field" href="../../../include/uapi/linux/usb/ch9.h.html#usb_interface_descriptor::bInterfaceClass" title='usb_interface_descriptor::bInterfaceClass' data-ref="usb_interface_descriptor::bInterfaceClass" data-ref-filename="usb_interface_descriptor..bInterfaceClass">bInterfaceClass</a> == <a class="macro" href="../../../include/uapi/linux/usb/ch9.h.html#316" title="1" data-ref="_M/USB_CLASS_AUDIO">USB_CLASS_AUDIO</a>;</td></tr>
+<tr><th id="49">49</th><td>}</td></tr>
+<tr><th id="50">50</th><td></td></tr>
+<tr><th id="51">51</th><td><em>static</em> <a class="typedef" href="../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="tu decl def fn" id="is_uac3_config" title='is_uac3_config' data-type='bool is_uac3_config(struct usb_interface_descriptor * desc)' data-ref="is_uac3_config" data-ref-filename="is_uac3_config">is_uac3_config</dfn>(<b>struct</b> <a class="type" href="../../../include/uapi/linux/usb/ch9.h.html#usb_interface_descriptor" title='usb_interface_descriptor' data-ref="usb_interface_descriptor" data-ref-filename="usb_interface_descriptor">usb_interface_descriptor</a> *<dfn class="local col9 decl" id="39desc" title='desc' data-type='struct usb_interface_descriptor *' data-ref="39desc" data-ref-filename="39desc">desc</dfn>)</td></tr>
+<tr><th id="52">52</th><td>{</td></tr>
+<tr><th id="53">53</th><td>	<b>return</b> <a class="local col9 ref" href="#39desc" title='desc' data-ref="39desc" data-ref-filename="39desc">desc</a>-&gt;<a class="ref field" href="../../../include/uapi/linux/usb/ch9.h.html#usb_interface_descriptor::bInterfaceProtocol" title='usb_interface_descriptor::bInterfaceProtocol' data-ref="usb_interface_descriptor::bInterfaceProtocol" data-ref-filename="usb_interface_descriptor..bInterfaceProtocol">bInterfaceProtocol</a> == <a class="macro" href="../../../include/uapi/linux/usb/audio.h.html#30" title="0x30" data-ref="_M/UAC_VERSION_3">UAC_VERSION_3</a>;</td></tr>
+<tr><th id="54">54</th><td>}</td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td><em>int</em> <dfn class="decl def fn" id="usb_choose_configuration" title='usb_choose_configuration' data-ref="usb_choose_configuration" data-ref-filename="usb_choose_configuration">usb_choose_configuration</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/usb.h.html#usb_device" title='usb_device' data-ref="usb_device" data-ref-filename="usb_device">usb_device</a> *<dfn class="local col0 decl" id="40udev" title='udev' data-type='struct usb_device *' data-ref="40udev" data-ref-filename="40udev">udev</dfn>)</td></tr>
+<tr><th id="57">57</th><td>{</td></tr>
+<tr><th id="58">58</th><td>	<em>int</em> <dfn class="local col1 decl" id="41i" title='i' data-type='int' data-ref="41i" data-ref-filename="41i">i</dfn>;</td></tr>
+<tr><th id="59">59</th><td>	<em>int</em> <dfn class="local col2 decl" id="42num_configs" title='num_configs' data-type='int' data-ref="42num_configs" data-ref-filename="42num_configs">num_configs</dfn>;</td></tr>
+<tr><th id="60">60</th><td>	<em>int</em> <dfn class="local col3 decl" id="43insufficient_power" title='insufficient_power' data-type='int' data-ref="43insufficient_power" data-ref-filename="43insufficient_power">insufficient_power</dfn> = <var>0</var>;</td></tr>
+<tr><th id="61">61</th><td>	<b>struct</b> <a class="type" href="../../../include/linux/usb.h.html#usb_host_config" title='usb_host_config' data-ref="usb_host_config" data-ref-filename="usb_host_config">usb_host_config</a> *<dfn class="local col4 decl" id="44c" title='c' data-type='struct usb_host_config *' data-ref="44c" data-ref-filename="44c">c</dfn>, *<dfn class="local col5 decl" id="45best" title='best' data-type='struct usb_host_config *' data-ref="45best" data-ref-filename="45best">best</dfn>;</td></tr>
+<tr><th id="62">62</th><td></td></tr>
+<tr><th id="63">63</th><td>	<b>if</b> (<a class="ref fn" href="usb.h.html#usb_device_is_owned" title='usb_device_is_owned' data-ref="usb_device_is_owned" data-ref-filename="usb_device_is_owned">usb_device_is_owned</a>(<a class="local col0 ref" href="#40udev" title='udev' data-ref="40udev" data-ref-filename="40udev">udev</a>))</td></tr>
+<tr><th id="64">64</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="65">65</th><td></td></tr>
+<tr><th id="66">66</th><td>	<a class="local col5 ref" href="#45best" title='best' data-ref="45best" data-ref-filename="45best">best</a> = <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="67">67</th><td>	<a class="local col4 ref" href="#44c" title='c' data-ref="44c" data-ref-filename="44c">c</a> = <a class="local col0 ref" href="#40udev" title='udev' data-ref="40udev" data-ref-filename="40udev">udev</a>-&gt;<a class="ref field" href="../../../include/linux/usb.h.html#usb_device::config" title='usb_device::config' data-ref="usb_device::config" data-ref-filename="usb_device..config">config</a>;</td></tr>
+<tr><th id="68">68</th><td>	<a class="local col2 ref" href="#42num_configs" title='num_configs' data-ref="42num_configs" data-ref-filename="42num_configs">num_configs</a> = <a class="local col0 ref" href="#40udev" title='udev' data-ref="40udev" data-ref-filename="40udev">udev</a>-&gt;<a class="ref field" href="../../../include/linux/usb.h.html#usb_device::descriptor" title='usb_device::descriptor' data-ref="usb_device::descriptor" data-ref-filename="usb_device..descriptor">descriptor</a>.<a class="ref field" href="../../../include/uapi/linux/usb/ch9.h.html#usb_device_descriptor::bNumConfigurations" title='usb_device_descriptor::bNumConfigurations' data-ref="usb_device_descriptor::bNumConfigurations" data-ref-filename="usb_device_descriptor..bNumConfigurations">bNumConfigurations</a>;</td></tr>
+<tr><th id="69">69</th><td>	<b>for</b> (<a class="local col1 ref" href="#41i" title='i' data-ref="41i" data-ref-filename="41i">i</a> = <var>0</var>; <a class="local col1 ref" href="#41i" title='i' data-ref="41i" data-ref-filename="41i">i</a> &lt; <a class="local col2 ref" href="#42num_configs" title='num_configs' data-ref="42num_configs" data-ref-filename="42num_configs">num_configs</a>; (<a class="local col1 ref" href="#41i" title='i' data-ref="41i" data-ref-filename="41i">i</a>++, <a class="local col4 ref" href="#44c" title='c' data-ref="44c" data-ref-filename="44c">c</a>++)) {</td></tr>
+<tr><th id="70">70</th><td>		<b>struct</b> <a class="type" href="../../../include/uapi/linux/usb/ch9.h.html#usb_interface_descriptor" title='usb_interface_descriptor' data-ref="usb_interface_descriptor" data-ref-filename="usb_interface_descriptor">usb_interface_descriptor</a>	*<dfn class="local col6 decl" id="46desc" title='desc' data-type='struct usb_interface_descriptor *' data-ref="46desc" data-ref-filename="46desc">desc</dfn> = <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="71">71</th><td></td></tr>
+<tr><th id="72">72</th><td>		<i>/* It's possible that a config has no interfaces! */</i></td></tr>
+<tr><th id="73">73</th><td>		<b>if</b> (<a class="local col4 ref" href="#44c" title='c' data-ref="44c" data-ref-filename="44c">c</a>-&gt;<a class="ref field" href="../../../include/linux/usb.h.html#usb_host_config::desc" title='usb_host_config::desc' data-ref="usb_host_config::desc" data-ref-filename="usb_host_config..desc">desc</a>.<a class="ref field" href="../../../include/uapi/linux/usb/ch9.h.html#usb_config_descriptor::bNumInterfaces" title='usb_config_descriptor::bNumInterfaces' data-ref="usb_config_descriptor::bNumInterfaces" data-ref-filename="usb_config_descriptor..bNumInterfaces">bNumInterfaces</a> &gt; <var>0</var>)</td></tr>
+<tr><th id="74">74</th><td>			<a class="local col6 ref" href="#46desc" title='desc' data-ref="46desc" data-ref-filename="46desc">desc</a> = &amp;<a class="local col4 ref" href="#44c" title='c' data-ref="44c" data-ref-filename="44c">c</a>-&gt;<a class="ref field" href="../../../include/linux/usb.h.html#usb_host_config::intf_cache" title='usb_host_config::intf_cache' data-ref="usb_host_config::intf_cache" data-ref-filename="usb_host_config..intf_cache">intf_cache</a>[<var>0</var>]-&gt;<a class="ref field" href="../../../include/linux/usb.h.html#usb_interface_cache::altsetting" title='usb_interface_cache::altsetting' data-ref="usb_interface_cache::altsetting" data-ref-filename="usb_interface_cache..altsetting">altsetting</a>-&gt;<a class="ref field" href="../../../include/linux/usb.h.html#usb_host_interface::desc" title='usb_host_interface::desc' data-ref="usb_host_interface::desc" data-ref-filename="usb_host_interface..desc">desc</a>;</td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td>		<i>/*</i></td></tr>
+<tr><th id="77">77</th><td><i>		 * HP's USB bus-powered keyboard has only one configuration</i></td></tr>
+<tr><th id="78">78</th><td><i>		 * and it claims to be self-powered; other devices may have</i></td></tr>
+<tr><th id="79">79</th><td><i>		 * similar errors in their descriptors.  If the next test</i></td></tr>
+<tr><th id="80">80</th><td><i>		 * were allowed to execute, such configurations would always</i></td></tr>
+<tr><th id="81">81</th><td><i>		 * be rejected and the devices would not work as expected.</i></td></tr>
+<tr><th id="82">82</th><td><i>		 * In the meantime, we run the risk of selecting a config</i></td></tr>
+<tr><th id="83">83</th><td><i>		 * that requires external power at a time when that power</i></td></tr>
+<tr><th id="84">84</th><td><i>		 * isn't available.  It seems to be the lesser of two evils.</i></td></tr>
+<tr><th id="85">85</th><td><i>		 *</i></td></tr>
+<tr><th id="86">86</th><td><i>		 * Bugzilla #6448 reports a device that appears to crash</i></td></tr>
+<tr><th id="87">87</th><td><i>		 * when it receives a GET_DEVICE_STATUS request!  We don't</i></td></tr>
+<tr><th id="88">88</th><td><i>		 * have any other way to tell whether a device is self-powered,</i></td></tr>
+<tr><th id="89">89</th><td><i>		 * but since we don't use that information anywhere but here,</i></td></tr>
+<tr><th id="90">90</th><td><i>		 * the call has been removed.</i></td></tr>
+<tr><th id="91">91</th><td><i>		 *</i></td></tr>
+<tr><th id="92">92</th><td><i>		 * Maybe the GET_DEVICE_STATUS call and the test below can</i></td></tr>
+<tr><th id="93">93</th><td><i>		 * be reinstated when device firmwares become more reliable.</i></td></tr>
+<tr><th id="94">94</th><td><i>		 * Don't hold your breath.</i></td></tr>
+<tr><th id="95">95</th><td><i>		 */</i></td></tr>
+<tr><th id="96">96</th><td><u>#<span data-ppcond="96">if</span> 0</u></td></tr>
+<tr><th id="97">97</th><td>		<i>/* Rule out self-powered configs for a bus-powered device */</i></td></tr>
+<tr><th id="98">98</th><td>		<b>if</b> (bus_powered &amp;&amp; (c-&gt;desc.bmAttributes &amp;</td></tr>
+<tr><th id="99">99</th><td>					USB_CONFIG_ATT_SELFPOWER))</td></tr>
+<tr><th id="100">100</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="101">101</th><td><u>#<span data-ppcond="96">endif</span></u></td></tr>
+<tr><th id="102">102</th><td></td></tr>
+<tr><th id="103">103</th><td>		<i>/*</i></td></tr>
+<tr><th id="104">104</th><td><i>		 * The next test may not be as effective as it should be.</i></td></tr>
+<tr><th id="105">105</th><td><i>		 * Some hubs have errors in their descriptor, claiming</i></td></tr>
+<tr><th id="106">106</th><td><i>		 * to be self-powered when they are really bus-powered.</i></td></tr>
+<tr><th id="107">107</th><td><i>		 * We will overestimate the amount of current such hubs</i></td></tr>
+<tr><th id="108">108</th><td><i>		 * make available for each port.</i></td></tr>
+<tr><th id="109">109</th><td><i>		 *</i></td></tr>
+<tr><th id="110">110</th><td><i>		 * This is a fairly benign sort of failure.  It won't</i></td></tr>
+<tr><th id="111">111</th><td><i>		 * cause us to reject configurations that we should have</i></td></tr>
+<tr><th id="112">112</th><td><i>		 * accepted.</i></td></tr>
+<tr><th id="113">113</th><td><i>		 */</i></td></tr>
+<tr><th id="114">114</th><td></td></tr>
+<tr><th id="115">115</th><td>		<i>/* Rule out configs that draw too much bus current */</i></td></tr>
+<tr><th id="116">116</th><td>		<b>if</b> (<a class="ref fn" href="usb.h.html#usb_get_max_power" title='usb_get_max_power' data-ref="usb_get_max_power" data-ref-filename="usb_get_max_power">usb_get_max_power</a>(<a class="local col0 ref" href="#40udev" title='udev' data-ref="40udev" data-ref-filename="40udev">udev</a>, <a class="local col4 ref" href="#44c" title='c' data-ref="44c" data-ref-filename="44c">c</a>) &gt; <a class="local col0 ref" href="#40udev" title='udev' data-ref="40udev" data-ref-filename="40udev">udev</a>-&gt;<a class="ref field" href="../../../include/linux/usb.h.html#usb_device::bus_mA" title='usb_device::bus_mA' data-ref="usb_device::bus_mA" data-ref-filename="usb_device..bus_mA">bus_mA</a>) {</td></tr>
+<tr><th id="117">117</th><td>			<a class="local col3 ref" href="#43insufficient_power" title='insufficient_power' data-ref="43insufficient_power" data-ref-filename="43insufficient_power">insufficient_power</a>++;</td></tr>
+<tr><th id="118">118</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="119">119</th><td>		}</td></tr>
+<tr><th id="120">120</th><td></td></tr>
+<tr><th id="121">121</th><td>		<i>/*</i></td></tr>
+<tr><th id="122">122</th><td><i>		 * Select first configuration as default for audio so that</i></td></tr>
+<tr><th id="123">123</th><td><i>		 * devices that don't comply with UAC3 protocol are supported.</i></td></tr>
+<tr><th id="124">124</th><td><i>		 * But, still iterate through other configurations and</i></td></tr>
+<tr><th id="125">125</th><td><i>		 * select UAC3 compliant config if present.</i></td></tr>
+<tr><th id="126">126</th><td><i>		 */</i></td></tr>
+<tr><th id="127">127</th><td>		<b>if</b> (<a class="local col6 ref" href="#46desc" title='desc' data-ref="46desc" data-ref-filename="46desc">desc</a> &amp;&amp; <a class="tu ref fn" href="#is_audio" title='is_audio' data-use='c' data-ref="is_audio" data-ref-filename="is_audio">is_audio</a>(<a class="local col6 ref" href="#46desc" title='desc' data-ref="46desc" data-ref-filename="46desc">desc</a>)) {</td></tr>
+<tr><th id="128">128</th><td>			<i>/* Always prefer the first found UAC3 config */</i></td></tr>
+<tr><th id="129">129</th><td>			<b>if</b> (<a class="tu ref fn" href="#is_uac3_config" title='is_uac3_config' data-use='c' data-ref="is_uac3_config" data-ref-filename="is_uac3_config">is_uac3_config</a>(<a class="local col6 ref" href="#46desc" title='desc' data-ref="46desc" data-ref-filename="46desc">desc</a>)) {</td></tr>
+<tr><th id="130">130</th><td>				<a class="local col5 ref" href="#45best" title='best' data-ref="45best" data-ref-filename="45best">best</a> = <a class="local col4 ref" href="#44c" title='c' data-ref="44c" data-ref-filename="44c">c</a>;</td></tr>
+<tr><th id="131">131</th><td>				<b>break</b>;</td></tr>
+<tr><th id="132">132</th><td>			}</td></tr>
+<tr><th id="133">133</th><td></td></tr>
+<tr><th id="134">134</th><td>			<i>/* If there is no UAC3 config, prefer the first config */</i></td></tr>
+<tr><th id="135">135</th><td>			<b>else</b> <b>if</b> (<a class="local col1 ref" href="#41i" title='i' data-ref="41i" data-ref-filename="41i">i</a> == <var>0</var>)</td></tr>
+<tr><th id="136">136</th><td>				<a class="local col5 ref" href="#45best" title='best' data-ref="45best" data-ref-filename="45best">best</a> = <a class="local col4 ref" href="#44c" title='c' data-ref="44c" data-ref-filename="44c">c</a>;</td></tr>
+<tr><th id="137">137</th><td></td></tr>
+<tr><th id="138">138</th><td>			<i>/* Unconditional continue, because the rest of the code</i></td></tr>
+<tr><th id="139">139</th><td><i>			 * in the loop is irrelevant for audio devices, and</i></td></tr>
+<tr><th id="140">140</th><td><i>			 * because it can reassign best, which for audio devices</i></td></tr>
+<tr><th id="141">141</th><td><i>			 * we don't want.</i></td></tr>
+<tr><th id="142">142</th><td><i>			 */</i></td></tr>
+<tr><th id="143">143</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="144">144</th><td>		}</td></tr>
+<tr><th id="145">145</th><td></td></tr>
+<tr><th id="146">146</th><td>		<i>/* When the first config's first interface is one of Microsoft's</i></td></tr>
+<tr><th id="147">147</th><td><i>		 * pet nonstandard Ethernet-over-USB protocols, ignore it unless</i></td></tr>
+<tr><th id="148">148</th><td><i>		 * this kernel has enabled the necessary host side driver.</i></td></tr>
+<tr><th id="149">149</th><td><i>		 * But: Don't ignore it if it's the only config.</i></td></tr>
+<tr><th id="150">150</th><td><i>		 */</i></td></tr>
+<tr><th id="151">151</th><td>		<b>if</b> (<a class="local col1 ref" href="#41i" title='i' data-ref="41i" data-ref-filename="41i">i</a> == <var>0</var> &amp;&amp; <a class="local col2 ref" href="#42num_configs" title='num_configs' data-ref="42num_configs" data-ref-filename="42num_configs">num_configs</a> &gt; <var>1</var> &amp;&amp; <a class="local col6 ref" href="#46desc" title='desc' data-ref="46desc" data-ref-filename="46desc">desc</a> &amp;&amp;</td></tr>
+<tr><th id="152">152</th><td>				(<a class="tu ref fn" href="#is_rndis" title='is_rndis' data-use='c' data-ref="is_rndis" data-ref-filename="is_rndis">is_rndis</a>(<a class="local col6 ref" href="#46desc" title='desc' data-ref="46desc" data-ref-filename="46desc">desc</a>) || <a class="tu ref fn" href="#is_activesync" title='is_activesync' data-use='c' data-ref="is_activesync" data-ref-filename="is_activesync">is_activesync</a>(<a class="local col6 ref" href="#46desc" title='desc' data-ref="46desc" data-ref-filename="46desc">desc</a>))) {</td></tr>
+<tr><th id="153">153</th><td><u>#<span data-ppcond="153">if</span> !defined(<span class="macro" data-ref="_M/CONFIG_USB_NET_RNDIS_HOST">CONFIG_USB_NET_RNDIS_HOST</span>) &amp;&amp; !defined(<span class="macro" data-ref="_M/CONFIG_USB_NET_RNDIS_HOST_MODULE">CONFIG_USB_NET_RNDIS_HOST_MODULE</span>)</u></td></tr>
+<tr><th id="154">154</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="155">155</th><td><u>#<span data-ppcond="153">else</span></u></td></tr>
+<tr><th id="156">156</th><td>			best = c;</td></tr>
+<tr><th id="157">157</th><td><u>#<span data-ppcond="153">endif</span></u></td></tr>
+<tr><th id="158">158</th><td>		}</td></tr>
+<tr><th id="159">159</th><td></td></tr>
+<tr><th id="160">160</th><td>		<i>/* From the remaining configs, choose the first one whose</i></td></tr>
+<tr><th id="161">161</th><td><i>		 * first interface is for a non-vendor-specific class.</i></td></tr>
+<tr><th id="162">162</th><td><i>		 * Reason: Linux is more likely to have a class driver</i></td></tr>
+<tr><th id="163">163</th><td><i>		 * than a vendor-specific driver. */</i></td></tr>
+<tr><th id="164">164</th><td>		<b>else</b> <b>if</b> (<a class="local col0 ref" href="#40udev" title='udev' data-ref="40udev" data-ref-filename="40udev">udev</a>-&gt;<a class="ref field" href="../../../include/linux/usb.h.html#usb_device::descriptor" title='usb_device::descriptor' data-ref="usb_device::descriptor" data-ref-filename="usb_device..descriptor">descriptor</a>.<a class="ref field" href="../../../include/uapi/linux/usb/ch9.h.html#usb_device_descriptor::bDeviceClass" title='usb_device_descriptor::bDeviceClass' data-ref="usb_device_descriptor::bDeviceClass" data-ref-filename="usb_device_descriptor..bDeviceClass">bDeviceClass</a> !=</td></tr>
+<tr><th id="165">165</th><td>						<a class="macro" href="../../../include/uapi/linux/usb/ch9.h.html#331" title="0xff" data-ref="_M/USB_CLASS_VENDOR_SPEC">USB_CLASS_VENDOR_SPEC</a> &amp;&amp;</td></tr>
+<tr><th id="166">166</th><td>				(<a class="local col6 ref" href="#46desc" title='desc' data-ref="46desc" data-ref-filename="46desc">desc</a> &amp;&amp; <a class="local col6 ref" href="#46desc" title='desc' data-ref="46desc" data-ref-filename="46desc">desc</a>-&gt;<a class="ref field" href="../../../include/uapi/linux/usb/ch9.h.html#usb_interface_descriptor::bInterfaceClass" title='usb_interface_descriptor::bInterfaceClass' data-ref="usb_interface_descriptor::bInterfaceClass" data-ref-filename="usb_interface_descriptor..bInterfaceClass">bInterfaceClass</a> !=</td></tr>
+<tr><th id="167">167</th><td>						<a class="macro" href="../../../include/uapi/linux/usb/ch9.h.html#331" title="0xff" data-ref="_M/USB_CLASS_VENDOR_SPEC">USB_CLASS_VENDOR_SPEC</a>)) {</td></tr>
+<tr><th id="168">168</th><td>			<a class="local col5 ref" href="#45best" title='best' data-ref="45best" data-ref-filename="45best">best</a> = <a class="local col4 ref" href="#44c" title='c' data-ref="44c" data-ref-filename="44c">c</a>;</td></tr>
+<tr><th id="169">169</th><td>			<b>break</b>;</td></tr>
+<tr><th id="170">170</th><td>		}</td></tr>
+<tr><th id="171">171</th><td></td></tr>
+<tr><th id="172">172</th><td>		<i>/* If all the remaining configs are vendor-specific,</i></td></tr>
+<tr><th id="173">173</th><td><i>		 * choose the first one. */</i></td></tr>
+<tr><th id="174">174</th><td>		<b>else</b> <b>if</b> (!<a class="local col5 ref" href="#45best" title='best' data-ref="45best" data-ref-filename="45best">best</a>)</td></tr>
+<tr><th id="175">175</th><td>			<a class="local col5 ref" href="#45best" title='best' data-ref="45best" data-ref-filename="45best">best</a> = <a class="local col4 ref" href="#44c" title='c' data-ref="44c" data-ref-filename="44c">c</a>;</td></tr>
+<tr><th id="176">176</th><td>	}</td></tr>
+<tr><th id="177">177</th><td></td></tr>
+<tr><th id="178">178</th><td>	<b>if</b> (<a class="local col3 ref" href="#43insufficient_power" title='insufficient_power' data-ref="43insufficient_power" data-ref-filename="43insufficient_power">insufficient_power</a> &gt; <var>0</var>)</td></tr>
+<tr><th id="179">179</th><td>		<a class="macro" href="../../../include/linux/device.h.html#1504" title="_dev_info(&amp;udev-&gt;dev, &quot;rejected %d configuration%s &quot; &quot;due to insufficient available bus power\n&quot;, insufficient_power, plural(insufficient_power))" data-ref="_M/dev_info">dev_info</a>(&amp;<a class="local col0 ref" href="#40udev" title='udev' data-ref="40udev" data-ref-filename="40udev">udev</a>-&gt;<a class="ref field" href="../../../include/linux/usb.h.html#usb_device::dev" title='usb_device::dev' data-ref="usb_device::dev" data-ref-filename="usb_device..dev">dev</a>, <q>"rejected %d configuration%s "</q></td></tr>
+<tr><th id="180">180</th><td>			<q>"due to insufficient available bus power\n"</q>,</td></tr>
+<tr><th id="181">181</th><td>			<a class="local col3 ref" href="#43insufficient_power" title='insufficient_power' data-ref="43insufficient_power" data-ref-filename="43insufficient_power">insufficient_power</a>, <a class="tu ref fn" href="#plural" title='plural' data-use='c' data-ref="plural" data-ref-filename="plural">plural</a>(<a class="local col3 ref" href="#43insufficient_power" title='insufficient_power' data-ref="43insufficient_power" data-ref-filename="43insufficient_power">insufficient_power</a>));</td></tr>
+<tr><th id="182">182</th><td></td></tr>
+<tr><th id="183">183</th><td>	<b>if</b> (<a class="local col5 ref" href="#45best" title='best' data-ref="45best" data-ref-filename="45best">best</a>) {</td></tr>
+<tr><th id="184">184</th><td>		<a class="local col1 ref" href="#41i" title='i' data-ref="41i" data-ref-filename="41i">i</a> = <a class="local col5 ref" href="#45best" title='best' data-ref="45best" data-ref-filename="45best">best</a>-&gt;<a class="ref field" href="../../../include/linux/usb.h.html#usb_host_config::desc" title='usb_host_config::desc' data-ref="usb_host_config::desc" data-ref-filename="usb_host_config..desc">desc</a>.<a class="ref field" href="../../../include/uapi/linux/usb/ch9.h.html#usb_config_descriptor::bConfigurationValue" title='usb_config_descriptor::bConfigurationValue' data-ref="usb_config_descriptor::bConfigurationValue" data-ref-filename="usb_config_descriptor..bConfigurationValue">bConfigurationValue</a>;</td></tr>
+<tr><th id="185">185</th><td>		<a class="macro" href="../../../include/linux/device.h.html#1514" title="({ if (0) dev_printk(&quot;\001&quot; &quot;7&quot;, &amp;udev-&gt;dev, &quot;configuration #%d chosen from %d choice%s\n&quot;, i, num_configs, plural(num_configs)); })" data-ref="_M/dev_dbg">dev_dbg</a>(&amp;<a class="local col0 ref" href="#40udev" title='udev' data-ref="40udev" data-ref-filename="40udev">udev</a>-&gt;<a class="ref field" href="../../../include/linux/usb.h.html#usb_device::dev" title='usb_device::dev' data-ref="usb_device::dev" data-ref-filename="usb_device..dev">dev</a>,</td></tr>
+<tr><th id="186">186</th><td>			<q>"configuration #%d chosen from %d choice%s\n"</q>,</td></tr>
+<tr><th id="187">187</th><td>			<a class="local col1 ref" href="#41i" title='i' data-ref="41i" data-ref-filename="41i">i</a>, <a class="local col2 ref" href="#42num_configs" title='num_configs' data-ref="42num_configs" data-ref-filename="42num_configs">num_configs</a>, <a class="tu ref fn" href="#plural" title='plural' data-use='c' data-ref="plural" data-ref-filename="plural">plural</a>(<a class="local col2 ref" href="#42num_configs" title='num_configs' data-ref="42num_configs" data-ref-filename="42num_configs">num_configs</a>));</td></tr>
+<tr><th id="188">188</th><td>	} <b>else</b> {</td></tr>
+<tr><th id="189">189</th><td>		<a class="local col1 ref" href="#41i" title='i' data-ref="41i" data-ref-filename="41i">i</a> = -<var>1</var>;</td></tr>
+<tr><th id="190">190</th><td>		<a class="macro" href="../../../include/linux/device.h.html#1500" title="_dev_warn(&amp;udev-&gt;dev, &quot;no configuration chosen from %d choice%s\n&quot;, num_configs, plural(num_configs))" data-ref="_M/dev_warn">dev_warn</a>(&amp;<a class="local col0 ref" href="#40udev" title='udev' data-ref="40udev" data-ref-filename="40udev">udev</a>-&gt;<a class="ref field" href="../../../include/linux/usb.h.html#usb_device::dev" title='usb_device::dev' data-ref="usb_device::dev" data-ref-filename="usb_device..dev">dev</a>,</td></tr>
+<tr><th id="191">191</th><td>			<q>"no configuration chosen from %d choice%s\n"</q>,</td></tr>
+<tr><th id="192">192</th><td>			<a class="local col2 ref" href="#42num_configs" title='num_configs' data-ref="42num_configs" data-ref-filename="42num_configs">num_configs</a>, <a class="tu ref fn" href="#plural" title='plural' data-use='c' data-ref="plural" data-ref-filename="plural">plural</a>(<a class="local col2 ref" href="#42num_configs" title='num_configs' data-ref="42num_configs" data-ref-filename="42num_configs">num_configs</a>));</td></tr>
+<tr><th id="193">193</th><td>	}</td></tr>
+<tr><th id="194">194</th><td>	<b>return</b> <a class="local col1 ref" href="#41i" title='i' data-ref="41i" data-ref-filename="41i">i</a>;</td></tr>
+<tr><th id="195">195</th><td>}</td></tr>
+<tr><th id="196">196</th><td><a class="macro" href="../../../include/linux/export.h.html#126" title="extern typeof(usb_choose_configuration) usb_choose_configuration; static const char __kstrtab_usb_choose_configuration[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;usb_choose_configuration&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_usb_choose_configuration196 = (void *)&amp;usb_choose_configuration; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;usb_choose_configuration&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;usb_choose_configuration&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;usb_choose_configuration&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;usb_choose_configuration&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#usb_choose_configuration" title='usb_choose_configuration' data-ref="usb_choose_configuration" data-ref-filename="usb_choose_configuration"><a class="ref fn" href="#usb_choose_configuration" title='usb_choose_configuration' data-ref="usb_choose_configuration" data-ref-filename="usb_choose_configuration"><a class="ref fn" href="#usb_choose_configuration" title='usb_choose_configuration' data-ref="usb_choose_configuration" data-ref-filename="usb_choose_configuration">usb_choose_configuration</a></a></a>);</td></tr>
+<tr><th id="197">197</th><td></td></tr>
+<tr><th id="198">198</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="generic_probe" title='generic_probe' data-type='int generic_probe(struct usb_device * udev)' data-ref="generic_probe" data-ref-filename="generic_probe">generic_probe</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/usb.h.html#usb_device" title='usb_device' data-ref="usb_device" data-ref-filename="usb_device">usb_device</a> *<dfn class="local col7 decl" id="47udev" title='udev' data-type='struct usb_device *' data-ref="47udev" data-ref-filename="47udev">udev</dfn>)</td></tr>
+<tr><th id="199">199</th><td>{</td></tr>
+<tr><th id="200">200</th><td>	<em>int</em> <dfn class="local col8 decl" id="48err" title='err' data-type='int' data-ref="48err" data-ref-filename="48err">err</dfn>, <dfn class="local col9 decl" id="49c" title='c' data-type='int' data-ref="49c" data-ref-filename="49c">c</dfn>;</td></tr>
+<tr><th id="201">201</th><td></td></tr>
+<tr><th id="202">202</th><td>	<i>/* Choose and set the configuration.  This registers the interfaces</i></td></tr>
+<tr><th id="203">203</th><td><i>	 * with the driver core and lets interface drivers bind to them.</i></td></tr>
+<tr><th id="204">204</th><td><i>	 */</i></td></tr>
+<tr><th id="205">205</th><td>	<b>if</b> (<a class="local col7 ref" href="#47udev" title='udev' data-ref="47udev" data-ref-filename="47udev">udev</a>-&gt;<a class="ref field" href="../../../include/linux/usb.h.html#usb_device::authorized" title='usb_device::authorized' data-ref="usb_device::authorized" data-ref-filename="usb_device..authorized">authorized</a> == <var>0</var>)</td></tr>
+<tr><th id="206">206</th><td>		<a class="macro" href="../../../include/linux/device.h.html#1498" title="_dev_err(&amp;udev-&gt;dev, &quot;Device is not authorized for usage\n&quot;)" data-ref="_M/dev_err">dev_err</a>(&amp;<a class="local col7 ref" href="#47udev" title='udev' data-ref="47udev" data-ref-filename="47udev">udev</a>-&gt;<a class="ref field" href="../../../include/linux/usb.h.html#usb_device::dev" title='usb_device::dev' data-ref="usb_device::dev" data-ref-filename="usb_device..dev">dev</a>, <q>"Device is not authorized for usage\n"</q>);</td></tr>
+<tr><th id="207">207</th><td>	<b>else</b> {</td></tr>
+<tr><th id="208">208</th><td>		<a class="local col9 ref" href="#49c" title='c' data-ref="49c" data-ref-filename="49c">c</a> = <a class="ref fn" href="#usb_choose_configuration" title='usb_choose_configuration' data-ref="usb_choose_configuration" data-ref-filename="usb_choose_configuration">usb_choose_configuration</a>(<a class="local col7 ref" href="#47udev" title='udev' data-ref="47udev" data-ref-filename="47udev">udev</a>);</td></tr>
+<tr><th id="209">209</th><td>		<b>if</b> (<a class="local col9 ref" href="#49c" title='c' data-ref="49c" data-ref-filename="49c">c</a> &gt;= <var>0</var>) {</td></tr>
+<tr><th id="210">210</th><td>			<a class="local col8 ref" href="#48err" title='err' data-ref="48err" data-ref-filename="48err">err</a> = <a class="ref fn" href="../../../include/linux/usb.h.html#usb_set_configuration" title='usb_set_configuration' data-ref="usb_set_configuration" data-ref-filename="usb_set_configuration">usb_set_configuration</a>(<a class="local col7 ref" href="#47udev" title='udev' data-ref="47udev" data-ref-filename="47udev">udev</a>, <a class="local col9 ref" href="#49c" title='c' data-ref="49c" data-ref-filename="49c">c</a>);</td></tr>
+<tr><th id="211">211</th><td>			<b>if</b> (<a class="local col8 ref" href="#48err" title='err' data-ref="48err" data-ref-filename="48err">err</a> &amp;&amp; <a class="local col8 ref" href="#48err" title='err' data-ref="48err" data-ref-filename="48err">err</a> != -<a class="macro" href="../../../include/uapi/asm-generic/errno-base.h.html#23" title="19" data-ref="_M/ENODEV">ENODEV</a>) {</td></tr>
+<tr><th id="212">212</th><td>				<a class="macro" href="../../../include/linux/device.h.html#1498" title="_dev_err(&amp;udev-&gt;dev, &quot;can&apos;t set config #%d, error %d\n&quot;, c, err)" data-ref="_M/dev_err">dev_err</a>(&amp;<a class="local col7 ref" href="#47udev" title='udev' data-ref="47udev" data-ref-filename="47udev">udev</a>-&gt;<a class="ref field" href="../../../include/linux/usb.h.html#usb_device::dev" title='usb_device::dev' data-ref="usb_device::dev" data-ref-filename="usb_device..dev">dev</a>, <q>"can't set config #%d, error %d\n"</q>,</td></tr>
+<tr><th id="213">213</th><td>					<a class="local col9 ref" href="#49c" title='c' data-ref="49c" data-ref-filename="49c">c</a>, <a class="local col8 ref" href="#48err" title='err' data-ref="48err" data-ref-filename="48err">err</a>);</td></tr>
+<tr><th id="214">214</th><td>				<i>/* This need not be fatal.  The user can try to</i></td></tr>
+<tr><th id="215">215</th><td><i>				 * set other configurations. */</i></td></tr>
+<tr><th id="216">216</th><td>			}</td></tr>
+<tr><th id="217">217</th><td>		}</td></tr>
+<tr><th id="218">218</th><td>	}</td></tr>
+<tr><th id="219">219</th><td>	<i>/* USB device state == configured ... usable */</i></td></tr>
+<tr><th id="220">220</th><td>	<a class="ref fn" href="usb.h.html#usb_notify_add_device" title='usb_notify_add_device' data-ref="usb_notify_add_device" data-ref-filename="usb_notify_add_device">usb_notify_add_device</a>(<a class="local col7 ref" href="#47udev" title='udev' data-ref="47udev" data-ref-filename="47udev">udev</a>);</td></tr>
+<tr><th id="221">221</th><td></td></tr>
+<tr><th id="222">222</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="223">223</th><td>}</td></tr>
+<tr><th id="224">224</th><td></td></tr>
+<tr><th id="225">225</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="generic_disconnect" title='generic_disconnect' data-type='void generic_disconnect(struct usb_device * udev)' data-ref="generic_disconnect" data-ref-filename="generic_disconnect">generic_disconnect</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/usb.h.html#usb_device" title='usb_device' data-ref="usb_device" data-ref-filename="usb_device">usb_device</a> *<dfn class="local col0 decl" id="50udev" title='udev' data-type='struct usb_device *' data-ref="50udev" data-ref-filename="50udev">udev</dfn>)</td></tr>
+<tr><th id="226">226</th><td>{</td></tr>
+<tr><th id="227">227</th><td>	<a class="ref fn" href="usb.h.html#usb_notify_remove_device" title='usb_notify_remove_device' data-ref="usb_notify_remove_device" data-ref-filename="usb_notify_remove_device">usb_notify_remove_device</a>(<a class="local col0 ref" href="#50udev" title='udev' data-ref="50udev" data-ref-filename="50udev">udev</a>);</td></tr>
+<tr><th id="228">228</th><td></td></tr>
+<tr><th id="229">229</th><td>	<i>/* if this is only an unbind, not a physical disconnect, then</i></td></tr>
+<tr><th id="230">230</th><td><i>	 * unconfigure the device */</i></td></tr>
+<tr><th id="231">231</th><td>	<b>if</b> (<a class="local col0 ref" href="#50udev" title='udev' data-ref="50udev" data-ref-filename="50udev">udev</a>-&gt;<a class="ref field" href="../../../include/linux/usb.h.html#usb_device::actconfig" title='usb_device::actconfig' data-ref="usb_device::actconfig" data-ref-filename="usb_device..actconfig">actconfig</a>)</td></tr>
+<tr><th id="232">232</th><td>		<a class="ref fn" href="../../../include/linux/usb.h.html#usb_set_configuration" title='usb_set_configuration' data-ref="usb_set_configuration" data-ref-filename="usb_set_configuration">usb_set_configuration</a>(<a class="local col0 ref" href="#50udev" title='udev' data-ref="50udev" data-ref-filename="50udev">udev</a>, -<var>1</var>);</td></tr>
+<tr><th id="233">233</th><td>}</td></tr>
+<tr><th id="234">234</th><td></td></tr>
+<tr><th id="235">235</th><td><u>#<span data-ppcond="235">ifdef</span>	<a class="macro" href="../../../include/generated/autoconf.h.html#275" data-ref="_M/CONFIG_PM">CONFIG_PM</a></u></td></tr>
+<tr><th id="236">236</th><td></td></tr>
+<tr><th id="237">237</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="generic_suspend" title='generic_suspend' data-type='int generic_suspend(struct usb_device * udev, pm_message_t msg)' data-ref="generic_suspend" data-ref-filename="generic_suspend">generic_suspend</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/usb.h.html#usb_device" title='usb_device' data-ref="usb_device" data-ref-filename="usb_device">usb_device</a> *<dfn class="local col1 decl" id="51udev" title='udev' data-type='struct usb_device *' data-ref="51udev" data-ref-filename="51udev">udev</dfn>, <a class="typedef" href="../../../include/linux/pm.h.html#pm_message_t" title='pm_message_t' data-type='struct pm_message' data-ref="pm_message_t" data-ref-filename="pm_message_t">pm_message_t</a> <dfn class="local col2 decl" id="52msg" title='msg' data-type='pm_message_t' data-ref="52msg" data-ref-filename="52msg">msg</dfn>)</td></tr>
+<tr><th id="238">238</th><td>{</td></tr>
+<tr><th id="239">239</th><td>	<em>int</em> <dfn class="local col3 decl" id="53rc" title='rc' data-type='int' data-ref="53rc" data-ref-filename="53rc">rc</dfn>;</td></tr>
+<tr><th id="240">240</th><td></td></tr>
+<tr><th id="241">241</th><td>	<i>/* Normal USB devices suspend through their upstream port.</i></td></tr>
+<tr><th id="242">242</th><td><i>	 * Root hubs don't have upstream ports to suspend,</i></td></tr>
+<tr><th id="243">243</th><td><i>	 * so we have to shut down their downstream HC-to-USB</i></td></tr>
+<tr><th id="244">244</th><td><i>	 * interfaces manually by doing a bus (or "global") suspend.</i></td></tr>
+<tr><th id="245">245</th><td><i>	 */</i></td></tr>
+<tr><th id="246">246</th><td>	<b>if</b> (!<a class="local col1 ref" href="#51udev" title='udev' data-ref="51udev" data-ref-filename="51udev">udev</a>-&gt;<a class="ref field" href="../../../include/linux/usb.h.html#usb_device::parent" title='usb_device::parent' data-ref="usb_device::parent" data-ref-filename="usb_device..parent">parent</a>)</td></tr>
+<tr><th id="247">247</th><td>		<a class="local col3 ref" href="#53rc" title='rc' data-ref="53rc" data-ref-filename="53rc">rc</a> = <a class="ref fn" href="../../../include/linux/usb/hcd.h.html#hcd_bus_suspend" title='hcd_bus_suspend' data-ref="hcd_bus_suspend" data-ref-filename="hcd_bus_suspend">hcd_bus_suspend</a>(<a class="local col1 ref" href="#51udev" title='udev' data-ref="51udev" data-ref-filename="51udev">udev</a>, <a class="local col2 ref" href="#52msg" title='msg' data-ref="52msg" data-ref-filename="52msg">msg</a>);</td></tr>
+<tr><th id="248">248</th><td></td></tr>
+<tr><th id="249">249</th><td>	<i>/*</i></td></tr>
+<tr><th id="250">250</th><td><i>	 * Non-root USB2 devices don't need to do anything for FREEZE</i></td></tr>
+<tr><th id="251">251</th><td><i>	 * or PRETHAW. USB3 devices don't support global suspend and</i></td></tr>
+<tr><th id="252">252</th><td><i>	 * needs to be selectively suspended.</i></td></tr>
+<tr><th id="253">253</th><td><i>	 */</i></td></tr>
+<tr><th id="254">254</th><td>	<b>else</b> <b>if</b> ((<a class="local col2 ref" href="#52msg" title='msg' data-ref="52msg" data-ref-filename="52msg">msg</a>.<a class="ref field" href="../../../include/linux/pm.h.html#pm_message::event" title='pm_message::event' data-ref="pm_message::event" data-ref-filename="pm_message..event">event</a> == <a class="macro" href="../../../include/linux/pm.h.html#431" title="0x0001" data-ref="_M/PM_EVENT_FREEZE">PM_EVENT_FREEZE</a> || <a class="local col2 ref" href="#52msg" title='msg' data-ref="52msg" data-ref-filename="52msg">msg</a>.<a class="ref field" href="../../../include/linux/pm.h.html#pm_message::event" title='pm_message::event' data-ref="pm_message::event" data-ref-filename="pm_message..event">event</a> == <a class="macro" href="../../../include/linux/pm.h.html#664" title="0x0008" data-ref="_M/PM_EVENT_PRETHAW">PM_EVENT_PRETHAW</a>)</td></tr>
+<tr><th id="255">255</th><td>		 &amp;&amp; (<a class="local col1 ref" href="#51udev" title='udev' data-ref="51udev" data-ref-filename="51udev">udev</a>-&gt;<a class="ref field" href="../../../include/linux/usb.h.html#usb_device::speed" title='usb_device::speed' data-ref="usb_device::speed" data-ref-filename="usb_device..speed">speed</a> &lt; <a class="enum" href="../../../include/uapi/linux/usb/ch9.h.html#USB_SPEED_SUPER" title='USB_SPEED_SUPER' data-ref="USB_SPEED_SUPER" data-ref-filename="USB_SPEED_SUPER">USB_SPEED_SUPER</a>))</td></tr>
+<tr><th id="256">256</th><td>		<a class="local col3 ref" href="#53rc" title='rc' data-ref="53rc" data-ref-filename="53rc">rc</a> = <var>0</var>;</td></tr>
+<tr><th id="257">257</th><td>	<b>else</b></td></tr>
+<tr><th id="258">258</th><td>		<a class="local col3 ref" href="#53rc" title='rc' data-ref="53rc" data-ref-filename="53rc">rc</a> = <a class="ref fn" href="usb.h.html#usb_port_suspend" title='usb_port_suspend' data-ref="usb_port_suspend" data-ref-filename="usb_port_suspend">usb_port_suspend</a>(<a class="local col1 ref" href="#51udev" title='udev' data-ref="51udev" data-ref-filename="51udev">udev</a>, <a class="local col2 ref" href="#52msg" title='msg' data-ref="52msg" data-ref-filename="52msg">msg</a>);</td></tr>
+<tr><th id="259">259</th><td></td></tr>
+<tr><th id="260">260</th><td>	<b>return</b> <a class="local col3 ref" href="#53rc" title='rc' data-ref="53rc" data-ref-filename="53rc">rc</a>;</td></tr>
+<tr><th id="261">261</th><td>}</td></tr>
+<tr><th id="262">262</th><td></td></tr>
+<tr><th id="263">263</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="generic_resume" title='generic_resume' data-type='int generic_resume(struct usb_device * udev, pm_message_t msg)' data-ref="generic_resume" data-ref-filename="generic_resume">generic_resume</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/usb.h.html#usb_device" title='usb_device' data-ref="usb_device" data-ref-filename="usb_device">usb_device</a> *<dfn class="local col4 decl" id="54udev" title='udev' data-type='struct usb_device *' data-ref="54udev" data-ref-filename="54udev">udev</dfn>, <a class="typedef" href="../../../include/linux/pm.h.html#pm_message_t" title='pm_message_t' data-type='struct pm_message' data-ref="pm_message_t" data-ref-filename="pm_message_t">pm_message_t</a> <dfn class="local col5 decl" id="55msg" title='msg' data-type='pm_message_t' data-ref="55msg" data-ref-filename="55msg">msg</dfn>)</td></tr>
+<tr><th id="264">264</th><td>{</td></tr>
+<tr><th id="265">265</th><td>	<em>int</em> <dfn class="local col6 decl" id="56rc" title='rc' data-type='int' data-ref="56rc" data-ref-filename="56rc">rc</dfn>;</td></tr>
+<tr><th id="266">266</th><td></td></tr>
+<tr><th id="267">267</th><td>	<i>/* Normal USB devices resume/reset through their upstream port.</i></td></tr>
+<tr><th id="268">268</th><td><i>	 * Root hubs don't have upstream ports to resume or reset,</i></td></tr>
+<tr><th id="269">269</th><td><i>	 * so we have to start up their downstream HC-to-USB</i></td></tr>
+<tr><th id="270">270</th><td><i>	 * interfaces manually by doing a bus (or "global") resume.</i></td></tr>
+<tr><th id="271">271</th><td><i>	 */</i></td></tr>
+<tr><th id="272">272</th><td>	<b>if</b> (!<a class="local col4 ref" href="#54udev" title='udev' data-ref="54udev" data-ref-filename="54udev">udev</a>-&gt;<a class="ref field" href="../../../include/linux/usb.h.html#usb_device::parent" title='usb_device::parent' data-ref="usb_device::parent" data-ref-filename="usb_device..parent">parent</a>)</td></tr>
+<tr><th id="273">273</th><td>		<a class="local col6 ref" href="#56rc" title='rc' data-ref="56rc" data-ref-filename="56rc">rc</a> = <a class="ref fn" href="../../../include/linux/usb/hcd.h.html#hcd_bus_resume" title='hcd_bus_resume' data-ref="hcd_bus_resume" data-ref-filename="hcd_bus_resume">hcd_bus_resume</a>(<a class="local col4 ref" href="#54udev" title='udev' data-ref="54udev" data-ref-filename="54udev">udev</a>, <a class="local col5 ref" href="#55msg" title='msg' data-ref="55msg" data-ref-filename="55msg">msg</a>);</td></tr>
+<tr><th id="274">274</th><td>	<b>else</b></td></tr>
+<tr><th id="275">275</th><td>		<a class="local col6 ref" href="#56rc" title='rc' data-ref="56rc" data-ref-filename="56rc">rc</a> = <a class="ref fn" href="usb.h.html#usb_port_resume" title='usb_port_resume' data-ref="usb_port_resume" data-ref-filename="usb_port_resume">usb_port_resume</a>(<a class="local col4 ref" href="#54udev" title='udev' data-ref="54udev" data-ref-filename="54udev">udev</a>, <a class="local col5 ref" href="#55msg" title='msg' data-ref="55msg" data-ref-filename="55msg">msg</a>);</td></tr>
+<tr><th id="276">276</th><td>	<b>return</b> <a class="local col6 ref" href="#56rc" title='rc' data-ref="56rc" data-ref-filename="56rc">rc</a>;</td></tr>
+<tr><th id="277">277</th><td>}</td></tr>
+<tr><th id="278">278</th><td></td></tr>
+<tr><th id="279">279</th><td><u>#<span data-ppcond="235">endif</span>	/* CONFIG_PM */</u></td></tr>
+<tr><th id="280">280</th><td></td></tr>
+<tr><th id="281">281</th><td><b>struct</b> <a class="type" href="../../../include/linux/usb.h.html#usb_device_driver" title='usb_device_driver' data-ref="usb_device_driver" data-ref-filename="usb_device_driver">usb_device_driver</a> <dfn class="decl def" id="usb_generic_driver" title='usb_generic_driver' data-ref="usb_generic_driver" data-ref-filename="usb_generic_driver">usb_generic_driver</dfn> = {</td></tr>
+<tr><th id="282">282</th><td>	.<a class="ref field" href="../../../include/linux/usb.h.html#usb_device_driver::name" title='usb_device_driver::name' data-ref="usb_device_driver::name" data-ref-filename="usb_device_driver..name">name</a> =	<q>"usb"</q>,</td></tr>
+<tr><th id="283">283</th><td>	.<a class="ref field" href="../../../include/linux/usb.h.html#usb_device_driver::probe" title='usb_device_driver::probe' data-ref="usb_device_driver::probe" data-ref-filename="usb_device_driver..probe">probe</a> = <a class="tu ref fn" href="#generic_probe" title='generic_probe' data-ref="generic_probe" data-ref-filename="generic_probe">generic_probe</a>,</td></tr>
+<tr><th id="284">284</th><td>	.<a class="ref field" href="../../../include/linux/usb.h.html#usb_device_driver::disconnect" title='usb_device_driver::disconnect' data-ref="usb_device_driver::disconnect" data-ref-filename="usb_device_driver..disconnect">disconnect</a> = <a class="tu ref fn" href="#generic_disconnect" title='generic_disconnect' data-ref="generic_disconnect" data-ref-filename="generic_disconnect">generic_disconnect</a>,</td></tr>
+<tr><th id="285">285</th><td><u>#<span data-ppcond="285">ifdef</span>	<a class="macro" href="../../../include/generated/autoconf.h.html#275" data-ref="_M/CONFIG_PM">CONFIG_PM</a></u></td></tr>
+<tr><th id="286">286</th><td>	.<a class="ref field" href="../../../include/linux/usb.h.html#usb_device_driver::suspend" title='usb_device_driver::suspend' data-ref="usb_device_driver::suspend" data-ref-filename="usb_device_driver..suspend">suspend</a> = <a class="tu ref fn" href="#generic_suspend" title='generic_suspend' data-ref="generic_suspend" data-ref-filename="generic_suspend">generic_suspend</a>,</td></tr>
+<tr><th id="287">287</th><td>	.<a class="ref field" href="../../../include/linux/usb.h.html#usb_device_driver::resume" title='usb_device_driver::resume' data-ref="usb_device_driver::resume" data-ref-filename="usb_device_driver..resume">resume</a> = <a class="tu ref fn" href="#generic_resume" title='generic_resume' data-ref="generic_resume" data-ref-filename="generic_resume">generic_resume</a>,</td></tr>
+<tr><th id="288">288</th><td><u>#<span data-ppcond="285">endif</span></u></td></tr>
+<tr><th id="289">289</th><td>	.<a class="ref field" href="../../../include/linux/usb.h.html#usb_device_driver::supports_autosuspend" title='usb_device_driver::supports_autosuspend' data-ref="usb_device_driver::supports_autosuspend" data-ref-filename="usb_device_driver..supports_autosuspend">supports_autosuspend</a> = <var>1</var>,</td></tr>
+<tr><th id="290">290</th><td>};</td></tr>
+<tr><th id="291">291</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

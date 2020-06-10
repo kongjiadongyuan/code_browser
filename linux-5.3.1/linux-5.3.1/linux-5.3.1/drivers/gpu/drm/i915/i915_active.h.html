@@ -1,0 +1,432 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>i915_active.h source code [linux-5.3.1/drivers/gpu/drm/i915/i915_active.h] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/drivers/gpu/drm/i915/i915_active.h'; var root_path = '../../../../..'; var data_path = '../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../..'>linux-5.3.1</a>/<a href='../../..'>drivers</a>/<a href='../..'>gpu</a>/<a href='..'>drm</a>/<a href='./'>i915</a>/<a href='i915_active.h.html'>i915_active.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*</i></td></tr>
+<tr><th id="2">2</th><td><i> * SPDX-License-Identifier: MIT</i></td></tr>
+<tr><th id="3">3</th><td><i> *</i></td></tr>
+<tr><th id="4">4</th><td><i> * Copyright © 2019 Intel Corporation</i></td></tr>
+<tr><th id="5">5</th><td><i> */</i></td></tr>
+<tr><th id="6">6</th><td></td></tr>
+<tr><th id="7">7</th><td><u>#<span data-ppcond="7">ifndef</span> <span class="macro" data-ref="_M/_I915_ACTIVE_H_">_I915_ACTIVE_H_</span></u></td></tr>
+<tr><th id="8">8</th><td><u>#define <dfn class="macro" id="_M/_I915_ACTIVE_H_" data-ref="_M/_I915_ACTIVE_H_">_I915_ACTIVE_H_</dfn></u></td></tr>
+<tr><th id="9">9</th><td></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="../../../../include/linux/lockdep.h.html">&lt;linux/lockdep.h&gt;</a></u></td></tr>
+<tr><th id="11">11</th><td></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="i915_active_types.h.html">"i915_active_types.h"</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="i915_request.h.html">"i915_request.h"</a></u></td></tr>
+<tr><th id="14">14</th><td></td></tr>
+<tr><th id="15">15</th><td><i>/*</i></td></tr>
+<tr><th id="16">16</th><td><i> * We treat requests as fences. This is not be to confused with our</i></td></tr>
+<tr><th id="17">17</th><td><i> * "fence registers" but pipeline synchronisation objects ala GL_ARB_sync.</i></td></tr>
+<tr><th id="18">18</th><td><i> * We use the fences to synchronize access from the CPU with activity on the</i></td></tr>
+<tr><th id="19">19</th><td><i> * GPU, for example, we should not rewrite an object's PTE whilst the GPU</i></td></tr>
+<tr><th id="20">20</th><td><i> * is reading them. We also track fences at a higher level to provide</i></td></tr>
+<tr><th id="21">21</th><td><i> * implicit synchronisation around GEM objects, e.g. set-domain will wait</i></td></tr>
+<tr><th id="22">22</th><td><i> * for outstanding GPU rendering before marking the object ready for CPU</i></td></tr>
+<tr><th id="23">23</th><td><i> * access, or a pageflip will wait until the GPU is complete before showing</i></td></tr>
+<tr><th id="24">24</th><td><i> * the frame on the scanout.</i></td></tr>
+<tr><th id="25">25</th><td><i> *</i></td></tr>
+<tr><th id="26">26</th><td><i> * In order to use a fence, the object must track the fence it needs to</i></td></tr>
+<tr><th id="27">27</th><td><i> * serialise with. For example, GEM objects want to track both read and</i></td></tr>
+<tr><th id="28">28</th><td><i> * write access so that we can perform concurrent read operations between</i></td></tr>
+<tr><th id="29">29</th><td><i> * the CPU and GPU engines, as well as waiting for all rendering to</i></td></tr>
+<tr><th id="30">30</th><td><i> * complete, or waiting for the last GPU user of a "fence register". The</i></td></tr>
+<tr><th id="31">31</th><td><i> * object then embeds a #i915_active_request to track the most recent (in</i></td></tr>
+<tr><th id="32">32</th><td><i> * retirement order) request relevant for the desired mode of access.</i></td></tr>
+<tr><th id="33">33</th><td><i> * The #i915_active_request is updated with i915_active_request_set() to</i></td></tr>
+<tr><th id="34">34</th><td><i> * track the most recent fence request, typically this is done as part of</i></td></tr>
+<tr><th id="35">35</th><td><i> * i915_vma_move_to_active().</i></td></tr>
+<tr><th id="36">36</th><td><i> *</i></td></tr>
+<tr><th id="37">37</th><td><i> * When the #i915_active_request completes (is retired), it will</i></td></tr>
+<tr><th id="38">38</th><td><i> * signal its completion to the owner through a callback as well as mark</i></td></tr>
+<tr><th id="39">39</th><td><i> * itself as idle (i915_active_request.request == NULL). The owner</i></td></tr>
+<tr><th id="40">40</th><td><i> * can then perform any action, such as delayed freeing of an active</i></td></tr>
+<tr><th id="41">41</th><td><i> * resource including itself.</i></td></tr>
+<tr><th id="42">42</th><td><i> */</i></td></tr>
+<tr><th id="43">43</th><td></td></tr>
+<tr><th id="44">44</th><td><em>void</em> <dfn class="decl fn" id="i915_active_retire_noop" title='i915_active_retire_noop' data-ref="i915_active_retire_noop" data-ref-filename="i915_active_retire_noop">i915_active_retire_noop</dfn>(<b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active_request" title='i915_active_request' data-ref="i915_active_request" data-ref-filename="i915_active_request">i915_active_request</a> *<dfn class="local col6 decl" id="1586active" title='active' data-type='struct i915_active_request *' data-ref="1586active" data-ref-filename="1586active">active</dfn>,</td></tr>
+<tr><th id="45">45</th><td>			     <b>struct</b> <a class="type" href="i915_request.h.html#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col7 decl" id="1587request" title='request' data-type='struct i915_request *' data-ref="1587request" data-ref-filename="1587request">request</dfn>);</td></tr>
+<tr><th id="46">46</th><td></td></tr>
+<tr><th id="47">47</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="48">48</th><td><i class="doc"> * i915_active_request_init - prepares the activity tracker for use</i></td></tr>
+<tr><th id="49">49</th><td><i class="doc"> *<span class="command"> @active</span> - the active tracker</i></td></tr>
+<tr><th id="50">50</th><td><i class="doc"> *<span class="command"> @rq</span> - initial request to track, can be NULL</i></td></tr>
+<tr><th id="51">51</th><td><i class="doc"> *<span class="command"> @func</span> - a callback when then the tracker is retired (becomes idle),</i></td></tr>
+<tr><th id="52">52</th><td><i class="doc"> *         can be NULL</i></td></tr>
+<tr><th id="53">53</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="54">54</th><td><i class="doc"> * i915_active_request_init() prepares the embedded<span class="command"> @active</span> struct for use as</i></td></tr>
+<tr><th id="55">55</th><td><i class="doc"> * an activity tracker, that is for tracking the last known active request</i></td></tr>
+<tr><th id="56">56</th><td><i class="doc"> * associated with it. When the last request becomes idle, when it is retired</i></td></tr>
+<tr><th id="57">57</th><td><i class="doc"> * after completion, the optional callback<span class="command"> @func</span> is invoked.</i></td></tr>
+<tr><th id="58">58</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="59">59</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em></td></tr>
+<tr><th id="60">60</th><td><dfn class="decl def fn" id="i915_active_request_init" title='i915_active_request_init' data-ref="i915_active_request_init" data-ref-filename="i915_active_request_init">i915_active_request_init</dfn>(<b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active_request" title='i915_active_request' data-ref="i915_active_request" data-ref-filename="i915_active_request">i915_active_request</a> *<dfn class="local col8 decl" id="1588active" title='active' data-type='struct i915_active_request *' data-ref="1588active" data-ref-filename="1588active">active</dfn>,</td></tr>
+<tr><th id="61">61</th><td>			 <b>struct</b> <a class="type" href="i915_request.h.html#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col9 decl" id="1589rq" title='rq' data-type='struct i915_request *' data-ref="1589rq" data-ref-filename="1589rq">rq</dfn>,</td></tr>
+<tr><th id="62">62</th><td>			 <a class="typedef" href="i915_active_types.h.html#i915_active_retire_fn" title='i915_active_retire_fn' data-type='void (*)(struct i915_active_request *, struct i915_request *)' data-ref="i915_active_retire_fn" data-ref-filename="i915_active_retire_fn">i915_active_retire_fn</a> <dfn class="local col0 decl" id="1590retire" title='retire' data-type='i915_active_retire_fn' data-ref="1590retire" data-ref-filename="1590retire">retire</dfn>)</td></tr>
+<tr><th id="63">63</th><td>{</td></tr>
+<tr><th id="64">64</th><td>	<a class="macro" href="../../../../include/linux/rcupdate.h.html#771" title="do { ; ({ union { typeof(active-&gt;request) __val; char __c[1]; } __u = { .__val = ( typeof(active-&gt;request)) ((typeof(*(rq)) *)(rq)) }; __write_once_size(&amp;(active-&gt;request), __u.__c, sizeof(active-&gt;request)); __u.__val; }); } while (0)" data-ref="_M/RCU_INIT_POINTER">RCU_INIT_POINTER</a>(<a class="local col8 ref" href="#1588active" title='active' data-ref="1588active" data-ref-filename="1588active">active</a>-&gt;<a class="ref field" href="i915_active_types.h.html#i915_active_request::request" title='i915_active_request::request' data-ref="i915_active_request::request" data-ref-filename="i915_active_request..request">request</a>, <a class="local col9 ref" href="#1589rq" title='rq' data-ref="1589rq" data-ref-filename="1589rq">rq</a>);</td></tr>
+<tr><th id="65">65</th><td>	<a class="ref fn" href="../../../../include/linux/list.h.html#INIT_LIST_HEAD" title='INIT_LIST_HEAD' data-ref="INIT_LIST_HEAD" data-ref-filename="INIT_LIST_HEAD">INIT_LIST_HEAD</a>(&amp;<a class="local col8 ref" href="#1588active" title='active' data-ref="1588active" data-ref-filename="1588active">active</a>-&gt;<a class="ref field" href="i915_active_types.h.html#i915_active_request::link" title='i915_active_request::link' data-ref="i915_active_request::link" data-ref-filename="i915_active_request..link">link</a>);</td></tr>
+<tr><th id="66">66</th><td>	<a class="local col8 ref" href="#1588active" title='active' data-ref="1588active" data-ref-filename="1588active">active</a>-&gt;<a class="ref field" href="i915_active_types.h.html#i915_active_request::retire" title='i915_active_request::retire' data-ref="i915_active_request::retire" data-ref-filename="i915_active_request..retire">retire</a> = <a class="local col0 ref" href="#1590retire" title='retire' data-ref="1590retire" data-ref-filename="1590retire">retire</a> ?: <a class="ref fn" href="#i915_active_retire_noop" title='i915_active_retire_noop' data-ref="i915_active_retire_noop" data-ref-filename="i915_active_retire_noop">i915_active_retire_noop</a>;</td></tr>
+<tr><th id="67">67</th><td>}</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td><u>#define <dfn class="macro" id="_M/INIT_ACTIVE_REQUEST" data-ref="_M/INIT_ACTIVE_REQUEST">INIT_ACTIVE_REQUEST</dfn>(name) i915_active_request_init((name), NULL, NULL)</u></td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="72">72</th><td><i class="doc"> * i915_active_request_set - updates the tracker to watch the current request</i></td></tr>
+<tr><th id="73">73</th><td><i class="doc"> *<span class="command"> @active</span> - the active tracker</i></td></tr>
+<tr><th id="74">74</th><td><i class="doc"> *<span class="command"> @request</span> - the request to watch</i></td></tr>
+<tr><th id="75">75</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="76">76</th><td><i class="doc"> * __i915_active_request_set() watches the given<span class="command"> @request</span> for completion. Whilst</i></td></tr>
+<tr><th id="77">77</th><td><i class="doc"> * that<span class="command"> @request</span> is busy, the<span class="command"> @active</span> reports busy. When that<span class="command"> @request</span> is</i></td></tr>
+<tr><th id="78">78</th><td><i class="doc"> * retired, the<span class="command"> @active</span> tracker is updated to report idle.</i></td></tr>
+<tr><th id="79">79</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="80">80</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em></td></tr>
+<tr><th id="81">81</th><td><dfn class="decl def fn" id="__i915_active_request_set" title='__i915_active_request_set' data-ref="__i915_active_request_set" data-ref-filename="__i915_active_request_set">__i915_active_request_set</dfn>(<b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active_request" title='i915_active_request' data-ref="i915_active_request" data-ref-filename="i915_active_request">i915_active_request</a> *<dfn class="local col1 decl" id="1591active" title='active' data-type='struct i915_active_request *' data-ref="1591active" data-ref-filename="1591active">active</dfn>,</td></tr>
+<tr><th id="82">82</th><td>			  <b>struct</b> <a class="type" href="i915_request.h.html#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col2 decl" id="1592request" title='request' data-type='struct i915_request *' data-ref="1592request" data-ref-filename="1592request">request</dfn>)</td></tr>
+<tr><th id="83">83</th><td>{</td></tr>
+<tr><th id="84">84</th><td>	<a class="ref fn" href="../../../../include/linux/list.h.html#list_move" title='list_move' data-ref="list_move" data-ref-filename="list_move">list_move</a>(&amp;<a class="local col1 ref" href="#1591active" title='active' data-ref="1591active" data-ref-filename="1591active">active</a>-&gt;<a class="ref field" href="i915_active_types.h.html#i915_active_request::link" title='i915_active_request::link' data-ref="i915_active_request::link" data-ref-filename="i915_active_request..link">link</a>, &amp;<a class="local col2 ref" href="#1592request" title='request' data-ref="1592request" data-ref-filename="1592request">request</a>-&gt;<a class="ref field" href="i915_request.h.html#i915_request::active_list" title='i915_request::active_list' data-ref="i915_request::active_list" data-ref-filename="i915_request..active_list">active_list</a>);</td></tr>
+<tr><th id="85">85</th><td>	<a class="macro" href="../../../../include/linux/rcupdate.h.html#367" title="do { uintptr_t _r_a_p__v = (uintptr_t)(request); ; if (__builtin_constant_p(request) &amp;&amp; (_r_a_p__v) == (uintptr_t)((void *)0)) ({ union { typeof((active-&gt;request)) __val; char __c[1]; } __u = { .__val = ( typeof((active-&gt;request))) ((typeof(active-&gt;request))(_r_a_p__v)) }; __write_once_size(&amp;((active-&gt;request)), __u.__c, sizeof((active-&gt;request))); __u.__val; }); else do { do { extern void __compiletime_assert_85(void) ; if (!((sizeof(*&amp;active-&gt;request) == sizeof(char) || sizeof(*&amp;active-&gt;request) == sizeof(short) || sizeof(*&amp;active-&gt;request) == sizeof(int) || sizeof(*&amp;active-&gt;request) == sizeof(long)))) __compiletime_assert_85(); } while (0); __asm__ __volatile__(&quot;&quot; : : : &quot;memory&quot;); ({ union { typeof(*&amp;active-&gt;request) __val; char __c[1]; } __u = { .__val = ( typeof(*&amp;active-&gt;request)) ((typeof(*((typeof(active-&gt;request))_r_a_p__v)) *)((typeof(active-&gt;request))_r_a_p__v)) }; __write_once_size(&amp;(*&amp;active-&gt;request), __u.__c, sizeof(*&amp;active-&gt;request)); __u.__val; }); } while (0); } while (0)" data-ref="_M/rcu_assign_pointer">rcu_assign_pointer</a>(<a class="local col1 ref" href="#1591active" title='active' data-ref="1591active" data-ref-filename="1591active">active</a>-&gt;<a class="ref field" href="i915_active_types.h.html#i915_active_request::request" title='i915_active_request::request' data-ref="i915_active_request::request" data-ref-filename="i915_active_request..request">request</a>, <a class="local col2 ref" href="#1592request" title='request' data-ref="1592request" data-ref-filename="1592request">request</a>);</td></tr>
+<tr><th id="86">86</th><td>}</td></tr>
+<tr><th id="87">87</th><td></td></tr>
+<tr><th id="88">88</th><td><em>int</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#108" title="__attribute__((__warn_unused_result__))" data-ref="_M/__must_check">__must_check</a></td></tr>
+<tr><th id="89">89</th><td><dfn class="decl fn" id="i915_active_request_set" title='i915_active_request_set' data-ref="i915_active_request_set" data-ref-filename="i915_active_request_set">i915_active_request_set</dfn>(<b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active_request" title='i915_active_request' data-ref="i915_active_request" data-ref-filename="i915_active_request">i915_active_request</a> *<dfn class="local col3 decl" id="1593active" title='active' data-type='struct i915_active_request *' data-ref="1593active" data-ref-filename="1593active">active</dfn>,</td></tr>
+<tr><th id="90">90</th><td>			<b>struct</b> <a class="type" href="i915_request.h.html#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col4 decl" id="1594rq" title='rq' data-type='struct i915_request *' data-ref="1594rq" data-ref-filename="1594rq">rq</dfn>);</td></tr>
+<tr><th id="91">91</th><td></td></tr>
+<tr><th id="92">92</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="93">93</th><td><i class="doc"> * i915_active_request_set_retire_fn - updates the retirement callback</i></td></tr>
+<tr><th id="94">94</th><td><i class="doc"> *<span class="command"> @active</span> - the active tracker</i></td></tr>
+<tr><th id="95">95</th><td><i class="doc"> * <span class="command">@fn</span> <span class="verb">- the routine called when the request is retired</span></i></td></tr>
+<tr><th id="96">96</th><td><i class="doc"> *<span class="command"> @mutex</span> - struct_mutex used to guard retirements</i></td></tr>
+<tr><th id="97">97</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="98">98</th><td><i class="doc"> * i915_active_request_set_retire_fn() updates the function pointer that</i></td></tr>
+<tr><th id="99">99</th><td><i class="doc"> * is called when the final request associated with the<span class="command"> @active</span> tracker</i></td></tr>
+<tr><th id="100">100</th><td><i class="doc"> * is retired.</i></td></tr>
+<tr><th id="101">101</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="102">102</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em></td></tr>
+<tr><th id="103">103</th><td><dfn class="decl def fn" id="i915_active_request_set_retire_fn" title='i915_active_request_set_retire_fn' data-ref="i915_active_request_set_retire_fn" data-ref-filename="i915_active_request_set_retire_fn">i915_active_request_set_retire_fn</dfn>(<b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active_request" title='i915_active_request' data-ref="i915_active_request" data-ref-filename="i915_active_request">i915_active_request</a> *<dfn class="local col5 decl" id="1595active" title='active' data-type='struct i915_active_request *' data-ref="1595active" data-ref-filename="1595active">active</dfn>,</td></tr>
+<tr><th id="104">104</th><td>				  <a class="typedef" href="i915_active_types.h.html#i915_active_retire_fn" title='i915_active_retire_fn' data-type='void (*)(struct i915_active_request *, struct i915_request *)' data-ref="i915_active_retire_fn" data-ref-filename="i915_active_retire_fn">i915_active_retire_fn</a> <dfn class="local col6 decl" id="1596fn" title='fn' data-type='i915_active_retire_fn' data-ref="1596fn" data-ref-filename="1596fn">fn</dfn>,</td></tr>
+<tr><th id="105">105</th><td>				  <b>struct</b> <a class="type" href="../../../../include/linux/mutex.h.html#mutex" title='mutex' data-ref="mutex" data-ref-filename="mutex">mutex</a> *<dfn class="local col7 decl" id="1597mutex" title='mutex' data-type='struct mutex *' data-ref="1597mutex" data-ref-filename="1597mutex">mutex</dfn>)</td></tr>
+<tr><th id="106">106</th><td>{</td></tr>
+<tr><th id="107">107</th><td>	<a class="macro" href="../../../../include/linux/lockdep.h.html#481" title="do { (void)(mutex); } while (0)" data-ref="_M/lockdep_assert_held">lockdep_assert_held</a>(<a class="local col7 ref" href="#1597mutex" title='mutex' data-ref="1597mutex" data-ref-filename="1597mutex">mutex</a>);</td></tr>
+<tr><th id="108">108</th><td>	<a class="local col5 ref" href="#1595active" title='active' data-ref="1595active" data-ref-filename="1595active">active</a>-&gt;<a class="ref field" href="i915_active_types.h.html#i915_active_request::retire" title='i915_active_request::retire' data-ref="i915_active_request::retire" data-ref-filename="i915_active_request..retire">retire</a> = <a class="local col6 ref" href="#1596fn" title='fn' data-ref="1596fn" data-ref-filename="1596fn">fn</a> ?: <a class="ref fn" href="#i915_active_retire_noop" title='i915_active_retire_noop' data-ref="i915_active_retire_noop" data-ref-filename="i915_active_retire_noop">i915_active_retire_noop</a>;</td></tr>
+<tr><th id="109">109</th><td>}</td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="112">112</th><td><i class="doc"> * i915_active_request_raw - return the active request</i></td></tr>
+<tr><th id="113">113</th><td><i class="doc"> *<span class="command"> @active</span> - the active tracker</i></td></tr>
+<tr><th id="114">114</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="115">115</th><td><i class="doc"> * i915_active_request_raw() returns the current request being tracked, or NULL.</i></td></tr>
+<tr><th id="116">116</th><td><i class="doc"> * It does not obtain a reference on the request for the caller, so the caller</i></td></tr>
+<tr><th id="117">117</th><td><i class="doc"> * must hold struct_mutex.</i></td></tr>
+<tr><th id="118">118</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="119">119</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="i915_request.h.html#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *</td></tr>
+<tr><th id="120">120</th><td><dfn class="decl def fn" id="i915_active_request_raw" title='i915_active_request_raw' data-ref="i915_active_request_raw" data-ref-filename="i915_active_request_raw">i915_active_request_raw</dfn>(<em>const</em> <b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active_request" title='i915_active_request' data-ref="i915_active_request" data-ref-filename="i915_active_request">i915_active_request</a> *<dfn class="local col8 decl" id="1598active" title='active' data-type='const struct i915_active_request *' data-ref="1598active" data-ref-filename="1598active">active</dfn>,</td></tr>
+<tr><th id="121">121</th><td>			<b>struct</b> <a class="type" href="../../../../include/linux/mutex.h.html#mutex" title='mutex' data-ref="mutex" data-ref-filename="mutex">mutex</a> *<dfn class="local col9 decl" id="1599mutex" title='mutex' data-type='struct mutex *' data-ref="1599mutex" data-ref-filename="1599mutex">mutex</dfn>)</td></tr>
+<tr><th id="122">122</th><td>{</td></tr>
+<tr><th id="123">123</th><td>	<b>return</b> <a class="macro" href="../../../../include/linux/rcupdate.h.html#497" title="({ do { } while (0); ; ((typeof(*(active-&gt;request)) *)((active-&gt;request))); })" data-ref="_M/rcu_dereference_protected">rcu_dereference_protected</a>(<a class="local col8 ref" href="#1598active" title='active' data-ref="1598active" data-ref-filename="1598active">active</a>-&gt;<a class="ref field" href="i915_active_types.h.html#i915_active_request::request" title='i915_active_request::request' data-ref="i915_active_request::request" data-ref-filename="i915_active_request..request">request</a>,</td></tr>
+<tr><th id="124">124</th><td>					 lockdep_is_held(mutex));</td></tr>
+<tr><th id="125">125</th><td>}</td></tr>
+<tr><th id="126">126</th><td></td></tr>
+<tr><th id="127">127</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="128">128</th><td><i class="doc"> * i915_active_request_peek - report the active request being monitored</i></td></tr>
+<tr><th id="129">129</th><td><i class="doc"> *<span class="command"> @active</span> - the active tracker</i></td></tr>
+<tr><th id="130">130</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="131">131</th><td><i class="doc"> * i915_active_request_peek() returns the current request being tracked if</i></td></tr>
+<tr><th id="132">132</th><td><i class="doc"> * still active, or NULL. It does not obtain a reference on the request</i></td></tr>
+<tr><th id="133">133</th><td><i class="doc"> * for the caller, so the caller must hold struct_mutex.</i></td></tr>
+<tr><th id="134">134</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="135">135</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="i915_request.h.html#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *</td></tr>
+<tr><th id="136">136</th><td><dfn class="decl def fn" id="i915_active_request_peek" title='i915_active_request_peek' data-ref="i915_active_request_peek" data-ref-filename="i915_active_request_peek">i915_active_request_peek</dfn>(<em>const</em> <b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active_request" title='i915_active_request' data-ref="i915_active_request" data-ref-filename="i915_active_request">i915_active_request</a> *<dfn class="local col0 decl" id="1600active" title='active' data-type='const struct i915_active_request *' data-ref="1600active" data-ref-filename="1600active">active</dfn>,</td></tr>
+<tr><th id="137">137</th><td>			 <b>struct</b> <a class="type" href="../../../../include/linux/mutex.h.html#mutex" title='mutex' data-ref="mutex" data-ref-filename="mutex">mutex</a> *<dfn class="local col1 decl" id="1601mutex" title='mutex' data-type='struct mutex *' data-ref="1601mutex" data-ref-filename="1601mutex">mutex</dfn>)</td></tr>
+<tr><th id="138">138</th><td>{</td></tr>
+<tr><th id="139">139</th><td>	<b>struct</b> <a class="type" href="i915_request.h.html#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col2 decl" id="1602request" title='request' data-type='struct i915_request *' data-ref="1602request" data-ref-filename="1602request">request</dfn>;</td></tr>
+<tr><th id="140">140</th><td></td></tr>
+<tr><th id="141">141</th><td>	<a class="local col2 ref" href="#1602request" title='request' data-ref="1602request" data-ref-filename="1602request">request</a> = <a class="ref fn" href="#i915_active_request_raw" title='i915_active_request_raw' data-ref="i915_active_request_raw" data-ref-filename="i915_active_request_raw">i915_active_request_raw</a>(<a class="local col0 ref" href="#1600active" title='active' data-ref="1600active" data-ref-filename="1600active">active</a>, <a class="local col1 ref" href="#1601mutex" title='mutex' data-ref="1601mutex" data-ref-filename="1601mutex">mutex</a>);</td></tr>
+<tr><th id="142">142</th><td>	<b>if</b> (!<a class="local col2 ref" href="#1602request" title='request' data-ref="1602request" data-ref-filename="1602request">request</a> || <a class="ref fn" href="i915_request.h.html#i915_request_completed" title='i915_request_completed' data-ref="i915_request_completed" data-ref-filename="i915_request_completed">i915_request_completed</a>(<a class="local col2 ref" href="#1602request" title='request' data-ref="1602request" data-ref-filename="1602request">request</a>))</td></tr>
+<tr><th id="143">143</th><td>		<b>return</b> <a class="macro" href="../../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="144">144</th><td></td></tr>
+<tr><th id="145">145</th><td>	<b>return</b> <a class="local col2 ref" href="#1602request" title='request' data-ref="1602request" data-ref-filename="1602request">request</a>;</td></tr>
+<tr><th id="146">146</th><td>}</td></tr>
+<tr><th id="147">147</th><td></td></tr>
+<tr><th id="148">148</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="149">149</th><td><i class="doc"> * i915_active_request_get - return a reference to the active request</i></td></tr>
+<tr><th id="150">150</th><td><i class="doc"> *<span class="command"> @active</span> - the active tracker</i></td></tr>
+<tr><th id="151">151</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="152">152</th><td><i class="doc"> * i915_active_request_get() returns a reference to the active request, or NULL</i></td></tr>
+<tr><th id="153">153</th><td><i class="doc"> * if the active tracker is idle. The caller must hold struct_mutex.</i></td></tr>
+<tr><th id="154">154</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="155">155</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="i915_request.h.html#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *</td></tr>
+<tr><th id="156">156</th><td><dfn class="decl def fn" id="i915_active_request_get" title='i915_active_request_get' data-ref="i915_active_request_get" data-ref-filename="i915_active_request_get">i915_active_request_get</dfn>(<em>const</em> <b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active_request" title='i915_active_request' data-ref="i915_active_request" data-ref-filename="i915_active_request">i915_active_request</a> *<dfn class="local col3 decl" id="1603active" title='active' data-type='const struct i915_active_request *' data-ref="1603active" data-ref-filename="1603active">active</dfn>,</td></tr>
+<tr><th id="157">157</th><td>			<b>struct</b> <a class="type" href="../../../../include/linux/mutex.h.html#mutex" title='mutex' data-ref="mutex" data-ref-filename="mutex">mutex</a> *<dfn class="local col4 decl" id="1604mutex" title='mutex' data-type='struct mutex *' data-ref="1604mutex" data-ref-filename="1604mutex">mutex</dfn>)</td></tr>
+<tr><th id="158">158</th><td>{</td></tr>
+<tr><th id="159">159</th><td>	<b>return</b> <a class="ref fn" href="i915_request.h.html#i915_request_get" title='i915_request_get' data-ref="i915_request_get" data-ref-filename="i915_request_get">i915_request_get</a>(<a class="ref fn" href="#i915_active_request_peek" title='i915_active_request_peek' data-ref="i915_active_request_peek" data-ref-filename="i915_active_request_peek">i915_active_request_peek</a>(<a class="local col3 ref" href="#1603active" title='active' data-ref="1603active" data-ref-filename="1603active">active</a>, <a class="local col4 ref" href="#1604mutex" title='mutex' data-ref="1604mutex" data-ref-filename="1604mutex">mutex</a>));</td></tr>
+<tr><th id="160">160</th><td>}</td></tr>
+<tr><th id="161">161</th><td></td></tr>
+<tr><th id="162">162</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="163">163</th><td><i class="doc"> * __i915_active_request_get_rcu - return a reference to the active request</i></td></tr>
+<tr><th id="164">164</th><td><i class="doc"> *<span class="command"> @active</span> - the active tracker</i></td></tr>
+<tr><th id="165">165</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="166">166</th><td><i class="doc"> * __i915_active_request_get() returns a reference to the active request,</i></td></tr>
+<tr><th id="167">167</th><td><i class="doc"> * or NULL if the active tracker is idle. The caller must hold the RCU read</i></td></tr>
+<tr><th id="168">168</th><td><i class="doc"> * lock, but the returned pointer is safe to use outside of RCU.</i></td></tr>
+<tr><th id="169">169</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="170">170</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="i915_request.h.html#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *</td></tr>
+<tr><th id="171">171</th><td><dfn class="decl def fn" id="__i915_active_request_get_rcu" title='__i915_active_request_get_rcu' data-ref="__i915_active_request_get_rcu" data-ref-filename="__i915_active_request_get_rcu">__i915_active_request_get_rcu</dfn>(<em>const</em> <b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active_request" title='i915_active_request' data-ref="i915_active_request" data-ref-filename="i915_active_request">i915_active_request</a> *<dfn class="local col5 decl" id="1605active" title='active' data-type='const struct i915_active_request *' data-ref="1605active" data-ref-filename="1605active">active</dfn>)</td></tr>
+<tr><th id="172">172</th><td>{</td></tr>
+<tr><th id="173">173</th><td>	<i>/*</i></td></tr>
+<tr><th id="174">174</th><td><i>	 * Performing a lockless retrieval of the active request is super</i></td></tr>
+<tr><th id="175">175</th><td><i>	 * tricky. SLAB_TYPESAFE_BY_RCU merely guarantees that the backing</i></td></tr>
+<tr><th id="176">176</th><td><i>	 * slab of request objects will not be freed whilst we hold the</i></td></tr>
+<tr><th id="177">177</th><td><i>	 * RCU read lock. It does not guarantee that the request itself</i></td></tr>
+<tr><th id="178">178</th><td><i>	 * will not be freed and then *reused*. Viz,</i></td></tr>
+<tr><th id="179">179</th><td><i>	 *</i></td></tr>
+<tr><th id="180">180</th><td><i>	 * Thread A			Thread B</i></td></tr>
+<tr><th id="181">181</th><td><i>	 *</i></td></tr>
+<tr><th id="182">182</th><td><i>	 * rq = active.request</i></td></tr>
+<tr><th id="183">183</th><td><i>	 *				retire(rq) -&gt; free(rq);</i></td></tr>
+<tr><th id="184">184</th><td><i>	 *				(rq is now first on the slab freelist)</i></td></tr>
+<tr><th id="185">185</th><td><i>	 *				active.request = NULL</i></td></tr>
+<tr><th id="186">186</th><td><i>	 *</i></td></tr>
+<tr><th id="187">187</th><td><i>	 *				rq = new submission on a new object</i></td></tr>
+<tr><th id="188">188</th><td><i>	 * ref(rq)</i></td></tr>
+<tr><th id="189">189</th><td><i>	 *</i></td></tr>
+<tr><th id="190">190</th><td><i>	 * To prevent the request from being reused whilst the caller</i></td></tr>
+<tr><th id="191">191</th><td><i>	 * uses it, we take a reference like normal. Whilst acquiring</i></td></tr>
+<tr><th id="192">192</th><td><i>	 * the reference we check that it is not in a destroyed state</i></td></tr>
+<tr><th id="193">193</th><td><i>	 * (refcnt == 0). That prevents the request being reallocated</i></td></tr>
+<tr><th id="194">194</th><td><i>	 * whilst the caller holds on to it. To check that the request</i></td></tr>
+<tr><th id="195">195</th><td><i>	 * was not reallocated as we acquired the reference we have to</i></td></tr>
+<tr><th id="196">196</th><td><i>	 * check that our request remains the active request across</i></td></tr>
+<tr><th id="197">197</th><td><i>	 * the lookup, in the same manner as a seqlock. The visibility</i></td></tr>
+<tr><th id="198">198</th><td><i>	 * of the pointer versus the reference counting is controlled</i></td></tr>
+<tr><th id="199">199</th><td><i>	 * by using RCU barriers (rcu_dereference and rcu_assign_pointer).</i></td></tr>
+<tr><th id="200">200</th><td><i>	 *</i></td></tr>
+<tr><th id="201">201</th><td><i>	 * In the middle of all that, we inspect whether the request is</i></td></tr>
+<tr><th id="202">202</th><td><i>	 * complete. Retiring is lazy so the request may be completed long</i></td></tr>
+<tr><th id="203">203</th><td><i>	 * before the active tracker is updated. Querying whether the</i></td></tr>
+<tr><th id="204">204</th><td><i>	 * request is complete is far cheaper (as it involves no locked</i></td></tr>
+<tr><th id="205">205</th><td><i>	 * instructions setting cachelines to exclusive) than acquiring</i></td></tr>
+<tr><th id="206">206</th><td><i>	 * the reference, so we do it first. The RCU read lock ensures the</i></td></tr>
+<tr><th id="207">207</th><td><i>	 * pointer dereference is valid, but does not ensure that the</i></td></tr>
+<tr><th id="208">208</th><td><i>	 * seqno nor HWS is the right one! However, if the request was</i></td></tr>
+<tr><th id="209">209</th><td><i>	 * reallocated, that means the active tracker's request was complete.</i></td></tr>
+<tr><th id="210">210</th><td><i>	 * If the new request is also complete, then both are and we can</i></td></tr>
+<tr><th id="211">211</th><td><i>	 * just report the active tracker is idle. If the new request is</i></td></tr>
+<tr><th id="212">212</th><td><i>	 * incomplete, then we acquire a reference on it and check that</i></td></tr>
+<tr><th id="213">213</th><td><i>	 * it remained the active request.</i></td></tr>
+<tr><th id="214">214</th><td><i>	 *</i></td></tr>
+<tr><th id="215">215</th><td><i>	 * It is then imperative that we do not zero the request on</i></td></tr>
+<tr><th id="216">216</th><td><i>	 * reallocation, so that we can chase the dangling pointers!</i></td></tr>
+<tr><th id="217">217</th><td><i>	 * See i915_request_alloc().</i></td></tr>
+<tr><th id="218">218</th><td><i>	 */</i></td></tr>
+<tr><th id="219">219</th><td>	<b>do</b> {</td></tr>
+<tr><th id="220">220</th><td>		<b>struct</b> <a class="type" href="i915_request.h.html#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col6 decl" id="1606request" title='request' data-type='struct i915_request *' data-ref="1606request" data-ref-filename="1606request">request</dfn>;</td></tr>
+<tr><th id="221">221</th><td></td></tr>
+<tr><th id="222">222</th><td>		<a class="local col6 ref" href="#1606request" title='request' data-ref="1606request" data-ref-filename="1606request">request</a> = <a class="macro" href="../../../../include/linux/rcupdate.h.html#507" title="({ typeof(*(active-&gt;request)) *________p1 = (typeof(*(active-&gt;request)) *)({ union { typeof((active-&gt;request)) __val; char __c[1]; } __u; if (1) __read_once_size(&amp;((active-&gt;request)), __u.__c, sizeof((active-&gt;request))); else __read_once_size_nocheck(&amp;((active-&gt;request)), __u.__c, sizeof((active-&gt;request))); do { } while (0); __u.__val; }); do { } while (0); ; ((typeof(*(active-&gt;request)) *)(________p1)); })" data-ref="_M/rcu_dereference">rcu_dereference</a>(<a class="local col5 ref" href="#1605active" title='active' data-ref="1605active" data-ref-filename="1605active">active</a>-&gt;<a class="ref field" href="i915_active_types.h.html#i915_active_request::request" title='i915_active_request::request' data-ref="i915_active_request::request" data-ref-filename="i915_active_request..request">request</a>);</td></tr>
+<tr><th id="223">223</th><td>		<b>if</b> (!<a class="local col6 ref" href="#1606request" title='request' data-ref="1606request" data-ref-filename="1606request">request</a> || <a class="ref fn" href="i915_request.h.html#i915_request_completed" title='i915_request_completed' data-ref="i915_request_completed" data-ref-filename="i915_request_completed">i915_request_completed</a>(<a class="local col6 ref" href="#1606request" title='request' data-ref="1606request" data-ref-filename="1606request">request</a>))</td></tr>
+<tr><th id="224">224</th><td>			<b>return</b> <a class="macro" href="../../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="225">225</th><td></td></tr>
+<tr><th id="226">226</th><td>		<i>/*</i></td></tr>
+<tr><th id="227">227</th><td><i>		 * An especially silly compiler could decide to recompute the</i></td></tr>
+<tr><th id="228">228</th><td><i>		 * result of i915_request_completed, more specifically</i></td></tr>
+<tr><th id="229">229</th><td><i>		 * re-emit the load for request-&gt;fence.seqno. A race would catch</i></td></tr>
+<tr><th id="230">230</th><td><i>		 * a later seqno value, which could flip the result from true to</i></td></tr>
+<tr><th id="231">231</th><td><i>		 * false. Which means part of the instructions below might not</i></td></tr>
+<tr><th id="232">232</th><td><i>		 * be executed, while later on instructions are executed. Due to</i></td></tr>
+<tr><th id="233">233</th><td><i>		 * barriers within the refcounting the inconsistency can't reach</i></td></tr>
+<tr><th id="234">234</th><td><i>		 * past the call to i915_request_get_rcu, but not executing</i></td></tr>
+<tr><th id="235">235</th><td><i>		 * that while still executing i915_request_put() creates</i></td></tr>
+<tr><th id="236">236</th><td><i>		 * havoc enough.  Prevent this with a compiler barrier.</i></td></tr>
+<tr><th id="237">237</th><td><i>		 */</i></td></tr>
+<tr><th id="238">238</th><td>		<a class="macro" href="../../../../include/linux/compiler-clang.h.html#44" title="__asm__ __volatile__(&quot;&quot; : : : &quot;memory&quot;)" data-ref="_M/barrier">barrier</a>();</td></tr>
+<tr><th id="239">239</th><td></td></tr>
+<tr><th id="240">240</th><td>		<a class="local col6 ref" href="#1606request" title='request' data-ref="1606request" data-ref-filename="1606request">request</a> = <a class="ref fn" href="i915_request.h.html#i915_request_get_rcu" title='i915_request_get_rcu' data-ref="i915_request_get_rcu" data-ref-filename="i915_request_get_rcu">i915_request_get_rcu</a>(<a class="local col6 ref" href="#1606request" title='request' data-ref="1606request" data-ref-filename="1606request">request</a>);</td></tr>
+<tr><th id="241">241</th><td></td></tr>
+<tr><th id="242">242</th><td>		<i>/*</i></td></tr>
+<tr><th id="243">243</th><td><i>		 * What stops the following rcu_access_pointer() from occurring</i></td></tr>
+<tr><th id="244">244</th><td><i>		 * before the above i915_request_get_rcu()? If we were</i></td></tr>
+<tr><th id="245">245</th><td><i>		 * to read the value before pausing to get the reference to</i></td></tr>
+<tr><th id="246">246</th><td><i>		 * the request, we may not notice a change in the active</i></td></tr>
+<tr><th id="247">247</th><td><i>		 * tracker.</i></td></tr>
+<tr><th id="248">248</th><td><i>		 *</i></td></tr>
+<tr><th id="249">249</th><td><i>		 * The rcu_access_pointer() is a mere compiler barrier, which</i></td></tr>
+<tr><th id="250">250</th><td><i>		 * means both the CPU and compiler are free to perform the</i></td></tr>
+<tr><th id="251">251</th><td><i>		 * memory read without constraint. The compiler only has to</i></td></tr>
+<tr><th id="252">252</th><td><i>		 * ensure that any operations after the rcu_access_pointer()</i></td></tr>
+<tr><th id="253">253</th><td><i>		 * occur afterwards in program order. This means the read may</i></td></tr>
+<tr><th id="254">254</th><td><i>		 * be performed earlier by an out-of-order CPU, or adventurous</i></td></tr>
+<tr><th id="255">255</th><td><i>		 * compiler.</i></td></tr>
+<tr><th id="256">256</th><td><i>		 *</i></td></tr>
+<tr><th id="257">257</th><td><i>		 * The atomic operation at the heart of</i></td></tr>
+<tr><th id="258">258</th><td><i>		 * i915_request_get_rcu(), see dma_fence_get_rcu(), is</i></td></tr>
+<tr><th id="259">259</th><td><i>		 * atomic_inc_not_zero() which is only a full memory barrier</i></td></tr>
+<tr><th id="260">260</th><td><i>		 * when successful. That is, if i915_request_get_rcu()</i></td></tr>
+<tr><th id="261">261</th><td><i>		 * returns the request (and so with the reference counted</i></td></tr>
+<tr><th id="262">262</th><td><i>		 * incremented) then the following read for rcu_access_pointer()</i></td></tr>
+<tr><th id="263">263</th><td><i>		 * must occur after the atomic operation and so confirm</i></td></tr>
+<tr><th id="264">264</th><td><i>		 * that this request is the one currently being tracked.</i></td></tr>
+<tr><th id="265">265</th><td><i>		 *</i></td></tr>
+<tr><th id="266">266</th><td><i>		 * The corresponding write barrier is part of</i></td></tr>
+<tr><th id="267">267</th><td><i>		 * rcu_assign_pointer().</i></td></tr>
+<tr><th id="268">268</th><td><i>		 */</i></td></tr>
+<tr><th id="269">269</th><td>		<b>if</b> (!<a class="local col6 ref" href="#1606request" title='request' data-ref="1606request" data-ref-filename="1606request">request</a> || <a class="local col6 ref" href="#1606request" title='request' data-ref="1606request" data-ref-filename="1606request">request</a> == <a class="macro" href="../../../../include/linux/rcupdate.h.html#413" title="({ typeof(*(active-&gt;request)) *_________p1 = (typeof(*(active-&gt;request)) *)({ union { typeof((active-&gt;request)) __val; char __c[1]; } __u; if (1) __read_once_size(&amp;((active-&gt;request)), __u.__c, sizeof((active-&gt;request))); else __read_once_size_nocheck(&amp;((active-&gt;request)), __u.__c, sizeof((active-&gt;request))); do { } while (0); __u.__val; }); ; ((typeof(*(active-&gt;request)) *)(_________p1)); })" data-ref="_M/rcu_access_pointer">rcu_access_pointer</a>(<a class="local col5 ref" href="#1605active" title='active' data-ref="1605active" data-ref-filename="1605active">active</a>-&gt;<a class="ref field" href="i915_active_types.h.html#i915_active_request::request" title='i915_active_request::request' data-ref="i915_active_request::request" data-ref-filename="i915_active_request..request">request</a>))</td></tr>
+<tr><th id="270">270</th><td>			<b>return</b> <a class="macro" href="../../../../include/linux/rcupdate.h.html#545" title="(request)" data-ref="_M/rcu_pointer_handoff">rcu_pointer_handoff</a>(<a class="local col6 ref" href="#1606request" title='request' data-ref="1606request" data-ref-filename="1606request">request</a>);</td></tr>
+<tr><th id="271">271</th><td></td></tr>
+<tr><th id="272">272</th><td>		<a class="ref fn" href="i915_request.h.html#i915_request_put" title='i915_request_put' data-ref="i915_request_put" data-ref-filename="i915_request_put">i915_request_put</a>(<a class="local col6 ref" href="#1606request" title='request' data-ref="1606request" data-ref-filename="1606request">request</a>);</td></tr>
+<tr><th id="273">273</th><td>	} <b>while</b> (<var>1</var>);</td></tr>
+<tr><th id="274">274</th><td>}</td></tr>
+<tr><th id="275">275</th><td></td></tr>
+<tr><th id="276">276</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="277">277</th><td><i class="doc"> * i915_active_request_get_unlocked - return a reference to the active request</i></td></tr>
+<tr><th id="278">278</th><td><i class="doc"> *<span class="command"> @active</span> - the active tracker</i></td></tr>
+<tr><th id="279">279</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="280">280</th><td><i class="doc"> * i915_active_request_get_unlocked() returns a reference to the active request,</i></td></tr>
+<tr><th id="281">281</th><td><i class="doc"> * or NULL if the active tracker is idle. The reference is obtained under RCU,</i></td></tr>
+<tr><th id="282">282</th><td><i class="doc"> * so no locking is required by the caller.</i></td></tr>
+<tr><th id="283">283</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="284">284</th><td><i class="doc"> * The reference should be freed with i915_request_put().</i></td></tr>
+<tr><th id="285">285</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="286">286</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="i915_request.h.html#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *</td></tr>
+<tr><th id="287">287</th><td><dfn class="decl def fn" id="i915_active_request_get_unlocked" title='i915_active_request_get_unlocked' data-ref="i915_active_request_get_unlocked" data-ref-filename="i915_active_request_get_unlocked">i915_active_request_get_unlocked</dfn>(<em>const</em> <b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active_request" title='i915_active_request' data-ref="i915_active_request" data-ref-filename="i915_active_request">i915_active_request</a> *<dfn class="local col7 decl" id="1607active" title='active' data-type='const struct i915_active_request *' data-ref="1607active" data-ref-filename="1607active">active</dfn>)</td></tr>
+<tr><th id="288">288</th><td>{</td></tr>
+<tr><th id="289">289</th><td>	<b>struct</b> <a class="type" href="i915_request.h.html#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col8 decl" id="1608request" title='request' data-type='struct i915_request *' data-ref="1608request" data-ref-filename="1608request">request</dfn>;</td></tr>
+<tr><th id="290">290</th><td></td></tr>
+<tr><th id="291">291</th><td>	<a class="ref fn" href="../../../../include/linux/rcupdate.h.html#rcu_read_lock" title='rcu_read_lock' data-ref="rcu_read_lock" data-ref-filename="rcu_read_lock">rcu_read_lock</a>();</td></tr>
+<tr><th id="292">292</th><td>	<a class="local col8 ref" href="#1608request" title='request' data-ref="1608request" data-ref-filename="1608request">request</a> = <a class="ref fn" href="#__i915_active_request_get_rcu" title='__i915_active_request_get_rcu' data-ref="__i915_active_request_get_rcu" data-ref-filename="__i915_active_request_get_rcu">__i915_active_request_get_rcu</a>(<a class="local col7 ref" href="#1607active" title='active' data-ref="1607active" data-ref-filename="1607active">active</a>);</td></tr>
+<tr><th id="293">293</th><td>	<a class="ref fn" href="../../../../include/linux/rcupdate.h.html#rcu_read_unlock" title='rcu_read_unlock' data-ref="rcu_read_unlock" data-ref-filename="rcu_read_unlock">rcu_read_unlock</a>();</td></tr>
+<tr><th id="294">294</th><td></td></tr>
+<tr><th id="295">295</th><td>	<b>return</b> <a class="local col8 ref" href="#1608request" title='request' data-ref="1608request" data-ref-filename="1608request">request</a>;</td></tr>
+<tr><th id="296">296</th><td>}</td></tr>
+<tr><th id="297">297</th><td></td></tr>
+<tr><th id="298">298</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="299">299</th><td><i class="doc"> * i915_active_request_isset - report whether the active tracker is assigned</i></td></tr>
+<tr><th id="300">300</th><td><i class="doc"> *<span class="command"> @active</span> - the active tracker</i></td></tr>
+<tr><th id="301">301</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="302">302</th><td><i class="doc"> * i915_active_request_isset() returns true if the active tracker is currently</i></td></tr>
+<tr><th id="303">303</th><td><i class="doc"> * assigned to a request. Due to the lazy retiring, that request may be idle</i></td></tr>
+<tr><th id="304">304</th><td><i class="doc"> * and this may report stale information.</i></td></tr>
+<tr><th id="305">305</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="306">306</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a></td></tr>
+<tr><th id="307">307</th><td><dfn class="decl def fn" id="i915_active_request_isset" title='i915_active_request_isset' data-ref="i915_active_request_isset" data-ref-filename="i915_active_request_isset">i915_active_request_isset</dfn>(<em>const</em> <b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active_request" title='i915_active_request' data-ref="i915_active_request" data-ref-filename="i915_active_request">i915_active_request</a> *<dfn class="local col9 decl" id="1609active" title='active' data-type='const struct i915_active_request *' data-ref="1609active" data-ref-filename="1609active">active</dfn>)</td></tr>
+<tr><th id="308">308</th><td>{</td></tr>
+<tr><th id="309">309</th><td>	<b>return</b> <a class="macro" href="../../../../include/linux/rcupdate.h.html#413" title="({ typeof(*(active-&gt;request)) *_________p1 = (typeof(*(active-&gt;request)) *)({ union { typeof((active-&gt;request)) __val; char __c[1]; } __u; if (1) __read_once_size(&amp;((active-&gt;request)), __u.__c, sizeof((active-&gt;request))); else __read_once_size_nocheck(&amp;((active-&gt;request)), __u.__c, sizeof((active-&gt;request))); do { } while (0); __u.__val; }); ; ((typeof(*(active-&gt;request)) *)(_________p1)); })" data-ref="_M/rcu_access_pointer">rcu_access_pointer</a>(<a class="local col9 ref" href="#1609active" title='active' data-ref="1609active" data-ref-filename="1609active">active</a>-&gt;<a class="ref field" href="i915_active_types.h.html#i915_active_request::request" title='i915_active_request::request' data-ref="i915_active_request::request" data-ref-filename="i915_active_request..request">request</a>);</td></tr>
+<tr><th id="310">310</th><td>}</td></tr>
+<tr><th id="311">311</th><td></td></tr>
+<tr><th id="312">312</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="313">313</th><td><i class="doc"> * i915_active_request_retire - waits until the request is retired</i></td></tr>
+<tr><th id="314">314</th><td><i class="doc"> *<span class="command"> @active</span> - the active request on which to wait</i></td></tr>
+<tr><th id="315">315</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="316">316</th><td><i class="doc"> * i915_active_request_retire() waits until the request is completed,</i></td></tr>
+<tr><th id="317">317</th><td><i class="doc"> * and then ensures that at least the retirement handler for this</i></td></tr>
+<tr><th id="318">318</th><td><i class="doc"> *<span class="command"> @active</span> tracker is called before returning. If the<span class="command"> @active</span></i></td></tr>
+<tr><th id="319">319</th><td><i class="doc"> * tracker is idle, the function returns immediately.</i></td></tr>
+<tr><th id="320">320</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="321">321</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#108" title="__attribute__((__warn_unused_result__))" data-ref="_M/__must_check">__must_check</a></td></tr>
+<tr><th id="322">322</th><td><dfn class="decl def fn" id="i915_active_request_retire" title='i915_active_request_retire' data-ref="i915_active_request_retire" data-ref-filename="i915_active_request_retire">i915_active_request_retire</dfn>(<b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active_request" title='i915_active_request' data-ref="i915_active_request" data-ref-filename="i915_active_request">i915_active_request</a> *<dfn class="local col0 decl" id="1610active" title='active' data-type='struct i915_active_request *' data-ref="1610active" data-ref-filename="1610active">active</dfn>,</td></tr>
+<tr><th id="323">323</th><td>			   <b>struct</b> <a class="type" href="../../../../include/linux/mutex.h.html#mutex" title='mutex' data-ref="mutex" data-ref-filename="mutex">mutex</a> *<dfn class="local col1 decl" id="1611mutex" title='mutex' data-type='struct mutex *' data-ref="1611mutex" data-ref-filename="1611mutex">mutex</dfn>)</td></tr>
+<tr><th id="324">324</th><td>{</td></tr>
+<tr><th id="325">325</th><td>	<b>struct</b> <a class="type" href="i915_request.h.html#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col2 decl" id="1612request" title='request' data-type='struct i915_request *' data-ref="1612request" data-ref-filename="1612request">request</dfn>;</td></tr>
+<tr><th id="326">326</th><td>	<em>long</em> <dfn class="local col3 decl" id="1613ret" title='ret' data-type='long' data-ref="1613ret" data-ref-filename="1613ret">ret</dfn>;</td></tr>
+<tr><th id="327">327</th><td></td></tr>
+<tr><th id="328">328</th><td>	<a class="local col2 ref" href="#1612request" title='request' data-ref="1612request" data-ref-filename="1612request">request</a> = <a class="ref fn" href="#i915_active_request_raw" title='i915_active_request_raw' data-ref="i915_active_request_raw" data-ref-filename="i915_active_request_raw">i915_active_request_raw</a>(<a class="local col0 ref" href="#1610active" title='active' data-ref="1610active" data-ref-filename="1610active">active</a>, <a class="local col1 ref" href="#1611mutex" title='mutex' data-ref="1611mutex" data-ref-filename="1611mutex">mutex</a>);</td></tr>
+<tr><th id="329">329</th><td>	<b>if</b> (!<a class="local col2 ref" href="#1612request" title='request' data-ref="1612request" data-ref-filename="1612request">request</a>)</td></tr>
+<tr><th id="330">330</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="331">331</th><td></td></tr>
+<tr><th id="332">332</th><td>	<a class="local col3 ref" href="#1613ret" title='ret' data-ref="1613ret" data-ref-filename="1613ret">ret</a> = <a class="ref fn" href="i915_request.h.html#i915_request_wait" title='i915_request_wait' data-ref="i915_request_wait" data-ref-filename="i915_request_wait">i915_request_wait</a>(<a class="local col2 ref" href="#1612request" title='request' data-ref="1612request" data-ref-filename="1612request">request</a>,</td></tr>
+<tr><th id="333">333</th><td>				<a class="macro" href="i915_request.h.html#309" title="((((1UL))) &lt;&lt; (0))" data-ref="_M/I915_WAIT_INTERRUPTIBLE">I915_WAIT_INTERRUPTIBLE</a>,</td></tr>
+<tr><th id="334">334</th><td>				<a class="macro" href="../../../../include/linux/sched.h.html#215" title="((long)(~0UL &gt;&gt; 1))" data-ref="_M/MAX_SCHEDULE_TIMEOUT">MAX_SCHEDULE_TIMEOUT</a>);</td></tr>
+<tr><th id="335">335</th><td>	<b>if</b> (<a class="local col3 ref" href="#1613ret" title='ret' data-ref="1613ret" data-ref-filename="1613ret">ret</a> &lt; <var>0</var>)</td></tr>
+<tr><th id="336">336</th><td>		<b>return</b> <a class="local col3 ref" href="#1613ret" title='ret' data-ref="1613ret" data-ref-filename="1613ret">ret</a>;</td></tr>
+<tr><th id="337">337</th><td></td></tr>
+<tr><th id="338">338</th><td>	<a class="ref fn" href="../../../../include/linux/list.h.html#list_del_init" title='list_del_init' data-ref="list_del_init" data-ref-filename="list_del_init">list_del_init</a>(&amp;<a class="local col0 ref" href="#1610active" title='active' data-ref="1610active" data-ref-filename="1610active">active</a>-&gt;<a class="ref field" href="i915_active_types.h.html#i915_active_request::link" title='i915_active_request::link' data-ref="i915_active_request::link" data-ref-filename="i915_active_request..link">link</a>);</td></tr>
+<tr><th id="339">339</th><td>	<a class="macro" href="../../../../include/linux/rcupdate.h.html#771" title="do { ; ({ union { typeof(active-&gt;request) __val; char __c[1]; } __u = { .__val = ( typeof(active-&gt;request)) ((typeof(*(((void *)0))) *)(((void *)0))) }; __write_once_size(&amp;(active-&gt;request), __u.__c, sizeof(active-&gt;request)); __u.__val; }); } while (0)" data-ref="_M/RCU_INIT_POINTER">RCU_INIT_POINTER</a>(<a class="local col0 ref" href="#1610active" title='active' data-ref="1610active" data-ref-filename="1610active">active</a>-&gt;<a class="ref field" href="i915_active_types.h.html#i915_active_request::request" title='i915_active_request::request' data-ref="i915_active_request::request" data-ref-filename="i915_active_request..request">request</a>, <a class="macro" href="../../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>);</td></tr>
+<tr><th id="340">340</th><td></td></tr>
+<tr><th id="341">341</th><td>	<a class="local col0 ref" href="#1610active" title='active' data-ref="1610active" data-ref-filename="1610active">active</a>-&gt;<a class="ref field" href="i915_active_types.h.html#i915_active_request::retire" title='i915_active_request::retire' data-ref="i915_active_request::retire" data-ref-filename="i915_active_request..retire">retire</a>(<a class="local col0 ref" href="#1610active" title='active' data-ref="1610active" data-ref-filename="1610active">active</a>, <a class="local col2 ref" href="#1612request" title='request' data-ref="1612request" data-ref-filename="1612request">request</a>);</td></tr>
+<tr><th id="342">342</th><td></td></tr>
+<tr><th id="343">343</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="344">344</th><td>}</td></tr>
+<tr><th id="345">345</th><td></td></tr>
+<tr><th id="346">346</th><td><i>/*</i></td></tr>
+<tr><th id="347">347</th><td><i> * GPU activity tracking</i></td></tr>
+<tr><th id="348">348</th><td><i> *</i></td></tr>
+<tr><th id="349">349</th><td><i> * Each set of commands submitted to the GPU compromises a single request that</i></td></tr>
+<tr><th id="350">350</th><td><i> * signals a fence upon completion. struct i915_request combines the</i></td></tr>
+<tr><th id="351">351</th><td><i> * command submission, scheduling and fence signaling roles. If we want to see</i></td></tr>
+<tr><th id="352">352</th><td><i> * if a particular task is complete, we need to grab the fence (struct</i></td></tr>
+<tr><th id="353">353</th><td><i> * i915_request) for that task and check or wait for it to be signaled. More</i></td></tr>
+<tr><th id="354">354</th><td><i> * often though we want to track the status of a bunch of tasks, for example</i></td></tr>
+<tr><th id="355">355</th><td><i> * to wait for the GPU to finish accessing some memory across a variety of</i></td></tr>
+<tr><th id="356">356</th><td><i> * different command pipelines from different clients. We could choose to</i></td></tr>
+<tr><th id="357">357</th><td><i> * track every single request associated with the task, but knowing that</i></td></tr>
+<tr><th id="358">358</th><td><i> * each request belongs to an ordered timeline (later requests within a</i></td></tr>
+<tr><th id="359">359</th><td><i> * timeline must wait for earlier requests), we need only track the</i></td></tr>
+<tr><th id="360">360</th><td><i> * latest request in each timeline to determine the overall status of the</i></td></tr>
+<tr><th id="361">361</th><td><i> * task.</i></td></tr>
+<tr><th id="362">362</th><td><i> *</i></td></tr>
+<tr><th id="363">363</th><td><i> * struct i915_active provides this tracking across timelines. It builds a</i></td></tr>
+<tr><th id="364">364</th><td><i> * composite shared-fence, and is updated as new work is submitted to the task,</i></td></tr>
+<tr><th id="365">365</th><td><i> * forming a snapshot of the current status. It should be embedded into the</i></td></tr>
+<tr><th id="366">366</th><td><i> * different resources that need to track their associated GPU activity to</i></td></tr>
+<tr><th id="367">367</th><td><i> * provide a callback when that GPU activity has ceased, or otherwise to</i></td></tr>
+<tr><th id="368">368</th><td><i> * provide a serialisation point either for request submission or for CPU</i></td></tr>
+<tr><th id="369">369</th><td><i> * synchronisation.</i></td></tr>
+<tr><th id="370">370</th><td><i> */</i></td></tr>
+<tr><th id="371">371</th><td></td></tr>
+<tr><th id="372">372</th><td><em>void</em> <dfn class="decl fn" id="i915_active_init" title='i915_active_init' data-ref="i915_active_init" data-ref-filename="i915_active_init">i915_active_init</dfn>(<b>struct</b> <a class="type" href="i915_drv.h.html#drm_i915_private" title='drm_i915_private' data-ref="drm_i915_private" data-ref-filename="drm_i915_private">drm_i915_private</a> *<dfn class="local col4 decl" id="1614i915" title='i915' data-type='struct drm_i915_private *' data-ref="1614i915" data-ref-filename="1614i915">i915</dfn>,</td></tr>
+<tr><th id="373">373</th><td>		      <b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active" title='i915_active' data-ref="i915_active" data-ref-filename="i915_active">i915_active</a> *<dfn class="local col5 decl" id="1615ref" title='ref' data-type='struct i915_active *' data-ref="1615ref" data-ref-filename="1615ref">ref</dfn>,</td></tr>
+<tr><th id="374">374</th><td>		      <em>void</em> (*<dfn class="local col6 decl" id="1616retire" title='retire' data-type='void (*)(struct i915_active *)' data-ref="1616retire" data-ref-filename="1616retire">retire</dfn>)(<b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active" title='i915_active' data-ref="i915_active" data-ref-filename="i915_active">i915_active</a> *<dfn class="local col7 decl" id="1617ref" title='ref' data-type='struct i915_active *' data-ref="1617ref" data-ref-filename="1617ref">ref</dfn>));</td></tr>
+<tr><th id="375">375</th><td></td></tr>
+<tr><th id="376">376</th><td><em>int</em> <dfn class="decl fn" id="i915_active_ref" title='i915_active_ref' data-ref="i915_active_ref" data-ref-filename="i915_active_ref">i915_active_ref</dfn>(<b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active" title='i915_active' data-ref="i915_active" data-ref-filename="i915_active">i915_active</a> *<dfn class="local col8 decl" id="1618ref" title='ref' data-type='struct i915_active *' data-ref="1618ref" data-ref-filename="1618ref">ref</dfn>,</td></tr>
+<tr><th id="377">377</th><td>		    <a class="typedef" href="../../../../include/asm-generic/int-ll64.h.html#u64" title='u64' data-type='__u64' data-ref="u64" data-ref-filename="u64">u64</a> <dfn class="local col9 decl" id="1619timeline" title='timeline' data-type='u64' data-ref="1619timeline" data-ref-filename="1619timeline">timeline</dfn>,</td></tr>
+<tr><th id="378">378</th><td>		    <b>struct</b> <a class="type" href="i915_request.h.html#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col0 decl" id="1620rq" title='rq' data-type='struct i915_request *' data-ref="1620rq" data-ref-filename="1620rq">rq</dfn>);</td></tr>
+<tr><th id="379">379</th><td></td></tr>
+<tr><th id="380">380</th><td><em>int</em> <dfn class="decl fn" id="i915_active_wait" title='i915_active_wait' data-ref="i915_active_wait" data-ref-filename="i915_active_wait">i915_active_wait</dfn>(<b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active" title='i915_active' data-ref="i915_active" data-ref-filename="i915_active">i915_active</a> *<dfn class="local col1 decl" id="1621ref" title='ref' data-type='struct i915_active *' data-ref="1621ref" data-ref-filename="1621ref">ref</dfn>);</td></tr>
+<tr><th id="381">381</th><td></td></tr>
+<tr><th id="382">382</th><td><em>int</em> <dfn class="decl fn" id="i915_request_await_active" title='i915_request_await_active' data-ref="i915_request_await_active" data-ref-filename="i915_request_await_active">i915_request_await_active</dfn>(<b>struct</b> <a class="type" href="i915_request.h.html#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col2 decl" id="1622rq" title='rq' data-type='struct i915_request *' data-ref="1622rq" data-ref-filename="1622rq">rq</dfn>,</td></tr>
+<tr><th id="383">383</th><td>			      <b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active" title='i915_active' data-ref="i915_active" data-ref-filename="i915_active">i915_active</a> *<dfn class="local col3 decl" id="1623ref" title='ref' data-type='struct i915_active *' data-ref="1623ref" data-ref-filename="1623ref">ref</dfn>);</td></tr>
+<tr><th id="384">384</th><td><em>int</em> <dfn class="decl fn" id="i915_request_await_active_request" title='i915_request_await_active_request' data-ref="i915_request_await_active_request" data-ref-filename="i915_request_await_active_request">i915_request_await_active_request</dfn>(<b>struct</b> <a class="type" href="i915_request.h.html#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col4 decl" id="1624rq" title='rq' data-type='struct i915_request *' data-ref="1624rq" data-ref-filename="1624rq">rq</dfn>,</td></tr>
+<tr><th id="385">385</th><td>				      <b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active_request" title='i915_active_request' data-ref="i915_active_request" data-ref-filename="i915_active_request">i915_active_request</a> *<dfn class="local col5 decl" id="1625active" title='active' data-type='struct i915_active_request *' data-ref="1625active" data-ref-filename="1625active">active</dfn>);</td></tr>
+<tr><th id="386">386</th><td></td></tr>
+<tr><th id="387">387</th><td><a class="typedef" href="../../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl fn" id="i915_active_acquire" title='i915_active_acquire' data-ref="i915_active_acquire" data-ref-filename="i915_active_acquire">i915_active_acquire</dfn>(<b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active" title='i915_active' data-ref="i915_active" data-ref-filename="i915_active">i915_active</a> *<dfn class="local col6 decl" id="1626ref" title='ref' data-type='struct i915_active *' data-ref="1626ref" data-ref-filename="1626ref">ref</dfn>);</td></tr>
+<tr><th id="388">388</th><td></td></tr>
+<tr><th id="389">389</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="i915_active_cancel" title='i915_active_cancel' data-ref="i915_active_cancel" data-ref-filename="i915_active_cancel">i915_active_cancel</dfn>(<b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active" title='i915_active' data-ref="i915_active" data-ref-filename="i915_active">i915_active</a> *<dfn class="local col7 decl" id="1627ref" title='ref' data-type='struct i915_active *' data-ref="1627ref" data-ref-filename="1627ref">ref</dfn>)</td></tr>
+<tr><th id="390">390</th><td>{</td></tr>
+<tr><th id="391">391</th><td>	<a class="macro" href="i915_gem.h.html#56" title="((void)(sizeof(( long)(ref-&gt;count != 1))))" data-ref="_M/GEM_BUG_ON">GEM_BUG_ON</a>(<a class="local col7 ref" href="#1627ref" title='ref' data-ref="1627ref" data-ref-filename="1627ref">ref</a>-&gt;<a class="ref field" href="i915_active_types.h.html#i915_active::count" title='i915_active::count' data-ref="i915_active::count" data-ref-filename="i915_active..count">count</a> != <var>1</var>);</td></tr>
+<tr><th id="392">392</th><td>	<a class="local col7 ref" href="#1627ref" title='ref' data-ref="1627ref" data-ref-filename="1627ref">ref</a>-&gt;<a class="ref field" href="i915_active_types.h.html#i915_active::count" title='i915_active::count' data-ref="i915_active::count" data-ref-filename="i915_active..count">count</a> = <var>0</var>;</td></tr>
+<tr><th id="393">393</th><td>}</td></tr>
+<tr><th id="394">394</th><td></td></tr>
+<tr><th id="395">395</th><td><em>void</em> <dfn class="decl fn" id="i915_active_release" title='i915_active_release' data-ref="i915_active_release" data-ref-filename="i915_active_release">i915_active_release</dfn>(<b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active" title='i915_active' data-ref="i915_active" data-ref-filename="i915_active">i915_active</a> *<dfn class="local col8 decl" id="1628ref" title='ref' data-type='struct i915_active *' data-ref="1628ref" data-ref-filename="1628ref">ref</dfn>);</td></tr>
+<tr><th id="396">396</th><td></td></tr>
+<tr><th id="397">397</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../../../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a></td></tr>
+<tr><th id="398">398</th><td><dfn class="decl def fn" id="i915_active_is_idle" title='i915_active_is_idle' data-ref="i915_active_is_idle" data-ref-filename="i915_active_is_idle">i915_active_is_idle</dfn>(<em>const</em> <b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active" title='i915_active' data-ref="i915_active" data-ref-filename="i915_active">i915_active</a> *<dfn class="local col9 decl" id="1629ref" title='ref' data-type='const struct i915_active *' data-ref="1629ref" data-ref-filename="1629ref">ref</dfn>)</td></tr>
+<tr><th id="399">399</th><td>{</td></tr>
+<tr><th id="400">400</th><td>	<b>return</b> !<a class="local col9 ref" href="#1629ref" title='ref' data-ref="1629ref" data-ref-filename="1629ref">ref</a>-&gt;<a class="ref field" href="i915_active_types.h.html#i915_active::count" title='i915_active::count' data-ref="i915_active::count" data-ref-filename="i915_active..count">count</a>;</td></tr>
+<tr><th id="401">401</th><td>}</td></tr>
+<tr><th id="402">402</th><td></td></tr>
+<tr><th id="403">403</th><td><u>#<span data-ppcond="403">if</span> <a class="macro" href="../../../../include/linux/kconfig.h.html#71" title="0" data-ref="_M/IS_ENABLED">IS_ENABLED</a>(CONFIG_DRM_I915_DEBUG_GEM)</u></td></tr>
+<tr><th id="404">404</th><td><em>void</em> i915_active_fini(<b>struct</b> i915_active *ref);</td></tr>
+<tr><th id="405">405</th><td><u>#<span data-ppcond="403">else</span></u></td></tr>
+<tr><th id="406">406</th><td><em>static</em> <a class="macro" href="../../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="i915_active_fini" title='i915_active_fini' data-ref="i915_active_fini" data-ref-filename="i915_active_fini">i915_active_fini</dfn>(<b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active" title='i915_active' data-ref="i915_active" data-ref-filename="i915_active">i915_active</a> *<dfn class="local col0 decl" id="1630ref" title='ref' data-type='struct i915_active *' data-ref="1630ref" data-ref-filename="1630ref">ref</dfn>) { }</td></tr>
+<tr><th id="407">407</th><td><u>#<span data-ppcond="403">endif</span></u></td></tr>
+<tr><th id="408">408</th><td></td></tr>
+<tr><th id="409">409</th><td><em>int</em> <dfn class="decl fn" id="i915_active_acquire_preallocate_barrier" title='i915_active_acquire_preallocate_barrier' data-ref="i915_active_acquire_preallocate_barrier" data-ref-filename="i915_active_acquire_preallocate_barrier">i915_active_acquire_preallocate_barrier</dfn>(<b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active" title='i915_active' data-ref="i915_active" data-ref-filename="i915_active">i915_active</a> *<dfn class="local col1 decl" id="1631ref" title='ref' data-type='struct i915_active *' data-ref="1631ref" data-ref-filename="1631ref">ref</dfn>,</td></tr>
+<tr><th id="410">410</th><td>					    <b>struct</b> <a class="type" href="gt/intel_engine_types.h.html#intel_engine_cs" title='intel_engine_cs' data-ref="intel_engine_cs" data-ref-filename="intel_engine_cs">intel_engine_cs</a> *<dfn class="local col2 decl" id="1632engine" title='engine' data-type='struct intel_engine_cs *' data-ref="1632engine" data-ref-filename="1632engine">engine</dfn>);</td></tr>
+<tr><th id="411">411</th><td><em>void</em> <dfn class="decl fn" id="i915_active_acquire_barrier" title='i915_active_acquire_barrier' data-ref="i915_active_acquire_barrier" data-ref-filename="i915_active_acquire_barrier">i915_active_acquire_barrier</dfn>(<b>struct</b> <a class="type" href="i915_active_types.h.html#i915_active" title='i915_active' data-ref="i915_active" data-ref-filename="i915_active">i915_active</a> *<dfn class="local col3 decl" id="1633ref" title='ref' data-type='struct i915_active *' data-ref="1633ref" data-ref-filename="1633ref">ref</dfn>);</td></tr>
+<tr><th id="412">412</th><td><em>void</em> <dfn class="decl fn" id="i915_request_add_barriers" title='i915_request_add_barriers' data-ref="i915_request_add_barriers" data-ref-filename="i915_request_add_barriers">i915_request_add_barriers</dfn>(<b>struct</b> <a class="type" href="i915_request.h.html#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col4 decl" id="1634rq" title='rq' data-type='struct i915_request *' data-ref="1634rq" data-ref-filename="1634rq">rq</dfn>);</td></tr>
+<tr><th id="413">413</th><td></td></tr>
+<tr><th id="414">414</th><td><u>#<span data-ppcond="7">endif</span> /* _I915_ACTIVE_H_ */</u></td></tr>
+<tr><th id="415">415</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='display/dvo_ch7017.c.html'>linux-5.3.1/drivers/gpu/drm/i915/display/dvo_ch7017.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

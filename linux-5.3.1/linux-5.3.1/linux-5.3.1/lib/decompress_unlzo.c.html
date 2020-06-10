@@ -1,0 +1,305 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>decompress_unlzo.c source code [linux-5.3.1/lib/decompress_unlzo.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/lib/decompress_unlzo.c'; var root_path = '../..'; var data_path = '../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='..'>linux-5.3.1</a>/<a href='./'>lib</a>/<a href='decompress_unlzo.c.html'>decompress_unlzo.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0-or-later</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * LZO decompressor for the Linux kernel. Code borrowed from the lzo</i></td></tr>
+<tr><th id="4">4</th><td><i> * implementation by Markus Franz Xaver Johannes Oberhumer.</i></td></tr>
+<tr><th id="5">5</th><td><i> *</i></td></tr>
+<tr><th id="6">6</th><td><i> * Linux kernel adaptation:</i></td></tr>
+<tr><th id="7">7</th><td><i> * Copyright (C) 2009</i></td></tr>
+<tr><th id="8">8</th><td><i> * Albin Tonnerre, Free Electrons &lt;albin.tonnerre@free-electrons.com&gt;</i></td></tr>
+<tr><th id="9">9</th><td><i> *</i></td></tr>
+<tr><th id="10">10</th><td><i> * Original code:</i></td></tr>
+<tr><th id="11">11</th><td><i> * Copyright (C) 1996-2005 Markus Franz Xaver Johannes Oberhumer</i></td></tr>
+<tr><th id="12">12</th><td><i> * All Rights Reserved.</i></td></tr>
+<tr><th id="13">13</th><td><i> *</i></td></tr>
+<tr><th id="14">14</th><td><i> * Markus F.X.J. Oberhumer</i></td></tr>
+<tr><th id="15">15</th><td><i> * &lt;markus@oberhumer.com&gt;</i></td></tr>
+<tr><th id="16">16</th><td><i> * <a href="http://www.oberhumer.com/opensource/lzop/">http://www.oberhumer.com/opensource/lzop/</a></i></td></tr>
+<tr><th id="17">17</th><td><i> */</i></td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td><u>#<span data-ppcond="19">ifdef</span> <span class="macro" data-ref="_M/STATIC">STATIC</span></u></td></tr>
+<tr><th id="20">20</th><td><u>#define PREBOOT</u></td></tr>
+<tr><th id="21">21</th><td><u>#include "lzo/lzo1x_decompress_safe.c"</u></td></tr>
+<tr><th id="22">22</th><td><u>#<span data-ppcond="19">else</span></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/linux/decompress/unlzo.h.html">&lt;linux/decompress/unlzo.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#<span data-ppcond="19">endif</span></u></td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../include/linux/types.h.html">&lt;linux/types.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../include/linux/lzo.h.html">&lt;linux/lzo.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../include/linux/decompress/mm.h.html">&lt;linux/decompress/mm.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td></td></tr>
+<tr><th id="30">30</th><td><u>#include <a href="../include/linux/compiler.h.html">&lt;linux/compiler.h&gt;</a></u></td></tr>
+<tr><th id="31">31</th><td><u>#include <a href="../arch/x86/include/asm/unaligned.h.html">&lt;asm/unaligned.h&gt;</a></u></td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td><em>static</em> <em>const</em> <em>unsigned</em> <em>char</em> <dfn class="tu decl def" id="lzop_magic" title='lzop_magic' data-type='const unsigned char [9]' data-ref="lzop_magic" data-ref-filename="lzop_magic">lzop_magic</dfn>[] = {</td></tr>
+<tr><th id="34">34</th><td>	<var>0x89</var>, <var>0x4c</var>, <var>0x5a</var>, <var>0x4f</var>, <var>0x00</var>, <var>0x0d</var>, <var>0x0a</var>, <var>0x1a</var>, <var>0x0a</var> };</td></tr>
+<tr><th id="35">35</th><td></td></tr>
+<tr><th id="36">36</th><td><u>#define <dfn class="macro" id="_M/LZO_BLOCK_SIZE" data-ref="_M/LZO_BLOCK_SIZE">LZO_BLOCK_SIZE</dfn>        (256*1024l)</u></td></tr>
+<tr><th id="37">37</th><td><u>#define <dfn class="macro" id="_M/HEADER_HAS_FILTER" data-ref="_M/HEADER_HAS_FILTER">HEADER_HAS_FILTER</dfn>      0x00000800L</u></td></tr>
+<tr><th id="38">38</th><td><u>#define <dfn class="macro" id="_M/HEADER_SIZE_MIN" data-ref="_M/HEADER_SIZE_MIN">HEADER_SIZE_MIN</dfn>       (9 + 7     + 4 + 8     + 1       + 4)</u></td></tr>
+<tr><th id="39">39</th><td><u>#define <dfn class="macro" id="_M/HEADER_SIZE_MAX" data-ref="_M/HEADER_SIZE_MAX">HEADER_SIZE_MAX</dfn>       (9 + 7 + 1 + 8 + 8 + 4 + 1 + 255 + 4)</u></td></tr>
+<tr><th id="40">40</th><td></td></tr>
+<tr><th id="41">41</th><td><a class="macro" href="../include/linux/decompress/mm.h.html#88" title="" data-ref="_M/STATIC">STATIC</a> <a class="macro" href="../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>long</em> <a class="macro" href="../include/linux/decompress/mm.h.html#87" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/INIT">INIT</a> <dfn class="decl def fn" id="parse_header" title='parse_header' data-ref="parse_header" data-ref-filename="parse_header">parse_header</dfn>(<a class="typedef" href="../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col1 decl" id="1input" title='input' data-type='u8 *' data-ref="1input" data-ref-filename="1input">input</dfn>, <em>long</em> *<dfn class="local col2 decl" id="2skip" title='skip' data-type='long *' data-ref="2skip" data-ref-filename="2skip">skip</dfn>, <em>long</em> <dfn class="local col3 decl" id="3in_len" title='in_len' data-type='long' data-ref="3in_len" data-ref-filename="3in_len">in_len</dfn>)</td></tr>
+<tr><th id="42">42</th><td>{</td></tr>
+<tr><th id="43">43</th><td>	<em>int</em> <dfn class="local col4 decl" id="4l" title='l' data-type='int' data-ref="4l" data-ref-filename="4l">l</dfn>;</td></tr>
+<tr><th id="44">44</th><td>	<a class="typedef" href="../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col5 decl" id="5parse" title='parse' data-type='u8 *' data-ref="5parse" data-ref-filename="5parse">parse</dfn> = <a class="local col1 ref" href="#1input" title='input' data-ref="1input" data-ref-filename="1input">input</a>;</td></tr>
+<tr><th id="45">45</th><td>	<a class="typedef" href="../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col6 decl" id="6end" title='end' data-type='u8 *' data-ref="6end" data-ref-filename="6end">end</dfn> = <a class="local col1 ref" href="#1input" title='input' data-ref="1input" data-ref-filename="1input">input</a> + <a class="local col3 ref" href="#3in_len" title='in_len' data-ref="3in_len" data-ref-filename="3in_len">in_len</a>;</td></tr>
+<tr><th id="46">46</th><td>	<a class="typedef" href="../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="local col7 decl" id="7level" title='level' data-type='u8' data-ref="7level" data-ref-filename="7level">level</dfn> = <var>0</var>;</td></tr>
+<tr><th id="47">47</th><td>	<a class="typedef" href="../include/asm-generic/int-ll64.h.html#u16" title='u16' data-type='__u16' data-ref="u16" data-ref-filename="u16">u16</a> <dfn class="local col8 decl" id="8version" title='version' data-type='u16' data-ref="8version" data-ref-filename="8version">version</dfn>;</td></tr>
+<tr><th id="48">48</th><td></td></tr>
+<tr><th id="49">49</th><td>	<i>/*</i></td></tr>
+<tr><th id="50">50</th><td><i>	 * Check that there's enough input to possibly have a valid header.</i></td></tr>
+<tr><th id="51">51</th><td><i>	 * Then it is possible to parse several fields until the minimum</i></td></tr>
+<tr><th id="52">52</th><td><i>	 * size may have been used.</i></td></tr>
+<tr><th id="53">53</th><td><i>	 */</i></td></tr>
+<tr><th id="54">54</th><td>	<b>if</b> (<a class="local col3 ref" href="#3in_len" title='in_len' data-ref="3in_len" data-ref-filename="3in_len">in_len</a> &lt; <a class="macro" href="#38" title="(9 + 7 + 4 + 8 + 1 + 4)" data-ref="_M/HEADER_SIZE_MIN">HEADER_SIZE_MIN</a>)</td></tr>
+<tr><th id="55">55</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="56">56</th><td></td></tr>
+<tr><th id="57">57</th><td>	<i>/* read magic: 9 first bits */</i></td></tr>
+<tr><th id="58">58</th><td>	<b>for</b> (<a class="local col4 ref" href="#4l" title='l' data-ref="4l" data-ref-filename="4l">l</a> = <var>0</var>; <a class="local col4 ref" href="#4l" title='l' data-ref="4l" data-ref-filename="4l">l</a> &lt; <var>9</var>; <a class="local col4 ref" href="#4l" title='l' data-ref="4l" data-ref-filename="4l">l</a>++) {</td></tr>
+<tr><th id="59">59</th><td>		<b>if</b> (*<a class="local col5 ref" href="#5parse" title='parse' data-ref="5parse" data-ref-filename="5parse">parse</a>++ != <a class="tu ref" href="#lzop_magic" title='lzop_magic' data-use='r' data-ref="lzop_magic" data-ref-filename="lzop_magic">lzop_magic</a>[<a class="local col4 ref" href="#4l" title='l' data-ref="4l" data-ref-filename="4l">l</a>])</td></tr>
+<tr><th id="60">60</th><td>			<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="61">61</th><td>	}</td></tr>
+<tr><th id="62">62</th><td>	<i>/* get version (2bytes), skip library version (2),</i></td></tr>
+<tr><th id="63">63</th><td><i>	 * 'need to be extracted' version (2) and</i></td></tr>
+<tr><th id="64">64</th><td><i>	 * method (1) */</i></td></tr>
+<tr><th id="65">65</th><td>	<a class="local col8 ref" href="#8version" title='version' data-ref="8version" data-ref-filename="8version">version</a> = <a class="ref fn" href="../include/linux/unaligned/access_ok.h.html#get_unaligned_be16" title='get_unaligned_be16' data-ref="get_unaligned_be16" data-ref-filename="get_unaligned_be16">get_unaligned_be16</a>(<a class="local col5 ref" href="#5parse" title='parse' data-ref="5parse" data-ref-filename="5parse">parse</a>);</td></tr>
+<tr><th id="66">66</th><td>	<a class="local col5 ref" href="#5parse" title='parse' data-ref="5parse" data-ref-filename="5parse">parse</a> += <var>7</var>;</td></tr>
+<tr><th id="67">67</th><td>	<b>if</b> (<a class="local col8 ref" href="#8version" title='version' data-ref="8version" data-ref-filename="8version">version</a> &gt;= <var>0x0940</var>)</td></tr>
+<tr><th id="68">68</th><td>		<a class="local col7 ref" href="#7level" title='level' data-ref="7level" data-ref-filename="7level">level</a> = *<a class="local col5 ref" href="#5parse" title='parse' data-ref="5parse" data-ref-filename="5parse">parse</a>++;</td></tr>
+<tr><th id="69">69</th><td>	<b>if</b> (<a class="ref fn" href="../include/linux/unaligned/access_ok.h.html#get_unaligned_be32" title='get_unaligned_be32' data-ref="get_unaligned_be32" data-ref-filename="get_unaligned_be32">get_unaligned_be32</a>(<a class="local col5 ref" href="#5parse" title='parse' data-ref="5parse" data-ref-filename="5parse">parse</a>) &amp; <a class="macro" href="#37" title="0x00000800L" data-ref="_M/HEADER_HAS_FILTER">HEADER_HAS_FILTER</a>)</td></tr>
+<tr><th id="70">70</th><td>		<a class="local col5 ref" href="#5parse" title='parse' data-ref="5parse" data-ref-filename="5parse">parse</a> += <var>8</var>; <i>/* flags + filter info */</i></td></tr>
+<tr><th id="71">71</th><td>	<b>else</b></td></tr>
+<tr><th id="72">72</th><td>		<a class="local col5 ref" href="#5parse" title='parse' data-ref="5parse" data-ref-filename="5parse">parse</a> += <var>4</var>; <i>/* flags */</i></td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td>	<i>/*</i></td></tr>
+<tr><th id="75">75</th><td><i>	 * At least mode, mtime_low, filename length, and checksum must</i></td></tr>
+<tr><th id="76">76</th><td><i>	 * be left to be parsed. If also mtime_high is present, it's OK</i></td></tr>
+<tr><th id="77">77</th><td><i>	 * because the next input buffer check is after reading the</i></td></tr>
+<tr><th id="78">78</th><td><i>	 * filename length.</i></td></tr>
+<tr><th id="79">79</th><td><i>	 */</i></td></tr>
+<tr><th id="80">80</th><td>	<b>if</b> (<a class="local col6 ref" href="#6end" title='end' data-ref="6end" data-ref-filename="6end">end</a> - <a class="local col5 ref" href="#5parse" title='parse' data-ref="5parse" data-ref-filename="5parse">parse</a> &lt; <var>8</var> + <var>1</var> + <var>4</var>)</td></tr>
+<tr><th id="81">81</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="82">82</th><td></td></tr>
+<tr><th id="83">83</th><td>	<i>/* skip mode and mtime_low */</i></td></tr>
+<tr><th id="84">84</th><td>	<a class="local col5 ref" href="#5parse" title='parse' data-ref="5parse" data-ref-filename="5parse">parse</a> += <var>8</var>;</td></tr>
+<tr><th id="85">85</th><td>	<b>if</b> (<a class="local col8 ref" href="#8version" title='version' data-ref="8version" data-ref-filename="8version">version</a> &gt;= <var>0x0940</var>)</td></tr>
+<tr><th id="86">86</th><td>		<a class="local col5 ref" href="#5parse" title='parse' data-ref="5parse" data-ref-filename="5parse">parse</a> += <var>4</var>;	<i>/* skip mtime_high */</i></td></tr>
+<tr><th id="87">87</th><td></td></tr>
+<tr><th id="88">88</th><td>	<a class="local col4 ref" href="#4l" title='l' data-ref="4l" data-ref-filename="4l">l</a> = *<a class="local col5 ref" href="#5parse" title='parse' data-ref="5parse" data-ref-filename="5parse">parse</a>++;</td></tr>
+<tr><th id="89">89</th><td>	<i>/* don't care about the file name, and skip checksum */</i></td></tr>
+<tr><th id="90">90</th><td>	<b>if</b> (<a class="local col6 ref" href="#6end" title='end' data-ref="6end" data-ref-filename="6end">end</a> - <a class="local col5 ref" href="#5parse" title='parse' data-ref="5parse" data-ref-filename="5parse">parse</a> &lt; <a class="local col4 ref" href="#4l" title='l' data-ref="4l" data-ref-filename="4l">l</a> + <var>4</var>)</td></tr>
+<tr><th id="91">91</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="92">92</th><td>	<a class="local col5 ref" href="#5parse" title='parse' data-ref="5parse" data-ref-filename="5parse">parse</a> += <a class="local col4 ref" href="#4l" title='l' data-ref="4l" data-ref-filename="4l">l</a> + <var>4</var>;</td></tr>
+<tr><th id="93">93</th><td></td></tr>
+<tr><th id="94">94</th><td>	*<a class="local col2 ref" href="#2skip" title='skip' data-ref="2skip" data-ref-filename="2skip">skip</a> = <a class="local col5 ref" href="#5parse" title='parse' data-ref="5parse" data-ref-filename="5parse">parse</a> - <a class="local col1 ref" href="#1input" title='input' data-ref="1input" data-ref-filename="1input">input</a>;</td></tr>
+<tr><th id="95">95</th><td>	<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="96">96</th><td>}</td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td><a class="macro" href="../include/linux/decompress/mm.h.html#88" title="" data-ref="_M/STATIC">STATIC</a> <em>int</em> <a class="macro" href="../include/linux/decompress/mm.h.html#87" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/INIT">INIT</a> <dfn class="decl def fn" id="unlzo" title='unlzo' data-ref="unlzo" data-ref-filename="unlzo">unlzo</dfn>(<a class="typedef" href="../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col9 decl" id="9input" title='input' data-type='u8 *' data-ref="9input" data-ref-filename="9input">input</dfn>, <em>long</em> <dfn class="local col0 decl" id="10in_len" title='in_len' data-type='long' data-ref="10in_len" data-ref-filename="10in_len">in_len</dfn>,</td></tr>
+<tr><th id="99">99</th><td>				<em>long</em> (*<dfn class="local col1 decl" id="11fill" title='fill' data-type='long (*)(void *, unsigned long)' data-ref="11fill" data-ref-filename="11fill">fill</dfn>)(<em>void</em> *, <em>unsigned</em> <em>long</em>),</td></tr>
+<tr><th id="100">100</th><td>				<em>long</em> (*<dfn class="local col2 decl" id="12flush" title='flush' data-type='long (*)(void *, unsigned long)' data-ref="12flush" data-ref-filename="12flush">flush</dfn>)(<em>void</em> *, <em>unsigned</em> <em>long</em>),</td></tr>
+<tr><th id="101">101</th><td>				<a class="typedef" href="../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col3 decl" id="13output" title='output' data-type='u8 *' data-ref="13output" data-ref-filename="13output">output</dfn>, <em>long</em> *<dfn class="local col4 decl" id="14posp" title='posp' data-type='long *' data-ref="14posp" data-ref-filename="14posp">posp</dfn>,</td></tr>
+<tr><th id="102">102</th><td>				<em>void</em> (*<dfn class="local col5 decl" id="15error" title='error' data-type='void (*)(char *)' data-ref="15error" data-ref-filename="15error">error</dfn>) (<em>char</em> *<dfn class="local col6 decl" id="16x" title='x' data-type='char *' data-ref="16x" data-ref-filename="16x">x</dfn>))</td></tr>
+<tr><th id="103">103</th><td>{</td></tr>
+<tr><th id="104">104</th><td>	<a class="typedef" href="../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> <dfn class="local col7 decl" id="17r" title='r' data-type='u8' data-ref="17r" data-ref-filename="17r">r</dfn> = <var>0</var>;</td></tr>
+<tr><th id="105">105</th><td>	<em>long</em> <dfn class="local col8 decl" id="18skip" title='skip' data-type='long' data-ref="18skip" data-ref-filename="18skip">skip</dfn> = <var>0</var>;</td></tr>
+<tr><th id="106">106</th><td>	<a class="typedef" href="../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col9 decl" id="19src_len" title='src_len' data-type='u32' data-ref="19src_len" data-ref-filename="19src_len">src_len</dfn>, <dfn class="local col0 decl" id="20dst_len" title='dst_len' data-type='u32' data-ref="20dst_len" data-ref-filename="20dst_len">dst_len</dfn>;</td></tr>
+<tr><th id="107">107</th><td>	<a class="typedef" href="../include/linux/types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col1 decl" id="21tmp" title='tmp' data-type='size_t' data-ref="21tmp" data-ref-filename="21tmp">tmp</dfn>;</td></tr>
+<tr><th id="108">108</th><td>	<a class="typedef" href="../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col2 decl" id="22in_buf" title='in_buf' data-type='u8 *' data-ref="22in_buf" data-ref-filename="22in_buf">in_buf</dfn>, *<dfn class="local col3 decl" id="23in_buf_save" title='in_buf_save' data-type='u8 *' data-ref="23in_buf_save" data-ref-filename="23in_buf_save">in_buf_save</dfn>, *<dfn class="local col4 decl" id="24out_buf" title='out_buf' data-type='u8 *' data-ref="24out_buf" data-ref-filename="24out_buf">out_buf</dfn>;</td></tr>
+<tr><th id="109">109</th><td>	<em>int</em> <dfn class="local col5 decl" id="25ret" title='ret' data-type='int' data-ref="25ret" data-ref-filename="25ret">ret</dfn> = -<var>1</var>;</td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td>	<b>if</b> (<a class="local col3 ref" href="#13output" title='output' data-ref="13output" data-ref-filename="13output">output</a>) {</td></tr>
+<tr><th id="112">112</th><td>		<a class="local col4 ref" href="#24out_buf" title='out_buf' data-ref="24out_buf" data-ref-filename="24out_buf">out_buf</a> = <a class="local col3 ref" href="#13output" title='output' data-ref="13output" data-ref-filename="13output">output</a>;</td></tr>
+<tr><th id="113">113</th><td>	} <b>else</b> <b>if</b> (!<a class="local col2 ref" href="#12flush" title='flush' data-ref="12flush" data-ref-filename="12flush">flush</a>) {</td></tr>
+<tr><th id="114">114</th><td>		<a class="local col5 ref" href="#15error" title='error' data-ref="15error" data-ref-filename="15error">error</a>(<q>"NULL output pointer and no flush function provided"</q>);</td></tr>
+<tr><th id="115">115</th><td>		<b>goto</b> <a class="lbl" href="#26exit" data-ref="26exit" data-ref-filename="26exit">exit</a>;</td></tr>
+<tr><th id="116">116</th><td>	} <b>else</b> {</td></tr>
+<tr><th id="117">117</th><td>		<a class="local col4 ref" href="#24out_buf" title='out_buf' data-ref="24out_buf" data-ref-filename="24out_buf">out_buf</a> = <a class="macro" href="../include/linux/decompress/mm.h.html#81" title="kmalloc((256*1024l), ((( gfp_t)(0x400u|0x800u)) | (( gfp_t)0x40u) | (( gfp_t)0x80u)))" data-ref="_M/malloc">malloc</a>(<a class="macro" href="#36" title="(256*1024l)" data-ref="_M/LZO_BLOCK_SIZE">LZO_BLOCK_SIZE</a>);</td></tr>
+<tr><th id="118">118</th><td>		<b>if</b> (!<a class="local col4 ref" href="#24out_buf" title='out_buf' data-ref="24out_buf" data-ref-filename="24out_buf">out_buf</a>) {</td></tr>
+<tr><th id="119">119</th><td>			<a class="local col5 ref" href="#15error" title='error' data-ref="15error" data-ref-filename="15error">error</a>(<q>"Could not allocate output buffer"</q>);</td></tr>
+<tr><th id="120">120</th><td>			<b>goto</b> <a class="lbl" href="#26exit" data-ref="26exit" data-ref-filename="26exit">exit</a>;</td></tr>
+<tr><th id="121">121</th><td>		}</td></tr>
+<tr><th id="122">122</th><td>	}</td></tr>
+<tr><th id="123">123</th><td></td></tr>
+<tr><th id="124">124</th><td>	<b>if</b> (<a class="local col9 ref" href="#9input" title='input' data-ref="9input" data-ref-filename="9input">input</a> &amp;&amp; <a class="local col1 ref" href="#11fill" title='fill' data-ref="11fill" data-ref-filename="11fill">fill</a>) {</td></tr>
+<tr><th id="125">125</th><td>		<a class="local col5 ref" href="#15error" title='error' data-ref="15error" data-ref-filename="15error">error</a>(<q>"Both input pointer and fill function provided, don't know what to do"</q>);</td></tr>
+<tr><th id="126">126</th><td>		<b>goto</b> <a class="lbl" href="#27exit_1" data-ref="27exit_1" data-ref-filename="27exit_1">exit_1</a>;</td></tr>
+<tr><th id="127">127</th><td>	} <b>else</b> <b>if</b> (<a class="local col9 ref" href="#9input" title='input' data-ref="9input" data-ref-filename="9input">input</a>) {</td></tr>
+<tr><th id="128">128</th><td>		<a class="local col2 ref" href="#22in_buf" title='in_buf' data-ref="22in_buf" data-ref-filename="22in_buf">in_buf</a> = <a class="local col9 ref" href="#9input" title='input' data-ref="9input" data-ref-filename="9input">input</a>;</td></tr>
+<tr><th id="129">129</th><td>	} <b>else</b> <b>if</b> (!<a class="local col1 ref" href="#11fill" title='fill' data-ref="11fill" data-ref-filename="11fill">fill</a>) {</td></tr>
+<tr><th id="130">130</th><td>		<a class="local col5 ref" href="#15error" title='error' data-ref="15error" data-ref-filename="15error">error</a>(<q>"NULL input pointer and missing fill function"</q>);</td></tr>
+<tr><th id="131">131</th><td>		<b>goto</b> <a class="lbl" href="#27exit_1" data-ref="27exit_1" data-ref-filename="27exit_1">exit_1</a>;</td></tr>
+<tr><th id="132">132</th><td>	} <b>else</b> {</td></tr>
+<tr><th id="133">133</th><td>		<a class="local col2 ref" href="#22in_buf" title='in_buf' data-ref="22in_buf" data-ref-filename="22in_buf">in_buf</a> = <a class="macro" href="../include/linux/decompress/mm.h.html#81" title="kmalloc((((256*1024l)) + (((256*1024l)) / 16) + 64 + 3 + 2), ((( gfp_t)(0x400u|0x800u)) | (( gfp_t)0x40u) | (( gfp_t)0x80u)))" data-ref="_M/malloc">malloc</a>(<a class="macro" href="../include/linux/lzo.h.html#21" title="(((256*1024l)) + (((256*1024l)) / 16) + 64 + 3 + 2)" data-ref="_M/lzo1x_worst_compress">lzo1x_worst_compress</a>(<a class="macro" href="#36" title="(256*1024l)" data-ref="_M/LZO_BLOCK_SIZE">LZO_BLOCK_SIZE</a>));</td></tr>
+<tr><th id="134">134</th><td>		<b>if</b> (!<a class="local col2 ref" href="#22in_buf" title='in_buf' data-ref="22in_buf" data-ref-filename="22in_buf">in_buf</a>) {</td></tr>
+<tr><th id="135">135</th><td>			<a class="local col5 ref" href="#15error" title='error' data-ref="15error" data-ref-filename="15error">error</a>(<q>"Could not allocate input buffer"</q>);</td></tr>
+<tr><th id="136">136</th><td>			<b>goto</b> <a class="lbl" href="#27exit_1" data-ref="27exit_1" data-ref-filename="27exit_1">exit_1</a>;</td></tr>
+<tr><th id="137">137</th><td>		}</td></tr>
+<tr><th id="138">138</th><td>	}</td></tr>
+<tr><th id="139">139</th><td>	<a class="local col3 ref" href="#23in_buf_save" title='in_buf_save' data-ref="23in_buf_save" data-ref-filename="23in_buf_save">in_buf_save</a> = <a class="local col2 ref" href="#22in_buf" title='in_buf' data-ref="22in_buf" data-ref-filename="22in_buf">in_buf</a>;</td></tr>
+<tr><th id="140">140</th><td></td></tr>
+<tr><th id="141">141</th><td>	<b>if</b> (<a class="local col4 ref" href="#14posp" title='posp' data-ref="14posp" data-ref-filename="14posp">posp</a>)</td></tr>
+<tr><th id="142">142</th><td>		*<a class="local col4 ref" href="#14posp" title='posp' data-ref="14posp" data-ref-filename="14posp">posp</a> = <var>0</var>;</td></tr>
+<tr><th id="143">143</th><td></td></tr>
+<tr><th id="144">144</th><td>	<b>if</b> (<a class="local col1 ref" href="#11fill" title='fill' data-ref="11fill" data-ref-filename="11fill">fill</a>) {</td></tr>
+<tr><th id="145">145</th><td>		<i>/*</i></td></tr>
+<tr><th id="146">146</th><td><i>		 * Start from in_buf + HEADER_SIZE_MAX to make it possible</i></td></tr>
+<tr><th id="147">147</th><td><i>		 * to use memcpy() to copy the unused data to the beginning</i></td></tr>
+<tr><th id="148">148</th><td><i>		 * of the buffer. This way memmove() isn't needed which</i></td></tr>
+<tr><th id="149">149</th><td><i>		 * is missing from pre-boot environments of most archs.</i></td></tr>
+<tr><th id="150">150</th><td><i>		 */</i></td></tr>
+<tr><th id="151">151</th><td>		<a class="local col2 ref" href="#22in_buf" title='in_buf' data-ref="22in_buf" data-ref-filename="22in_buf">in_buf</a> += <a class="macro" href="#39" title="(9 + 7 + 1 + 8 + 8 + 4 + 1 + 255 + 4)" data-ref="_M/HEADER_SIZE_MAX">HEADER_SIZE_MAX</a>;</td></tr>
+<tr><th id="152">152</th><td>		<a class="local col0 ref" href="#10in_len" title='in_len' data-ref="10in_len" data-ref-filename="10in_len">in_len</a> = <a class="local col1 ref" href="#11fill" title='fill' data-ref="11fill" data-ref-filename="11fill">fill</a>(<a class="local col2 ref" href="#22in_buf" title='in_buf' data-ref="22in_buf" data-ref-filename="22in_buf">in_buf</a>, <a class="macro" href="#39" title="(9 + 7 + 1 + 8 + 8 + 4 + 1 + 255 + 4)" data-ref="_M/HEADER_SIZE_MAX">HEADER_SIZE_MAX</a>);</td></tr>
+<tr><th id="153">153</th><td>	}</td></tr>
+<tr><th id="154">154</th><td></td></tr>
+<tr><th id="155">155</th><td>	<b>if</b> (!<a class="ref fn" href="#parse_header" title='parse_header' data-ref="parse_header" data-ref-filename="parse_header">parse_header</a>(<a class="local col2 ref" href="#22in_buf" title='in_buf' data-ref="22in_buf" data-ref-filename="22in_buf">in_buf</a>, &amp;<a class="local col8 ref" href="#18skip" title='skip' data-ref="18skip" data-ref-filename="18skip">skip</a>, <a class="local col0 ref" href="#10in_len" title='in_len' data-ref="10in_len" data-ref-filename="10in_len">in_len</a>)) {</td></tr>
+<tr><th id="156">156</th><td>		<a class="local col5 ref" href="#15error" title='error' data-ref="15error" data-ref-filename="15error">error</a>(<q>"invalid header"</q>);</td></tr>
+<tr><th id="157">157</th><td>		<b>goto</b> <a class="lbl" href="#28exit_2" data-ref="28exit_2" data-ref-filename="28exit_2">exit_2</a>;</td></tr>
+<tr><th id="158">158</th><td>	}</td></tr>
+<tr><th id="159">159</th><td>	<a class="local col2 ref" href="#22in_buf" title='in_buf' data-ref="22in_buf" data-ref-filename="22in_buf">in_buf</a> += <a class="local col8 ref" href="#18skip" title='skip' data-ref="18skip" data-ref-filename="18skip">skip</a>;</td></tr>
+<tr><th id="160">160</th><td>	<a class="local col0 ref" href="#10in_len" title='in_len' data-ref="10in_len" data-ref-filename="10in_len">in_len</a> -= <a class="local col8 ref" href="#18skip" title='skip' data-ref="18skip" data-ref-filename="18skip">skip</a>;</td></tr>
+<tr><th id="161">161</th><td></td></tr>
+<tr><th id="162">162</th><td>	<b>if</b> (<a class="local col1 ref" href="#11fill" title='fill' data-ref="11fill" data-ref-filename="11fill">fill</a>) {</td></tr>
+<tr><th id="163">163</th><td>		<i>/* Move the unused data to the beginning of the buffer. */</i></td></tr>
+<tr><th id="164">164</th><td>		<a class="ref fn" href="../arch/x86/include/asm/string_64.h.html#memcpy" title='memcpy' data-ref="memcpy" data-ref-filename="memcpy">memcpy</a>(<a class="local col3 ref" href="#23in_buf_save" title='in_buf_save' data-ref="23in_buf_save" data-ref-filename="23in_buf_save">in_buf_save</a>, <a class="local col2 ref" href="#22in_buf" title='in_buf' data-ref="22in_buf" data-ref-filename="22in_buf">in_buf</a>, <a class="local col0 ref" href="#10in_len" title='in_len' data-ref="10in_len" data-ref-filename="10in_len">in_len</a>);</td></tr>
+<tr><th id="165">165</th><td>		<a class="local col2 ref" href="#22in_buf" title='in_buf' data-ref="22in_buf" data-ref-filename="22in_buf">in_buf</a> = <a class="local col3 ref" href="#23in_buf_save" title='in_buf_save' data-ref="23in_buf_save" data-ref-filename="23in_buf_save">in_buf_save</a>;</td></tr>
+<tr><th id="166">166</th><td>	}</td></tr>
+<tr><th id="167">167</th><td></td></tr>
+<tr><th id="168">168</th><td>	<b>if</b> (<a class="local col4 ref" href="#14posp" title='posp' data-ref="14posp" data-ref-filename="14posp">posp</a>)</td></tr>
+<tr><th id="169">169</th><td>		*<a class="local col4 ref" href="#14posp" title='posp' data-ref="14posp" data-ref-filename="14posp">posp</a> = <a class="local col8 ref" href="#18skip" title='skip' data-ref="18skip" data-ref-filename="18skip">skip</a>;</td></tr>
+<tr><th id="170">170</th><td></td></tr>
+<tr><th id="171">171</th><td>	<b>for</b> (;;) {</td></tr>
+<tr><th id="172">172</th><td>		<i>/* read uncompressed block size */</i></td></tr>
+<tr><th id="173">173</th><td>		<b>if</b> (<a class="local col1 ref" href="#11fill" title='fill' data-ref="11fill" data-ref-filename="11fill">fill</a> &amp;&amp; <a class="local col0 ref" href="#10in_len" title='in_len' data-ref="10in_len" data-ref-filename="10in_len">in_len</a> &lt; <var>4</var>) {</td></tr>
+<tr><th id="174">174</th><td>			<a class="local col8 ref" href="#18skip" title='skip' data-ref="18skip" data-ref-filename="18skip">skip</a> = <a class="local col1 ref" href="#11fill" title='fill' data-ref="11fill" data-ref-filename="11fill">fill</a>(<a class="local col2 ref" href="#22in_buf" title='in_buf' data-ref="22in_buf" data-ref-filename="22in_buf">in_buf</a> + <a class="local col0 ref" href="#10in_len" title='in_len' data-ref="10in_len" data-ref-filename="10in_len">in_len</a>, <var>4</var> - <a class="local col0 ref" href="#10in_len" title='in_len' data-ref="10in_len" data-ref-filename="10in_len">in_len</a>);</td></tr>
+<tr><th id="175">175</th><td>			<b>if</b> (<a class="local col8 ref" href="#18skip" title='skip' data-ref="18skip" data-ref-filename="18skip">skip</a> &gt; <var>0</var>)</td></tr>
+<tr><th id="176">176</th><td>				<a class="local col0 ref" href="#10in_len" title='in_len' data-ref="10in_len" data-ref-filename="10in_len">in_len</a> += <a class="local col8 ref" href="#18skip" title='skip' data-ref="18skip" data-ref-filename="18skip">skip</a>;</td></tr>
+<tr><th id="177">177</th><td>		}</td></tr>
+<tr><th id="178">178</th><td>		<b>if</b> (<a class="local col0 ref" href="#10in_len" title='in_len' data-ref="10in_len" data-ref-filename="10in_len">in_len</a> &lt; <var>4</var>) {</td></tr>
+<tr><th id="179">179</th><td>			<a class="local col5 ref" href="#15error" title='error' data-ref="15error" data-ref-filename="15error">error</a>(<q>"file corrupted"</q>);</td></tr>
+<tr><th id="180">180</th><td>			<b>goto</b> <a class="lbl" href="#28exit_2" data-ref="28exit_2" data-ref-filename="28exit_2">exit_2</a>;</td></tr>
+<tr><th id="181">181</th><td>		}</td></tr>
+<tr><th id="182">182</th><td>		<a class="local col0 ref" href="#20dst_len" title='dst_len' data-ref="20dst_len" data-ref-filename="20dst_len">dst_len</a> = <a class="ref fn" href="../include/linux/unaligned/access_ok.h.html#get_unaligned_be32" title='get_unaligned_be32' data-ref="get_unaligned_be32" data-ref-filename="get_unaligned_be32">get_unaligned_be32</a>(<a class="local col2 ref" href="#22in_buf" title='in_buf' data-ref="22in_buf" data-ref-filename="22in_buf">in_buf</a>);</td></tr>
+<tr><th id="183">183</th><td>		<a class="local col2 ref" href="#22in_buf" title='in_buf' data-ref="22in_buf" data-ref-filename="22in_buf">in_buf</a> += <var>4</var>;</td></tr>
+<tr><th id="184">184</th><td>		<a class="local col0 ref" href="#10in_len" title='in_len' data-ref="10in_len" data-ref-filename="10in_len">in_len</a> -= <var>4</var>;</td></tr>
+<tr><th id="185">185</th><td></td></tr>
+<tr><th id="186">186</th><td>		<i>/* exit if last block */</i></td></tr>
+<tr><th id="187">187</th><td>		<b>if</b> (<a class="local col0 ref" href="#20dst_len" title='dst_len' data-ref="20dst_len" data-ref-filename="20dst_len">dst_len</a> == <var>0</var>) {</td></tr>
+<tr><th id="188">188</th><td>			<b>if</b> (<a class="local col4 ref" href="#14posp" title='posp' data-ref="14posp" data-ref-filename="14posp">posp</a>)</td></tr>
+<tr><th id="189">189</th><td>				*<a class="local col4 ref" href="#14posp" title='posp' data-ref="14posp" data-ref-filename="14posp">posp</a> += <var>4</var>;</td></tr>
+<tr><th id="190">190</th><td>			<b>break</b>;</td></tr>
+<tr><th id="191">191</th><td>		}</td></tr>
+<tr><th id="192">192</th><td></td></tr>
+<tr><th id="193">193</th><td>		<b>if</b> (<a class="local col0 ref" href="#20dst_len" title='dst_len' data-ref="20dst_len" data-ref-filename="20dst_len">dst_len</a> &gt; <a class="macro" href="#36" title="(256*1024l)" data-ref="_M/LZO_BLOCK_SIZE">LZO_BLOCK_SIZE</a>) {</td></tr>
+<tr><th id="194">194</th><td>			<a class="local col5 ref" href="#15error" title='error' data-ref="15error" data-ref-filename="15error">error</a>(<q>"dest len longer than block size"</q>);</td></tr>
+<tr><th id="195">195</th><td>			<b>goto</b> <a class="lbl" href="#28exit_2" data-ref="28exit_2" data-ref-filename="28exit_2">exit_2</a>;</td></tr>
+<tr><th id="196">196</th><td>		}</td></tr>
+<tr><th id="197">197</th><td></td></tr>
+<tr><th id="198">198</th><td>		<i>/* read compressed block size, and skip block checksum info */</i></td></tr>
+<tr><th id="199">199</th><td>		<b>if</b> (<a class="local col1 ref" href="#11fill" title='fill' data-ref="11fill" data-ref-filename="11fill">fill</a> &amp;&amp; <a class="local col0 ref" href="#10in_len" title='in_len' data-ref="10in_len" data-ref-filename="10in_len">in_len</a> &lt; <var>8</var>) {</td></tr>
+<tr><th id="200">200</th><td>			<a class="local col8 ref" href="#18skip" title='skip' data-ref="18skip" data-ref-filename="18skip">skip</a> = <a class="local col1 ref" href="#11fill" title='fill' data-ref="11fill" data-ref-filename="11fill">fill</a>(<a class="local col2 ref" href="#22in_buf" title='in_buf' data-ref="22in_buf" data-ref-filename="22in_buf">in_buf</a> + <a class="local col0 ref" href="#10in_len" title='in_len' data-ref="10in_len" data-ref-filename="10in_len">in_len</a>, <var>8</var> - <a class="local col0 ref" href="#10in_len" title='in_len' data-ref="10in_len" data-ref-filename="10in_len">in_len</a>);</td></tr>
+<tr><th id="201">201</th><td>			<b>if</b> (<a class="local col8 ref" href="#18skip" title='skip' data-ref="18skip" data-ref-filename="18skip">skip</a> &gt; <var>0</var>)</td></tr>
+<tr><th id="202">202</th><td>				<a class="local col0 ref" href="#10in_len" title='in_len' data-ref="10in_len" data-ref-filename="10in_len">in_len</a> += <a class="local col8 ref" href="#18skip" title='skip' data-ref="18skip" data-ref-filename="18skip">skip</a>;</td></tr>
+<tr><th id="203">203</th><td>		}</td></tr>
+<tr><th id="204">204</th><td>		<b>if</b> (<a class="local col0 ref" href="#10in_len" title='in_len' data-ref="10in_len" data-ref-filename="10in_len">in_len</a> &lt; <var>8</var>) {</td></tr>
+<tr><th id="205">205</th><td>			<a class="local col5 ref" href="#15error" title='error' data-ref="15error" data-ref-filename="15error">error</a>(<q>"file corrupted"</q>);</td></tr>
+<tr><th id="206">206</th><td>			<b>goto</b> <a class="lbl" href="#28exit_2" data-ref="28exit_2" data-ref-filename="28exit_2">exit_2</a>;</td></tr>
+<tr><th id="207">207</th><td>		}</td></tr>
+<tr><th id="208">208</th><td>		<a class="local col9 ref" href="#19src_len" title='src_len' data-ref="19src_len" data-ref-filename="19src_len">src_len</a> = <a class="ref fn" href="../include/linux/unaligned/access_ok.h.html#get_unaligned_be32" title='get_unaligned_be32' data-ref="get_unaligned_be32" data-ref-filename="get_unaligned_be32">get_unaligned_be32</a>(<a class="local col2 ref" href="#22in_buf" title='in_buf' data-ref="22in_buf" data-ref-filename="22in_buf">in_buf</a>);</td></tr>
+<tr><th id="209">209</th><td>		<a class="local col2 ref" href="#22in_buf" title='in_buf' data-ref="22in_buf" data-ref-filename="22in_buf">in_buf</a> += <var>8</var>;</td></tr>
+<tr><th id="210">210</th><td>		<a class="local col0 ref" href="#10in_len" title='in_len' data-ref="10in_len" data-ref-filename="10in_len">in_len</a> -= <var>8</var>;</td></tr>
+<tr><th id="211">211</th><td></td></tr>
+<tr><th id="212">212</th><td>		<b>if</b> (<a class="local col9 ref" href="#19src_len" title='src_len' data-ref="19src_len" data-ref-filename="19src_len">src_len</a> &lt;= <var>0</var> || <a class="local col9 ref" href="#19src_len" title='src_len' data-ref="19src_len" data-ref-filename="19src_len">src_len</a> &gt; <a class="local col0 ref" href="#20dst_len" title='dst_len' data-ref="20dst_len" data-ref-filename="20dst_len">dst_len</a>) {</td></tr>
+<tr><th id="213">213</th><td>			<a class="local col5 ref" href="#15error" title='error' data-ref="15error" data-ref-filename="15error">error</a>(<q>"file corrupted"</q>);</td></tr>
+<tr><th id="214">214</th><td>			<b>goto</b> <a class="lbl" href="#28exit_2" data-ref="28exit_2" data-ref-filename="28exit_2">exit_2</a>;</td></tr>
+<tr><th id="215">215</th><td>		}</td></tr>
+<tr><th id="216">216</th><td></td></tr>
+<tr><th id="217">217</th><td>		<i>/* decompress */</i></td></tr>
+<tr><th id="218">218</th><td>		<b>if</b> (<a class="local col1 ref" href="#11fill" title='fill' data-ref="11fill" data-ref-filename="11fill">fill</a> &amp;&amp; <a class="local col0 ref" href="#10in_len" title='in_len' data-ref="10in_len" data-ref-filename="10in_len">in_len</a> &lt; <a class="local col9 ref" href="#19src_len" title='src_len' data-ref="19src_len" data-ref-filename="19src_len">src_len</a>) {</td></tr>
+<tr><th id="219">219</th><td>			<a class="local col8 ref" href="#18skip" title='skip' data-ref="18skip" data-ref-filename="18skip">skip</a> = <a class="local col1 ref" href="#11fill" title='fill' data-ref="11fill" data-ref-filename="11fill">fill</a>(<a class="local col2 ref" href="#22in_buf" title='in_buf' data-ref="22in_buf" data-ref-filename="22in_buf">in_buf</a> + <a class="local col0 ref" href="#10in_len" title='in_len' data-ref="10in_len" data-ref-filename="10in_len">in_len</a>, <a class="local col9 ref" href="#19src_len" title='src_len' data-ref="19src_len" data-ref-filename="19src_len">src_len</a> - <a class="local col0 ref" href="#10in_len" title='in_len' data-ref="10in_len" data-ref-filename="10in_len">in_len</a>);</td></tr>
+<tr><th id="220">220</th><td>			<b>if</b> (<a class="local col8 ref" href="#18skip" title='skip' data-ref="18skip" data-ref-filename="18skip">skip</a> &gt; <var>0</var>)</td></tr>
+<tr><th id="221">221</th><td>				<a class="local col0 ref" href="#10in_len" title='in_len' data-ref="10in_len" data-ref-filename="10in_len">in_len</a> += <a class="local col8 ref" href="#18skip" title='skip' data-ref="18skip" data-ref-filename="18skip">skip</a>;</td></tr>
+<tr><th id="222">222</th><td>		}</td></tr>
+<tr><th id="223">223</th><td>		<b>if</b> (<a class="local col0 ref" href="#10in_len" title='in_len' data-ref="10in_len" data-ref-filename="10in_len">in_len</a> &lt; <a class="local col9 ref" href="#19src_len" title='src_len' data-ref="19src_len" data-ref-filename="19src_len">src_len</a>) {</td></tr>
+<tr><th id="224">224</th><td>			<a class="local col5 ref" href="#15error" title='error' data-ref="15error" data-ref-filename="15error">error</a>(<q>"file corrupted"</q>);</td></tr>
+<tr><th id="225">225</th><td>			<b>goto</b> <a class="lbl" href="#28exit_2" data-ref="28exit_2" data-ref-filename="28exit_2">exit_2</a>;</td></tr>
+<tr><th id="226">226</th><td>		}</td></tr>
+<tr><th id="227">227</th><td>		<a class="local col1 ref" href="#21tmp" title='tmp' data-ref="21tmp" data-ref-filename="21tmp">tmp</a> = <a class="local col0 ref" href="#20dst_len" title='dst_len' data-ref="20dst_len" data-ref-filename="20dst_len">dst_len</a>;</td></tr>
+<tr><th id="228">228</th><td></td></tr>
+<tr><th id="229">229</th><td>		<i>/* When the input data is not compressed at all,</i></td></tr>
+<tr><th id="230">230</th><td><i>		 * lzo1x_decompress_safe will fail, so call memcpy()</i></td></tr>
+<tr><th id="231">231</th><td><i>		 * instead */</i></td></tr>
+<tr><th id="232">232</th><td>		<b>if</b> (<a class="macro" href="../include/linux/compiler.h.html#78" title="__builtin_expect(!!(dst_len == src_len), 0)" data-ref="_M/unlikely">unlikely</a>(<a class="local col0 ref" href="#20dst_len" title='dst_len' data-ref="20dst_len" data-ref-filename="20dst_len">dst_len</a> == <a class="local col9 ref" href="#19src_len" title='src_len' data-ref="19src_len" data-ref-filename="19src_len">src_len</a>))</td></tr>
+<tr><th id="233">233</th><td>			<a class="ref fn" href="../arch/x86/include/asm/string_64.h.html#memcpy" title='memcpy' data-ref="memcpy" data-ref-filename="memcpy">memcpy</a>(<a class="local col4 ref" href="#24out_buf" title='out_buf' data-ref="24out_buf" data-ref-filename="24out_buf">out_buf</a>, <a class="local col2 ref" href="#22in_buf" title='in_buf' data-ref="22in_buf" data-ref-filename="22in_buf">in_buf</a>, <a class="local col9 ref" href="#19src_len" title='src_len' data-ref="19src_len" data-ref-filename="19src_len">src_len</a>);</td></tr>
+<tr><th id="234">234</th><td>		<b>else</b> {</td></tr>
+<tr><th id="235">235</th><td>			<a class="local col7 ref" href="#17r" title='r' data-ref="17r" data-ref-filename="17r">r</a> = <a class="ref fn" href="../include/linux/lzo.h.html#lzo1x_decompress_safe" title='lzo1x_decompress_safe' data-ref="lzo1x_decompress_safe" data-ref-filename="lzo1x_decompress_safe">lzo1x_decompress_safe</a>((<a class="typedef" href="../include/asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *) <a class="local col2 ref" href="#22in_buf" title='in_buf' data-ref="22in_buf" data-ref-filename="22in_buf">in_buf</a>, <a class="local col9 ref" href="#19src_len" title='src_len' data-ref="19src_len" data-ref-filename="19src_len">src_len</a>,</td></tr>
+<tr><th id="236">236</th><td>						<a class="local col4 ref" href="#24out_buf" title='out_buf' data-ref="24out_buf" data-ref-filename="24out_buf">out_buf</a>, &amp;<a class="local col1 ref" href="#21tmp" title='tmp' data-ref="21tmp" data-ref-filename="21tmp">tmp</a>);</td></tr>
+<tr><th id="237">237</th><td></td></tr>
+<tr><th id="238">238</th><td>			<b>if</b> (<a class="local col7 ref" href="#17r" title='r' data-ref="17r" data-ref-filename="17r">r</a> != <a class="macro" href="../include/linux/lzo.h.html#38" title="0" data-ref="_M/LZO_E_OK">LZO_E_OK</a> || <a class="local col0 ref" href="#20dst_len" title='dst_len' data-ref="20dst_len" data-ref-filename="20dst_len">dst_len</a> != <a class="local col1 ref" href="#21tmp" title='tmp' data-ref="21tmp" data-ref-filename="21tmp">tmp</a>) {</td></tr>
+<tr><th id="239">239</th><td>				<a class="local col5 ref" href="#15error" title='error' data-ref="15error" data-ref-filename="15error">error</a>(<q>"Compressed data violation"</q>);</td></tr>
+<tr><th id="240">240</th><td>				<b>goto</b> <a class="lbl" href="#28exit_2" data-ref="28exit_2" data-ref-filename="28exit_2">exit_2</a>;</td></tr>
+<tr><th id="241">241</th><td>			}</td></tr>
+<tr><th id="242">242</th><td>		}</td></tr>
+<tr><th id="243">243</th><td></td></tr>
+<tr><th id="244">244</th><td>		<b>if</b> (<a class="local col2 ref" href="#12flush" title='flush' data-ref="12flush" data-ref-filename="12flush">flush</a> &amp;&amp; <a class="local col2 ref" href="#12flush" title='flush' data-ref="12flush" data-ref-filename="12flush">flush</a>(<a class="local col4 ref" href="#24out_buf" title='out_buf' data-ref="24out_buf" data-ref-filename="24out_buf">out_buf</a>, <a class="local col0 ref" href="#20dst_len" title='dst_len' data-ref="20dst_len" data-ref-filename="20dst_len">dst_len</a>) != <a class="local col0 ref" href="#20dst_len" title='dst_len' data-ref="20dst_len" data-ref-filename="20dst_len">dst_len</a>)</td></tr>
+<tr><th id="245">245</th><td>			<b>goto</b> <a class="lbl" href="#28exit_2" data-ref="28exit_2" data-ref-filename="28exit_2">exit_2</a>;</td></tr>
+<tr><th id="246">246</th><td>		<b>if</b> (<a class="local col3 ref" href="#13output" title='output' data-ref="13output" data-ref-filename="13output">output</a>)</td></tr>
+<tr><th id="247">247</th><td>			<a class="local col4 ref" href="#24out_buf" title='out_buf' data-ref="24out_buf" data-ref-filename="24out_buf">out_buf</a> += <a class="local col0 ref" href="#20dst_len" title='dst_len' data-ref="20dst_len" data-ref-filename="20dst_len">dst_len</a>;</td></tr>
+<tr><th id="248">248</th><td>		<b>if</b> (<a class="local col4 ref" href="#14posp" title='posp' data-ref="14posp" data-ref-filename="14posp">posp</a>)</td></tr>
+<tr><th id="249">249</th><td>			*<a class="local col4 ref" href="#14posp" title='posp' data-ref="14posp" data-ref-filename="14posp">posp</a> += <a class="local col9 ref" href="#19src_len" title='src_len' data-ref="19src_len" data-ref-filename="19src_len">src_len</a> + <var>12</var>;</td></tr>
+<tr><th id="250">250</th><td></td></tr>
+<tr><th id="251">251</th><td>		<a class="local col2 ref" href="#22in_buf" title='in_buf' data-ref="22in_buf" data-ref-filename="22in_buf">in_buf</a> += <a class="local col9 ref" href="#19src_len" title='src_len' data-ref="19src_len" data-ref-filename="19src_len">src_len</a>;</td></tr>
+<tr><th id="252">252</th><td>		<a class="local col0 ref" href="#10in_len" title='in_len' data-ref="10in_len" data-ref-filename="10in_len">in_len</a> -= <a class="local col9 ref" href="#19src_len" title='src_len' data-ref="19src_len" data-ref-filename="19src_len">src_len</a>;</td></tr>
+<tr><th id="253">253</th><td>		<b>if</b> (<a class="local col1 ref" href="#11fill" title='fill' data-ref="11fill" data-ref-filename="11fill">fill</a>) {</td></tr>
+<tr><th id="254">254</th><td>			<i>/*</i></td></tr>
+<tr><th id="255">255</th><td><i>			 * If there happens to still be unused data left in</i></td></tr>
+<tr><th id="256">256</th><td><i>			 * in_buf, move it to the beginning of the buffer.</i></td></tr>
+<tr><th id="257">257</th><td><i>			 * Use a loop to avoid memmove() dependency.</i></td></tr>
+<tr><th id="258">258</th><td><i>			 */</i></td></tr>
+<tr><th id="259">259</th><td>			<b>if</b> (<a class="local col0 ref" href="#10in_len" title='in_len' data-ref="10in_len" data-ref-filename="10in_len">in_len</a> &gt; <var>0</var>)</td></tr>
+<tr><th id="260">260</th><td>				<b>for</b> (<a class="local col8 ref" href="#18skip" title='skip' data-ref="18skip" data-ref-filename="18skip">skip</a> = <var>0</var>; <a class="local col8 ref" href="#18skip" title='skip' data-ref="18skip" data-ref-filename="18skip">skip</a> &lt; <a class="local col0 ref" href="#10in_len" title='in_len' data-ref="10in_len" data-ref-filename="10in_len">in_len</a>; ++<a class="local col8 ref" href="#18skip" title='skip' data-ref="18skip" data-ref-filename="18skip">skip</a>)</td></tr>
+<tr><th id="261">261</th><td>					<a class="local col3 ref" href="#23in_buf_save" title='in_buf_save' data-ref="23in_buf_save" data-ref-filename="23in_buf_save">in_buf_save</a>[<a class="local col8 ref" href="#18skip" title='skip' data-ref="18skip" data-ref-filename="18skip">skip</a>] = <a class="local col2 ref" href="#22in_buf" title='in_buf' data-ref="22in_buf" data-ref-filename="22in_buf">in_buf</a>[<a class="local col8 ref" href="#18skip" title='skip' data-ref="18skip" data-ref-filename="18skip">skip</a>];</td></tr>
+<tr><th id="262">262</th><td>			<a class="local col2 ref" href="#22in_buf" title='in_buf' data-ref="22in_buf" data-ref-filename="22in_buf">in_buf</a> = <a class="local col3 ref" href="#23in_buf_save" title='in_buf_save' data-ref="23in_buf_save" data-ref-filename="23in_buf_save">in_buf_save</a>;</td></tr>
+<tr><th id="263">263</th><td>		}</td></tr>
+<tr><th id="264">264</th><td>	}</td></tr>
+<tr><th id="265">265</th><td></td></tr>
+<tr><th id="266">266</th><td>	<a class="local col5 ref" href="#25ret" title='ret' data-ref="25ret" data-ref-filename="25ret">ret</a> = <var>0</var>;</td></tr>
+<tr><th id="267">267</th><td><dfn class="lbl" id="28exit_2" data-ref="28exit_2" data-ref-filename="28exit_2">exit_2</dfn>:</td></tr>
+<tr><th id="268">268</th><td>	<b>if</b> (!<a class="local col9 ref" href="#9input" title='input' data-ref="9input" data-ref-filename="9input">input</a>)</td></tr>
+<tr><th id="269">269</th><td>		<a class="macro" href="../include/linux/decompress/mm.h.html#82" title="kfree(in_buf_save)" data-ref="_M/free">free</a>(<a class="local col3 ref" href="#23in_buf_save" title='in_buf_save' data-ref="23in_buf_save" data-ref-filename="23in_buf_save">in_buf_save</a>);</td></tr>
+<tr><th id="270">270</th><td><dfn class="lbl" id="27exit_1" data-ref="27exit_1" data-ref-filename="27exit_1">exit_1</dfn>:</td></tr>
+<tr><th id="271">271</th><td>	<b>if</b> (!<a class="local col3 ref" href="#13output" title='output' data-ref="13output" data-ref-filename="13output">output</a>)</td></tr>
+<tr><th id="272">272</th><td>		<a class="macro" href="../include/linux/decompress/mm.h.html#82" title="kfree(out_buf)" data-ref="_M/free">free</a>(<a class="local col4 ref" href="#24out_buf" title='out_buf' data-ref="24out_buf" data-ref-filename="24out_buf">out_buf</a>);</td></tr>
+<tr><th id="273">273</th><td><dfn class="lbl" id="26exit" data-ref="26exit" data-ref-filename="26exit">exit</dfn>:</td></tr>
+<tr><th id="274">274</th><td>	<b>return</b> <a class="local col5 ref" href="#25ret" title='ret' data-ref="25ret" data-ref-filename="25ret">ret</a>;</td></tr>
+<tr><th id="275">275</th><td>}</td></tr>
+<tr><th id="276">276</th><td></td></tr>
+<tr><th id="277">277</th><td><u>#<span data-ppcond="277">ifdef</span> <span class="macro" data-ref="_M/PREBOOT">PREBOOT</span></u></td></tr>
+<tr><th id="278">278</th><td>STATIC <em>int</em> INIT __decompress(<em>unsigned</em> <em>char</em> *buf, <em>long</em> len,</td></tr>
+<tr><th id="279">279</th><td>			   <em>long</em> (*fill)(<em>void</em>*, <em>unsigned</em> <em>long</em>),</td></tr>
+<tr><th id="280">280</th><td>			   <em>long</em> (*flush)(<em>void</em>*, <em>unsigned</em> <em>long</em>),</td></tr>
+<tr><th id="281">281</th><td>			   <em>unsigned</em> <em>char</em> *out_buf, <em>long</em> olen,</td></tr>
+<tr><th id="282">282</th><td>			   <em>long</em> *pos,</td></tr>
+<tr><th id="283">283</th><td>			   <em>void</em> (*error)(<em>char</em> *x))</td></tr>
+<tr><th id="284">284</th><td>{</td></tr>
+<tr><th id="285">285</th><td>	<b>return</b> unlzo(buf, len, fill, flush, out_buf, pos, error);</td></tr>
+<tr><th id="286">286</th><td>}</td></tr>
+<tr><th id="287">287</th><td><u>#<span data-ppcond="277">endif</span></u></td></tr>
+<tr><th id="288">288</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

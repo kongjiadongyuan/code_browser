@@ -1,0 +1,7 @@
+<dec f='linux-5.3.1/drivers/edac/edac_device.h' l='134' type='struct edac_device_ctl_info *'/>
+<use f='linux-5.3.1/drivers/edac/edac_device.c' l='147' u='w' c='edac_device_alloc_ctl_info'/>
+<offset>0</offset>
+<doc f='linux-5.3.1/drivers/edac/edac_device.h' l='134'>/* Up pointer */</doc>
+<use f='linux-5.3.1/drivers/edac/edac_device_sysfs.c' l='334' u='r' c='edac_device_ctrl_instance_release'/>
+<use f='linux-5.3.1/drivers/edac/edac_device_sysfs.c' l='442' u='r' c='edac_device_ctrl_block_release'/>
+<use f='linux-5.3.1/drivers/edac/edac_device_sysfs.c' l='621' u='w' c='edac_device_create_instance'/>

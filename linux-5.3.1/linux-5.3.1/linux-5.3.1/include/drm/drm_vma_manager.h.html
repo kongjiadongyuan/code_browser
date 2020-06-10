@@ -1,0 +1,265 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>drm_vma_manager.h source code [linux-5.3.1/include/drm/drm_vma_manager.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="drm_vma_offset_file,drm_vma_offset_manager,drm_vma_offset_node "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/include/drm/drm_vma_manager.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>include</a>/<a href='./'>drm</a>/<a href='drm_vma_manager.h.html'>drm_vma_manager.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><u>#<span data-ppcond="1">ifndef</span> <span class="macro" data-ref="_M/__DRM_VMA_MANAGER_H__">__DRM_VMA_MANAGER_H__</span></u></td></tr>
+<tr><th id="2">2</th><td><u>#define <dfn class="macro" id="_M/__DRM_VMA_MANAGER_H__" data-ref="_M/__DRM_VMA_MANAGER_H__">__DRM_VMA_MANAGER_H__</dfn></u></td></tr>
+<tr><th id="3">3</th><td></td></tr>
+<tr><th id="4">4</th><td><i>/*</i></td></tr>
+<tr><th id="5">5</th><td><i> * Copyright (c) 2013 David Herrmann &lt;dh.herrmann@gmail.com&gt;</i></td></tr>
+<tr><th id="6">6</th><td><i> *</i></td></tr>
+<tr><th id="7">7</th><td><i> * Permission is hereby granted, free of charge, to any person obtaining a</i></td></tr>
+<tr><th id="8">8</th><td><i> * copy of this software and associated documentation files (the "Software"),</i></td></tr>
+<tr><th id="9">9</th><td><i> * to deal in the Software without restriction, including without limitation</i></td></tr>
+<tr><th id="10">10</th><td><i> * the rights to use, copy, modify, merge, publish, distribute, sublicense,</i></td></tr>
+<tr><th id="11">11</th><td><i> * and/or sell copies of the Software, and to permit persons to whom the</i></td></tr>
+<tr><th id="12">12</th><td><i> * Software is furnished to do so, subject to the following conditions:</i></td></tr>
+<tr><th id="13">13</th><td><i> *</i></td></tr>
+<tr><th id="14">14</th><td><i> * The above copyright notice and this permission notice shall be included in</i></td></tr>
+<tr><th id="15">15</th><td><i> * all copies or substantial portions of the Software.</i></td></tr>
+<tr><th id="16">16</th><td><i> *</i></td></tr>
+<tr><th id="17">17</th><td><i> * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR</i></td></tr>
+<tr><th id="18">18</th><td><i> * IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,</i></td></tr>
+<tr><th id="19">19</th><td><i> * FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT.  IN NO EVENT SHALL</i></td></tr>
+<tr><th id="20">20</th><td><i> * THE COPYRIGHT HOLDER(S) OR AUTHOR(S) BE LIABLE FOR ANY CLAIM, DAMAGES OR</i></td></tr>
+<tr><th id="21">21</th><td><i> * OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE,</i></td></tr>
+<tr><th id="22">22</th><td><i> * ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR</i></td></tr>
+<tr><th id="23">23</th><td><i> * OTHER DEALINGS IN THE SOFTWARE.</i></td></tr>
+<tr><th id="24">24</th><td><i> */</i></td></tr>
+<tr><th id="25">25</th><td></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="drm_mm.h.html">&lt;drm/drm_mm.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../linux/mm.h.html">&lt;linux/mm.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../linux/rbtree.h.html">&lt;linux/rbtree.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="../linux/spinlock.h.html">&lt;linux/spinlock.h&gt;</a></u></td></tr>
+<tr><th id="30">30</th><td><u>#include <a href="../linux/types.h.html">&lt;linux/types.h&gt;</a></u></td></tr>
+<tr><th id="31">31</th><td></td></tr>
+<tr><th id="32">32</th><td><i>/* We make up offsets for buffer objects so we can recognize them at</i></td></tr>
+<tr><th id="33">33</th><td><i> * mmap time. pgoff in mmap is an unsigned long, so we need to make sure</i></td></tr>
+<tr><th id="34">34</th><td><i> * that the faked up offset will fit</i></td></tr>
+<tr><th id="35">35</th><td><i> */</i></td></tr>
+<tr><th id="36">36</th><td><u>#<span data-ppcond="36">if</span> <a class="macro" href="../asm-generic/bitsperlong.h.html#9" title="64" data-ref="_M/BITS_PER_LONG">BITS_PER_LONG</a> == 64</u></td></tr>
+<tr><th id="37">37</th><td><u>#define <dfn class="macro" id="_M/DRM_FILE_PAGE_OFFSET_START" data-ref="_M/DRM_FILE_PAGE_OFFSET_START">DRM_FILE_PAGE_OFFSET_START</dfn> ((0xFFFFFFFFUL &gt;&gt; PAGE_SHIFT) + 1)</u></td></tr>
+<tr><th id="38">38</th><td><u>#define <dfn class="macro" id="_M/DRM_FILE_PAGE_OFFSET_SIZE" data-ref="_M/DRM_FILE_PAGE_OFFSET_SIZE">DRM_FILE_PAGE_OFFSET_SIZE</dfn> ((0xFFFFFFFFUL &gt;&gt; PAGE_SHIFT) * 256)</u></td></tr>
+<tr><th id="39">39</th><td><u>#<span data-ppcond="36">else</span></u></td></tr>
+<tr><th id="40">40</th><td><u>#define DRM_FILE_PAGE_OFFSET_START ((0xFFFFFFFUL &gt;&gt; PAGE_SHIFT) + 1)</u></td></tr>
+<tr><th id="41">41</th><td><u>#define DRM_FILE_PAGE_OFFSET_SIZE ((0xFFFFFFFUL &gt;&gt; PAGE_SHIFT) * 16)</u></td></tr>
+<tr><th id="42">42</th><td><u>#<span data-ppcond="36">endif</span></u></td></tr>
+<tr><th id="43">43</th><td></td></tr>
+<tr><th id="44">44</th><td><b>struct</b> <a class="type" href="drm_file.h.html#drm_file" title='drm_file' data-ref="drm_file" data-ref-filename="drm_file" id="drm_file">drm_file</a>;</td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td><b>struct</b> <dfn class="type def" id="drm_vma_offset_file" title='drm_vma_offset_file' data-ref="drm_vma_offset_file" data-ref-filename="drm_vma_offset_file">drm_vma_offset_file</dfn> {</td></tr>
+<tr><th id="47">47</th><td>	<b>struct</b> <a class="type" href="../linux/rbtree.h.html#rb_node" title='rb_node' data-ref="rb_node" data-ref-filename="rb_node">rb_node</a> <dfn class="decl field" id="drm_vma_offset_file::vm_rb" title='drm_vma_offset_file::vm_rb' data-ref="drm_vma_offset_file::vm_rb" data-ref-filename="drm_vma_offset_file..vm_rb">vm_rb</dfn>;</td></tr>
+<tr><th id="48">48</th><td>	<b>struct</b> <a class="type" href="drm_file.h.html#drm_file" title='drm_file' data-ref="drm_file" data-ref-filename="drm_file">drm_file</a> *<dfn class="decl field" id="drm_vma_offset_file::vm_tag" title='drm_vma_offset_file::vm_tag' data-ref="drm_vma_offset_file::vm_tag" data-ref-filename="drm_vma_offset_file..vm_tag">vm_tag</dfn>;</td></tr>
+<tr><th id="49">49</th><td>	<em>unsigned</em> <em>long</em> <dfn class="decl field" id="drm_vma_offset_file::vm_count" title='drm_vma_offset_file::vm_count' data-ref="drm_vma_offset_file::vm_count" data-ref-filename="drm_vma_offset_file..vm_count">vm_count</dfn>;</td></tr>
+<tr><th id="50">50</th><td>};</td></tr>
+<tr><th id="51">51</th><td></td></tr>
+<tr><th id="52">52</th><td><b>struct</b> <dfn class="type def" id="drm_vma_offset_node" title='drm_vma_offset_node' data-ref="drm_vma_offset_node" data-ref-filename="drm_vma_offset_node">drm_vma_offset_node</dfn> {</td></tr>
+<tr><th id="53">53</th><td>	<a class="typedef" href="../linux/rwlock_types.h.html#rwlock_t" title='rwlock_t' data-type='struct rwlock_t' data-ref="rwlock_t" data-ref-filename="rwlock_t">rwlock_t</a> <dfn class="decl field" id="drm_vma_offset_node::vm_lock" title='drm_vma_offset_node::vm_lock' data-ref="drm_vma_offset_node::vm_lock" data-ref-filename="drm_vma_offset_node..vm_lock">vm_lock</dfn>;</td></tr>
+<tr><th id="54">54</th><td>	<b>struct</b> <a class="type" href="drm_mm.h.html#drm_mm_node" title='drm_mm_node' data-ref="drm_mm_node" data-ref-filename="drm_mm_node">drm_mm_node</a> <dfn class="decl field" id="drm_vma_offset_node::vm_node" title='drm_vma_offset_node::vm_node' data-ref="drm_vma_offset_node::vm_node" data-ref-filename="drm_vma_offset_node..vm_node">vm_node</dfn>;</td></tr>
+<tr><th id="55">55</th><td>	<b>struct</b> <a class="type" href="../linux/rbtree.h.html#rb_root" title='rb_root' data-ref="rb_root" data-ref-filename="rb_root">rb_root</a> <dfn class="decl field" id="drm_vma_offset_node::vm_files" title='drm_vma_offset_node::vm_files' data-ref="drm_vma_offset_node::vm_files" data-ref-filename="drm_vma_offset_node..vm_files">vm_files</dfn>;</td></tr>
+<tr><th id="56">56</th><td>	<a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="drm_vma_offset_node::readonly" title='drm_vma_offset_node::readonly' data-ref="drm_vma_offset_node::readonly" data-ref-filename="drm_vma_offset_node..readonly">readonly</dfn>:<var>1</var>;</td></tr>
+<tr><th id="57">57</th><td>};</td></tr>
+<tr><th id="58">58</th><td></td></tr>
+<tr><th id="59">59</th><td><b>struct</b> <dfn class="type def" id="drm_vma_offset_manager" title='drm_vma_offset_manager' data-ref="drm_vma_offset_manager" data-ref-filename="drm_vma_offset_manager">drm_vma_offset_manager</dfn> {</td></tr>
+<tr><th id="60">60</th><td>	<a class="typedef" href="../linux/rwlock_types.h.html#rwlock_t" title='rwlock_t' data-type='struct rwlock_t' data-ref="rwlock_t" data-ref-filename="rwlock_t">rwlock_t</a> <dfn class="decl field" id="drm_vma_offset_manager::vm_lock" title='drm_vma_offset_manager::vm_lock' data-ref="drm_vma_offset_manager::vm_lock" data-ref-filename="drm_vma_offset_manager..vm_lock">vm_lock</dfn>;</td></tr>
+<tr><th id="61">61</th><td>	<b>struct</b> <a class="type" href="drm_mm.h.html#drm_mm" title='drm_mm' data-ref="drm_mm" data-ref-filename="drm_mm">drm_mm</a> <dfn class="decl field" id="drm_vma_offset_manager::vm_addr_space_mm" title='drm_vma_offset_manager::vm_addr_space_mm' data-ref="drm_vma_offset_manager::vm_addr_space_mm" data-ref-filename="drm_vma_offset_manager..vm_addr_space_mm">vm_addr_space_mm</dfn>;</td></tr>
+<tr><th id="62">62</th><td>};</td></tr>
+<tr><th id="63">63</th><td></td></tr>
+<tr><th id="64">64</th><td><em>void</em> <dfn class="decl fn" id="drm_vma_offset_manager_init" title='drm_vma_offset_manager_init' data-ref="drm_vma_offset_manager_init" data-ref-filename="drm_vma_offset_manager_init">drm_vma_offset_manager_init</dfn>(<b>struct</b> <a class="type" href="#drm_vma_offset_manager" title='drm_vma_offset_manager' data-ref="drm_vma_offset_manager" data-ref-filename="drm_vma_offset_manager">drm_vma_offset_manager</a> *<dfn class="local col4 decl" id="94mgr" title='mgr' data-type='struct drm_vma_offset_manager *' data-ref="94mgr" data-ref-filename="94mgr">mgr</dfn>,</td></tr>
+<tr><th id="65">65</th><td>				 <em>unsigned</em> <em>long</em> <dfn class="local col5 decl" id="95page_offset" title='page_offset' data-type='unsigned long' data-ref="95page_offset" data-ref-filename="95page_offset">page_offset</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col6 decl" id="96size" title='size' data-type='unsigned long' data-ref="96size" data-ref-filename="96size">size</dfn>);</td></tr>
+<tr><th id="66">66</th><td><em>void</em> <dfn class="decl fn" id="drm_vma_offset_manager_destroy" title='drm_vma_offset_manager_destroy' data-ref="drm_vma_offset_manager_destroy" data-ref-filename="drm_vma_offset_manager_destroy">drm_vma_offset_manager_destroy</dfn>(<b>struct</b> <a class="type" href="#drm_vma_offset_manager" title='drm_vma_offset_manager' data-ref="drm_vma_offset_manager" data-ref-filename="drm_vma_offset_manager">drm_vma_offset_manager</a> *<dfn class="local col7 decl" id="97mgr" title='mgr' data-type='struct drm_vma_offset_manager *' data-ref="97mgr" data-ref-filename="97mgr">mgr</dfn>);</td></tr>
+<tr><th id="67">67</th><td></td></tr>
+<tr><th id="68">68</th><td><b>struct</b> <a class="type" href="#drm_vma_offset_node" title='drm_vma_offset_node' data-ref="drm_vma_offset_node" data-ref-filename="drm_vma_offset_node">drm_vma_offset_node</a> *<dfn class="decl fn" id="drm_vma_offset_lookup_locked" title='drm_vma_offset_lookup_locked' data-ref="drm_vma_offset_lookup_locked" data-ref-filename="drm_vma_offset_lookup_locked">drm_vma_offset_lookup_locked</dfn>(<b>struct</b> <a class="type" href="#drm_vma_offset_manager" title='drm_vma_offset_manager' data-ref="drm_vma_offset_manager" data-ref-filename="drm_vma_offset_manager">drm_vma_offset_manager</a> *<dfn class="local col8 decl" id="98mgr" title='mgr' data-type='struct drm_vma_offset_manager *' data-ref="98mgr" data-ref-filename="98mgr">mgr</dfn>,</td></tr>
+<tr><th id="69">69</th><td>							   <em>unsigned</em> <em>long</em> <dfn class="local col9 decl" id="99start" title='start' data-type='unsigned long' data-ref="99start" data-ref-filename="99start">start</dfn>,</td></tr>
+<tr><th id="70">70</th><td>							   <em>unsigned</em> <em>long</em> <dfn class="local col0 decl" id="100pages" title='pages' data-type='unsigned long' data-ref="100pages" data-ref-filename="100pages">pages</dfn>);</td></tr>
+<tr><th id="71">71</th><td><em>int</em> <dfn class="decl fn" id="drm_vma_offset_add" title='drm_vma_offset_add' data-ref="drm_vma_offset_add" data-ref-filename="drm_vma_offset_add">drm_vma_offset_add</dfn>(<b>struct</b> <a class="type" href="#drm_vma_offset_manager" title='drm_vma_offset_manager' data-ref="drm_vma_offset_manager" data-ref-filename="drm_vma_offset_manager">drm_vma_offset_manager</a> *<dfn class="local col1 decl" id="101mgr" title='mgr' data-type='struct drm_vma_offset_manager *' data-ref="101mgr" data-ref-filename="101mgr">mgr</dfn>,</td></tr>
+<tr><th id="72">72</th><td>		       <b>struct</b> <a class="type" href="#drm_vma_offset_node" title='drm_vma_offset_node' data-ref="drm_vma_offset_node" data-ref-filename="drm_vma_offset_node">drm_vma_offset_node</a> *<dfn class="local col2 decl" id="102node" title='node' data-type='struct drm_vma_offset_node *' data-ref="102node" data-ref-filename="102node">node</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col3 decl" id="103pages" title='pages' data-type='unsigned long' data-ref="103pages" data-ref-filename="103pages">pages</dfn>);</td></tr>
+<tr><th id="73">73</th><td><em>void</em> <dfn class="decl fn" id="drm_vma_offset_remove" title='drm_vma_offset_remove' data-ref="drm_vma_offset_remove" data-ref-filename="drm_vma_offset_remove">drm_vma_offset_remove</dfn>(<b>struct</b> <a class="type" href="#drm_vma_offset_manager" title='drm_vma_offset_manager' data-ref="drm_vma_offset_manager" data-ref-filename="drm_vma_offset_manager">drm_vma_offset_manager</a> *<dfn class="local col4 decl" id="104mgr" title='mgr' data-type='struct drm_vma_offset_manager *' data-ref="104mgr" data-ref-filename="104mgr">mgr</dfn>,</td></tr>
+<tr><th id="74">74</th><td>			   <b>struct</b> <a class="type" href="#drm_vma_offset_node" title='drm_vma_offset_node' data-ref="drm_vma_offset_node" data-ref-filename="drm_vma_offset_node">drm_vma_offset_node</a> *<dfn class="local col5 decl" id="105node" title='node' data-type='struct drm_vma_offset_node *' data-ref="105node" data-ref-filename="105node">node</dfn>);</td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td><em>int</em> <dfn class="decl fn" id="drm_vma_node_allow" title='drm_vma_node_allow' data-ref="drm_vma_node_allow" data-ref-filename="drm_vma_node_allow">drm_vma_node_allow</dfn>(<b>struct</b> <a class="type" href="#drm_vma_offset_node" title='drm_vma_offset_node' data-ref="drm_vma_offset_node" data-ref-filename="drm_vma_offset_node">drm_vma_offset_node</a> *<dfn class="local col6 decl" id="106node" title='node' data-type='struct drm_vma_offset_node *' data-ref="106node" data-ref-filename="106node">node</dfn>, <b>struct</b> <a class="type" href="drm_file.h.html#drm_file" title='drm_file' data-ref="drm_file" data-ref-filename="drm_file">drm_file</a> *<dfn class="local col7 decl" id="107tag" title='tag' data-type='struct drm_file *' data-ref="107tag" data-ref-filename="107tag">tag</dfn>);</td></tr>
+<tr><th id="77">77</th><td><em>void</em> <dfn class="decl fn" id="drm_vma_node_revoke" title='drm_vma_node_revoke' data-ref="drm_vma_node_revoke" data-ref-filename="drm_vma_node_revoke">drm_vma_node_revoke</dfn>(<b>struct</b> <a class="type" href="#drm_vma_offset_node" title='drm_vma_offset_node' data-ref="drm_vma_offset_node" data-ref-filename="drm_vma_offset_node">drm_vma_offset_node</a> *<dfn class="local col8 decl" id="108node" title='node' data-type='struct drm_vma_offset_node *' data-ref="108node" data-ref-filename="108node">node</dfn>,</td></tr>
+<tr><th id="78">78</th><td>			 <b>struct</b> <a class="type" href="drm_file.h.html#drm_file" title='drm_file' data-ref="drm_file" data-ref-filename="drm_file">drm_file</a> *<dfn class="local col9 decl" id="109tag" title='tag' data-type='struct drm_file *' data-ref="109tag" data-ref-filename="109tag">tag</dfn>);</td></tr>
+<tr><th id="79">79</th><td><a class="typedef" href="../linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl fn" id="drm_vma_node_is_allowed" title='drm_vma_node_is_allowed' data-ref="drm_vma_node_is_allowed" data-ref-filename="drm_vma_node_is_allowed">drm_vma_node_is_allowed</dfn>(<b>struct</b> <a class="type" href="#drm_vma_offset_node" title='drm_vma_offset_node' data-ref="drm_vma_offset_node" data-ref-filename="drm_vma_offset_node">drm_vma_offset_node</a> *<dfn class="local col0 decl" id="110node" title='node' data-type='struct drm_vma_offset_node *' data-ref="110node" data-ref-filename="110node">node</dfn>,</td></tr>
+<tr><th id="80">80</th><td>			     <b>struct</b> <a class="type" href="drm_file.h.html#drm_file" title='drm_file' data-ref="drm_file" data-ref-filename="drm_file">drm_file</a> *<dfn class="local col1 decl" id="111tag" title='tag' data-type='struct drm_file *' data-ref="111tag" data-ref-filename="111tag">tag</dfn>);</td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="83">83</th><td><i class="doc"> * drm_vma_offset_exact_lookup_locked() - Look up node by exact address</i></td></tr>
+<tr><th id="84">84</th><td><i class="doc"> *<span class="command"> @mgr</span>: Manager object</i></td></tr>
+<tr><th id="85">85</th><td><i class="doc"> *<span class="command"> @start</span>: Start address (page-based, not byte-based)</i></td></tr>
+<tr><th id="86">86</th><td><i class="doc"> *<span class="command"> @pages</span>: Size of object (page-based)</i></td></tr>
+<tr><th id="87">87</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="88">88</th><td><i class="doc"> * Same as drm_vma_offset_lookup_locked() but does not allow any offset into the node.</i></td></tr>
+<tr><th id="89">89</th><td><i class="doc"> * It only returns the exact object with the given start address.</i></td></tr>
+<tr><th id="90">90</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="91">91</th><td><i class="doc"> * RETURNS:</i></td></tr>
+<tr><th id="92">92</th><td><i class="doc"> * Node at exact start address<span class="command"> @start</span>.</i></td></tr>
+<tr><th id="93">93</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="94">94</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <b>struct</b> <a class="type" href="#drm_vma_offset_node" title='drm_vma_offset_node' data-ref="drm_vma_offset_node" data-ref-filename="drm_vma_offset_node">drm_vma_offset_node</a> *</td></tr>
+<tr><th id="95">95</th><td><dfn class="decl def fn" id="drm_vma_offset_exact_lookup_locked" title='drm_vma_offset_exact_lookup_locked' data-ref="drm_vma_offset_exact_lookup_locked" data-ref-filename="drm_vma_offset_exact_lookup_locked">drm_vma_offset_exact_lookup_locked</dfn>(<b>struct</b> <a class="type" href="#drm_vma_offset_manager" title='drm_vma_offset_manager' data-ref="drm_vma_offset_manager" data-ref-filename="drm_vma_offset_manager">drm_vma_offset_manager</a> *<dfn class="local col2 decl" id="112mgr" title='mgr' data-type='struct drm_vma_offset_manager *' data-ref="112mgr" data-ref-filename="112mgr">mgr</dfn>,</td></tr>
+<tr><th id="96">96</th><td>				   <em>unsigned</em> <em>long</em> <dfn class="local col3 decl" id="113start" title='start' data-type='unsigned long' data-ref="113start" data-ref-filename="113start">start</dfn>,</td></tr>
+<tr><th id="97">97</th><td>				   <em>unsigned</em> <em>long</em> <dfn class="local col4 decl" id="114pages" title='pages' data-type='unsigned long' data-ref="114pages" data-ref-filename="114pages">pages</dfn>)</td></tr>
+<tr><th id="98">98</th><td>{</td></tr>
+<tr><th id="99">99</th><td>	<b>struct</b> <a class="type" href="#drm_vma_offset_node" title='drm_vma_offset_node' data-ref="drm_vma_offset_node" data-ref-filename="drm_vma_offset_node">drm_vma_offset_node</a> *<dfn class="local col5 decl" id="115node" title='node' data-type='struct drm_vma_offset_node *' data-ref="115node" data-ref-filename="115node">node</dfn>;</td></tr>
+<tr><th id="100">100</th><td></td></tr>
+<tr><th id="101">101</th><td>	<a class="local col5 ref" href="#115node" title='node' data-ref="115node" data-ref-filename="115node">node</a> = <a class="ref fn" href="#drm_vma_offset_lookup_locked" title='drm_vma_offset_lookup_locked' data-ref="drm_vma_offset_lookup_locked" data-ref-filename="drm_vma_offset_lookup_locked">drm_vma_offset_lookup_locked</a>(<a class="local col2 ref" href="#112mgr" title='mgr' data-ref="112mgr" data-ref-filename="112mgr">mgr</a>, <a class="local col3 ref" href="#113start" title='start' data-ref="113start" data-ref-filename="113start">start</a>, <a class="local col4 ref" href="#114pages" title='pages' data-ref="114pages" data-ref-filename="114pages">pages</a>);</td></tr>
+<tr><th id="102">102</th><td>	<b>return</b> (<a class="local col5 ref" href="#115node" title='node' data-ref="115node" data-ref-filename="115node">node</a> &amp;&amp; <a class="local col5 ref" href="#115node" title='node' data-ref="115node" data-ref-filename="115node">node</a>-&gt;<a class="ref field" href="#drm_vma_offset_node::vm_node" title='drm_vma_offset_node::vm_node' data-ref="drm_vma_offset_node::vm_node" data-ref-filename="drm_vma_offset_node..vm_node">vm_node</a>.<a class="ref field" href="drm_mm.h.html#drm_mm_node::start" title='drm_mm_node::start' data-ref="drm_mm_node::start" data-ref-filename="drm_mm_node..start">start</a> == <a class="local col3 ref" href="#113start" title='start' data-ref="113start" data-ref-filename="113start">start</a>) ? <a class="local col5 ref" href="#115node" title='node' data-ref="115node" data-ref-filename="115node">node</a> : <a class="macro" href="../linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="103">103</th><td>}</td></tr>
+<tr><th id="104">104</th><td></td></tr>
+<tr><th id="105">105</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="106">106</th><td><i class="doc"> * drm_vma_offset_lock_lookup() - Lock lookup for extended private use</i></td></tr>
+<tr><th id="107">107</th><td><i class="doc"> *<span class="command"> @mgr</span>: Manager object</i></td></tr>
+<tr><th id="108">108</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="109">109</th><td><i class="doc"> * Lock VMA manager for extended lookups. Only locked VMA function calls</i></td></tr>
+<tr><th id="110">110</th><td><i class="doc"> * are allowed while holding this lock. All other contexts are blocked from VMA</i></td></tr>
+<tr><th id="111">111</th><td><i class="doc"> * until the lock is released via drm_vma_offset_unlock_lookup().</i></td></tr>
+<tr><th id="112">112</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="113">113</th><td><i class="doc"> * Use this if you need to take a reference to the objects returned by</i></td></tr>
+<tr><th id="114">114</th><td><i class="doc"> * drm_vma_offset_lookup_locked() before releasing this lock again.</i></td></tr>
+<tr><th id="115">115</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="116">116</th><td><i class="doc"> * This lock must not be used for anything else than extended lookups. You must</i></td></tr>
+<tr><th id="117">117</th><td><i class="doc"> * not call any other VMA helpers while holding this lock.</i></td></tr>
+<tr><th id="118">118</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="119">119</th><td><i class="doc"> * Note: You're in atomic-context while holding this lock!</i></td></tr>
+<tr><th id="120">120</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="121">121</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="drm_vma_offset_lock_lookup" title='drm_vma_offset_lock_lookup' data-ref="drm_vma_offset_lock_lookup" data-ref-filename="drm_vma_offset_lock_lookup">drm_vma_offset_lock_lookup</dfn>(<b>struct</b> <a class="type" href="#drm_vma_offset_manager" title='drm_vma_offset_manager' data-ref="drm_vma_offset_manager" data-ref-filename="drm_vma_offset_manager">drm_vma_offset_manager</a> *<dfn class="local col6 decl" id="116mgr" title='mgr' data-type='struct drm_vma_offset_manager *' data-ref="116mgr" data-ref-filename="116mgr">mgr</dfn>)</td></tr>
+<tr><th id="122">122</th><td>{</td></tr>
+<tr><th id="123">123</th><td>	<a class="macro" href="../linux/rwlock.h.html#71" title="_raw_read_lock(&amp;mgr-&gt;vm_lock)" data-ref="_M/read_lock">read_lock</a>(&amp;<a class="local col6 ref" href="#116mgr" title='mgr' data-ref="116mgr" data-ref-filename="116mgr">mgr</a>-&gt;<a class="ref field" href="#drm_vma_offset_manager::vm_lock" title='drm_vma_offset_manager::vm_lock' data-ref="drm_vma_offset_manager::vm_lock" data-ref-filename="drm_vma_offset_manager..vm_lock">vm_lock</a>);</td></tr>
+<tr><th id="124">124</th><td>}</td></tr>
+<tr><th id="125">125</th><td></td></tr>
+<tr><th id="126">126</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="127">127</th><td><i class="doc"> * drm_vma_offset_unlock_lookup() - Unlock lookup for extended private use</i></td></tr>
+<tr><th id="128">128</th><td><i class="doc"> *<span class="command"> @mgr</span>: Manager object</i></td></tr>
+<tr><th id="129">129</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="130">130</th><td><i class="doc"> * Release lookup-lock. See drm_vma_offset_lock_lookup() for more information.</i></td></tr>
+<tr><th id="131">131</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="132">132</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="drm_vma_offset_unlock_lookup" title='drm_vma_offset_unlock_lookup' data-ref="drm_vma_offset_unlock_lookup" data-ref-filename="drm_vma_offset_unlock_lookup">drm_vma_offset_unlock_lookup</dfn>(<b>struct</b> <a class="type" href="#drm_vma_offset_manager" title='drm_vma_offset_manager' data-ref="drm_vma_offset_manager" data-ref-filename="drm_vma_offset_manager">drm_vma_offset_manager</a> *<dfn class="local col7 decl" id="117mgr" title='mgr' data-type='struct drm_vma_offset_manager *' data-ref="117mgr" data-ref-filename="117mgr">mgr</dfn>)</td></tr>
+<tr><th id="133">133</th><td>{</td></tr>
+<tr><th id="134">134</th><td>	<a class="macro" href="../linux/rwlock.h.html#105" title="__raw_read_unlock(&amp;mgr-&gt;vm_lock)" data-ref="_M/read_unlock">read_unlock</a>(&amp;<a class="local col7 ref" href="#117mgr" title='mgr' data-ref="117mgr" data-ref-filename="117mgr">mgr</a>-&gt;<a class="ref field" href="#drm_vma_offset_manager::vm_lock" title='drm_vma_offset_manager::vm_lock' data-ref="drm_vma_offset_manager::vm_lock" data-ref-filename="drm_vma_offset_manager..vm_lock">vm_lock</a>);</td></tr>
+<tr><th id="135">135</th><td>}</td></tr>
+<tr><th id="136">136</th><td></td></tr>
+<tr><th id="137">137</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="138">138</th><td><i class="doc"> * drm_vma_node_reset() - Initialize or reset node object</i></td></tr>
+<tr><th id="139">139</th><td><i class="doc"> *<span class="command"> @node</span>: Node to initialize or reset</i></td></tr>
+<tr><th id="140">140</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="141">141</th><td><i class="doc"> * Reset a node to its initial state. This must be called before using it with</i></td></tr>
+<tr><th id="142">142</th><td><i class="doc"> * any VMA offset manager.</i></td></tr>
+<tr><th id="143">143</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="144">144</th><td><i class="doc"> * This must not be called on an already allocated node, or you will leak</i></td></tr>
+<tr><th id="145">145</th><td><i class="doc"> * memory.</i></td></tr>
+<tr><th id="146">146</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="147">147</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="drm_vma_node_reset" title='drm_vma_node_reset' data-ref="drm_vma_node_reset" data-ref-filename="drm_vma_node_reset">drm_vma_node_reset</dfn>(<b>struct</b> <a class="type" href="#drm_vma_offset_node" title='drm_vma_offset_node' data-ref="drm_vma_offset_node" data-ref-filename="drm_vma_offset_node">drm_vma_offset_node</a> *<dfn class="local col8 decl" id="118node" title='node' data-type='struct drm_vma_offset_node *' data-ref="118node" data-ref-filename="118node">node</dfn>)</td></tr>
+<tr><th id="148">148</th><td>{</td></tr>
+<tr><th id="149">149</th><td>	<a class="ref fn" href="../../arch/x86/include/asm/string_64.h.html#memset" title='memset' data-ref="memset" data-ref-filename="memset">memset</a>(<a class="local col8 ref" href="#118node" title='node' data-ref="118node" data-ref-filename="118node">node</a>, <var>0</var>, <b>sizeof</b>(*<a class="local col8 ref" href="#118node" title='node' data-ref="118node" data-ref-filename="118node">node</a>));</td></tr>
+<tr><th id="150">150</th><td>	<a class="local col8 ref" href="#118node" title='node' data-ref="118node" data-ref-filename="118node">node</a>-&gt;<a class="ref field" href="#drm_vma_offset_node::vm_files" title='drm_vma_offset_node::vm_files' data-ref="drm_vma_offset_node::vm_files" data-ref-filename="drm_vma_offset_node..vm_files">vm_files</a> = <a class="macro" href="../linux/rbtree.h.html#37" title="(struct rb_root) { ((void *)0), }" data-ref="_M/RB_ROOT">RB_ROOT</a>;</td></tr>
+<tr><th id="151">151</th><td>	<a class="macro" href="../linux/rwlock.h.html#27" title="do { *(&amp;node-&gt;vm_lock) = (rwlock_t) { .raw_lock = { { .cnts = { (0) }, }, .wait_lock = { { .val = { (0) } } }, }, }; } while (0)" data-ref="_M/rwlock_init">rwlock_init</a>(&amp;<a class="local col8 ref" href="#118node" title='node' data-ref="118node" data-ref-filename="118node">node</a>-&gt;<a class="ref field" href="#drm_vma_offset_node::vm_lock" title='drm_vma_offset_node::vm_lock' data-ref="drm_vma_offset_node::vm_lock" data-ref-filename="drm_vma_offset_node..vm_lock">vm_lock</a>);</td></tr>
+<tr><th id="152">152</th><td>}</td></tr>
+<tr><th id="153">153</th><td></td></tr>
+<tr><th id="154">154</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="155">155</th><td><i class="doc"> * drm_vma_node_start() - Return start address for page-based addressing</i></td></tr>
+<tr><th id="156">156</th><td><i class="doc"> *<span class="command"> @node</span>: Node to inspect</i></td></tr>
+<tr><th id="157">157</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="158">158</th><td><i class="doc"> * Return the start address of the given node. This can be used as offset into</i></td></tr>
+<tr><th id="159">159</th><td><i class="doc"> * the linear VM space that is provided by the VMA offset manager. Note that</i></td></tr>
+<tr><th id="160">160</th><td><i class="doc"> * this can only be used for page-based addressing. If you need a proper offset</i></td></tr>
+<tr><th id="161">161</th><td><i class="doc"> * for user-space mappings, you must apply "&lt;&lt; PAGE_SHIFT" or use the</i></td></tr>
+<tr><th id="162">162</th><td><i class="doc"> * drm_vma_node_offset_addr() helper instead.</i></td></tr>
+<tr><th id="163">163</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="164">164</th><td><i class="doc"> * RETURNS:</i></td></tr>
+<tr><th id="165">165</th><td><i class="doc"> * Start address of<span class="command"> @node</span> for page-based addressing. 0 if the node does not</i></td></tr>
+<tr><th id="166">166</th><td><i class="doc"> * have an offset allocated.</i></td></tr>
+<tr><th id="167">167</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="168">168</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>long</em> <dfn class="decl def fn" id="drm_vma_node_start" title='drm_vma_node_start' data-ref="drm_vma_node_start" data-ref-filename="drm_vma_node_start">drm_vma_node_start</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#drm_vma_offset_node" title='drm_vma_offset_node' data-ref="drm_vma_offset_node" data-ref-filename="drm_vma_offset_node">drm_vma_offset_node</a> *<dfn class="local col9 decl" id="119node" title='node' data-type='const struct drm_vma_offset_node *' data-ref="119node" data-ref-filename="119node">node</dfn>)</td></tr>
+<tr><th id="169">169</th><td>{</td></tr>
+<tr><th id="170">170</th><td>	<b>return</b> <a class="local col9 ref" href="#119node" title='node' data-ref="119node" data-ref-filename="119node">node</a>-&gt;<a class="ref field" href="#drm_vma_offset_node::vm_node" title='drm_vma_offset_node::vm_node' data-ref="drm_vma_offset_node::vm_node" data-ref-filename="drm_vma_offset_node..vm_node">vm_node</a>.<a class="ref field" href="drm_mm.h.html#drm_mm_node::start" title='drm_mm_node::start' data-ref="drm_mm_node::start" data-ref-filename="drm_mm_node..start">start</a>;</td></tr>
+<tr><th id="171">171</th><td>}</td></tr>
+<tr><th id="172">172</th><td></td></tr>
+<tr><th id="173">173</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="174">174</th><td><i class="doc"> * drm_vma_node_size() - Return size (page-based)</i></td></tr>
+<tr><th id="175">175</th><td><i class="doc"> *<span class="command"> @node</span>: Node to inspect</i></td></tr>
+<tr><th id="176">176</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="177">177</th><td><i class="doc"> * Return the size as number of pages for the given node. This is the same size</i></td></tr>
+<tr><th id="178">178</th><td><i class="doc"> * that was passed to drm_vma_offset_add(). If no offset is allocated for the</i></td></tr>
+<tr><th id="179">179</th><td><i class="doc"> * node, this is 0.</i></td></tr>
+<tr><th id="180">180</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="181">181</th><td><i class="doc"> * RETURNS:</i></td></tr>
+<tr><th id="182">182</th><td><i class="doc"> * Size of<span class="command"> @node</span> as number of pages. 0 if the node does not have an offset</i></td></tr>
+<tr><th id="183">183</th><td><i class="doc"> * allocated.</i></td></tr>
+<tr><th id="184">184</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="185">185</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>long</em> <dfn class="decl def fn" id="drm_vma_node_size" title='drm_vma_node_size' data-ref="drm_vma_node_size" data-ref-filename="drm_vma_node_size">drm_vma_node_size</dfn>(<b>struct</b> <a class="type" href="#drm_vma_offset_node" title='drm_vma_offset_node' data-ref="drm_vma_offset_node" data-ref-filename="drm_vma_offset_node">drm_vma_offset_node</a> *<dfn class="local col0 decl" id="120node" title='node' data-type='struct drm_vma_offset_node *' data-ref="120node" data-ref-filename="120node">node</dfn>)</td></tr>
+<tr><th id="186">186</th><td>{</td></tr>
+<tr><th id="187">187</th><td>	<b>return</b> <a class="local col0 ref" href="#120node" title='node' data-ref="120node" data-ref-filename="120node">node</a>-&gt;<a class="ref field" href="#drm_vma_offset_node::vm_node" title='drm_vma_offset_node::vm_node' data-ref="drm_vma_offset_node::vm_node" data-ref-filename="drm_vma_offset_node..vm_node">vm_node</a>.<a class="ref field" href="drm_mm.h.html#drm_mm_node::size" title='drm_mm_node::size' data-ref="drm_mm_node::size" data-ref-filename="drm_mm_node..size">size</a>;</td></tr>
+<tr><th id="188">188</th><td>}</td></tr>
+<tr><th id="189">189</th><td></td></tr>
+<tr><th id="190">190</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="191">191</th><td><i class="doc"> * drm_vma_node_offset_addr() - Return sanitized offset for user-space mmaps</i></td></tr>
+<tr><th id="192">192</th><td><i class="doc"> *<span class="command"> @node</span>: Linked offset node</i></td></tr>
+<tr><th id="193">193</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="194">194</th><td><i class="doc"> * Same as drm_vma_node_start() but returns the address as a valid offset that</i></td></tr>
+<tr><th id="195">195</th><td><i class="doc"> * can be used for user-space mappings during mmap().</i></td></tr>
+<tr><th id="196">196</th><td><i class="doc"> * This must not be called on unlinked nodes.</i></td></tr>
+<tr><th id="197">197</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="198">198</th><td><i class="doc"> * RETURNS:</i></td></tr>
+<tr><th id="199">199</th><td><i class="doc"> * Offset of<span class="command"> @node</span> for byte-based addressing. 0 if the node does not have an</i></td></tr>
+<tr><th id="200">200</th><td><i class="doc"> * object allocated.</i></td></tr>
+<tr><th id="201">201</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="202">202</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a> <dfn class="decl def fn" id="drm_vma_node_offset_addr" title='drm_vma_node_offset_addr' data-ref="drm_vma_node_offset_addr" data-ref-filename="drm_vma_node_offset_addr">drm_vma_node_offset_addr</dfn>(<b>struct</b> <a class="type" href="#drm_vma_offset_node" title='drm_vma_offset_node' data-ref="drm_vma_offset_node" data-ref-filename="drm_vma_offset_node">drm_vma_offset_node</a> *<dfn class="local col1 decl" id="121node" title='node' data-type='struct drm_vma_offset_node *' data-ref="121node" data-ref-filename="121node">node</dfn>)</td></tr>
+<tr><th id="203">203</th><td>{</td></tr>
+<tr><th id="204">204</th><td>	<b>return</b> ((<a class="typedef" href="../uapi/asm-generic/int-ll64.h.html#__u64" title='__u64' data-type='unsigned long long' data-ref="__u64" data-ref-filename="__u64">__u64</a>)<a class="local col1 ref" href="#121node" title='node' data-ref="121node" data-ref-filename="121node">node</a>-&gt;<a class="ref field" href="#drm_vma_offset_node::vm_node" title='drm_vma_offset_node::vm_node' data-ref="drm_vma_offset_node::vm_node" data-ref-filename="drm_vma_offset_node..vm_node">vm_node</a>.<a class="ref field" href="drm_mm.h.html#drm_mm_node::start" title='drm_mm_node::start' data-ref="drm_mm_node::start" data-ref-filename="drm_mm_node..start">start</a>) &lt;&lt; <a class="macro" href="../../arch/x86/include/asm/page_types.h.html#10" title="12" data-ref="_M/PAGE_SHIFT">PAGE_SHIFT</a>;</td></tr>
+<tr><th id="205">205</th><td>}</td></tr>
+<tr><th id="206">206</th><td></td></tr>
+<tr><th id="207">207</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="208">208</th><td><i class="doc"> * drm_vma_node_unmap() - Unmap offset node</i></td></tr>
+<tr><th id="209">209</th><td><i class="doc"> *<span class="command"> @node</span>: Offset node</i></td></tr>
+<tr><th id="210">210</th><td><i class="doc"> *<span class="command"> @file</span>_mapping: Address space to unmap<span class="command"> @node</span> from</i></td></tr>
+<tr><th id="211">211</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="212">212</th><td><i class="doc"> * Unmap all userspace mappings for a given offset node. The mappings must be</i></td></tr>
+<tr><th id="213">213</th><td><i class="doc"> * associated with the<span class="command"> @file</span>_mapping address-space. If no offset exists</i></td></tr>
+<tr><th id="214">214</th><td><i class="doc"> * nothing is done.</i></td></tr>
+<tr><th id="215">215</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="216">216</th><td><i class="doc"> * This call is unlocked. The caller must guarantee that drm_vma_offset_remove()</i></td></tr>
+<tr><th id="217">217</th><td><i class="doc"> * is not called on this node concurrently.</i></td></tr>
+<tr><th id="218">218</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="219">219</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="drm_vma_node_unmap" title='drm_vma_node_unmap' data-ref="drm_vma_node_unmap" data-ref-filename="drm_vma_node_unmap">drm_vma_node_unmap</dfn>(<b>struct</b> <a class="type" href="#drm_vma_offset_node" title='drm_vma_offset_node' data-ref="drm_vma_offset_node" data-ref-filename="drm_vma_offset_node">drm_vma_offset_node</a> *<dfn class="local col2 decl" id="122node" title='node' data-type='struct drm_vma_offset_node *' data-ref="122node" data-ref-filename="122node">node</dfn>,</td></tr>
+<tr><th id="220">220</th><td>				      <b>struct</b> <a class="type" href="../linux/fs.h.html#address_space" title='address_space' data-ref="address_space" data-ref-filename="address_space">address_space</a> *<dfn class="local col3 decl" id="123file_mapping" title='file_mapping' data-type='struct address_space *' data-ref="123file_mapping" data-ref-filename="123file_mapping">file_mapping</dfn>)</td></tr>
+<tr><th id="221">221</th><td>{</td></tr>
+<tr><th id="222">222</th><td>	<b>if</b> (<a class="ref fn" href="drm_mm.h.html#drm_mm_node_allocated" title='drm_mm_node_allocated' data-ref="drm_mm_node_allocated" data-ref-filename="drm_mm_node_allocated">drm_mm_node_allocated</a>(&amp;<a class="local col2 ref" href="#122node" title='node' data-ref="122node" data-ref-filename="122node">node</a>-&gt;<a class="ref field" href="#drm_vma_offset_node::vm_node" title='drm_vma_offset_node::vm_node' data-ref="drm_vma_offset_node::vm_node" data-ref-filename="drm_vma_offset_node..vm_node">vm_node</a>))</td></tr>
+<tr><th id="223">223</th><td>		<a class="ref fn" href="../linux/mm.h.html#unmap_mapping_range" title='unmap_mapping_range' data-ref="unmap_mapping_range" data-ref-filename="unmap_mapping_range">unmap_mapping_range</a>(<a class="local col3 ref" href="#123file_mapping" title='file_mapping' data-ref="123file_mapping" data-ref-filename="123file_mapping">file_mapping</a>,</td></tr>
+<tr><th id="224">224</th><td>				    <a class="ref fn" href="#drm_vma_node_offset_addr" title='drm_vma_node_offset_addr' data-ref="drm_vma_node_offset_addr" data-ref-filename="drm_vma_node_offset_addr">drm_vma_node_offset_addr</a>(<a class="local col2 ref" href="#122node" title='node' data-ref="122node" data-ref-filename="122node">node</a>),</td></tr>
+<tr><th id="225">225</th><td>				    <a class="ref fn" href="#drm_vma_node_size" title='drm_vma_node_size' data-ref="drm_vma_node_size" data-ref-filename="drm_vma_node_size">drm_vma_node_size</a>(<a class="local col2 ref" href="#122node" title='node' data-ref="122node" data-ref-filename="122node">node</a>) &lt;&lt; <a class="macro" href="../../arch/x86/include/asm/page_types.h.html#10" title="12" data-ref="_M/PAGE_SHIFT">PAGE_SHIFT</a>, <var>1</var>);</td></tr>
+<tr><th id="226">226</th><td>}</td></tr>
+<tr><th id="227">227</th><td></td></tr>
+<tr><th id="228">228</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="229">229</th><td><i class="doc"> * drm_vma_node_verify_access() - Access verification helper for TTM</i></td></tr>
+<tr><th id="230">230</th><td><i class="doc"> *<span class="command"> @node</span>: Offset node</i></td></tr>
+<tr><th id="231">231</th><td><i class="doc"> *<span class="command"> @tag</span>: Tag of file to check</i></td></tr>
+<tr><th id="232">232</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="233">233</th><td><i class="doc"> * This checks whether<span class="command"> @tag</span> is granted access to<span class="command"> @node</span>. It is the same as</i></td></tr>
+<tr><th id="234">234</th><td><i class="doc"> * drm_vma_node_is_allowed() but suitable as drop-in helper for TTM</i></td></tr>
+<tr><th id="235">235</th><td><i class="doc"> * verify_access() callbacks.</i></td></tr>
+<tr><th id="236">236</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="237">237</th><td><i class="doc"> * RETURNS:</i></td></tr>
+<tr><th id="238">238</th><td><i class="doc"> * 0 if access is granted, -EACCES otherwise.</i></td></tr>
+<tr><th id="239">239</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="240">240</th><td><em>static</em> <a class="macro" href="../linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="drm_vma_node_verify_access" title='drm_vma_node_verify_access' data-ref="drm_vma_node_verify_access" data-ref-filename="drm_vma_node_verify_access">drm_vma_node_verify_access</dfn>(<b>struct</b> <a class="type" href="#drm_vma_offset_node" title='drm_vma_offset_node' data-ref="drm_vma_offset_node" data-ref-filename="drm_vma_offset_node">drm_vma_offset_node</a> *<dfn class="local col4 decl" id="124node" title='node' data-type='struct drm_vma_offset_node *' data-ref="124node" data-ref-filename="124node">node</dfn>,</td></tr>
+<tr><th id="241">241</th><td>					     <b>struct</b> <a class="type" href="drm_file.h.html#drm_file" title='drm_file' data-ref="drm_file" data-ref-filename="drm_file">drm_file</a> *<dfn class="local col5 decl" id="125tag" title='tag' data-type='struct drm_file *' data-ref="125tag" data-ref-filename="125tag">tag</dfn>)</td></tr>
+<tr><th id="242">242</th><td>{</td></tr>
+<tr><th id="243">243</th><td>	<b>return</b> <a class="ref fn" href="#drm_vma_node_is_allowed" title='drm_vma_node_is_allowed' data-ref="drm_vma_node_is_allowed" data-ref-filename="drm_vma_node_is_allowed">drm_vma_node_is_allowed</a>(<a class="local col4 ref" href="#124node" title='node' data-ref="124node" data-ref-filename="124node">node</a>, <a class="local col5 ref" href="#125tag" title='tag' data-ref="125tag" data-ref-filename="125tag">tag</a>) ? <var>0</var> : -<a class="macro" href="../uapi/asm-generic/errno-base.h.html#17" title="13" data-ref="_M/EACCES">EACCES</a>;</td></tr>
+<tr><th id="244">244</th><td>}</td></tr>
+<tr><th id="245">245</th><td></td></tr>
+<tr><th id="246">246</th><td><u>#<span data-ppcond="1">endif</span> /* __DRM_VMA_MANAGER_H__ */</u></td></tr>
+<tr><th id="247">247</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../drivers/gpu/drm/drm_client.c.html'>linux-5.3.1/drivers/gpu/drm/drm_client.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

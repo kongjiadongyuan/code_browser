@@ -1,0 +1,17 @@
+<dec f='linux-5.3.1/drivers/pnp/base.h' l='158' type='struct resource'/>
+<offset>128</offset>
+<use f='linux-5.3.1/drivers/pnp/interface.c' l='270' u='a' c='resources_show'/>
+<use f='linux-5.3.1/drivers/pnp/manager.c' l='246' u='m' c='pnp_clean_resource_table'/>
+<use f='linux-5.3.1/drivers/pnp/quirks.c' l='318' u='a' c='quirk_amd_mmconfig_area'/>
+<use f='linux-5.3.1/drivers/pnp/quirks.c' l='401' u='a' c='quirk_intel_mch'/>
+<use f='linux-5.3.1/drivers/pnp/resource.c' l='489' u='a' c='pnp_get_resource'/>
+<use f='linux-5.3.1/drivers/pnp/resource.c' l='520' u='w' c='pnp_add_resource'/>
+<use f='linux-5.3.1/drivers/pnp/resource.c' l='521' u='m' c='pnp_add_resource'/>
+<use f='linux-5.3.1/drivers/pnp/resource.c' l='538' u='a' c='pnp_add_irq_resource'/>
+<use f='linux-5.3.1/drivers/pnp/resource.c' l='559' u='a' c='pnp_add_dma_resource'/>
+<use f='linux-5.3.1/drivers/pnp/resource.c' l='583' u='a' c='pnp_add_io_resource'/>
+<use f='linux-5.3.1/drivers/pnp/resource.c' l='607' u='a' c='pnp_add_mem_resource'/>
+<use f='linux-5.3.1/drivers/pnp/resource.c' l='631' u='a' c='pnp_add_bus_resource'/>
+<use f='linux-5.3.1/drivers/pnp/resource.c' l='694' u='m' c='pnp_range_reserved'/>
+<use f='linux-5.3.1/drivers/pnp/resource.c' l='695' u='m' c='pnp_range_reserved'/>
+<use f='linux-5.3.1/drivers/pnp/support.c' l='88' u='a' c='dbg_pnp_show_resources'/>

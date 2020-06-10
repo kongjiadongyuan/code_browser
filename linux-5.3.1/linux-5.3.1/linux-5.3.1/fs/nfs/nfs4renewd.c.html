@@ -1,0 +1,178 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>nfs4renewd.c source code [linux-5.3.1/fs/nfs/nfs4renewd.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/fs/nfs/nfs4renewd.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>fs</a>/<a href='./'>nfs</a>/<a href='nfs4renewd.c.html'>nfs4renewd.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*</i></td></tr>
+<tr><th id="2">2</th><td><i> *  fs/nfs/nfs4renewd.c</i></td></tr>
+<tr><th id="3">3</th><td><i> *</i></td></tr>
+<tr><th id="4">4</th><td><i> *  Copyright (c) 2002 The Regents of the University of Michigan.</i></td></tr>
+<tr><th id="5">5</th><td><i> *  All rights reserved.</i></td></tr>
+<tr><th id="6">6</th><td><i> *</i></td></tr>
+<tr><th id="7">7</th><td><i> *  Kendrick Smith &lt;kmsmith@umich.edu&gt;</i></td></tr>
+<tr><th id="8">8</th><td><i> *</i></td></tr>
+<tr><th id="9">9</th><td><i> *  Redistribution and use in source and binary forms, with or without</i></td></tr>
+<tr><th id="10">10</th><td><i> *  modification, are permitted provided that the following conditions</i></td></tr>
+<tr><th id="11">11</th><td><i> *  are met:</i></td></tr>
+<tr><th id="12">12</th><td><i> *</i></td></tr>
+<tr><th id="13">13</th><td><i> *  1. Redistributions of source code must retain the above copyright</i></td></tr>
+<tr><th id="14">14</th><td><i> *     notice, this list of conditions and the following disclaimer.</i></td></tr>
+<tr><th id="15">15</th><td><i> *  2. Redistributions in binary form must reproduce the above copyright</i></td></tr>
+<tr><th id="16">16</th><td><i> *     notice, this list of conditions and the following disclaimer in the</i></td></tr>
+<tr><th id="17">17</th><td><i> *     documentation and/or other materials provided with the distribution.</i></td></tr>
+<tr><th id="18">18</th><td><i> *  3. Neither the name of the University nor the names of its</i></td></tr>
+<tr><th id="19">19</th><td><i> *     contributors may be used to endorse or promote products derived</i></td></tr>
+<tr><th id="20">20</th><td><i> *     from this software without specific prior written permission.</i></td></tr>
+<tr><th id="21">21</th><td><i> *</i></td></tr>
+<tr><th id="22">22</th><td><i> *  THIS SOFTWARE IS PROVIDED ``AS IS'' AND ANY EXPRESS OR IMPLIED</i></td></tr>
+<tr><th id="23">23</th><td><i> *  WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF</i></td></tr>
+<tr><th id="24">24</th><td><i> *  MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE</i></td></tr>
+<tr><th id="25">25</th><td><i> *  DISCLAIMED. IN NO EVENT SHALL THE REGENTS OR CONTRIBUTORS BE LIABLE</i></td></tr>
+<tr><th id="26">26</th><td><i> *  FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR</i></td></tr>
+<tr><th id="27">27</th><td><i> *  CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF</i></td></tr>
+<tr><th id="28">28</th><td><i> *  SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR</i></td></tr>
+<tr><th id="29">29</th><td><i> *  BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF</i></td></tr>
+<tr><th id="30">30</th><td><i> *  LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING</i></td></tr>
+<tr><th id="31">31</th><td><i> *  NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS</i></td></tr>
+<tr><th id="32">32</th><td><i> *  SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</i></td></tr>
+<tr><th id="33">33</th><td><i> *</i></td></tr>
+<tr><th id="34">34</th><td><i> * Implementation of the NFSv4 "renew daemon", which wakes up periodically to</i></td></tr>
+<tr><th id="35">35</th><td><i> * send a RENEW, to keep state alive on the server.  The daemon is implemented</i></td></tr>
+<tr><th id="36">36</th><td><i> * as an rpc_task, not a real kernel thread, so it always runs in rpciod's</i></td></tr>
+<tr><th id="37">37</th><td><i> * context.  There is one renewd per nfs_server.</i></td></tr>
+<tr><th id="38">38</th><td><i> *</i></td></tr>
+<tr><th id="39">39</th><td><i> */</i></td></tr>
+<tr><th id="40">40</th><td></td></tr>
+<tr><th id="41">41</th><td><u>#include <a href="../../include/linux/mm.h.html">&lt;linux/mm.h&gt;</a></u></td></tr>
+<tr><th id="42">42</th><td><u>#include <a href="../../include/linux/pagemap.h.html">&lt;linux/pagemap.h&gt;</a></u></td></tr>
+<tr><th id="43">43</th><td><u>#include <a href="../../include/linux/sunrpc/sched.h.html">&lt;linux/sunrpc/sched.h&gt;</a></u></td></tr>
+<tr><th id="44">44</th><td><u>#include <a href="../../include/linux/sunrpc/clnt.h.html">&lt;linux/sunrpc/clnt.h&gt;</a></u></td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td><u>#include <a href="../../include/linux/nfs.h.html">&lt;linux/nfs.h&gt;</a></u></td></tr>
+<tr><th id="47">47</th><td><u>#include <a href="../../include/linux/nfs4.h.html">&lt;linux/nfs4.h&gt;</a></u></td></tr>
+<tr><th id="48">48</th><td><u>#include <a href="../../include/linux/nfs_fs.h.html">&lt;linux/nfs_fs.h&gt;</a></u></td></tr>
+<tr><th id="49">49</th><td><u>#include <a href="nfs4_fs.h.html">"nfs4_fs.h"</a></u></td></tr>
+<tr><th id="50">50</th><td><u>#include <a href="delegation.h.html">"delegation.h"</a></u></td></tr>
+<tr><th id="51">51</th><td></td></tr>
+<tr><th id="52">52</th><td><u>#define <dfn class="macro" id="_M/NFSDBG_FACILITY" data-ref="_M/NFSDBG_FACILITY">NFSDBG_FACILITY</dfn>		NFSDBG_STATE</u></td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td><em>void</em></td></tr>
+<tr><th id="55">55</th><td><dfn class="decl def fn" id="nfs4_renew_state" title='nfs4_renew_state' data-ref="nfs4_renew_state" data-ref-filename="nfs4_renew_state">nfs4_renew_state</dfn>(<b>struct</b> <a class="type" href="../../include/linux/workqueue.h.html#work_struct" title='work_struct' data-ref="work_struct" data-ref-filename="work_struct">work_struct</a> *<dfn class="local col1 decl" id="1work" title='work' data-type='struct work_struct *' data-ref="1work" data-ref-filename="1work">work</dfn>)</td></tr>
+<tr><th id="56">56</th><td>{</td></tr>
+<tr><th id="57">57</th><td>	<em>const</em> <b>struct</b> <a class="type" href="nfs4_fs.h.html#nfs4_state_maintenance_ops" title='nfs4_state_maintenance_ops' data-ref="nfs4_state_maintenance_ops" data-ref-filename="nfs4_state_maintenance_ops">nfs4_state_maintenance_ops</a> *<dfn class="local col2 decl" id="2ops" title='ops' data-type='const struct nfs4_state_maintenance_ops *' data-ref="2ops" data-ref-filename="2ops">ops</dfn>;</td></tr>
+<tr><th id="58">58</th><td>	<b>struct</b> <a class="type" href="../../include/linux/nfs_fs_sb.h.html#nfs_client" title='nfs_client' data-ref="nfs_client" data-ref-filename="nfs_client">nfs_client</a> *<dfn class="local col3 decl" id="3clp" title='clp' data-type='struct nfs_client *' data-ref="3clp" data-ref-filename="3clp">clp</dfn> =</td></tr>
+<tr><th id="59">59</th><td>		<a class="macro" href="../../include/linux/kernel.h.html#971" title="({ void *__mptr = (void *)(work); do { extern void __compiletime_assert_59(void) ; if (!(!(!__builtin_types_compatible_p(typeof(*(work)), typeof(((struct nfs_client *)0)-&gt;cl_renewd.work)) &amp;&amp; !__builtin_types_compatible_p(typeof(*(work)), typeof(void))))) __compiletime_assert_59(); } while (0); ((struct nfs_client *)(__mptr - __builtin_offsetof(struct nfs_client, cl_renewd.work))); })" data-ref="_M/container_of">container_of</a>(<a class="local col1 ref" href="#1work" title='work' data-ref="1work" data-ref-filename="1work">work</a>, <b>struct</b> <a class="type" href="../../include/linux/nfs_fs_sb.h.html#nfs_client" title='nfs_client' data-ref="nfs_client" data-ref-filename="nfs_client">nfs_client</a>, <a class="ref field" href="../../include/linux/nfs_fs_sb.h.html#nfs_client::cl_renewd" title='nfs_client::cl_renewd' data-ref="nfs_client::cl_renewd" data-ref-filename="nfs_client..cl_renewd">cl_renewd</a>.<a class="ref field" href="../../include/linux/workqueue.h.html#delayed_work::work" title='delayed_work::work' data-ref="delayed_work::work" data-ref-filename="delayed_work..work">work</a>);</td></tr>
+<tr><th id="60">60</th><td>	<em>const</em> <b>struct</b> <a class="type" href="../../include/linux/cred.h.html#cred" title='cred' data-ref="cred" data-ref-filename="cred">cred</a> *<dfn class="local col4 decl" id="4cred" title='cred' data-type='const struct cred *' data-ref="4cred" data-ref-filename="4cred">cred</dfn>;</td></tr>
+<tr><th id="61">61</th><td>	<em>long</em> <dfn class="local col5 decl" id="5lease" title='lease' data-type='long' data-ref="5lease" data-ref-filename="5lease">lease</dfn>;</td></tr>
+<tr><th id="62">62</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col6 decl" id="6last" title='last' data-type='unsigned long' data-ref="6last" data-ref-filename="6last">last</dfn>, <dfn class="local col7 decl" id="7now" title='now' data-type='unsigned long' data-ref="7now" data-ref-filename="7now">now</dfn>;</td></tr>
+<tr><th id="63">63</th><td>	<em>unsigned</em> <dfn class="local col8 decl" id="8renew_flags" title='renew_flags' data-type='unsigned int' data-ref="8renew_flags" data-ref-filename="8renew_flags">renew_flags</dfn> = <var>0</var>;</td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td>	<a class="local col2 ref" href="#2ops" title='ops' data-ref="2ops" data-ref-filename="2ops">ops</a> = <a class="local col3 ref" href="#3clp" title='clp' data-ref="3clp" data-ref-filename="3clp">clp</a>-&gt;<a class="ref field" href="../../include/linux/nfs_fs_sb.h.html#nfs_client::cl_mvops" title='nfs_client::cl_mvops' data-ref="nfs_client::cl_mvops" data-ref-filename="nfs_client..cl_mvops">cl_mvops</a>-&gt;<a class="ref field" href="nfs4_fs.h.html#nfs4_minor_version_ops::state_renewal_ops" title='nfs4_minor_version_ops::state_renewal_ops' data-ref="nfs4_minor_version_ops::state_renewal_ops" data-ref-filename="nfs4_minor_version_ops..state_renewal_ops">state_renewal_ops</a>;</td></tr>
+<tr><th id="66">66</th><td>	<a class="macro" href="../../include/linux/sunrpc/debug.h.html#24" title="do {} while (0)" data-ref="_M/dprintk">dprintk</a>(<q>"%s: start\n"</q>, <b>__func__</b>);</td></tr>
+<tr><th id="67">67</th><td></td></tr>
+<tr><th id="68">68</th><td>	<b>if</b> (<a class="ref fn" href="../../include/asm-generic/bitops-instrumented.h.html#test_bit" title='test_bit' data-ref="test_bit" data-ref-filename="test_bit">test_bit</a>(<a class="macro" href="../../include/linux/nfs_fs_sb.h.html#39" title="4" data-ref="_M/NFS_CS_STOP_RENEW">NFS_CS_STOP_RENEW</a>, &amp;<a class="local col3 ref" href="#3clp" title='clp' data-ref="3clp" data-ref-filename="3clp">clp</a>-&gt;<a class="ref field" href="../../include/linux/nfs_fs_sb.h.html#nfs_client::cl_res_state" title='nfs_client::cl_res_state' data-ref="nfs_client::cl_res_state" data-ref-filename="nfs_client..cl_res_state">cl_res_state</a>))</td></tr>
+<tr><th id="69">69</th><td>		<b>goto</b> <a class="lbl" href="#9out" data-ref="9out" data-ref-filename="9out">out</a>;</td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td>	<a class="local col5 ref" href="#5lease" title='lease' data-ref="5lease" data-ref-filename="5lease">lease</a> = <a class="local col3 ref" href="#3clp" title='clp' data-ref="3clp" data-ref-filename="3clp">clp</a>-&gt;<a class="ref field" href="../../include/linux/nfs_fs_sb.h.html#nfs_client::cl_lease_time" title='nfs_client::cl_lease_time' data-ref="nfs_client::cl_lease_time" data-ref-filename="nfs_client..cl_lease_time">cl_lease_time</a>;</td></tr>
+<tr><th id="72">72</th><td>	<a class="local col6 ref" href="#6last" title='last' data-ref="6last" data-ref-filename="6last">last</a> = <a class="local col3 ref" href="#3clp" title='clp' data-ref="3clp" data-ref-filename="3clp">clp</a>-&gt;<a class="ref field" href="../../include/linux/nfs_fs_sb.h.html#nfs_client::cl_last_renewal" title='nfs_client::cl_last_renewal' data-ref="nfs_client::cl_last_renewal" data-ref-filename="nfs_client..cl_last_renewal">cl_last_renewal</a>;</td></tr>
+<tr><th id="73">73</th><td>	<a class="local col7 ref" href="#7now" title='now' data-ref="7now" data-ref-filename="7now">now</a> = <a class="ref" href="../../include/linux/jiffies.h.html#jiffies" title='jiffies' data-ref="jiffies" data-ref-filename="jiffies">jiffies</a>;</td></tr>
+<tr><th id="74">74</th><td>	<i>/* Are we close to a lease timeout? */</i></td></tr>
+<tr><th id="75">75</th><td>	<b>if</b> (<a class="macro" href="../../include/linux/jiffies.h.html#105" title="(({ unsigned long __dummy; typeof(now) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }) &amp;&amp; ({ unsigned long __dummy; typeof(last + lease/3) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }) &amp;&amp; ((long)((last + lease/3) - (now)) &lt; 0))" data-ref="_M/time_after">time_after</a>(<a class="local col7 ref" href="#7now" title='now' data-ref="7now" data-ref-filename="7now">now</a>, <a class="local col6 ref" href="#6last" title='last' data-ref="6last" data-ref-filename="6last">last</a> + <a class="local col5 ref" href="#5lease" title='lease' data-ref="5lease" data-ref-filename="5lease">lease</a>/<var>3</var>))</td></tr>
+<tr><th id="76">76</th><td>		<a class="local col8 ref" href="#8renew_flags" title='renew_flags' data-ref="8renew_flags" data-ref-filename="8renew_flags">renew_flags</a> |= <a class="macro" href="nfs4_fs.h.html#48" title="0x01" data-ref="_M/NFS4_RENEW_TIMEOUT">NFS4_RENEW_TIMEOUT</a>;</td></tr>
+<tr><th id="77">77</th><td>	<b>if</b> (<a class="ref fn" href="delegation.h.html#nfs_delegations_present" title='nfs_delegations_present' data-ref="nfs_delegations_present" data-ref-filename="nfs_delegations_present">nfs_delegations_present</a>(<a class="local col3 ref" href="#3clp" title='clp' data-ref="3clp" data-ref-filename="3clp">clp</a>))</td></tr>
+<tr><th id="78">78</th><td>		<a class="local col8 ref" href="#8renew_flags" title='renew_flags' data-ref="8renew_flags" data-ref-filename="8renew_flags">renew_flags</a> |= <a class="macro" href="nfs4_fs.h.html#49" title="0x02" data-ref="_M/NFS4_RENEW_DELEGATION_CB">NFS4_RENEW_DELEGATION_CB</a>;</td></tr>
+<tr><th id="79">79</th><td></td></tr>
+<tr><th id="80">80</th><td>	<b>if</b> (<a class="local col8 ref" href="#8renew_flags" title='renew_flags' data-ref="8renew_flags" data-ref-filename="8renew_flags">renew_flags</a> != <var>0</var>) {</td></tr>
+<tr><th id="81">81</th><td>		<a class="local col4 ref" href="#4cred" title='cred' data-ref="4cred" data-ref-filename="4cred">cred</a> = <a class="local col2 ref" href="#2ops" title='ops' data-ref="2ops" data-ref-filename="2ops">ops</a>-&gt;<a class="ref field" href="nfs4_fs.h.html#nfs4_state_maintenance_ops::get_state_renewal_cred" title='nfs4_state_maintenance_ops::get_state_renewal_cred' data-ref="nfs4_state_maintenance_ops::get_state_renewal_cred" data-ref-filename="nfs4_state_maintenance_ops..get_state_renewal_cred">get_state_renewal_cred</a>(<a class="local col3 ref" href="#3clp" title='clp' data-ref="3clp" data-ref-filename="3clp">clp</a>);</td></tr>
+<tr><th id="82">82</th><td>		<b>if</b> (<a class="local col4 ref" href="#4cred" title='cred' data-ref="4cred" data-ref-filename="4cred">cred</a> == <a class="macro" href="../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>) {</td></tr>
+<tr><th id="83">83</th><td>			<b>if</b> (!(<a class="local col8 ref" href="#8renew_flags" title='renew_flags' data-ref="8renew_flags" data-ref-filename="8renew_flags">renew_flags</a> &amp; <a class="macro" href="nfs4_fs.h.html#49" title="0x02" data-ref="_M/NFS4_RENEW_DELEGATION_CB">NFS4_RENEW_DELEGATION_CB</a>)) {</td></tr>
+<tr><th id="84">84</th><td>				<a class="ref fn" href="../../include/asm-generic/bitops-instrumented.h.html#set_bit" title='set_bit' data-ref="set_bit" data-ref-filename="set_bit">set_bit</a>(<a class="enum" href="nfs4_fs.h.html#NFS4CLNT_LEASE_EXPIRED" title='NFS4CLNT_LEASE_EXPIRED' data-ref="NFS4CLNT_LEASE_EXPIRED" data-ref-filename="NFS4CLNT_LEASE_EXPIRED">NFS4CLNT_LEASE_EXPIRED</a>, &amp;<a class="local col3 ref" href="#3clp" title='clp' data-ref="3clp" data-ref-filename="3clp">clp</a>-&gt;<a class="ref field" href="../../include/linux/nfs_fs_sb.h.html#nfs_client::cl_state" title='nfs_client::cl_state' data-ref="nfs_client::cl_state" data-ref-filename="nfs_client..cl_state">cl_state</a>);</td></tr>
+<tr><th id="85">85</th><td>				<b>goto</b> <a class="lbl" href="#9out" data-ref="9out" data-ref-filename="9out">out</a>;</td></tr>
+<tr><th id="86">86</th><td>			}</td></tr>
+<tr><th id="87">87</th><td>			<a class="ref fn" href="delegation.h.html#nfs_expire_all_delegations" title='nfs_expire_all_delegations' data-ref="nfs_expire_all_delegations" data-ref-filename="nfs_expire_all_delegations">nfs_expire_all_delegations</a>(<a class="local col3 ref" href="#3clp" title='clp' data-ref="3clp" data-ref-filename="3clp">clp</a>);</td></tr>
+<tr><th id="88">88</th><td>		} <b>else</b> {</td></tr>
+<tr><th id="89">89</th><td>			<em>int</em> <dfn class="local col0 decl" id="10ret" title='ret' data-type='int' data-ref="10ret" data-ref-filename="10ret">ret</dfn>;</td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td>			<i>/* Queue an asynchronous RENEW. */</i></td></tr>
+<tr><th id="92">92</th><td>			<a class="local col0 ref" href="#10ret" title='ret' data-ref="10ret" data-ref-filename="10ret">ret</a> = <a class="local col2 ref" href="#2ops" title='ops' data-ref="2ops" data-ref-filename="2ops">ops</a>-&gt;<a class="ref field" href="nfs4_fs.h.html#nfs4_state_maintenance_ops::sched_state_renewal" title='nfs4_state_maintenance_ops::sched_state_renewal' data-ref="nfs4_state_maintenance_ops::sched_state_renewal" data-ref-filename="nfs4_state_maintenance_ops..sched_state_renewal">sched_state_renewal</a>(<a class="local col3 ref" href="#3clp" title='clp' data-ref="3clp" data-ref-filename="3clp">clp</a>, <a class="local col4 ref" href="#4cred" title='cred' data-ref="4cred" data-ref-filename="4cred">cred</a>, <a class="local col8 ref" href="#8renew_flags" title='renew_flags' data-ref="8renew_flags" data-ref-filename="8renew_flags">renew_flags</a>);</td></tr>
+<tr><th id="93">93</th><td>			<a class="ref fn" href="../../include/linux/cred.h.html#put_cred" title='put_cred' data-ref="put_cred" data-ref-filename="put_cred">put_cred</a>(<a class="local col4 ref" href="#4cred" title='cred' data-ref="4cred" data-ref-filename="4cred">cred</a>);</td></tr>
+<tr><th id="94">94</th><td>			<b>switch</b> (<a class="local col0 ref" href="#10ret" title='ret' data-ref="10ret" data-ref-filename="10ret">ret</a>) {</td></tr>
+<tr><th id="95">95</th><td>			<b>default</b>:</td></tr>
+<tr><th id="96">96</th><td>				<b>goto</b> <a class="lbl" href="#11out_exp" data-ref="11out_exp" data-ref-filename="11out_exp">out_exp</a>;</td></tr>
+<tr><th id="97">97</th><td>			<b>case</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#15" title="11" data-ref="_M/EAGAIN">EAGAIN</a>:</td></tr>
+<tr><th id="98">98</th><td>			<b>case</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#16" title="12" data-ref="_M/ENOMEM">ENOMEM</a>:</td></tr>
+<tr><th id="99">99</th><td>				<b>break</b>;</td></tr>
+<tr><th id="100">100</th><td>			}</td></tr>
+<tr><th id="101">101</th><td>		}</td></tr>
+<tr><th id="102">102</th><td>	} <b>else</b> {</td></tr>
+<tr><th id="103">103</th><td>		<a class="macro" href="../../include/linux/sunrpc/debug.h.html#24" title="do {} while (0)" data-ref="_M/dprintk">dprintk</a>(<q>"%s: failed to call renewd. Reason: lease not expired \n"</q>,</td></tr>
+<tr><th id="104">104</th><td>				<b>__func__</b>);</td></tr>
+<tr><th id="105">105</th><td>	}</td></tr>
+<tr><th id="106">106</th><td>	<a class="ref fn" href="#nfs4_schedule_state_renewal" title='nfs4_schedule_state_renewal' data-ref="nfs4_schedule_state_renewal" data-ref-filename="nfs4_schedule_state_renewal">nfs4_schedule_state_renewal</a>(<a class="local col3 ref" href="#3clp" title='clp' data-ref="3clp" data-ref-filename="3clp">clp</a>);</td></tr>
+<tr><th id="107">107</th><td><dfn class="lbl" id="11out_exp" data-ref="11out_exp" data-ref-filename="11out_exp">out_exp</dfn>:</td></tr>
+<tr><th id="108">108</th><td>	<a class="ref fn" href="delegation.h.html#nfs_expire_unreferenced_delegations" title='nfs_expire_unreferenced_delegations' data-ref="nfs_expire_unreferenced_delegations" data-ref-filename="nfs_expire_unreferenced_delegations">nfs_expire_unreferenced_delegations</a>(<a class="local col3 ref" href="#3clp" title='clp' data-ref="3clp" data-ref-filename="3clp">clp</a>);</td></tr>
+<tr><th id="109">109</th><td><dfn class="lbl" id="9out" data-ref="9out" data-ref-filename="9out">out</dfn>:</td></tr>
+<tr><th id="110">110</th><td>	<a class="macro" href="../../include/linux/sunrpc/debug.h.html#24" title="do {} while (0)" data-ref="_M/dprintk">dprintk</a>(<q>"%s: done\n"</q>, <b>__func__</b>);</td></tr>
+<tr><th id="111">111</th><td>}</td></tr>
+<tr><th id="112">112</th><td></td></tr>
+<tr><th id="113">113</th><td><em>void</em></td></tr>
+<tr><th id="114">114</th><td><dfn class="decl def fn" id="nfs4_schedule_state_renewal" title='nfs4_schedule_state_renewal' data-ref="nfs4_schedule_state_renewal" data-ref-filename="nfs4_schedule_state_renewal">nfs4_schedule_state_renewal</dfn>(<b>struct</b> <a class="type" href="../../include/linux/nfs_fs_sb.h.html#nfs_client" title='nfs_client' data-ref="nfs_client" data-ref-filename="nfs_client">nfs_client</a> *<dfn class="local col2 decl" id="12clp" title='clp' data-type='struct nfs_client *' data-ref="12clp" data-ref-filename="12clp">clp</dfn>)</td></tr>
+<tr><th id="115">115</th><td>{</td></tr>
+<tr><th id="116">116</th><td>	<em>long</em> <dfn class="local col3 decl" id="13timeout" title='timeout' data-type='long' data-ref="13timeout" data-ref-filename="13timeout">timeout</dfn>;</td></tr>
+<tr><th id="117">117</th><td></td></tr>
+<tr><th id="118">118</th><td>	<a class="ref fn" href="../../include/linux/spinlock.h.html#spin_lock" title='spin_lock' data-ref="spin_lock" data-ref-filename="spin_lock">spin_lock</a>(&amp;<a class="local col2 ref" href="#12clp" title='clp' data-ref="12clp" data-ref-filename="12clp">clp</a>-&gt;<a class="ref field" href="../../include/linux/nfs_fs_sb.h.html#nfs_client::cl_lock" title='nfs_client::cl_lock' data-ref="nfs_client::cl_lock" data-ref-filename="nfs_client..cl_lock">cl_lock</a>);</td></tr>
+<tr><th id="119">119</th><td>	<a class="local col3 ref" href="#13timeout" title='timeout' data-ref="13timeout" data-ref-filename="13timeout">timeout</a> = (<var>2</var> * <a class="local col2 ref" href="#12clp" title='clp' data-ref="12clp" data-ref-filename="12clp">clp</a>-&gt;<a class="ref field" href="../../include/linux/nfs_fs_sb.h.html#nfs_client::cl_lease_time" title='nfs_client::cl_lease_time' data-ref="nfs_client::cl_lease_time" data-ref-filename="nfs_client..cl_lease_time">cl_lease_time</a>) / <var>3</var> + (<em>long</em>)<a class="local col2 ref" href="#12clp" title='clp' data-ref="12clp" data-ref-filename="12clp">clp</a>-&gt;<a class="ref field" href="../../include/linux/nfs_fs_sb.h.html#nfs_client::cl_last_renewal" title='nfs_client::cl_last_renewal' data-ref="nfs_client::cl_last_renewal" data-ref-filename="nfs_client..cl_last_renewal">cl_last_renewal</a></td></tr>
+<tr><th id="120">120</th><td>		- (<em>long</em>)<a class="ref" href="../../include/linux/jiffies.h.html#jiffies" title='jiffies' data-ref="jiffies" data-ref-filename="jiffies">jiffies</a>;</td></tr>
+<tr><th id="121">121</th><td>	<b>if</b> (<a class="local col3 ref" href="#13timeout" title='timeout' data-ref="13timeout" data-ref-filename="13timeout">timeout</a> &lt; <var>5</var> * <a class="macro" href="../../include/asm-generic/param.h.html#8" title="1000" data-ref="_M/HZ">HZ</a>)</td></tr>
+<tr><th id="122">122</th><td>		<a class="local col3 ref" href="#13timeout" title='timeout' data-ref="13timeout" data-ref-filename="13timeout">timeout</a> = <var>5</var> * <a class="macro" href="../../include/asm-generic/param.h.html#8" title="1000" data-ref="_M/HZ">HZ</a>;</td></tr>
+<tr><th id="123">123</th><td>	<a class="macro" href="../../include/linux/sunrpc/debug.h.html#24" title="do {} while (0)" data-ref="_M/dprintk">dprintk</a>(<q>"%s: requeueing work. Lease period = %ld\n"</q>,</td></tr>
+<tr><th id="124">124</th><td>			<b>__func__</b>, (timeout + HZ - <var>1</var>) / HZ);</td></tr>
+<tr><th id="125">125</th><td>	<a class="ref fn" href="../../include/linux/workqueue.h.html#mod_delayed_work" title='mod_delayed_work' data-ref="mod_delayed_work" data-ref-filename="mod_delayed_work">mod_delayed_work</a>(<a class="ref" href="../../include/linux/workqueue.h.html#system_wq" title='system_wq' data-ref="system_wq" data-ref-filename="system_wq">system_wq</a>, &amp;<a class="local col2 ref" href="#12clp" title='clp' data-ref="12clp" data-ref-filename="12clp">clp</a>-&gt;<a class="ref field" href="../../include/linux/nfs_fs_sb.h.html#nfs_client::cl_renewd" title='nfs_client::cl_renewd' data-ref="nfs_client::cl_renewd" data-ref-filename="nfs_client..cl_renewd">cl_renewd</a>, <a class="local col3 ref" href="#13timeout" title='timeout' data-ref="13timeout" data-ref-filename="13timeout">timeout</a>);</td></tr>
+<tr><th id="126">126</th><td>	<a class="ref fn" href="../../include/asm-generic/bitops-instrumented.h.html#set_bit" title='set_bit' data-ref="set_bit" data-ref-filename="set_bit">set_bit</a>(<a class="macro" href="../../include/linux/nfs_fs_sb.h.html#38" title="3" data-ref="_M/NFS_CS_RENEWD">NFS_CS_RENEWD</a>, &amp;<a class="local col2 ref" href="#12clp" title='clp' data-ref="12clp" data-ref-filename="12clp">clp</a>-&gt;<a class="ref field" href="../../include/linux/nfs_fs_sb.h.html#nfs_client::cl_res_state" title='nfs_client::cl_res_state' data-ref="nfs_client::cl_res_state" data-ref-filename="nfs_client..cl_res_state">cl_res_state</a>);</td></tr>
+<tr><th id="127">127</th><td>	<a class="ref fn" href="../../include/linux/spinlock.h.html#spin_unlock" title='spin_unlock' data-ref="spin_unlock" data-ref-filename="spin_unlock">spin_unlock</a>(&amp;<a class="local col2 ref" href="#12clp" title='clp' data-ref="12clp" data-ref-filename="12clp">clp</a>-&gt;<a class="ref field" href="../../include/linux/nfs_fs_sb.h.html#nfs_client::cl_lock" title='nfs_client::cl_lock' data-ref="nfs_client::cl_lock" data-ref-filename="nfs_client..cl_lock">cl_lock</a>);</td></tr>
+<tr><th id="128">128</th><td>}</td></tr>
+<tr><th id="129">129</th><td></td></tr>
+<tr><th id="130">130</th><td><em>void</em></td></tr>
+<tr><th id="131">131</th><td><dfn class="decl def fn" id="nfs4_kill_renewd" title='nfs4_kill_renewd' data-ref="nfs4_kill_renewd" data-ref-filename="nfs4_kill_renewd">nfs4_kill_renewd</dfn>(<b>struct</b> <a class="type" href="../../include/linux/nfs_fs_sb.h.html#nfs_client" title='nfs_client' data-ref="nfs_client" data-ref-filename="nfs_client">nfs_client</a> *<dfn class="local col4 decl" id="14clp" title='clp' data-type='struct nfs_client *' data-ref="14clp" data-ref-filename="14clp">clp</dfn>)</td></tr>
+<tr><th id="132">132</th><td>{</td></tr>
+<tr><th id="133">133</th><td>	<a class="ref fn" href="../../include/linux/workqueue.h.html#cancel_delayed_work_sync" title='cancel_delayed_work_sync' data-ref="cancel_delayed_work_sync" data-ref-filename="cancel_delayed_work_sync">cancel_delayed_work_sync</a>(&amp;<a class="local col4 ref" href="#14clp" title='clp' data-ref="14clp" data-ref-filename="14clp">clp</a>-&gt;<a class="ref field" href="../../include/linux/nfs_fs_sb.h.html#nfs_client::cl_renewd" title='nfs_client::cl_renewd' data-ref="nfs_client::cl_renewd" data-ref-filename="nfs_client..cl_renewd">cl_renewd</a>);</td></tr>
+<tr><th id="134">134</th><td>}</td></tr>
+<tr><th id="135">135</th><td></td></tr>
+<tr><th id="136">136</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="137">137</th><td><i class="doc"> * nfs4_set_lease_period - Sets the lease period on a nfs_client</i></td></tr>
+<tr><th id="138">138</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="139">139</th><td><i class="doc"> *<span class="command"> @clp</span>: pointer to nfs_client</i></td></tr>
+<tr><th id="140">140</th><td><i class="doc"> *<span class="command"> @lease</span>: new value for lease period</i></td></tr>
+<tr><th id="141">141</th><td><i class="doc"> *<span class="command"> @lastrenewed</span>: time at which lease was last renewed</i></td></tr>
+<tr><th id="142">142</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="143">143</th><td><em>void</em> <dfn class="decl def fn" id="nfs4_set_lease_period" title='nfs4_set_lease_period' data-ref="nfs4_set_lease_period" data-ref-filename="nfs4_set_lease_period">nfs4_set_lease_period</dfn>(<b>struct</b> <a class="type" href="../../include/linux/nfs_fs_sb.h.html#nfs_client" title='nfs_client' data-ref="nfs_client" data-ref-filename="nfs_client">nfs_client</a> *<dfn class="local col5 decl" id="15clp" title='clp' data-type='struct nfs_client *' data-ref="15clp" data-ref-filename="15clp">clp</dfn>,</td></tr>
+<tr><th id="144">144</th><td>		<em>unsigned</em> <em>long</em> <dfn class="local col6 decl" id="16lease" title='lease' data-type='unsigned long' data-ref="16lease" data-ref-filename="16lease">lease</dfn>,</td></tr>
+<tr><th id="145">145</th><td>		<em>unsigned</em> <em>long</em> <dfn class="local col7 decl" id="17lastrenewed" title='lastrenewed' data-type='unsigned long' data-ref="17lastrenewed" data-ref-filename="17lastrenewed">lastrenewed</dfn>)</td></tr>
+<tr><th id="146">146</th><td>{</td></tr>
+<tr><th id="147">147</th><td>	<a class="ref fn" href="../../include/linux/spinlock.h.html#spin_lock" title='spin_lock' data-ref="spin_lock" data-ref-filename="spin_lock">spin_lock</a>(&amp;<a class="local col5 ref" href="#15clp" title='clp' data-ref="15clp" data-ref-filename="15clp">clp</a>-&gt;<a class="ref field" href="../../include/linux/nfs_fs_sb.h.html#nfs_client::cl_lock" title='nfs_client::cl_lock' data-ref="nfs_client::cl_lock" data-ref-filename="nfs_client..cl_lock">cl_lock</a>);</td></tr>
+<tr><th id="148">148</th><td>	<a class="local col5 ref" href="#15clp" title='clp' data-ref="15clp" data-ref-filename="15clp">clp</a>-&gt;<a class="ref field" href="../../include/linux/nfs_fs_sb.h.html#nfs_client::cl_lease_time" title='nfs_client::cl_lease_time' data-ref="nfs_client::cl_lease_time" data-ref-filename="nfs_client..cl_lease_time">cl_lease_time</a> = <a class="local col6 ref" href="#16lease" title='lease' data-ref="16lease" data-ref-filename="16lease">lease</a>;</td></tr>
+<tr><th id="149">149</th><td>	<a class="local col5 ref" href="#15clp" title='clp' data-ref="15clp" data-ref-filename="15clp">clp</a>-&gt;<a class="ref field" href="../../include/linux/nfs_fs_sb.h.html#nfs_client::cl_last_renewal" title='nfs_client::cl_last_renewal' data-ref="nfs_client::cl_last_renewal" data-ref-filename="nfs_client..cl_last_renewal">cl_last_renewal</a> = <a class="local col7 ref" href="#17lastrenewed" title='lastrenewed' data-ref="17lastrenewed" data-ref-filename="17lastrenewed">lastrenewed</a>;</td></tr>
+<tr><th id="150">150</th><td>	<a class="ref fn" href="../../include/linux/spinlock.h.html#spin_unlock" title='spin_unlock' data-ref="spin_unlock" data-ref-filename="spin_unlock">spin_unlock</a>(&amp;<a class="local col5 ref" href="#15clp" title='clp' data-ref="15clp" data-ref-filename="15clp">clp</a>-&gt;<a class="ref field" href="../../include/linux/nfs_fs_sb.h.html#nfs_client::cl_lock" title='nfs_client::cl_lock' data-ref="nfs_client::cl_lock" data-ref-filename="nfs_client..cl_lock">cl_lock</a>);</td></tr>
+<tr><th id="151">151</th><td></td></tr>
+<tr><th id="152">152</th><td>	<i>/* Cap maximum reconnect timeout at 1/2 lease period */</i></td></tr>
+<tr><th id="153">153</th><td>	<a class="ref fn" href="../../include/linux/sunrpc/clnt.h.html#rpc_set_connect_timeout" title='rpc_set_connect_timeout' data-ref="rpc_set_connect_timeout" data-ref-filename="rpc_set_connect_timeout">rpc_set_connect_timeout</a>(<a class="local col5 ref" href="#15clp" title='clp' data-ref="15clp" data-ref-filename="15clp">clp</a>-&gt;<a class="ref field" href="../../include/linux/nfs_fs_sb.h.html#nfs_client::cl_rpcclient" title='nfs_client::cl_rpcclient' data-ref="nfs_client::cl_rpcclient" data-ref-filename="nfs_client..cl_rpcclient">cl_rpcclient</a>, <a class="local col6 ref" href="#16lease" title='lease' data-ref="16lease" data-ref-filename="16lease">lease</a>, <a class="local col6 ref" href="#16lease" title='lease' data-ref="16lease" data-ref-filename="16lease">lease</a> &gt;&gt; <var>1</var>);</td></tr>
+<tr><th id="154">154</th><td>}</td></tr>
+<tr><th id="155">155</th><td></td></tr>
+<tr><th id="156">156</th><td><i>/*</i></td></tr>
+<tr><th id="157">157</th><td><i> * Local variables:</i></td></tr>
+<tr><th id="158">158</th><td><i> *   c-basic-offset: 8</i></td></tr>
+<tr><th id="159">159</th><td><i> * End:</i></td></tr>
+<tr><th id="160">160</th><td><i> */</i></td></tr>
+<tr><th id="161">161</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

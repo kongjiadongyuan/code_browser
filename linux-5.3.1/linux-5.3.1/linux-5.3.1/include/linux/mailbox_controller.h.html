@@ -1,0 +1,158 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>mailbox_controller.h source code [linux-5.3.1/include/linux/mailbox_controller.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="mbox_chan,mbox_chan_ops,mbox_controller "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/include/linux/mailbox_controller.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>include</a>/<a href='./'>linux</a>/<a href='mailbox_controller.h.html'>mailbox_controller.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0-only */</i></td></tr>
+<tr><th id="2">2</th><td></td></tr>
+<tr><th id="3">3</th><td><u>#<span data-ppcond="3">ifndef</span> <span class="macro" data-ref="_M/__MAILBOX_CONTROLLER_H">__MAILBOX_CONTROLLER_H</span></u></td></tr>
+<tr><th id="4">4</th><td><u>#define <dfn class="macro" id="_M/__MAILBOX_CONTROLLER_H" data-ref="_M/__MAILBOX_CONTROLLER_H">__MAILBOX_CONTROLLER_H</dfn></u></td></tr>
+<tr><th id="5">5</th><td></td></tr>
+<tr><th id="6">6</th><td><u>#include <a href="of.h.html">&lt;linux/of.h&gt;</a></u></td></tr>
+<tr><th id="7">7</th><td><u>#include <a href="types.h.html">&lt;linux/types.h&gt;</a></u></td></tr>
+<tr><th id="8">8</th><td><u>#include <a href="hrtimer.h.html">&lt;linux/hrtimer.h&gt;</a></u></td></tr>
+<tr><th id="9">9</th><td><u>#include <a href="device.h.html">&lt;linux/device.h&gt;</a></u></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="completion.h.html">&lt;linux/completion.h&gt;</a></u></td></tr>
+<tr><th id="11">11</th><td></td></tr>
+<tr><th id="12">12</th><td><b>struct</b> <a class="type" href="#mbox_chan" title='mbox_chan' data-ref="mbox_chan" data-ref-filename="mbox_chan">mbox_chan</a>;</td></tr>
+<tr><th id="13">13</th><td></td></tr>
+<tr><th id="14">14</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="15">15</th><td><i class="doc"> * struct mbox_chan_ops - methods to control mailbox channels</i></td></tr>
+<tr><th id="16">16</th><td><i class="doc"> *<span class="command"> @send</span>_data:	The API asks the MBOX controller driver, in atomic</i></td></tr>
+<tr><th id="17">17</th><td><i class="doc"> *		context try to transmit a message on the bus. Returns 0 if</i></td></tr>
+<tr><th id="18">18</th><td><i class="doc"> *		data is accepted for transmission, -EBUSY while rejecting</i></td></tr>
+<tr><th id="19">19</th><td><i class="doc"> *		if the remote hasn't yet read the last data sent. Actual</i></td></tr>
+<tr><th id="20">20</th><td><i class="doc"> *		transmission of data is reported by the controller via</i></td></tr>
+<tr><th id="21">21</th><td><i class="doc"> *		mbox_chan_txdone (if it has some TX ACK irq). It must not</i></td></tr>
+<tr><th id="22">22</th><td><i class="doc"> *		sleep.</i></td></tr>
+<tr><th id="23">23</th><td><i class="doc"> *<span class="command"> @flush</span>:	Called when a client requests transmissions to be blocking but</i></td></tr>
+<tr><th id="24">24</th><td><i class="doc"> *		the context doesn't allow sleeping. Typically the controller</i></td></tr>
+<tr><th id="25">25</th><td><i class="doc"> *		will implement a busy loop waiting for the data to flush out.</i></td></tr>
+<tr><th id="26">26</th><td><i class="doc"> *<span class="command"> @startup</span>:	Called when a client requests the chan. The controller</i></td></tr>
+<tr><th id="27">27</th><td><i class="doc"> *		could ask clients for additional parameters of communication</i></td></tr>
+<tr><th id="28">28</th><td><i class="doc"> *		to be provided via client's chan_data. This call may</i></td></tr>
+<tr><th id="29">29</th><td><i class="doc"> *		block. After this call the Controller must forward any</i></td></tr>
+<tr><th id="30">30</th><td><i class="doc"> *		data received on the chan by calling mbox_chan_received_data.</i></td></tr>
+<tr><th id="31">31</th><td><i class="doc"> *		The controller may do stuff that need to sleep.</i></td></tr>
+<tr><th id="32">32</th><td><i class="doc"> *<span class="command"> @shutdown</span>:	Called when a client relinquishes control of a chan.</i></td></tr>
+<tr><th id="33">33</th><td><i class="doc"> *		This call may block too. The controller must not forward</i></td></tr>
+<tr><th id="34">34</th><td><i class="doc"> *		any received data anymore.</i></td></tr>
+<tr><th id="35">35</th><td><i class="doc"> *		The controller may do stuff that need to sleep.</i></td></tr>
+<tr><th id="36">36</th><td><i class="doc"> *<span class="command"> @last</span>_tx_done: If the controller sets 'txdone_poll', the API calls</i></td></tr>
+<tr><th id="37">37</th><td><i class="doc"> *		  this to poll status of last TX. The controller must</i></td></tr>
+<tr><th id="38">38</th><td><i class="doc"> *		  give priority to IRQ method over polling and never</i></td></tr>
+<tr><th id="39">39</th><td><i class="doc"> *		  set both txdone_poll and txdone_irq. Only in polling</i></td></tr>
+<tr><th id="40">40</th><td><i class="doc"> *		  mode 'send_data' is expected to return -EBUSY.</i></td></tr>
+<tr><th id="41">41</th><td><i class="doc"> *		  The controller may do stuff that need to sleep/block.</i></td></tr>
+<tr><th id="42">42</th><td><i class="doc"> *		  Used only if txdone_poll:=true &amp;&amp; txdone_irq:=false</i></td></tr>
+<tr><th id="43">43</th><td><i class="doc"> *<span class="command"> @peek</span>_data: Atomic check for any received data. Return true if controller</i></td></tr>
+<tr><th id="44">44</th><td><i class="doc"> *		  has some data to push to the client. False otherwise.</i></td></tr>
+<tr><th id="45">45</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="46">46</th><td><b>struct</b> <dfn class="type def" id="mbox_chan_ops" title='mbox_chan_ops' data-ref="mbox_chan_ops" data-ref-filename="mbox_chan_ops">mbox_chan_ops</dfn> {</td></tr>
+<tr><th id="47">47</th><td>	<em>int</em> (*<dfn class="decl field" id="mbox_chan_ops::send_data" title='mbox_chan_ops::send_data' data-ref="mbox_chan_ops::send_data" data-ref-filename="mbox_chan_ops..send_data">send_data</dfn>)(<b>struct</b> <a class="type" href="#mbox_chan" title='mbox_chan' data-ref="mbox_chan" data-ref-filename="mbox_chan">mbox_chan</a> *<dfn class="local col1 decl" id="1chan" title='chan' data-type='struct mbox_chan *' data-ref="1chan" data-ref-filename="1chan">chan</dfn>, <em>void</em> *<dfn class="local col2 decl" id="2data" title='data' data-type='void *' data-ref="2data" data-ref-filename="2data">data</dfn>);</td></tr>
+<tr><th id="48">48</th><td>	<em>int</em> (*<dfn class="decl field" id="mbox_chan_ops::flush" title='mbox_chan_ops::flush' data-ref="mbox_chan_ops::flush" data-ref-filename="mbox_chan_ops..flush">flush</dfn>)(<b>struct</b> <a class="type" href="#mbox_chan" title='mbox_chan' data-ref="mbox_chan" data-ref-filename="mbox_chan">mbox_chan</a> *<dfn class="local col3 decl" id="3chan" title='chan' data-type='struct mbox_chan *' data-ref="3chan" data-ref-filename="3chan">chan</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col4 decl" id="4timeout" title='timeout' data-type='unsigned long' data-ref="4timeout" data-ref-filename="4timeout">timeout</dfn>);</td></tr>
+<tr><th id="49">49</th><td>	<em>int</em> (*<dfn class="decl field" id="mbox_chan_ops::startup" title='mbox_chan_ops::startup' data-ref="mbox_chan_ops::startup" data-ref-filename="mbox_chan_ops..startup">startup</dfn>)(<b>struct</b> <a class="type" href="#mbox_chan" title='mbox_chan' data-ref="mbox_chan" data-ref-filename="mbox_chan">mbox_chan</a> *<dfn class="local col5 decl" id="5chan" title='chan' data-type='struct mbox_chan *' data-ref="5chan" data-ref-filename="5chan">chan</dfn>);</td></tr>
+<tr><th id="50">50</th><td>	<em>void</em> (*<dfn class="decl field" id="mbox_chan_ops::shutdown" title='mbox_chan_ops::shutdown' data-ref="mbox_chan_ops::shutdown" data-ref-filename="mbox_chan_ops..shutdown">shutdown</dfn>)(<b>struct</b> <a class="type" href="#mbox_chan" title='mbox_chan' data-ref="mbox_chan" data-ref-filename="mbox_chan">mbox_chan</a> *<dfn class="local col6 decl" id="6chan" title='chan' data-type='struct mbox_chan *' data-ref="6chan" data-ref-filename="6chan">chan</dfn>);</td></tr>
+<tr><th id="51">51</th><td>	<a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> (*<dfn class="decl field" id="mbox_chan_ops::last_tx_done" title='mbox_chan_ops::last_tx_done' data-ref="mbox_chan_ops::last_tx_done" data-ref-filename="mbox_chan_ops..last_tx_done">last_tx_done</dfn>)(<b>struct</b> <a class="type" href="#mbox_chan" title='mbox_chan' data-ref="mbox_chan" data-ref-filename="mbox_chan">mbox_chan</a> *<dfn class="local col7 decl" id="7chan" title='chan' data-type='struct mbox_chan *' data-ref="7chan" data-ref-filename="7chan">chan</dfn>);</td></tr>
+<tr><th id="52">52</th><td>	<a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> (*<dfn class="decl field" id="mbox_chan_ops::peek_data" title='mbox_chan_ops::peek_data' data-ref="mbox_chan_ops::peek_data" data-ref-filename="mbox_chan_ops..peek_data">peek_data</dfn>)(<b>struct</b> <a class="type" href="#mbox_chan" title='mbox_chan' data-ref="mbox_chan" data-ref-filename="mbox_chan">mbox_chan</a> *<dfn class="local col8 decl" id="8chan" title='chan' data-type='struct mbox_chan *' data-ref="8chan" data-ref-filename="8chan">chan</dfn>);</td></tr>
+<tr><th id="53">53</th><td>};</td></tr>
+<tr><th id="54">54</th><td></td></tr>
+<tr><th id="55">55</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="56">56</th><td><i class="doc"> * struct mbox_controller - Controller of a class of communication channels</i></td></tr>
+<tr><th id="57">57</th><td><i class="doc"> * <span class="command">@dev</span>:<span class="verb">		Device backing this controller</span></i></td></tr>
+<tr><th id="58">58</th><td><i class="doc"> *<span class="command"> @ops</span>:		Operators that work on each communication chan</i></td></tr>
+<tr><th id="59">59</th><td><i class="doc"> *<span class="command"> @chans</span>:		Array of channels</i></td></tr>
+<tr><th id="60">60</th><td><i class="doc"> * <span class="command">@num_</span><span class="verb">chans:		Number of channels in the 'chans' array.</span></i></td></tr>
+<tr><th id="61">61</th><td><i class="doc"> *<span class="command"> @txdone</span>_irq:		Indicates if the controller can report to API when</i></td></tr>
+<tr><th id="62">62</th><td><i class="doc"> *			the last transmitted data was read by the remote.</i></td></tr>
+<tr><th id="63">63</th><td><i class="doc"> *			Eg, if it has some TX ACK irq.</i></td></tr>
+<tr><th id="64">64</th><td><i class="doc"> *<span class="command"> @txdone</span>_poll:	If the controller can read but not report the TX</i></td></tr>
+<tr><th id="65">65</th><td><i class="doc"> *			done. Ex, some register shows the TX status but</i></td></tr>
+<tr><th id="66">66</th><td><i class="doc"> *			no interrupt rises. Ignored if 'txdone_irq' is set.</i></td></tr>
+<tr><th id="67">67</th><td><i class="doc"> *<span class="command"> @txpoll</span>_period:	If 'txdone_poll' is in effect, the API polls for</i></td></tr>
+<tr><th id="68">68</th><td><i class="doc"> *			last TX's status after these many millisecs</i></td></tr>
+<tr><th id="69">69</th><td><i class="doc"> *<span class="command"> @of</span>_xlate:		Controller driver specific mapping of channel via DT</i></td></tr>
+<tr><th id="70">70</th><td><i class="doc"> *<span class="command"> @poll</span>_hrt:		API private. hrtimer used to poll for TXDONE on all</i></td></tr>
+<tr><th id="71">71</th><td><i class="doc"> *			channels.</i></td></tr>
+<tr><th id="72">72</th><td><i class="doc"> *<span class="command"> @node</span>:		API private. To hook into list of controllers.</i></td></tr>
+<tr><th id="73">73</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="74">74</th><td><b>struct</b> <dfn class="type def" id="mbox_controller" title='mbox_controller' data-ref="mbox_controller" data-ref-filename="mbox_controller">mbox_controller</dfn> {</td></tr>
+<tr><th id="75">75</th><td>	<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="decl field" id="mbox_controller::dev" title='mbox_controller::dev' data-ref="mbox_controller::dev" data-ref-filename="mbox_controller..dev">dev</dfn>;</td></tr>
+<tr><th id="76">76</th><td>	<em>const</em> <b>struct</b> <a class="type" href="#mbox_chan_ops" title='mbox_chan_ops' data-ref="mbox_chan_ops" data-ref-filename="mbox_chan_ops">mbox_chan_ops</a> *<dfn class="decl field" id="mbox_controller::ops" title='mbox_controller::ops' data-ref="mbox_controller::ops" data-ref-filename="mbox_controller..ops">ops</dfn>;</td></tr>
+<tr><th id="77">77</th><td>	<b>struct</b> <a class="type" href="#mbox_chan" title='mbox_chan' data-ref="mbox_chan" data-ref-filename="mbox_chan">mbox_chan</a> *<dfn class="decl field" id="mbox_controller::chans" title='mbox_controller::chans' data-ref="mbox_controller::chans" data-ref-filename="mbox_controller..chans">chans</dfn>;</td></tr>
+<tr><th id="78">78</th><td>	<em>int</em> <dfn class="decl field" id="mbox_controller::num_chans" title='mbox_controller::num_chans' data-ref="mbox_controller::num_chans" data-ref-filename="mbox_controller..num_chans">num_chans</dfn>;</td></tr>
+<tr><th id="79">79</th><td>	<a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="mbox_controller::txdone_irq" title='mbox_controller::txdone_irq' data-ref="mbox_controller::txdone_irq" data-ref-filename="mbox_controller..txdone_irq">txdone_irq</dfn>;</td></tr>
+<tr><th id="80">80</th><td>	<a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl field" id="mbox_controller::txdone_poll" title='mbox_controller::txdone_poll' data-ref="mbox_controller::txdone_poll" data-ref-filename="mbox_controller..txdone_poll">txdone_poll</dfn>;</td></tr>
+<tr><th id="81">81</th><td>	<em>unsigned</em> <dfn class="decl field" id="mbox_controller::txpoll_period" title='mbox_controller::txpoll_period' data-ref="mbox_controller::txpoll_period" data-ref-filename="mbox_controller..txpoll_period">txpoll_period</dfn>;</td></tr>
+<tr><th id="82">82</th><td>	<b>struct</b> <a class="type" href="#mbox_chan" title='mbox_chan' data-ref="mbox_chan" data-ref-filename="mbox_chan">mbox_chan</a> *(*<dfn class="decl field" id="mbox_controller::of_xlate" title='mbox_controller::of_xlate' data-ref="mbox_controller::of_xlate" data-ref-filename="mbox_controller..of_xlate">of_xlate</dfn>)(<b>struct</b> <a class="type" href="#mbox_controller" title='mbox_controller' data-ref="mbox_controller" data-ref-filename="mbox_controller">mbox_controller</a> *<dfn class="local col9 decl" id="9mbox" title='mbox' data-type='struct mbox_controller *' data-ref="9mbox" data-ref-filename="9mbox">mbox</dfn>,</td></tr>
+<tr><th id="83">83</th><td>				      <em>const</em> <b>struct</b> <a class="type" href="of.h.html#of_phandle_args" title='of_phandle_args' data-ref="of_phandle_args" data-ref-filename="of_phandle_args">of_phandle_args</a> *<dfn class="local col0 decl" id="10sp" title='sp' data-type='const struct of_phandle_args *' data-ref="10sp" data-ref-filename="10sp">sp</dfn>);</td></tr>
+<tr><th id="84">84</th><td>	<i>/* Internal to API */</i></td></tr>
+<tr><th id="85">85</th><td>	<b>struct</b> <a class="type" href="hrtimer.h.html#hrtimer" title='hrtimer' data-ref="hrtimer" data-ref-filename="hrtimer">hrtimer</a> <dfn class="decl field" id="mbox_controller::poll_hrt" title='mbox_controller::poll_hrt' data-ref="mbox_controller::poll_hrt" data-ref-filename="mbox_controller..poll_hrt">poll_hrt</dfn>;</td></tr>
+<tr><th id="86">86</th><td>	<b>struct</b> <a class="type" href="types.h.html#list_head" title='list_head' data-ref="list_head" data-ref-filename="list_head">list_head</a> <dfn class="decl field" id="mbox_controller::node" title='mbox_controller::node' data-ref="mbox_controller::node" data-ref-filename="mbox_controller..node">node</dfn>;</td></tr>
+<tr><th id="87">87</th><td>};</td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td><i>/*</i></td></tr>
+<tr><th id="90">90</th><td><i> * The length of circular buffer for queuing messages from a client.</i></td></tr>
+<tr><th id="91">91</th><td><i> * 'msg_count' tracks the number of buffered messages while 'msg_free'</i></td></tr>
+<tr><th id="92">92</th><td><i> * is the index where the next message would be buffered.</i></td></tr>
+<tr><th id="93">93</th><td><i> * We shouldn't need it too big because every transfer is interrupt</i></td></tr>
+<tr><th id="94">94</th><td><i> * triggered and if we have lots of data to transfer, the interrupt</i></td></tr>
+<tr><th id="95">95</th><td><i> * latencies are going to be the bottleneck, not the buffer length.</i></td></tr>
+<tr><th id="96">96</th><td><i> * Besides, mbox_send_message could be called from atomic context and</i></td></tr>
+<tr><th id="97">97</th><td><i> * the client could also queue another message from the notifier 'tx_done'</i></td></tr>
+<tr><th id="98">98</th><td><i> * of the last transfer done.</i></td></tr>
+<tr><th id="99">99</th><td><i> * REVISIT: If too many platforms see the "Try increasing MBOX_TX_QUEUE_LEN"</i></td></tr>
+<tr><th id="100">100</th><td><i> * print, it needs to be taken from config option or somesuch.</i></td></tr>
+<tr><th id="101">101</th><td><i> */</i></td></tr>
+<tr><th id="102">102</th><td><u>#define <dfn class="macro" id="_M/MBOX_TX_QUEUE_LEN" data-ref="_M/MBOX_TX_QUEUE_LEN">MBOX_TX_QUEUE_LEN</dfn>	20</u></td></tr>
+<tr><th id="103">103</th><td></td></tr>
+<tr><th id="104">104</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="105">105</th><td><i class="doc"> * struct mbox_chan - s/w representation of a communication chan</i></td></tr>
+<tr><th id="106">106</th><td><i class="doc"> *<span class="command"> @mbox</span>:		Pointer to the parent/provider of this channel</i></td></tr>
+<tr><th id="107">107</th><td><i class="doc"> *<span class="command"> @txdone</span>_method:	Way to detect TXDone chosen by the API</i></td></tr>
+<tr><th id="108">108</th><td><i class="doc"> *<span class="command"> @cl</span><span class="arg">:</span>			Pointer to the current owner of this channel</i></td></tr>
+<tr><th id="109">109</th><td><i class="doc"> *<span class="command"> @tx</span>_complete:	Transmission completion</i></td></tr>
+<tr><th id="110">110</th><td><i class="doc"> *<span class="command"> @active</span>_req:		Currently active request hook</i></td></tr>
+<tr><th id="111">111</th><td><i class="doc"> * <span class="command">@msg</span><span class="verb">_count:		No. of mssg currently queued</span></i></td></tr>
+<tr><th id="112">112</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> @msg_free:		Index of next available mssg slot</span></i></td></tr>
+<tr><th id="113">113</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> @msg_data:		Hook for data packet</span></i></td></tr>
+<tr><th id="114">114</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> @lock:		Serialise access to the channel</span></i></td></tr>
+<tr><th id="115">115</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> @con_priv:		Hook for controller driver to attach private data</span></i></td></tr>
+<tr><th id="116">116</th><td><i class="doc"><span class="verb"></span><span class="verb"> *</span>/</i><span class="verb"></span></td></tr>
+<tr><th id="117">117</th><td><span class="verb"></span><b>struct</b> <dfn class="type def" id="mbox_chan" title='mbox_chan' data-ref="mbox_chan" data-ref-filename="mbox_chan">mbox_chan</dfn> {</td></tr>
+<tr><th id="118">118</th><td>	<b>struct</b> <a class="type" href="#mbox_controller" title='mbox_controller' data-ref="mbox_controller" data-ref-filename="mbox_controller">mbox_controller</a> *<dfn class="decl field" id="mbox_chan::mbox" title='mbox_chan::mbox' data-ref="mbox_chan::mbox" data-ref-filename="mbox_chan..mbox">mbox</dfn>;</td></tr>
+<tr><th id="119">119</th><td>	<em>unsigned</em> <dfn class="decl field" id="mbox_chan::txdone_method" title='mbox_chan::txdone_method' data-ref="mbox_chan::txdone_method" data-ref-filename="mbox_chan..txdone_method">txdone_method</dfn>;</td></tr>
+<tr><th id="120">120</th><td>	<b>struct</b> <a class="type" href="mailbox_client.h.html#mbox_client" title='mbox_client' data-ref="mbox_client" data-ref-filename="mbox_client" id="mbox_client"><a class="type" href="mailbox_client.h.html#mbox_client" title='mbox_client' data-ref="mbox_client" data-ref-filename="mbox_client">mbox_client</a></a> *<dfn class="decl field" id="mbox_chan::cl" title='mbox_chan::cl' data-ref="mbox_chan::cl" data-ref-filename="mbox_chan..cl">cl</dfn>;</td></tr>
+<tr><th id="121">121</th><td>	<b>struct</b> <a class="type" href="completion.h.html#completion" title='completion' data-ref="completion" data-ref-filename="completion">completion</a> <dfn class="decl field" id="mbox_chan::tx_complete" title='mbox_chan::tx_complete' data-ref="mbox_chan::tx_complete" data-ref-filename="mbox_chan..tx_complete">tx_complete</dfn>;</td></tr>
+<tr><th id="122">122</th><td>	<em>void</em> *<dfn class="decl field" id="mbox_chan::active_req" title='mbox_chan::active_req' data-ref="mbox_chan::active_req" data-ref-filename="mbox_chan..active_req">active_req</dfn>;</td></tr>
+<tr><th id="123">123</th><td>	<em>unsigned</em> <dfn class="decl field" id="mbox_chan::msg_count" title='mbox_chan::msg_count' data-ref="mbox_chan::msg_count" data-ref-filename="mbox_chan..msg_count">msg_count</dfn>, <dfn class="decl field" id="mbox_chan::msg_free" title='mbox_chan::msg_free' data-ref="mbox_chan::msg_free" data-ref-filename="mbox_chan..msg_free">msg_free</dfn>;</td></tr>
+<tr><th id="124">124</th><td>	<em>void</em> *<dfn class="decl field" id="mbox_chan::msg_data" title='mbox_chan::msg_data' data-ref="mbox_chan::msg_data" data-ref-filename="mbox_chan..msg_data">msg_data</dfn>[<a class="macro" href="#102" title="20" data-ref="_M/MBOX_TX_QUEUE_LEN">MBOX_TX_QUEUE_LEN</a>];</td></tr>
+<tr><th id="125">125</th><td>	<a class="typedef" href="spinlock_types.h.html#spinlock_t" title='spinlock_t' data-type='struct spinlock' data-ref="spinlock_t" data-ref-filename="spinlock_t">spinlock_t</a> <dfn class="decl field" id="mbox_chan::lock" title='mbox_chan::lock' data-ref="mbox_chan::lock" data-ref-filename="mbox_chan..lock">lock</dfn>; <i>/* Serialise access to the channel */</i></td></tr>
+<tr><th id="126">126</th><td>	<em>void</em> *<dfn class="decl field" id="mbox_chan::con_priv" title='mbox_chan::con_priv' data-ref="mbox_chan::con_priv" data-ref-filename="mbox_chan..con_priv">con_priv</dfn>;</td></tr>
+<tr><th id="127">127</th><td>};</td></tr>
+<tr><th id="128">128</th><td></td></tr>
+<tr><th id="129">129</th><td><em>int</em> <dfn class="decl fn" id="mbox_controller_register" title='mbox_controller_register' data-ref="mbox_controller_register" data-ref-filename="mbox_controller_register">mbox_controller_register</dfn>(<b>struct</b> <a class="type" href="#mbox_controller" title='mbox_controller' data-ref="mbox_controller" data-ref-filename="mbox_controller">mbox_controller</a> *<dfn class="local col1 decl" id="11mbox" title='mbox' data-type='struct mbox_controller *' data-ref="11mbox" data-ref-filename="11mbox">mbox</dfn>); <i>/* can sleep */</i></td></tr>
+<tr><th id="130">130</th><td><em>void</em> <dfn class="decl fn" id="mbox_controller_unregister" title='mbox_controller_unregister' data-ref="mbox_controller_unregister" data-ref-filename="mbox_controller_unregister">mbox_controller_unregister</dfn>(<b>struct</b> <a class="type" href="#mbox_controller" title='mbox_controller' data-ref="mbox_controller" data-ref-filename="mbox_controller">mbox_controller</a> *<dfn class="local col2 decl" id="12mbox" title='mbox' data-type='struct mbox_controller *' data-ref="12mbox" data-ref-filename="12mbox">mbox</dfn>); <i>/* can sleep */</i></td></tr>
+<tr><th id="131">131</th><td><em>void</em> <dfn class="decl fn" id="mbox_chan_received_data" title='mbox_chan_received_data' data-ref="mbox_chan_received_data" data-ref-filename="mbox_chan_received_data">mbox_chan_received_data</dfn>(<b>struct</b> <a class="type" href="#mbox_chan" title='mbox_chan' data-ref="mbox_chan" data-ref-filename="mbox_chan">mbox_chan</a> *<dfn class="local col3 decl" id="13chan" title='chan' data-type='struct mbox_chan *' data-ref="13chan" data-ref-filename="13chan">chan</dfn>, <em>void</em> *<dfn class="local col4 decl" id="14data" title='data' data-type='void *' data-ref="14data" data-ref-filename="14data">data</dfn>); <i>/* atomic */</i></td></tr>
+<tr><th id="132">132</th><td><em>void</em> <dfn class="decl fn" id="mbox_chan_txdone" title='mbox_chan_txdone' data-ref="mbox_chan_txdone" data-ref-filename="mbox_chan_txdone">mbox_chan_txdone</dfn>(<b>struct</b> <a class="type" href="#mbox_chan" title='mbox_chan' data-ref="mbox_chan" data-ref-filename="mbox_chan">mbox_chan</a> *<dfn class="local col5 decl" id="15chan" title='chan' data-type='struct mbox_chan *' data-ref="15chan" data-ref-filename="15chan">chan</dfn>, <em>int</em> <dfn class="local col6 decl" id="16r" title='r' data-type='int' data-ref="16r" data-ref-filename="16r">r</dfn>); <i>/* atomic */</i></td></tr>
+<tr><th id="133">133</th><td></td></tr>
+<tr><th id="134">134</th><td><em>int</em> <dfn class="decl fn" id="devm_mbox_controller_register" title='devm_mbox_controller_register' data-ref="devm_mbox_controller_register" data-ref-filename="devm_mbox_controller_register">devm_mbox_controller_register</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col7 decl" id="17dev" title='dev' data-type='struct device *' data-ref="17dev" data-ref-filename="17dev">dev</dfn>,</td></tr>
+<tr><th id="135">135</th><td>				  <b>struct</b> <a class="type" href="#mbox_controller" title='mbox_controller' data-ref="mbox_controller" data-ref-filename="mbox_controller">mbox_controller</a> *<dfn class="local col8 decl" id="18mbox" title='mbox' data-type='struct mbox_controller *' data-ref="18mbox" data-ref-filename="18mbox">mbox</dfn>);</td></tr>
+<tr><th id="136">136</th><td><em>void</em> <dfn class="decl fn" id="devm_mbox_controller_unregister" title='devm_mbox_controller_unregister' data-ref="devm_mbox_controller_unregister" data-ref-filename="devm_mbox_controller_unregister">devm_mbox_controller_unregister</dfn>(<b>struct</b> <a class="type" href="device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col9 decl" id="19dev" title='dev' data-type='struct device *' data-ref="19dev" data-ref-filename="19dev">dev</dfn>,</td></tr>
+<tr><th id="137">137</th><td>				     <b>struct</b> <a class="type" href="#mbox_controller" title='mbox_controller' data-ref="mbox_controller" data-ref-filename="mbox_controller">mbox_controller</a> *<dfn class="local col0 decl" id="20mbox" title='mbox' data-type='struct mbox_controller *' data-ref="20mbox" data-ref-filename="20mbox">mbox</dfn>);</td></tr>
+<tr><th id="138">138</th><td></td></tr>
+<tr><th id="139">139</th><td><u>#<span data-ppcond="3">endif</span> /* __MAILBOX_CONTROLLER_H */</u></td></tr>
+<tr><th id="140">140</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../arch/x86/kernel/acpi/cppc_msr.c.html'>linux-5.3.1/arch/x86/kernel/acpi/cppc_msr.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

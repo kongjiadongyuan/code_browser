@@ -1,0 +1,911 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>update.c source code [linux-5.3.1/kernel/rcu/update.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/kernel/rcu/update.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>kernel</a>/<a href='./'>rcu</a>/<a href='update.c.html'>update.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0+</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * Read-Copy Update mechanism for mutual exclusion</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * Copyright IBM Corporation, 2001</i></td></tr>
+<tr><th id="6">6</th><td><i> *</i></td></tr>
+<tr><th id="7">7</th><td><i> * Authors: Dipankar Sarma &lt;dipankar@in.ibm.com&gt;</i></td></tr>
+<tr><th id="8">8</th><td><i> *	    Manfred Spraul &lt;manfred@colorfullife.com&gt;</i></td></tr>
+<tr><th id="9">9</th><td><i> *</i></td></tr>
+<tr><th id="10">10</th><td><i> * Based on the original work by Paul McKenney &lt;paulmck@linux.ibm.com&gt;</i></td></tr>
+<tr><th id="11">11</th><td><i> * and inputs from Rusty Russell, Andrea Arcangeli and Andi Kleen.</i></td></tr>
+<tr><th id="12">12</th><td><i> * Papers:</i></td></tr>
+<tr><th id="13">13</th><td><i> * <a href="http://www.rdrop.com/users/paulmck/paper/rclockpdcsproof.pdf">http://www.rdrop.com/users/paulmck/paper/rclockpdcsproof.pdf</a></i></td></tr>
+<tr><th id="14">14</th><td><i> * <a href="http://lse.sourceforge.net/locking/rclock_OLS.2001.05.01c.sc.pdf">http://lse.sourceforge.net/locking/rclock_OLS.2001.05.01c.sc.pdf</a> (OLS2001)</i></td></tr>
+<tr><th id="15">15</th><td><i> *</i></td></tr>
+<tr><th id="16">16</th><td><i> * For detailed explanation of Read-Copy Update mechanism see -</i></td></tr>
+<tr><th id="17">17</th><td><i> *		<a href="http://lse.sourceforge.net/locking/rcupdate.html">http://lse.sourceforge.net/locking/rcupdate.html</a></i></td></tr>
+<tr><th id="18">18</th><td><i> *</i></td></tr>
+<tr><th id="19">19</th><td><i> */</i></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../include/linux/types.h.html">&lt;linux/types.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../include/linux/kernel.h.html">&lt;linux/kernel.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../../include/linux/init.h.html">&lt;linux/init.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../../include/linux/spinlock.h.html">&lt;linux/spinlock.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../../include/linux/smp.h.html">&lt;linux/smp.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../../include/linux/interrupt.h.html">&lt;linux/interrupt.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../../include/linux/sched/signal.h.html">&lt;linux/sched/signal.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../../include/linux/sched/debug.h.html">&lt;linux/sched/debug.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../../include/linux/atomic.h.html">&lt;linux/atomic.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="../../include/linux/bitops.h.html">&lt;linux/bitops.h&gt;</a></u></td></tr>
+<tr><th id="30">30</th><td><u>#include <a href="../../include/linux/percpu.h.html">&lt;linux/percpu.h&gt;</a></u></td></tr>
+<tr><th id="31">31</th><td><u>#include <a href="../../include/linux/notifier.h.html">&lt;linux/notifier.h&gt;</a></u></td></tr>
+<tr><th id="32">32</th><td><u>#include <a href="../../include/linux/cpu.h.html">&lt;linux/cpu.h&gt;</a></u></td></tr>
+<tr><th id="33">33</th><td><u>#include <a href="../../include/linux/mutex.h.html">&lt;linux/mutex.h&gt;</a></u></td></tr>
+<tr><th id="34">34</th><td><u>#include <a href="../../include/linux/export.h.html">&lt;linux/export.h&gt;</a></u></td></tr>
+<tr><th id="35">35</th><td><u>#include <a href="../../include/linux/hardirq.h.html">&lt;linux/hardirq.h&gt;</a></u></td></tr>
+<tr><th id="36">36</th><td><u>#include <a href="../../include/linux/delay.h.html">&lt;linux/delay.h&gt;</a></u></td></tr>
+<tr><th id="37">37</th><td><u>#include <a href="../../include/linux/moduleparam.h.html">&lt;linux/moduleparam.h&gt;</a></u></td></tr>
+<tr><th id="38">38</th><td><u>#include <a href="../../include/linux/kthread.h.html">&lt;linux/kthread.h&gt;</a></u></td></tr>
+<tr><th id="39">39</th><td><u>#include <a href="../../include/linux/tick.h.html">&lt;linux/tick.h&gt;</a></u></td></tr>
+<tr><th id="40">40</th><td><u>#include <a href="../../include/linux/rcupdate_wait.h.html">&lt;linux/rcupdate_wait.h&gt;</a></u></td></tr>
+<tr><th id="41">41</th><td><u>#include <a href="../../include/linux/sched/isolation.h.html">&lt;linux/sched/isolation.h&gt;</a></u></td></tr>
+<tr><th id="42">42</th><td><u>#include <a href="../../include/linux/kprobes.h.html">&lt;linux/kprobes.h&gt;</a></u></td></tr>
+<tr><th id="43">43</th><td></td></tr>
+<tr><th id="44">44</th><td><u>#define <dfn class="macro" id="_M/CREATE_TRACE_POINTS" data-ref="_M/CREATE_TRACE_POINTS">CREATE_TRACE_POINTS</dfn></u></td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td><u>#include <a href="rcu.h.html">"rcu.h"</a></u></td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td><u>#<span data-ppcond="48">ifdef</span> <a class="macro" href="../../include/linux/moduleparam.h.html#15" data-ref="_M/MODULE_PARAM_PREFIX">MODULE_PARAM_PREFIX</a></u></td></tr>
+<tr><th id="49">49</th><td><u>#undef <a class="macro" href="../../include/linux/moduleparam.h.html#15" data-ref="_M/MODULE_PARAM_PREFIX">MODULE_PARAM_PREFIX</a></u></td></tr>
+<tr><th id="50">50</th><td><u>#<span data-ppcond="48">endif</span></u></td></tr>
+<tr><th id="51">51</th><td><u>#define <dfn class="macro" id="_M/MODULE_PARAM_PREFIX" data-ref="_M/MODULE_PARAM_PREFIX">MODULE_PARAM_PREFIX</dfn> "rcupdate."</u></td></tr>
+<tr><th id="52">52</th><td></td></tr>
+<tr><th id="53">53</th><td><u>#<span data-ppcond="53">ifndef</span> <span class="macro" data-ref="_M/CONFIG_TINY_RCU">CONFIG_TINY_RCU</span></u></td></tr>
+<tr><th id="54">54</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="rcu_expedited" title='rcu_expedited' data-ref="rcu_expedited" data-ref-filename="rcu_expedited">rcu_expedited</dfn>; <i>/* from sysctl */</i></td></tr>
+<tr><th id="55">55</th><td><a class="macro" href="../../include/linux/moduleparam.h.html#126" title="static inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function)) int __attribute__((__unused__)) *__check_rcu_expedited(void) { return(&amp;(rcu_expedited)); }; static const char __param_str_rcu_expedited[] = &quot;rcupdate.&quot; &quot;rcu_expedited&quot;; static struct kernel_param const __param_rcu_expedited __attribute__((__used__)) __attribute__ ((unused,__section__ (&quot;__param&quot;),aligned(sizeof(void *)))) = { __param_str_rcu_expedited, ((struct module *)0), &amp;param_ops_int, ((sizeof(struct { int:(-!!((0) &lt; 0)); })) + (sizeof(struct { int:(-!!((0) &gt; 0777)); })) + (sizeof(struct { int:(-!!((((0) &gt;&gt; 6) &amp; 4) &lt; (((0) &gt;&gt; 3) &amp; 4))); })) + (sizeof(struct { int:(-!!((((0) &gt;&gt; 3) &amp; 4) &lt; ((0) &amp; 4))); })) + (sizeof(struct { int:(-!!((((0) &gt;&gt; 6) &amp; 2) &lt; (((0) &gt;&gt; 3) &amp; 2))); })) + (sizeof(struct { int:(-!!((0) &amp; 2)); })) + (0)), -1, 0, { &amp;rcu_expedited } }; static const char __UNIQUE_ID_rcu_expeditedtype86[] __attribute__((__used__)) __attribute__((section(&quot;.modinfo&quot;), unused, aligned(1))) = &quot;update&quot; &quot;.&quot; &quot;parmtype&quot; &quot;=&quot; &quot;rcu_expedited&quot; &quot;:&quot; &quot;int&quot;" data-ref="_M/module_param">module_param</a>(<a class="ref" href="#rcu_expedited" title='rcu_expedited' data-ref="rcu_expedited" data-ref-filename="rcu_expedited">rcu_expedited</a>, <em>int</em>, <var>0</var>);</td></tr>
+<tr><th id="56">56</th><td><b>extern</b> <em>int</em> <dfn class="decl" id="rcu_normal" title='rcu_normal' data-ref="rcu_normal" data-ref-filename="rcu_normal">rcu_normal</dfn>; <i>/* from sysctl */</i></td></tr>
+<tr><th id="57">57</th><td><a class="macro" href="../../include/linux/moduleparam.h.html#126" title="static inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function)) int __attribute__((__unused__)) *__check_rcu_normal(void) { return(&amp;(rcu_normal)); }; static const char __param_str_rcu_normal[] = &quot;rcupdate.&quot; &quot;rcu_normal&quot;; static struct kernel_param const __param_rcu_normal __attribute__((__used__)) __attribute__ ((unused,__section__ (&quot;__param&quot;),aligned(sizeof(void *)))) = { __param_str_rcu_normal, ((struct module *)0), &amp;param_ops_int, ((sizeof(struct { int:(-!!((0) &lt; 0)); })) + (sizeof(struct { int:(-!!((0) &gt; 0777)); })) + (sizeof(struct { int:(-!!((((0) &gt;&gt; 6) &amp; 4) &lt; (((0) &gt;&gt; 3) &amp; 4))); })) + (sizeof(struct { int:(-!!((((0) &gt;&gt; 3) &amp; 4) &lt; ((0) &amp; 4))); })) + (sizeof(struct { int:(-!!((((0) &gt;&gt; 6) &amp; 2) &lt; (((0) &gt;&gt; 3) &amp; 2))); })) + (sizeof(struct { int:(-!!((0) &amp; 2)); })) + (0)), -1, 0, { &amp;rcu_normal } }; static const char __UNIQUE_ID_rcu_normaltype88[] __attribute__((__used__)) __attribute__((section(&quot;.modinfo&quot;), unused, aligned(1))) = &quot;update&quot; &quot;.&quot; &quot;parmtype&quot; &quot;=&quot; &quot;rcu_normal&quot; &quot;:&quot; &quot;int&quot;" data-ref="_M/module_param">module_param</a>(<a class="ref" href="#rcu_normal" title='rcu_normal' data-ref="rcu_normal" data-ref-filename="rcu_normal">rcu_normal</a>, <em>int</em>, <var>0</var>);</td></tr>
+<tr><th id="58">58</th><td><em>static</em> <em>int</em> <dfn class="tu decl def" id="rcu_normal_after_boot" title='rcu_normal_after_boot' data-type='int' data-ref="rcu_normal_after_boot" data-ref-filename="rcu_normal_after_boot">rcu_normal_after_boot</dfn>;</td></tr>
+<tr><th id="59">59</th><td><a class="macro" href="../../include/linux/moduleparam.h.html#126" title="static inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function)) int __attribute__((__unused__)) *__check_rcu_normal_after_boot(void) { return(&amp;(rcu_normal_after_boot)); }; static const char __param_str_rcu_normal_after_boot[] = &quot;rcupdate.&quot; &quot;rcu_normal_after_boot&quot;; static struct kernel_param const __param_rcu_normal_after_boot __attribute__((__used__)) __attribute__ ((unused,__section__ (&quot;__param&quot;),aligned(sizeof(void *)))) = { __param_str_rcu_normal_after_boot, ((struct module *)0), &amp;param_ops_int, ((sizeof(struct { int:(-!!((0) &lt; 0)); })) + (sizeof(struct { int:(-!!((0) &gt; 0777)); })) + (sizeof(struct { int:(-!!((((0) &gt;&gt; 6) &amp; 4) &lt; (((0) &gt;&gt; 3) &amp; 4))); })) + (sizeof(struct { int:(-!!((((0) &gt;&gt; 3) &amp; 4) &lt; ((0) &amp; 4))); })) + (sizeof(struct { int:(-!!((((0) &gt;&gt; 6) &amp; 2) &lt; (((0) &gt;&gt; 3) &amp; 2))); })) + (sizeof(struct { int:(-!!((0) &amp; 2)); })) + (0)), -1, 0, { &amp;rcu_normal_after_boot } }; static const char __UNIQUE_ID_rcu_normal_after_boottype90[] __attribute__((__used__)) __attribute__((section(&quot;.modinfo&quot;), unused, aligned(1))) = &quot;update&quot; &quot;.&quot; &quot;parmtype&quot; &quot;=&quot; &quot;rcu_normal_after_boot&quot; &quot;:&quot; &quot;int&quot;" data-ref="_M/module_param">module_param</a>(<a class="tu ref" href="#rcu_normal_after_boot" title='rcu_normal_after_boot' data-use='a' data-ref="rcu_normal_after_boot" data-ref-filename="rcu_normal_after_boot">rcu_normal_after_boot</a>, <em>int</em>, <var>0</var>);</td></tr>
+<tr><th id="60">60</th><td><u>#<span data-ppcond="53">endif</span> /* #ifndef CONFIG_TINY_RCU */</u></td></tr>
+<tr><th id="61">61</th><td></td></tr>
+<tr><th id="62">62</th><td><u>#<span data-ppcond="62">ifdef</span> <span class="macro" data-ref="_M/CONFIG_DEBUG_LOCK_ALLOC">CONFIG_DEBUG_LOCK_ALLOC</span></u></td></tr>
+<tr><th id="63">63</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="64">64</th><td><i class="doc"> * rcu_read_lock_sched_held() - might we be in RCU-sched read-side critical section?</i></td></tr>
+<tr><th id="65">65</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="66">66</th><td><i class="doc"> * If CONFIG_DEBUG_LOCK_ALLOC is selected, returns nonzero iff in an</i></td></tr>
+<tr><th id="67">67</th><td><i class="doc"> * RCU-sched read-side critical section.  In absence of</i></td></tr>
+<tr><th id="68">68</th><td><i class="doc"> * CONFIG_DEBUG_LOCK_ALLOC, this assumes we are in an RCU-sched read-side</i></td></tr>
+<tr><th id="69">69</th><td><i class="doc"> * critical section unless it can prove otherwise.  Note that disabling</i></td></tr>
+<tr><th id="70">70</th><td><i class="doc"> * of preemption (including disabling irqs) counts as an RCU-sched</i></td></tr>
+<tr><th id="71">71</th><td><i class="doc"> * read-side critical section.  This is useful for debug checks in functions</i></td></tr>
+<tr><th id="72">72</th><td><i class="doc"> * that required that they be called within an RCU-sched read-side</i></td></tr>
+<tr><th id="73">73</th><td><i class="doc"> * critical section.</i></td></tr>
+<tr><th id="74">74</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="75">75</th><td><i class="doc"> * Check debug_lockdep_rcu_enabled() to prevent false positives during boot</i></td></tr>
+<tr><th id="76">76</th><td><i class="doc"> * and while lockdep is disabled.</i></td></tr>
+<tr><th id="77">77</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="78">78</th><td><i class="doc"> * Note that if the CPU is in the idle loop from an RCU point of</i></td></tr>
+<tr><th id="79">79</th><td><i class="doc"> * view (ie: that we are in the section between rcu_idle_enter() and</i></td></tr>
+<tr><th id="80">80</th><td><i class="doc"> * rcu_idle_exit()) then rcu_read_lock_held() returns false even if the CPU</i></td></tr>
+<tr><th id="81">81</th><td><i class="doc"> * did an rcu_read_lock().  The reason for this is that RCU ignores CPUs</i></td></tr>
+<tr><th id="82">82</th><td><i class="doc"> * that are in such a section, considering these as in extended quiescent</i></td></tr>
+<tr><th id="83">83</th><td><i class="doc"> * state, so such a CPU is effectively never in an RCU read-side critical</i></td></tr>
+<tr><th id="84">84</th><td><i class="doc"> * section regardless of what RCU primitives it invokes.  This state of</i></td></tr>
+<tr><th id="85">85</th><td><i class="doc"> * affairs is required --- we need to keep an RCU-free window in idle</i></td></tr>
+<tr><th id="86">86</th><td><i class="doc"> * where the CPU may possibly enter into low power mode. This way we can</i></td></tr>
+<tr><th id="87">87</th><td><i class="doc"> * notice an extended quiescent state to other CPUs that started a grace</i></td></tr>
+<tr><th id="88">88</th><td><i class="doc"> * period. Otherwise we would delay any grace period as long as we run in</i></td></tr>
+<tr><th id="89">89</th><td><i class="doc"> * the idle task.</i></td></tr>
+<tr><th id="90">90</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="91">91</th><td><i class="doc"> * Similarly, we avoid claiming an SRCU read lock held if the current</i></td></tr>
+<tr><th id="92">92</th><td><i class="doc"> * CPU is offline.</i></td></tr>
+<tr><th id="93">93</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="94">94</th><td><em>int</em> rcu_read_lock_sched_held(<em>void</em>)</td></tr>
+<tr><th id="95">95</th><td>{</td></tr>
+<tr><th id="96">96</th><td>	<em>int</em> lockdep_opinion = <var>0</var>;</td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td>	<b>if</b> (!debug_lockdep_rcu_enabled())</td></tr>
+<tr><th id="99">99</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="100">100</th><td>	<b>if</b> (!rcu_is_watching())</td></tr>
+<tr><th id="101">101</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="102">102</th><td>	<b>if</b> (!rcu_lockdep_current_cpu_online())</td></tr>
+<tr><th id="103">103</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="104">104</th><td>	<b>if</b> (debug_locks)</td></tr>
+<tr><th id="105">105</th><td>		lockdep_opinion = lock_is_held(&amp;rcu_sched_lock_map);</td></tr>
+<tr><th id="106">106</th><td>	<b>return</b> lockdep_opinion || !preemptible();</td></tr>
+<tr><th id="107">107</th><td>}</td></tr>
+<tr><th id="108">108</th><td>EXPORT_SYMBOL(rcu_read_lock_sched_held);</td></tr>
+<tr><th id="109">109</th><td><u>#<span data-ppcond="62">endif</span></u></td></tr>
+<tr><th id="110">110</th><td></td></tr>
+<tr><th id="111">111</th><td><u>#<span data-ppcond="111">ifndef</span> <span class="macro" data-ref="_M/CONFIG_TINY_RCU">CONFIG_TINY_RCU</span></u></td></tr>
+<tr><th id="112">112</th><td></td></tr>
+<tr><th id="113">113</th><td><i>/*</i></td></tr>
+<tr><th id="114">114</th><td><i> * Should expedited grace-period primitives always fall back to their</i></td></tr>
+<tr><th id="115">115</th><td><i> * non-expedited counterparts?  Intended for use within RCU.  Note</i></td></tr>
+<tr><th id="116">116</th><td><i> * that if the user specifies both rcu_expedited and rcu_normal, then</i></td></tr>
+<tr><th id="117">117</th><td><i> * rcu_normal wins.  (Except during the time period during boot from</i></td></tr>
+<tr><th id="118">118</th><td><i> * when the first task is spawned until the rcu_set_runtime_mode()</i></td></tr>
+<tr><th id="119">119</th><td><i> * core_initcall() is invoked, at which point everything is expedited.)</i></td></tr>
+<tr><th id="120">120</th><td><i> */</i></td></tr>
+<tr><th id="121">121</th><td><a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="rcu_gp_is_normal" title='rcu_gp_is_normal' data-ref="rcu_gp_is_normal" data-ref-filename="rcu_gp_is_normal">rcu_gp_is_normal</dfn>(<em>void</em>)</td></tr>
+<tr><th id="122">122</th><td>{</td></tr>
+<tr><th id="123">123</th><td>	<b>return</b> <a class="macro" href="../../include/linux/compiler.h.html#269" title="({ union { typeof(rcu_normal) __val; char __c[1]; } __u; if (1) __read_once_size(&amp;(rcu_normal), __u.__c, sizeof(rcu_normal)); else __read_once_size_nocheck(&amp;(rcu_normal), __u.__c, sizeof(rcu_normal)); do { } while (0); __u.__val; })" data-ref="_M/READ_ONCE">READ_ONCE</a>(<a class="ref" href="#rcu_normal" title='rcu_normal' data-ref="rcu_normal" data-ref-filename="rcu_normal">rcu_normal</a>) &amp;&amp;</td></tr>
+<tr><th id="124">124</th><td>	       <a class="ref" href="../../include/linux/rcupdate.h.html#rcu_scheduler_active" title='rcu_scheduler_active' data-ref="rcu_scheduler_active" data-ref-filename="rcu_scheduler_active">rcu_scheduler_active</a> != <a class="macro" href="rcu.h.html#443" title="1" data-ref="_M/RCU_SCHEDULER_INIT">RCU_SCHEDULER_INIT</a>;</td></tr>
+<tr><th id="125">125</th><td>}</td></tr>
+<tr><th id="126">126</th><td><a class="macro" href="../../include/linux/export.h.html#126" title="extern typeof(rcu_gp_is_normal) rcu_gp_is_normal; static const char __kstrtab_rcu_gp_is_normal[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;rcu_gp_is_normal&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_rcu_gp_is_normal126 = (void *)&amp;rcu_gp_is_normal; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;rcu_gp_is_normal&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;rcu_gp_is_normal&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;rcu_gp_is_normal&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;rcu_gp_is_normal&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#rcu_gp_is_normal" title='rcu_gp_is_normal' data-ref="rcu_gp_is_normal" data-ref-filename="rcu_gp_is_normal"><a class="ref fn" href="#rcu_gp_is_normal" title='rcu_gp_is_normal' data-ref="rcu_gp_is_normal" data-ref-filename="rcu_gp_is_normal"><a class="ref fn" href="#rcu_gp_is_normal" title='rcu_gp_is_normal' data-ref="rcu_gp_is_normal" data-ref-filename="rcu_gp_is_normal">rcu_gp_is_normal</a></a></a>);</td></tr>
+<tr><th id="127">127</th><td></td></tr>
+<tr><th id="128">128</th><td><em>static</em> <a class="typedef" href="../../include/linux/types.h.html#atomic_t" title='atomic_t' data-type='struct atomic_t' data-ref="atomic_t" data-ref-filename="atomic_t">atomic_t</a> <dfn class="tu decl def" id="rcu_expedited_nesting" title='rcu_expedited_nesting' data-type='atomic_t' data-ref="rcu_expedited_nesting" data-ref-filename="rcu_expedited_nesting">rcu_expedited_nesting</dfn> = <a class="macro" href="../../arch/x86/include/asm/atomic.h.html#17" title="{ (1) }" data-ref="_M/ATOMIC_INIT">ATOMIC_INIT</a>(<var>1</var>);</td></tr>
+<tr><th id="129">129</th><td></td></tr>
+<tr><th id="130">130</th><td><i>/*</i></td></tr>
+<tr><th id="131">131</th><td><i> * Should normal grace-period primitives be expedited?  Intended for</i></td></tr>
+<tr><th id="132">132</th><td><i> * use within RCU.  Note that this function takes the rcu_expedited</i></td></tr>
+<tr><th id="133">133</th><td><i> * sysfs/boot variable and rcu_scheduler_active into account as well</i></td></tr>
+<tr><th id="134">134</th><td><i> * as the rcu_expedite_gp() nesting.  So looping on rcu_unexpedite_gp()</i></td></tr>
+<tr><th id="135">135</th><td><i> * until rcu_gp_is_expedited() returns false is a -really- bad idea.</i></td></tr>
+<tr><th id="136">136</th><td><i> */</i></td></tr>
+<tr><th id="137">137</th><td><a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="rcu_gp_is_expedited" title='rcu_gp_is_expedited' data-ref="rcu_gp_is_expedited" data-ref-filename="rcu_gp_is_expedited">rcu_gp_is_expedited</dfn>(<em>void</em>)</td></tr>
+<tr><th id="138">138</th><td>{</td></tr>
+<tr><th id="139">139</th><td>	<b>return</b> <a class="ref" href="#rcu_expedited" title='rcu_expedited' data-ref="rcu_expedited" data-ref-filename="rcu_expedited">rcu_expedited</a> || <a class="macro" href="../../include/asm-generic/atomic-instrumented.h.html#29" title="atomic_read" data-ref="_M/atomic_read">atomic_read</a>(&amp;<a class="tu ref" href="#rcu_expedited_nesting" title='rcu_expedited_nesting' data-use='a' data-ref="rcu_expedited_nesting" data-ref-filename="rcu_expedited_nesting">rcu_expedited_nesting</a>) ||</td></tr>
+<tr><th id="140">140</th><td>	       <a class="ref" href="../../include/linux/rcupdate.h.html#rcu_scheduler_active" title='rcu_scheduler_active' data-ref="rcu_scheduler_active" data-ref-filename="rcu_scheduler_active">rcu_scheduler_active</a> == <a class="macro" href="rcu.h.html#443" title="1" data-ref="_M/RCU_SCHEDULER_INIT">RCU_SCHEDULER_INIT</a>;</td></tr>
+<tr><th id="141">141</th><td>}</td></tr>
+<tr><th id="142">142</th><td><a class="macro" href="../../include/linux/export.h.html#126" title="extern typeof(rcu_gp_is_expedited) rcu_gp_is_expedited; static const char __kstrtab_rcu_gp_is_expedited[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;rcu_gp_is_expedited&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_rcu_gp_is_expedited142 = (void *)&amp;rcu_gp_is_expedited; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;rcu_gp_is_expedited&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;rcu_gp_is_expedited&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;rcu_gp_is_expedited&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;rcu_gp_is_expedited&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#rcu_gp_is_expedited" title='rcu_gp_is_expedited' data-ref="rcu_gp_is_expedited" data-ref-filename="rcu_gp_is_expedited"><a class="ref fn" href="#rcu_gp_is_expedited" title='rcu_gp_is_expedited' data-ref="rcu_gp_is_expedited" data-ref-filename="rcu_gp_is_expedited"><a class="ref fn" href="#rcu_gp_is_expedited" title='rcu_gp_is_expedited' data-ref="rcu_gp_is_expedited" data-ref-filename="rcu_gp_is_expedited">rcu_gp_is_expedited</a></a></a>);</td></tr>
+<tr><th id="143">143</th><td></td></tr>
+<tr><th id="144">144</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="145">145</th><td><i class="doc"> * rcu_expedite_gp - Expedite future RCU grace periods</i></td></tr>
+<tr><th id="146">146</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="147">147</th><td><i class="doc"> * After a call to this function, future calls to synchronize_rcu() and</i></td></tr>
+<tr><th id="148">148</th><td><i class="doc"> * friends act as the corresponding synchronize_rcu_expedited() function</i></td></tr>
+<tr><th id="149">149</th><td><i class="doc"> * had instead been called.</i></td></tr>
+<tr><th id="150">150</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="151">151</th><td><em>void</em> <dfn class="decl def fn" id="rcu_expedite_gp" title='rcu_expedite_gp' data-ref="rcu_expedite_gp" data-ref-filename="rcu_expedite_gp">rcu_expedite_gp</dfn>(<em>void</em>)</td></tr>
+<tr><th id="152">152</th><td>{</td></tr>
+<tr><th id="153">153</th><td>	<a class="macro" href="../../include/asm-generic/atomic-instrumented.h.html#242" title="atomic_inc" data-ref="_M/atomic_inc">atomic_inc</a>(&amp;<a class="tu ref" href="#rcu_expedited_nesting" title='rcu_expedited_nesting' data-use='a' data-ref="rcu_expedited_nesting" data-ref-filename="rcu_expedited_nesting">rcu_expedited_nesting</a>);</td></tr>
+<tr><th id="154">154</th><td>}</td></tr>
+<tr><th id="155">155</th><td><a class="macro" href="../../include/linux/export.h.html#126" title="extern typeof(rcu_expedite_gp) rcu_expedite_gp; static const char __kstrtab_rcu_expedite_gp[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;rcu_expedite_gp&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_rcu_expedite_gp155 = (void *)&amp;rcu_expedite_gp; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;rcu_expedite_gp&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;rcu_expedite_gp&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;rcu_expedite_gp&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;rcu_expedite_gp&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#rcu_expedite_gp" title='rcu_expedite_gp' data-ref="rcu_expedite_gp" data-ref-filename="rcu_expedite_gp"><a class="ref fn" href="#rcu_expedite_gp" title='rcu_expedite_gp' data-ref="rcu_expedite_gp" data-ref-filename="rcu_expedite_gp"><a class="ref fn" href="#rcu_expedite_gp" title='rcu_expedite_gp' data-ref="rcu_expedite_gp" data-ref-filename="rcu_expedite_gp">rcu_expedite_gp</a></a></a>);</td></tr>
+<tr><th id="156">156</th><td></td></tr>
+<tr><th id="157">157</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="158">158</th><td><i class="doc"> * rcu_unexpedite_gp - Cancel prior rcu_expedite_gp() invocation</i></td></tr>
+<tr><th id="159">159</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="160">160</th><td><i class="doc"> * Undo a prior call to rcu_expedite_gp().  If all prior calls to</i></td></tr>
+<tr><th id="161">161</th><td><i class="doc"> * rcu_expedite_gp() are undone by a subsequent call to rcu_unexpedite_gp(),</i></td></tr>
+<tr><th id="162">162</th><td><i class="doc"> * and if the rcu_expedited sysfs/boot parameter is not set, then all</i></td></tr>
+<tr><th id="163">163</th><td><i class="doc"> * subsequent calls to synchronize_rcu() and friends will return to</i></td></tr>
+<tr><th id="164">164</th><td><i class="doc"> * their normal non-expedited behavior.</i></td></tr>
+<tr><th id="165">165</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="166">166</th><td><em>void</em> <dfn class="decl def fn" id="rcu_unexpedite_gp" title='rcu_unexpedite_gp' data-ref="rcu_unexpedite_gp" data-ref-filename="rcu_unexpedite_gp">rcu_unexpedite_gp</dfn>(<em>void</em>)</td></tr>
+<tr><th id="167">167</th><td>{</td></tr>
+<tr><th id="168">168</th><td>	<a class="macro" href="../../include/asm-generic/atomic-instrumented.h.html#332" title="atomic_dec" data-ref="_M/atomic_dec">atomic_dec</a>(&amp;<a class="tu ref" href="#rcu_expedited_nesting" title='rcu_expedited_nesting' data-use='a' data-ref="rcu_expedited_nesting" data-ref-filename="rcu_expedited_nesting">rcu_expedited_nesting</a>);</td></tr>
+<tr><th id="169">169</th><td>}</td></tr>
+<tr><th id="170">170</th><td><a class="macro" href="../../include/linux/export.h.html#126" title="extern typeof(rcu_unexpedite_gp) rcu_unexpedite_gp; static const char __kstrtab_rcu_unexpedite_gp[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;rcu_unexpedite_gp&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_rcu_unexpedite_gp170 = (void *)&amp;rcu_unexpedite_gp; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;rcu_unexpedite_gp&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;rcu_unexpedite_gp&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;rcu_unexpedite_gp&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;rcu_unexpedite_gp&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#rcu_unexpedite_gp" title='rcu_unexpedite_gp' data-ref="rcu_unexpedite_gp" data-ref-filename="rcu_unexpedite_gp"><a class="ref fn" href="#rcu_unexpedite_gp" title='rcu_unexpedite_gp' data-ref="rcu_unexpedite_gp" data-ref-filename="rcu_unexpedite_gp"><a class="ref fn" href="#rcu_unexpedite_gp" title='rcu_unexpedite_gp' data-ref="rcu_unexpedite_gp" data-ref-filename="rcu_unexpedite_gp">rcu_unexpedite_gp</a></a></a>);</td></tr>
+<tr><th id="171">171</th><td></td></tr>
+<tr><th id="172">172</th><td><i>/*</i></td></tr>
+<tr><th id="173">173</th><td><i> * Inform RCU of the end of the in-kernel boot sequence.</i></td></tr>
+<tr><th id="174">174</th><td><i> */</i></td></tr>
+<tr><th id="175">175</th><td><em>void</em> <dfn class="decl def fn" id="rcu_end_inkernel_boot" title='rcu_end_inkernel_boot' data-ref="rcu_end_inkernel_boot" data-ref-filename="rcu_end_inkernel_boot">rcu_end_inkernel_boot</dfn>(<em>void</em>)</td></tr>
+<tr><th id="176">176</th><td>{</td></tr>
+<tr><th id="177">177</th><td>	<a class="ref fn" href="#rcu_unexpedite_gp" title='rcu_unexpedite_gp' data-ref="rcu_unexpedite_gp" data-ref-filename="rcu_unexpedite_gp">rcu_unexpedite_gp</a>();</td></tr>
+<tr><th id="178">178</th><td>	<b>if</b> (<a class="tu ref" href="#rcu_normal_after_boot" title='rcu_normal_after_boot' data-use='r' data-ref="rcu_normal_after_boot" data-ref-filename="rcu_normal_after_boot">rcu_normal_after_boot</a>)</td></tr>
+<tr><th id="179">179</th><td>		<a class="macro" href="../../include/linux/compiler.h.html#284" title="({ union { typeof(rcu_normal) __val; char __c[1]; } __u = { .__val = ( typeof(rcu_normal)) (1) }; __write_once_size(&amp;(rcu_normal), __u.__c, sizeof(rcu_normal)); __u.__val; })" data-ref="_M/WRITE_ONCE">WRITE_ONCE</a>(<a class="ref" href="#rcu_normal" title='rcu_normal' data-ref="rcu_normal" data-ref-filename="rcu_normal">rcu_normal</a>, <var>1</var>);</td></tr>
+<tr><th id="180">180</th><td>}</td></tr>
+<tr><th id="181">181</th><td></td></tr>
+<tr><th id="182">182</th><td><u>#<span data-ppcond="111">endif</span> /* #ifndef CONFIG_TINY_RCU */</u></td></tr>
+<tr><th id="183">183</th><td></td></tr>
+<tr><th id="184">184</th><td><i>/*</i></td></tr>
+<tr><th id="185">185</th><td><i> * Test each non-SRCU synchronous grace-period wait API.  This is</i></td></tr>
+<tr><th id="186">186</th><td><i> * useful just after a change in mode for these primitives, and</i></td></tr>
+<tr><th id="187">187</th><td><i> * during early boot.</i></td></tr>
+<tr><th id="188">188</th><td><i> */</i></td></tr>
+<tr><th id="189">189</th><td><em>void</em> <dfn class="decl def fn" id="rcu_test_sync_prims" title='rcu_test_sync_prims' data-ref="rcu_test_sync_prims" data-ref-filename="rcu_test_sync_prims">rcu_test_sync_prims</dfn>(<em>void</em>)</td></tr>
+<tr><th id="190">190</th><td>{</td></tr>
+<tr><th id="191">191</th><td>	<b>if</b> (!<a class="macro" href="../../include/linux/kconfig.h.html#71" title="0" data-ref="_M/IS_ENABLED">IS_ENABLED</a>(CONFIG_PROVE_RCU))</td></tr>
+<tr><th id="192">192</th><td>		<b>return</b>;</td></tr>
+<tr><th id="193">193</th><td>	<a class="ref fn" href="../../include/linux/rcupdate.h.html#synchronize_rcu" title='synchronize_rcu' data-ref="synchronize_rcu" data-ref-filename="synchronize_rcu">synchronize_rcu</a>();</td></tr>
+<tr><th id="194">194</th><td>	<a class="ref fn" href="../../include/linux/rcutree.h.html#synchronize_rcu_expedited" title='synchronize_rcu_expedited' data-ref="synchronize_rcu_expedited" data-ref-filename="synchronize_rcu_expedited">synchronize_rcu_expedited</a>();</td></tr>
+<tr><th id="195">195</th><td>}</td></tr>
+<tr><th id="196">196</th><td></td></tr>
+<tr><th id="197">197</th><td><u>#<span data-ppcond="197">if</span> !defined(<span class="macro" data-ref="_M/CONFIG_TINY_RCU">CONFIG_TINY_RCU</span>) || defined(<a class="macro" href="../../include/generated/autoconf.h.html#564" data-ref="_M/CONFIG_SRCU">CONFIG_SRCU</a>)</u></td></tr>
+<tr><th id="198">198</th><td></td></tr>
+<tr><th id="199">199</th><td><i  data-doc="rcu_set_runtime_mode">/*</i></td></tr>
+<tr><th id="200">200</th><td><i  data-doc="rcu_set_runtime_mode"> * Switch to run-time mode once RCU has fully initialized.</i></td></tr>
+<tr><th id="201">201</th><td><i  data-doc="rcu_set_runtime_mode"> */</i></td></tr>
+<tr><th id="202">202</th><td><em>static</em> <em>int</em> <a class="macro" href="../../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="tu decl def fn" id="rcu_set_runtime_mode" title='rcu_set_runtime_mode' data-type='int rcu_set_runtime_mode()' data-ref="rcu_set_runtime_mode" data-ref-filename="rcu_set_runtime_mode">rcu_set_runtime_mode</dfn>(<em>void</em>)</td></tr>
+<tr><th id="203">203</th><td>{</td></tr>
+<tr><th id="204">204</th><td>	<a class="ref fn" href="#rcu_test_sync_prims" title='rcu_test_sync_prims' data-ref="rcu_test_sync_prims" data-ref-filename="rcu_test_sync_prims">rcu_test_sync_prims</a>();</td></tr>
+<tr><th id="205">205</th><td>	<a class="ref" href="../../include/linux/rcupdate.h.html#rcu_scheduler_active" title='rcu_scheduler_active' data-ref="rcu_scheduler_active" data-ref-filename="rcu_scheduler_active">rcu_scheduler_active</a> = <a class="macro" href="rcu.h.html#444" title="2" data-ref="_M/RCU_SCHEDULER_RUNNING">RCU_SCHEDULER_RUNNING</a>;</td></tr>
+<tr><th id="206">206</th><td>	<a class="ref fn" href="#rcu_test_sync_prims" title='rcu_test_sync_prims' data-ref="rcu_test_sync_prims" data-ref-filename="rcu_test_sync_prims">rcu_test_sync_prims</a>();</td></tr>
+<tr><th id="207">207</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="208">208</th><td>}</td></tr>
+<tr><th id="209">209</th><td><a class="macro" href="../../include/linux/init.h.html#218" title="static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_rcu_set_runtime_mode209 = (void *)&amp;rcu_set_runtime_mode; asm(&quot;.section	\&quot;&quot; &quot;.initcall1&quot; &quot;.init\&quot;, \&quot;a\&quot;	\n&quot; &quot;__initcall_&quot; &quot;rcu_set_runtime_mode&quot; &quot;1&quot; &quot;:			\n&quot; &quot;.long	&quot; &quot;rcu_set_runtime_mode&quot; &quot; - .			\n&quot; &quot;.previous					\n&quot;);" data-ref="_M/core_initcall">core_initcall</a>(<a class="tu ref fn" href="#rcu_set_runtime_mode" title='rcu_set_runtime_mode' data-use='a' data-ref="rcu_set_runtime_mode" data-ref-filename="rcu_set_runtime_mode">rcu_set_runtime_mode</a>);</td></tr>
+<tr><th id="210">210</th><td></td></tr>
+<tr><th id="211">211</th><td><u>#<span data-ppcond="197">endif</span> /* #if !defined(CONFIG_TINY_RCU) || defined(CONFIG_SRCU) */</u></td></tr>
+<tr><th id="212">212</th><td></td></tr>
+<tr><th id="213">213</th><td><u>#<span data-ppcond="213">ifdef</span> <span class="macro" data-ref="_M/CONFIG_DEBUG_LOCK_ALLOC">CONFIG_DEBUG_LOCK_ALLOC</span></u></td></tr>
+<tr><th id="214">214</th><td><em>static</em> <b>struct</b> lock_class_key rcu_lock_key;</td></tr>
+<tr><th id="215">215</th><td><b>struct</b> lockdep_map rcu_lock_map =</td></tr>
+<tr><th id="216">216</th><td>	STATIC_LOCKDEP_MAP_INIT(<q>"rcu_read_lock"</q>, &amp;rcu_lock_key);</td></tr>
+<tr><th id="217">217</th><td>EXPORT_SYMBOL_GPL(rcu_lock_map);</td></tr>
+<tr><th id="218">218</th><td></td></tr>
+<tr><th id="219">219</th><td><em>static</em> <b>struct</b> lock_class_key rcu_bh_lock_key;</td></tr>
+<tr><th id="220">220</th><td><b>struct</b> lockdep_map rcu_bh_lock_map =</td></tr>
+<tr><th id="221">221</th><td>	STATIC_LOCKDEP_MAP_INIT(<q>"rcu_read_lock_bh"</q>, &amp;rcu_bh_lock_key);</td></tr>
+<tr><th id="222">222</th><td>EXPORT_SYMBOL_GPL(rcu_bh_lock_map);</td></tr>
+<tr><th id="223">223</th><td></td></tr>
+<tr><th id="224">224</th><td><em>static</em> <b>struct</b> lock_class_key rcu_sched_lock_key;</td></tr>
+<tr><th id="225">225</th><td><b>struct</b> lockdep_map rcu_sched_lock_map =</td></tr>
+<tr><th id="226">226</th><td>	STATIC_LOCKDEP_MAP_INIT(<q>"rcu_read_lock_sched"</q>, &amp;rcu_sched_lock_key);</td></tr>
+<tr><th id="227">227</th><td>EXPORT_SYMBOL_GPL(rcu_sched_lock_map);</td></tr>
+<tr><th id="228">228</th><td></td></tr>
+<tr><th id="229">229</th><td><em>static</em> <b>struct</b> lock_class_key rcu_callback_key;</td></tr>
+<tr><th id="230">230</th><td><b>struct</b> lockdep_map rcu_callback_map =</td></tr>
+<tr><th id="231">231</th><td>	STATIC_LOCKDEP_MAP_INIT(<q>"rcu_callback"</q>, &amp;rcu_callback_key);</td></tr>
+<tr><th id="232">232</th><td>EXPORT_SYMBOL_GPL(rcu_callback_map);</td></tr>
+<tr><th id="233">233</th><td></td></tr>
+<tr><th id="234">234</th><td><em>int</em> notrace debug_lockdep_rcu_enabled(<em>void</em>)</td></tr>
+<tr><th id="235">235</th><td>{</td></tr>
+<tr><th id="236">236</th><td>	<b>return</b> rcu_scheduler_active != RCU_SCHEDULER_INACTIVE &amp;&amp; debug_locks &amp;&amp;</td></tr>
+<tr><th id="237">237</th><td>	       current-&gt;lockdep_recursion == <var>0</var>;</td></tr>
+<tr><th id="238">238</th><td>}</td></tr>
+<tr><th id="239">239</th><td>EXPORT_SYMBOL_GPL(debug_lockdep_rcu_enabled);</td></tr>
+<tr><th id="240">240</th><td>NOKPROBE_SYMBOL(debug_lockdep_rcu_enabled);</td></tr>
+<tr><th id="241">241</th><td></td></tr>
+<tr><th id="242">242</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="243">243</th><td><i class="doc"> * rcu_read_lock_held() - might we be in RCU read-side critical section?</i></td></tr>
+<tr><th id="244">244</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="245">245</th><td><i class="doc"> * If CONFIG_DEBUG_LOCK_ALLOC is selected, returns nonzero iff in an RCU</i></td></tr>
+<tr><th id="246">246</th><td><i class="doc"> * read-side critical section.  In absence of CONFIG_DEBUG_LOCK_ALLOC,</i></td></tr>
+<tr><th id="247">247</th><td><i class="doc"> * this assumes we are in an RCU read-side critical section unless it can</i></td></tr>
+<tr><th id="248">248</th><td><i class="doc"> * prove otherwise.  This is useful for debug checks in functions that</i></td></tr>
+<tr><th id="249">249</th><td><i class="doc"> * require that they be called within an RCU read-side critical section.</i></td></tr>
+<tr><th id="250">250</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="251">251</th><td><i class="doc"> * Checks debug_lockdep_rcu_enabled() to prevent false positives during boot</i></td></tr>
+<tr><th id="252">252</th><td><i class="doc"> * and while lockdep is disabled.</i></td></tr>
+<tr><th id="253">253</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="254">254</th><td><i class="doc"> * Note that rcu_read_lock() and the matching rcu_read_unlock() must</i></td></tr>
+<tr><th id="255">255</th><td><i class="doc"> * occur in the same context, for example, it is illegal to invoke</i></td></tr>
+<tr><th id="256">256</th><td><i class="doc"> * rcu_read_unlock() in process context if the matching rcu_read_lock()</i></td></tr>
+<tr><th id="257">257</th><td><i class="doc"> * was invoked from within an irq handler.</i></td></tr>
+<tr><th id="258">258</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="259">259</th><td><i class="doc"> * Note that rcu_read_lock() is disallowed if the CPU is either idle or</i></td></tr>
+<tr><th id="260">260</th><td><i class="doc"> * offline from an RCU perspective, so check for those as well.</i></td></tr>
+<tr><th id="261">261</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="262">262</th><td><em>int</em> rcu_read_lock_held(<em>void</em>)</td></tr>
+<tr><th id="263">263</th><td>{</td></tr>
+<tr><th id="264">264</th><td>	<b>if</b> (!debug_lockdep_rcu_enabled())</td></tr>
+<tr><th id="265">265</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="266">266</th><td>	<b>if</b> (!rcu_is_watching())</td></tr>
+<tr><th id="267">267</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="268">268</th><td>	<b>if</b> (!rcu_lockdep_current_cpu_online())</td></tr>
+<tr><th id="269">269</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="270">270</th><td>	<b>return</b> lock_is_held(&amp;rcu_lock_map);</td></tr>
+<tr><th id="271">271</th><td>}</td></tr>
+<tr><th id="272">272</th><td>EXPORT_SYMBOL_GPL(rcu_read_lock_held);</td></tr>
+<tr><th id="273">273</th><td></td></tr>
+<tr><th id="274">274</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="275">275</th><td><i class="doc"> * rcu_read_lock_bh_held() - might we be in RCU-bh read-side critical section?</i></td></tr>
+<tr><th id="276">276</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="277">277</th><td><i class="doc"> * Check for bottom half being disabled, which covers both the</i></td></tr>
+<tr><th id="278">278</th><td><i class="doc"> * CONFIG_PROVE_RCU and not cases.  Note that if someone uses</i></td></tr>
+<tr><th id="279">279</th><td><i class="doc"> * rcu_read_lock_bh(), but then later enables BH, lockdep (if enabled)</i></td></tr>
+<tr><th id="280">280</th><td><i class="doc"> * will show the situation.  This is useful for debug checks in functions</i></td></tr>
+<tr><th id="281">281</th><td><i class="doc"> * that require that they be called within an RCU read-side critical</i></td></tr>
+<tr><th id="282">282</th><td><i class="doc"> * section.</i></td></tr>
+<tr><th id="283">283</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="284">284</th><td><i class="doc"> * Check debug_lockdep_rcu_enabled() to prevent false positives during boot.</i></td></tr>
+<tr><th id="285">285</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="286">286</th><td><i class="doc"> * Note that rcu_read_lock_bh() is disallowed if the CPU is either idle or</i></td></tr>
+<tr><th id="287">287</th><td><i class="doc"> * offline from an RCU perspective, so check for those as well.</i></td></tr>
+<tr><th id="288">288</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="289">289</th><td><em>int</em> rcu_read_lock_bh_held(<em>void</em>)</td></tr>
+<tr><th id="290">290</th><td>{</td></tr>
+<tr><th id="291">291</th><td>	<b>if</b> (!debug_lockdep_rcu_enabled())</td></tr>
+<tr><th id="292">292</th><td>		<b>return</b> <var>1</var>;</td></tr>
+<tr><th id="293">293</th><td>	<b>if</b> (!rcu_is_watching())</td></tr>
+<tr><th id="294">294</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="295">295</th><td>	<b>if</b> (!rcu_lockdep_current_cpu_online())</td></tr>
+<tr><th id="296">296</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="297">297</th><td>	<b>return</b> in_softirq() || irqs_disabled();</td></tr>
+<tr><th id="298">298</th><td>}</td></tr>
+<tr><th id="299">299</th><td>EXPORT_SYMBOL_GPL(rcu_read_lock_bh_held);</td></tr>
+<tr><th id="300">300</th><td></td></tr>
+<tr><th id="301">301</th><td><u>#<span data-ppcond="213">endif</span> /* #ifdef CONFIG_DEBUG_LOCK_ALLOC */</u></td></tr>
+<tr><th id="302">302</th><td></td></tr>
+<tr><th id="303">303</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="304">304</th><td><i class="doc"> * wakeme_after_rcu() - Callback function to awaken a task after grace period</i></td></tr>
+<tr><th id="305">305</th><td><i class="doc"> *<span class="command"> @head</span>: Pointer to rcu_head member within rcu_synchronize structure</i></td></tr>
+<tr><th id="306">306</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="307">307</th><td><i class="doc"> * Awaken the corresponding task now that a grace period has elapsed.</i></td></tr>
+<tr><th id="308">308</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="309">309</th><td><em>void</em> <dfn class="decl def fn" id="wakeme_after_rcu" title='wakeme_after_rcu' data-ref="wakeme_after_rcu" data-ref-filename="wakeme_after_rcu">wakeme_after_rcu</dfn>(<b>struct</b> <a class="macro" href="../../include/linux/types.h.html#223" title="callback_head" data-ref="_M/rcu_head">rcu_head</a> *<dfn class="local col1 decl" id="1head" title='head' data-type='struct callback_head *' data-ref="1head" data-ref-filename="1head">head</dfn>)</td></tr>
+<tr><th id="310">310</th><td>{</td></tr>
+<tr><th id="311">311</th><td>	<b>struct</b> <a class="type" href="../../include/linux/rcupdate_wait.h.html#rcu_synchronize" title='rcu_synchronize' data-ref="rcu_synchronize" data-ref-filename="rcu_synchronize">rcu_synchronize</a> *<dfn class="local col2 decl" id="2rcu" title='rcu' data-type='struct rcu_synchronize *' data-ref="2rcu" data-ref-filename="2rcu">rcu</dfn>;</td></tr>
+<tr><th id="312">312</th><td></td></tr>
+<tr><th id="313">313</th><td>	<a class="local col2 ref" href="#2rcu" title='rcu' data-ref="2rcu" data-ref-filename="2rcu">rcu</a> = <a class="macro" href="../../include/linux/kernel.h.html#971" title="({ void *__mptr = (void *)(head); do { extern void __compiletime_assert_313(void) ; if (!(!(!__builtin_types_compatible_p(typeof(*(head)), typeof(((struct rcu_synchronize *)0)-&gt;head)) &amp;&amp; !__builtin_types_compatible_p(typeof(*(head)), typeof(void))))) __compiletime_assert_313(); } while (0); ((struct rcu_synchronize *)(__mptr - __builtin_offsetof(struct rcu_synchronize, head))); })" data-ref="_M/container_of">container_of</a>(<a class="local col1 ref" href="#1head" title='head' data-ref="1head" data-ref-filename="1head">head</a>, <b>struct</b> <a class="type" href="../../include/linux/rcupdate_wait.h.html#rcu_synchronize" title='rcu_synchronize' data-ref="rcu_synchronize" data-ref-filename="rcu_synchronize">rcu_synchronize</a>, <a class="ref field" href="../../include/linux/rcupdate_wait.h.html#rcu_synchronize::head" title='rcu_synchronize::head' data-ref="rcu_synchronize::head" data-ref-filename="rcu_synchronize..head">head</a>);</td></tr>
+<tr><th id="314">314</th><td>	<a class="ref fn" href="../../include/linux/completion.h.html#complete" title='complete' data-ref="complete" data-ref-filename="complete">complete</a>(&amp;<a class="local col2 ref" href="#2rcu" title='rcu' data-ref="2rcu" data-ref-filename="2rcu">rcu</a>-&gt;<a class="ref field" href="../../include/linux/rcupdate_wait.h.html#rcu_synchronize::completion" title='rcu_synchronize::completion' data-ref="rcu_synchronize::completion" data-ref-filename="rcu_synchronize..completion">completion</a>);</td></tr>
+<tr><th id="315">315</th><td>}</td></tr>
+<tr><th id="316">316</th><td><a class="macro" href="../../include/linux/export.h.html#126" title="extern typeof(wakeme_after_rcu) wakeme_after_rcu; static const char __kstrtab_wakeme_after_rcu[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;wakeme_after_rcu&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_wakeme_after_rcu316 = (void *)&amp;wakeme_after_rcu; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;wakeme_after_rcu&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;wakeme_after_rcu&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;wakeme_after_rcu&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;wakeme_after_rcu&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#wakeme_after_rcu" title='wakeme_after_rcu' data-ref="wakeme_after_rcu" data-ref-filename="wakeme_after_rcu"><a class="ref fn" href="#wakeme_after_rcu" title='wakeme_after_rcu' data-ref="wakeme_after_rcu" data-ref-filename="wakeme_after_rcu"><a class="ref fn" href="#wakeme_after_rcu" title='wakeme_after_rcu' data-ref="wakeme_after_rcu" data-ref-filename="wakeme_after_rcu">wakeme_after_rcu</a></a></a>);</td></tr>
+<tr><th id="317">317</th><td></td></tr>
+<tr><th id="318">318</th><td><em>void</em> <dfn class="decl def fn" id="__wait_rcu_gp" title='__wait_rcu_gp' data-ref="__wait_rcu_gp" data-ref-filename="__wait_rcu_gp">__wait_rcu_gp</dfn>(<a class="typedef" href="../../include/linux/types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="local col3 decl" id="3checktiny" title='checktiny' data-type='bool' data-ref="3checktiny" data-ref-filename="3checktiny">checktiny</dfn>, <em>int</em> <dfn class="local col4 decl" id="4n" title='n' data-type='int' data-ref="4n" data-ref-filename="4n">n</dfn>, <a class="typedef" href="../../include/linux/types.h.html#call_rcu_func_t" title='call_rcu_func_t' data-type='void (*)(struct callback_head *, rcu_callback_t)' data-ref="call_rcu_func_t" data-ref-filename="call_rcu_func_t">call_rcu_func_t</a> *<dfn class="local col5 decl" id="5crcu_array" title='crcu_array' data-type='call_rcu_func_t *' data-ref="5crcu_array" data-ref-filename="5crcu_array">crcu_array</dfn>,</td></tr>
+<tr><th id="319">319</th><td>		   <b>struct</b> <a class="type" href="../../include/linux/rcupdate_wait.h.html#rcu_synchronize" title='rcu_synchronize' data-ref="rcu_synchronize" data-ref-filename="rcu_synchronize">rcu_synchronize</a> *<dfn class="local col6 decl" id="6rs_array" title='rs_array' data-type='struct rcu_synchronize *' data-ref="6rs_array" data-ref-filename="6rs_array">rs_array</dfn>)</td></tr>
+<tr><th id="320">320</th><td>{</td></tr>
+<tr><th id="321">321</th><td>	<em>int</em> <dfn class="local col7 decl" id="7i" title='i' data-type='int' data-ref="7i" data-ref-filename="7i">i</dfn>;</td></tr>
+<tr><th id="322">322</th><td>	<em>int</em> <dfn class="local col8 decl" id="8j" title='j' data-type='int' data-ref="8j" data-ref-filename="8j">j</dfn>;</td></tr>
+<tr><th id="323">323</th><td></td></tr>
+<tr><th id="324">324</th><td>	<i>/* Initialize and register callbacks for each crcu_array element. */</i></td></tr>
+<tr><th id="325">325</th><td>	<b>for</b> (<a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a> = <var>0</var>; <a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a> &lt; <a class="local col4 ref" href="#4n" title='n' data-ref="4n" data-ref-filename="4n">n</a>; <a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a>++) {</td></tr>
+<tr><th id="326">326</th><td>		<b>if</b> (<a class="local col3 ref" href="#3checktiny" title='checktiny' data-ref="3checktiny" data-ref-filename="3checktiny">checktiny</a> &amp;&amp;</td></tr>
+<tr><th id="327">327</th><td>		    (<a class="local col5 ref" href="#5crcu_array" title='crcu_array' data-ref="5crcu_array" data-ref-filename="5crcu_array">crcu_array</a>[<a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a>] == <a class="ref fn" href="../../include/linux/rcupdate.h.html#call_rcu" title='call_rcu' data-ref="call_rcu" data-ref-filename="call_rcu">call_rcu</a>)) {</td></tr>
+<tr><th id="328">328</th><td>			<a class="macro" href="../../include/linux/kernel.h.html#241" title="do { _cond_resched(); } while (0)" data-ref="_M/might_sleep">might_sleep</a>();</td></tr>
+<tr><th id="329">329</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="330">330</th><td>		}</td></tr>
+<tr><th id="331">331</th><td>		<a class="ref fn" href="../../include/linux/rcupdate.h.html#init_rcu_head_on_stack" title='init_rcu_head_on_stack' data-ref="init_rcu_head_on_stack" data-ref-filename="init_rcu_head_on_stack">init_rcu_head_on_stack</a>(&amp;<a class="local col6 ref" href="#6rs_array" title='rs_array' data-ref="6rs_array" data-ref-filename="6rs_array">rs_array</a>[<a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a>].<a class="ref field" href="../../include/linux/rcupdate_wait.h.html#rcu_synchronize::head" title='rcu_synchronize::head' data-ref="rcu_synchronize::head" data-ref-filename="rcu_synchronize..head">head</a>);</td></tr>
+<tr><th id="332">332</th><td>		<a class="macro" href="../../include/linux/completion.h.html#32" title="__init_completion(&amp;rs_array[i].completion)" data-ref="_M/init_completion">init_completion</a>(&amp;<a class="local col6 ref" href="#6rs_array" title='rs_array' data-ref="6rs_array" data-ref-filename="6rs_array">rs_array</a>[<a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a>].<a class="ref field" href="../../include/linux/rcupdate_wait.h.html#rcu_synchronize::completion" title='rcu_synchronize::completion' data-ref="rcu_synchronize::completion" data-ref-filename="rcu_synchronize..completion">completion</a>);</td></tr>
+<tr><th id="333">333</th><td>		<b>for</b> (<a class="local col8 ref" href="#8j" title='j' data-ref="8j" data-ref-filename="8j">j</a> = <var>0</var>; <a class="local col8 ref" href="#8j" title='j' data-ref="8j" data-ref-filename="8j">j</a> &lt; <a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a>; <a class="local col8 ref" href="#8j" title='j' data-ref="8j" data-ref-filename="8j">j</a>++)</td></tr>
+<tr><th id="334">334</th><td>			<b>if</b> (<a class="local col5 ref" href="#5crcu_array" title='crcu_array' data-ref="5crcu_array" data-ref-filename="5crcu_array">crcu_array</a>[<a class="local col8 ref" href="#8j" title='j' data-ref="8j" data-ref-filename="8j">j</a>] == <a class="local col5 ref" href="#5crcu_array" title='crcu_array' data-ref="5crcu_array" data-ref-filename="5crcu_array">crcu_array</a>[<a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a>])</td></tr>
+<tr><th id="335">335</th><td>				<b>break</b>;</td></tr>
+<tr><th id="336">336</th><td>		<b>if</b> (<a class="local col8 ref" href="#8j" title='j' data-ref="8j" data-ref-filename="8j">j</a> == <a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a>)</td></tr>
+<tr><th id="337">337</th><td>			(<a class="local col5 ref" href="#5crcu_array" title='crcu_array' data-ref="5crcu_array" data-ref-filename="5crcu_array">crcu_array</a>[<a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a>])(&amp;<a class="local col6 ref" href="#6rs_array" title='rs_array' data-ref="6rs_array" data-ref-filename="6rs_array">rs_array</a>[<a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a>].<a class="ref field" href="../../include/linux/rcupdate_wait.h.html#rcu_synchronize::head" title='rcu_synchronize::head' data-ref="rcu_synchronize::head" data-ref-filename="rcu_synchronize..head">head</a>, <a class="ref fn" href="#wakeme_after_rcu" title='wakeme_after_rcu' data-ref="wakeme_after_rcu" data-ref-filename="wakeme_after_rcu">wakeme_after_rcu</a>);</td></tr>
+<tr><th id="338">338</th><td>	}</td></tr>
+<tr><th id="339">339</th><td></td></tr>
+<tr><th id="340">340</th><td>	<i>/* Wait for all callbacks to be invoked. */</i></td></tr>
+<tr><th id="341">341</th><td>	<b>for</b> (<a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a> = <var>0</var>; <a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a> &lt; <a class="local col4 ref" href="#4n" title='n' data-ref="4n" data-ref-filename="4n">n</a>; <a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a>++) {</td></tr>
+<tr><th id="342">342</th><td>		<b>if</b> (<a class="local col3 ref" href="#3checktiny" title='checktiny' data-ref="3checktiny" data-ref-filename="3checktiny">checktiny</a> &amp;&amp;</td></tr>
+<tr><th id="343">343</th><td>		    (<a class="local col5 ref" href="#5crcu_array" title='crcu_array' data-ref="5crcu_array" data-ref-filename="5crcu_array">crcu_array</a>[<a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a>] == <a class="ref fn" href="../../include/linux/rcupdate.h.html#call_rcu" title='call_rcu' data-ref="call_rcu" data-ref-filename="call_rcu">call_rcu</a>))</td></tr>
+<tr><th id="344">344</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="345">345</th><td>		<b>for</b> (<a class="local col8 ref" href="#8j" title='j' data-ref="8j" data-ref-filename="8j">j</a> = <var>0</var>; <a class="local col8 ref" href="#8j" title='j' data-ref="8j" data-ref-filename="8j">j</a> &lt; <a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a>; <a class="local col8 ref" href="#8j" title='j' data-ref="8j" data-ref-filename="8j">j</a>++)</td></tr>
+<tr><th id="346">346</th><td>			<b>if</b> (<a class="local col5 ref" href="#5crcu_array" title='crcu_array' data-ref="5crcu_array" data-ref-filename="5crcu_array">crcu_array</a>[<a class="local col8 ref" href="#8j" title='j' data-ref="8j" data-ref-filename="8j">j</a>] == <a class="local col5 ref" href="#5crcu_array" title='crcu_array' data-ref="5crcu_array" data-ref-filename="5crcu_array">crcu_array</a>[<a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a>])</td></tr>
+<tr><th id="347">347</th><td>				<b>break</b>;</td></tr>
+<tr><th id="348">348</th><td>		<b>if</b> (<a class="local col8 ref" href="#8j" title='j' data-ref="8j" data-ref-filename="8j">j</a> == <a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a>)</td></tr>
+<tr><th id="349">349</th><td>			<a class="ref fn" href="../../include/linux/completion.h.html#wait_for_completion" title='wait_for_completion' data-ref="wait_for_completion" data-ref-filename="wait_for_completion">wait_for_completion</a>(&amp;<a class="local col6 ref" href="#6rs_array" title='rs_array' data-ref="6rs_array" data-ref-filename="6rs_array">rs_array</a>[<a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a>].<a class="ref field" href="../../include/linux/rcupdate_wait.h.html#rcu_synchronize::completion" title='rcu_synchronize::completion' data-ref="rcu_synchronize::completion" data-ref-filename="rcu_synchronize..completion">completion</a>);</td></tr>
+<tr><th id="350">350</th><td>		<a class="ref fn" href="../../include/linux/rcupdate.h.html#destroy_rcu_head_on_stack" title='destroy_rcu_head_on_stack' data-ref="destroy_rcu_head_on_stack" data-ref-filename="destroy_rcu_head_on_stack">destroy_rcu_head_on_stack</a>(&amp;<a class="local col6 ref" href="#6rs_array" title='rs_array' data-ref="6rs_array" data-ref-filename="6rs_array">rs_array</a>[<a class="local col7 ref" href="#7i" title='i' data-ref="7i" data-ref-filename="7i">i</a>].<a class="ref field" href="../../include/linux/rcupdate_wait.h.html#rcu_synchronize::head" title='rcu_synchronize::head' data-ref="rcu_synchronize::head" data-ref-filename="rcu_synchronize..head">head</a>);</td></tr>
+<tr><th id="351">351</th><td>	}</td></tr>
+<tr><th id="352">352</th><td>}</td></tr>
+<tr><th id="353">353</th><td><a class="macro" href="../../include/linux/export.h.html#126" title="extern typeof(__wait_rcu_gp) __wait_rcu_gp; static const char __kstrtab___wait_rcu_gp[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;__wait_rcu_gp&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable___wait_rcu_gp353 = (void *)&amp;__wait_rcu_gp; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;__wait_rcu_gp&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;__wait_rcu_gp&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;__wait_rcu_gp&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;__wait_rcu_gp&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#__wait_rcu_gp" title='__wait_rcu_gp' data-ref="__wait_rcu_gp" data-ref-filename="__wait_rcu_gp"><a class="ref fn" href="#__wait_rcu_gp" title='__wait_rcu_gp' data-ref="__wait_rcu_gp" data-ref-filename="__wait_rcu_gp"><a class="ref fn" href="#__wait_rcu_gp" title='__wait_rcu_gp' data-ref="__wait_rcu_gp" data-ref-filename="__wait_rcu_gp">__wait_rcu_gp</a></a></a>);</td></tr>
+<tr><th id="354">354</th><td></td></tr>
+<tr><th id="355">355</th><td><u>#<span data-ppcond="355">ifdef</span> <span class="macro" data-ref="_M/CONFIG_DEBUG_OBJECTS_RCU_HEAD">CONFIG_DEBUG_OBJECTS_RCU_HEAD</span></u></td></tr>
+<tr><th id="356">356</th><td><em>void</em> init_rcu_head(<b>struct</b> rcu_head *head)</td></tr>
+<tr><th id="357">357</th><td>{</td></tr>
+<tr><th id="358">358</th><td>	debug_object_init(head, &amp;rcuhead_debug_descr);</td></tr>
+<tr><th id="359">359</th><td>}</td></tr>
+<tr><th id="360">360</th><td>EXPORT_SYMBOL_GPL(init_rcu_head);</td></tr>
+<tr><th id="361">361</th><td></td></tr>
+<tr><th id="362">362</th><td><em>void</em> destroy_rcu_head(<b>struct</b> rcu_head *head)</td></tr>
+<tr><th id="363">363</th><td>{</td></tr>
+<tr><th id="364">364</th><td>	debug_object_free(head, &amp;rcuhead_debug_descr);</td></tr>
+<tr><th id="365">365</th><td>}</td></tr>
+<tr><th id="366">366</th><td>EXPORT_SYMBOL_GPL(destroy_rcu_head);</td></tr>
+<tr><th id="367">367</th><td></td></tr>
+<tr><th id="368">368</th><td><em>static</em> bool rcuhead_is_static_object(<em>void</em> *addr)</td></tr>
+<tr><th id="369">369</th><td>{</td></tr>
+<tr><th id="370">370</th><td>	<b>return</b> true;</td></tr>
+<tr><th id="371">371</th><td>}</td></tr>
+<tr><th id="372">372</th><td></td></tr>
+<tr><th id="373">373</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="374">374</th><td><i class="doc"> * init_rcu_head_on_stack() - initialize on-stack rcu_head for debugobjects</i></td></tr>
+<tr><th id="375">375</th><td><i class="doc"> *<span class="command"> @head</span>: pointer to rcu_head structure to be initialized</i></td></tr>
+<tr><th id="376">376</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="377">377</th><td><i class="doc"> * This function informs debugobjects of a new rcu_head structure that</i></td></tr>
+<tr><th id="378">378</th><td><i class="doc"> * has been allocated as an auto variable on the stack.  This function</i></td></tr>
+<tr><th id="379">379</th><td><i class="doc"> * is not required for rcu_head structures that are statically defined or</i></td></tr>
+<tr><th id="380">380</th><td><i class="doc"> * that are dynamically allocated on the heap.  This function has no</i></td></tr>
+<tr><th id="381">381</th><td><i class="doc"> * effect for !CONFIG_DEBUG_OBJECTS_RCU_HEAD kernel builds.</i></td></tr>
+<tr><th id="382">382</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="383">383</th><td><em>void</em> init_rcu_head_on_stack(<b>struct</b> rcu_head *head)</td></tr>
+<tr><th id="384">384</th><td>{</td></tr>
+<tr><th id="385">385</th><td>	debug_object_init_on_stack(head, &amp;rcuhead_debug_descr);</td></tr>
+<tr><th id="386">386</th><td>}</td></tr>
+<tr><th id="387">387</th><td>EXPORT_SYMBOL_GPL(init_rcu_head_on_stack);</td></tr>
+<tr><th id="388">388</th><td></td></tr>
+<tr><th id="389">389</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="390">390</th><td><i class="doc"> * destroy_rcu_head_on_stack() - destroy on-stack rcu_head for debugobjects</i></td></tr>
+<tr><th id="391">391</th><td><i class="doc"> *<span class="command"> @head</span>: pointer to rcu_head structure to be initialized</i></td></tr>
+<tr><th id="392">392</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="393">393</th><td><i class="doc"> * This function informs debugobjects that an on-stack rcu_head structure</i></td></tr>
+<tr><th id="394">394</th><td><i class="doc"> * is about to go out of scope.  As with init_rcu_head_on_stack(), this</i></td></tr>
+<tr><th id="395">395</th><td><i class="doc"> * function is not required for rcu_head structures that are statically</i></td></tr>
+<tr><th id="396">396</th><td><i class="doc"> * defined or that are dynamically allocated on the heap.  Also as with</i></td></tr>
+<tr><th id="397">397</th><td><i class="doc"> * init_rcu_head_on_stack(), this function has no effect for</i></td></tr>
+<tr><th id="398">398</th><td><i class="doc"> * !CONFIG_DEBUG_OBJECTS_RCU_HEAD kernel builds.</i></td></tr>
+<tr><th id="399">399</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="400">400</th><td><em>void</em> destroy_rcu_head_on_stack(<b>struct</b> rcu_head *head)</td></tr>
+<tr><th id="401">401</th><td>{</td></tr>
+<tr><th id="402">402</th><td>	debug_object_free(head, &amp;rcuhead_debug_descr);</td></tr>
+<tr><th id="403">403</th><td>}</td></tr>
+<tr><th id="404">404</th><td>EXPORT_SYMBOL_GPL(destroy_rcu_head_on_stack);</td></tr>
+<tr><th id="405">405</th><td></td></tr>
+<tr><th id="406">406</th><td><b>struct</b> debug_obj_descr rcuhead_debug_descr = {</td></tr>
+<tr><th id="407">407</th><td>	.name = <q>"rcu_head"</q>,</td></tr>
+<tr><th id="408">408</th><td>	.is_static_object = rcuhead_is_static_object,</td></tr>
+<tr><th id="409">409</th><td>};</td></tr>
+<tr><th id="410">410</th><td>EXPORT_SYMBOL_GPL(rcuhead_debug_descr);</td></tr>
+<tr><th id="411">411</th><td><u>#<span data-ppcond="355">endif</span> /* #ifdef CONFIG_DEBUG_OBJECTS_RCU_HEAD */</u></td></tr>
+<tr><th id="412">412</th><td></td></tr>
+<tr><th id="413">413</th><td><u>#<span data-ppcond="413">if</span> defined(<a class="macro" href="../../include/generated/autoconf.h.html#451" data-ref="_M/CONFIG_TREE_RCU">CONFIG_TREE_RCU</a>) || defined(<span class="macro" data-ref="_M/CONFIG_PREEMPT_RCU">CONFIG_PREEMPT_RCU</span>) || defined(<a class="macro" href="../../include/generated/autoconf.h.html#217" data-ref="_M/CONFIG_RCU_TRACE">CONFIG_RCU_TRACE</a>)</u></td></tr>
+<tr><th id="414">414</th><td><em>void</em> <dfn class="decl def fn" id="do_trace_rcu_torture_read" title='do_trace_rcu_torture_read' data-ref="do_trace_rcu_torture_read" data-ref-filename="do_trace_rcu_torture_read">do_trace_rcu_torture_read</dfn>(<em>const</em> <em>char</em> *<dfn class="local col9 decl" id="9rcutorturename" title='rcutorturename' data-type='const char *' data-ref="9rcutorturename" data-ref-filename="9rcutorturename">rcutorturename</dfn>, <b>struct</b> <a class="macro" href="../../include/linux/types.h.html#223" title="callback_head" data-ref="_M/rcu_head">rcu_head</a> *<dfn class="local col0 decl" id="10rhp" title='rhp' data-type='struct callback_head *' data-ref="10rhp" data-ref-filename="10rhp">rhp</dfn>,</td></tr>
+<tr><th id="415">415</th><td>			       <em>unsigned</em> <em>long</em> <dfn class="local col1 decl" id="11secs" title='secs' data-type='unsigned long' data-ref="11secs" data-ref-filename="11secs">secs</dfn>,</td></tr>
+<tr><th id="416">416</th><td>			       <em>unsigned</em> <em>long</em> <dfn class="local col2 decl" id="12c_old" title='c_old' data-type='unsigned long' data-ref="12c_old" data-ref-filename="12c_old">c_old</dfn>, <em>unsigned</em> <em>long</em> <dfn class="local col3 decl" id="13c" title='c' data-type='unsigned long' data-ref="13c" data-ref-filename="13c">c</dfn>)</td></tr>
+<tr><th id="417">417</th><td>{</td></tr>
+<tr><th id="418">418</th><td>	<a class="ref fn" href="../../include/trace/events/rcu.h.html#680" title='trace_rcu_torture_read' data-ref="trace_rcu_torture_read" data-ref-filename="trace_rcu_torture_read">trace_rcu_torture_read</a>(<a class="local col9 ref" href="#9rcutorturename" title='rcutorturename' data-ref="9rcutorturename" data-ref-filename="9rcutorturename">rcutorturename</a>, <a class="local col0 ref" href="#10rhp" title='rhp' data-ref="10rhp" data-ref-filename="10rhp">rhp</a>, <a class="local col1 ref" href="#11secs" title='secs' data-ref="11secs" data-ref-filename="11secs">secs</a>, <a class="local col2 ref" href="#12c_old" title='c_old' data-ref="12c_old" data-ref-filename="12c_old">c_old</a>, <a class="local col3 ref" href="#13c" title='c' data-ref="13c" data-ref-filename="13c">c</a>);</td></tr>
+<tr><th id="419">419</th><td>}</td></tr>
+<tr><th id="420">420</th><td><a class="macro" href="../../include/linux/export.h.html#126" title="extern typeof(do_trace_rcu_torture_read) do_trace_rcu_torture_read; static const char __kstrtab_do_trace_rcu_torture_read[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;do_trace_rcu_torture_read&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_do_trace_rcu_torture_read420 = (void *)&amp;do_trace_rcu_torture_read; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;do_trace_rcu_torture_read&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;do_trace_rcu_torture_read&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;do_trace_rcu_torture_read&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;do_trace_rcu_torture_read&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl fn" href="#do_trace_rcu_torture_read" title='do_trace_rcu_torture_read' data-ref="do_trace_rcu_torture_read" data-ref-filename="do_trace_rcu_torture_read"><a class="ref fn" href="#do_trace_rcu_torture_read" title='do_trace_rcu_torture_read' data-ref="do_trace_rcu_torture_read" data-ref-filename="do_trace_rcu_torture_read"><a class="ref fn" href="#do_trace_rcu_torture_read" title='do_trace_rcu_torture_read' data-ref="do_trace_rcu_torture_read" data-ref-filename="do_trace_rcu_torture_read">do_trace_rcu_torture_read</a></a></a>);</td></tr>
+<tr><th id="421">421</th><td><u>#<span data-ppcond="413">else</span></u></td></tr>
+<tr><th id="422">422</th><td><u>#define do_trace_rcu_torture_read(rcutorturename, rhp, secs, c_old, c) \</u></td></tr>
+<tr><th id="423">423</th><td><u>	do { } while (0)</u></td></tr>
+<tr><th id="424">424</th><td><u>#<span data-ppcond="413">endif</span></u></td></tr>
+<tr><th id="425">425</th><td></td></tr>
+<tr><th id="426">426</th><td><u>#<span data-ppcond="426">if</span> <a class="macro" href="../../include/linux/kconfig.h.html#71" title="0" data-ref="_M/IS_ENABLED">IS_ENABLED</a>(CONFIG_RCU_TORTURE_TEST) || <a class="macro" href="../../include/linux/kconfig.h.html#56" title="0" data-ref="_M/IS_MODULE">IS_MODULE</a>(CONFIG_RCU_TORTURE_TEST)</u></td></tr>
+<tr><th id="427">427</th><td><i>/* Get rcutorture access to sched_setaffinity(). */</i></td></tr>
+<tr><th id="428">428</th><td><em>long</em> rcutorture_sched_setaffinity(pid_t pid, <em>const</em> <b>struct</b> cpumask *in_mask)</td></tr>
+<tr><th id="429">429</th><td>{</td></tr>
+<tr><th id="430">430</th><td>	<em>int</em> ret;</td></tr>
+<tr><th id="431">431</th><td></td></tr>
+<tr><th id="432">432</th><td>	ret = sched_setaffinity(pid, in_mask);</td></tr>
+<tr><th id="433">433</th><td>	WARN_ONCE(ret, <q>"%s: sched_setaffinity() returned %d\n"</q>, <b>__func__</b>, ret);</td></tr>
+<tr><th id="434">434</th><td>	<b>return</b> ret;</td></tr>
+<tr><th id="435">435</th><td>}</td></tr>
+<tr><th id="436">436</th><td>EXPORT_SYMBOL_GPL(rcutorture_sched_setaffinity);</td></tr>
+<tr><th id="437">437</th><td><u>#<span data-ppcond="426">endif</span></u></td></tr>
+<tr><th id="438">438</th><td></td></tr>
+<tr><th id="439">439</th><td><u>#<span data-ppcond="439">ifdef</span> <a class="macro" href="../../include/generated/autoconf.h.html#397" data-ref="_M/CONFIG_RCU_STALL_COMMON">CONFIG_RCU_STALL_COMMON</a></u></td></tr>
+<tr><th id="440">440</th><td><em>int</em> <dfn class="decl def" id="rcu_cpu_stall_suppress" title='rcu_cpu_stall_suppress' data-ref="rcu_cpu_stall_suppress" data-ref-filename="rcu_cpu_stall_suppress">rcu_cpu_stall_suppress</dfn> <a class="macro" href="../../arch/x86/include/asm/cache.h.html#11" title="__attribute__((__section__(&quot;.data..read_mostly&quot;)))" data-ref="_M/__read_mostly">__read_mostly</a>; <i>/* 1 = suppress stall warnings. */</i></td></tr>
+<tr><th id="441">441</th><td><a class="macro" href="../../include/linux/export.h.html#126" title="extern typeof(rcu_cpu_stall_suppress) rcu_cpu_stall_suppress; static const char __kstrtab_rcu_cpu_stall_suppress[] __attribute__((section(&quot;__ksymtab_strings&quot;), used, aligned(1))) = &quot;rcu_cpu_stall_suppress&quot;; static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_rcu_cpu_stall_suppress441 = (void *)&amp;rcu_cpu_stall_suppress; asm(&quot;	.section \&quot;___ksymtab&quot; &quot;_gpl&quot; &quot;+&quot; &quot;rcu_cpu_stall_suppress&quot; &quot;\&quot;, \&quot;a\&quot;	\n&quot; &quot;	.balign	8					\n&quot; &quot;__ksymtab_&quot; &quot;rcu_cpu_stall_suppress&quot; &quot;:				\n&quot; &quot;	.long	&quot; &quot;rcu_cpu_stall_suppress&quot; &quot;- .				\n&quot; &quot;	.long	__kstrtab_&quot; &quot;rcu_cpu_stall_suppress&quot; &quot;- .			\n&quot; &quot;	.previous					\n&quot;)" data-ref="_M/EXPORT_SYMBOL_GPL">EXPORT_SYMBOL_GPL</a>(<a class="decl" href="rcu.h.html#rcu_cpu_stall_suppress" title='rcu_cpu_stall_suppress' data-ref="rcu_cpu_stall_suppress" data-ref-filename="rcu_cpu_stall_suppress" id="rcu_cpu_stall_suppress"><a class="ref" href="rcu.h.html#rcu_cpu_stall_suppress" title='rcu_cpu_stall_suppress' data-ref="rcu_cpu_stall_suppress" data-ref-filename="rcu_cpu_stall_suppress"><a class="ref" href="rcu.h.html#rcu_cpu_stall_suppress" title='rcu_cpu_stall_suppress' data-ref="rcu_cpu_stall_suppress" data-ref-filename="rcu_cpu_stall_suppress">rcu_cpu_stall_suppress</a></a></a>);</td></tr>
+<tr><th id="442">442</th><td><a class="macro" href="../../include/linux/moduleparam.h.html#126" title="static inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function)) int __attribute__((__unused__)) *__check_rcu_cpu_stall_suppress(void) { return(&amp;(rcu_cpu_stall_suppress)); }; static const char __param_str_rcu_cpu_stall_suppress[] = &quot;rcupdate.&quot; &quot;rcu_cpu_stall_suppress&quot;; static struct kernel_param const __param_rcu_cpu_stall_suppress __attribute__((__used__)) __attribute__ ((unused,__section__ (&quot;__param&quot;),aligned(sizeof(void *)))) = { __param_str_rcu_cpu_stall_suppress, ((struct module *)0), &amp;param_ops_int, ((sizeof(struct { int:(-!!((0644) &lt; 0)); })) + (sizeof(struct { int:(-!!((0644) &gt; 0777)); })) + (sizeof(struct { int:(-!!((((0644) &gt;&gt; 6) &amp; 4) &lt; (((0644) &gt;&gt; 3) &amp; 4))); })) + (sizeof(struct { int:(-!!((((0644) &gt;&gt; 3) &amp; 4) &lt; ((0644) &amp; 4))); })) + (sizeof(struct { int:(-!!((((0644) &gt;&gt; 6) &amp; 2) &lt; (((0644) &gt;&gt; 3) &amp; 2))); })) + (sizeof(struct { int:(-!!((0644) &amp; 2)); })) + (0644)), -1, 0, { &amp;rcu_cpu_stall_suppress } }; static const char __UNIQUE_ID_rcu_cpu_stall_suppresstype92[] __attribute__((__used__)) __attribute__((section(&quot;.modinfo&quot;), unused, aligned(1))) = &quot;update&quot; &quot;.&quot; &quot;parmtype&quot; &quot;=&quot; &quot;rcu_cpu_stall_suppress&quot; &quot;:&quot; &quot;int&quot;" data-ref="_M/module_param">module_param</a>(<a class="ref" href="rcu.h.html#rcu_cpu_stall_suppress" title='rcu_cpu_stall_suppress' data-ref="rcu_cpu_stall_suppress" data-ref-filename="rcu_cpu_stall_suppress">rcu_cpu_stall_suppress</a>, <em>int</em>, <var>0644</var>);</td></tr>
+<tr><th id="443">443</th><td><em>int</em> <dfn class="decl def" id="rcu_cpu_stall_timeout" title='rcu_cpu_stall_timeout' data-ref="rcu_cpu_stall_timeout" data-ref-filename="rcu_cpu_stall_timeout">rcu_cpu_stall_timeout</dfn> <a class="macro" href="../../arch/x86/include/asm/cache.h.html#11" title="__attribute__((__section__(&quot;.data..read_mostly&quot;)))" data-ref="_M/__read_mostly">__read_mostly</a> = <a class="macro" href="../../include/generated/autoconf.h.html#1002" title="21" data-ref="_M/CONFIG_RCU_CPU_STALL_TIMEOUT">CONFIG_RCU_CPU_STALL_TIMEOUT</a>;</td></tr>
+<tr><th id="444">444</th><td><a class="macro" href="../../include/linux/moduleparam.h.html#126" title="static inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function)) int __attribute__((__unused__)) *__check_rcu_cpu_stall_timeout(void) { return(&amp;(rcu_cpu_stall_timeout)); }; static const char __param_str_rcu_cpu_stall_timeout[] = &quot;rcupdate.&quot; &quot;rcu_cpu_stall_timeout&quot;; static struct kernel_param const __param_rcu_cpu_stall_timeout __attribute__((__used__)) __attribute__ ((unused,__section__ (&quot;__param&quot;),aligned(sizeof(void *)))) = { __param_str_rcu_cpu_stall_timeout, ((struct module *)0), &amp;param_ops_int, ((sizeof(struct { int:(-!!((0644) &lt; 0)); })) + (sizeof(struct { int:(-!!((0644) &gt; 0777)); })) + (sizeof(struct { int:(-!!((((0644) &gt;&gt; 6) &amp; 4) &lt; (((0644) &gt;&gt; 3) &amp; 4))); })) + (sizeof(struct { int:(-!!((((0644) &gt;&gt; 3) &amp; 4) &lt; ((0644) &amp; 4))); })) + (sizeof(struct { int:(-!!((((0644) &gt;&gt; 6) &amp; 2) &lt; (((0644) &gt;&gt; 3) &amp; 2))); })) + (sizeof(struct { int:(-!!((0644) &amp; 2)); })) + (0644)), -1, 0, { &amp;rcu_cpu_stall_timeout } }; static const char __UNIQUE_ID_rcu_cpu_stall_timeouttype94[] __attribute__((__used__)) __attribute__((section(&quot;.modinfo&quot;), unused, aligned(1))) = &quot;update&quot; &quot;.&quot; &quot;parmtype&quot; &quot;=&quot; &quot;rcu_cpu_stall_timeout&quot; &quot;:&quot; &quot;int&quot;" data-ref="_M/module_param">module_param</a>(<a class="ref" href="rcu.h.html#rcu_cpu_stall_timeout" title='rcu_cpu_stall_timeout' data-ref="rcu_cpu_stall_timeout" data-ref-filename="rcu_cpu_stall_timeout">rcu_cpu_stall_timeout</a>, <em>int</em>, <var>0644</var>);</td></tr>
+<tr><th id="445">445</th><td><u>#<span data-ppcond="439">endif</span> /* #ifdef CONFIG_RCU_STALL_COMMON */</u></td></tr>
+<tr><th id="446">446</th><td></td></tr>
+<tr><th id="447">447</th><td><u>#<span data-ppcond="447">ifdef</span> <span class="macro" data-ref="_M/CONFIG_TASKS_RCU">CONFIG_TASKS_RCU</span></u></td></tr>
+<tr><th id="448">448</th><td></td></tr>
+<tr><th id="449">449</th><td><i>/*</i></td></tr>
+<tr><th id="450">450</th><td><i> * Simple variant of RCU whose quiescent states are voluntary context</i></td></tr>
+<tr><th id="451">451</th><td><i> * switch, cond_resched_rcu_qs(), user-space execution, and idle.</i></td></tr>
+<tr><th id="452">452</th><td><i> * As such, grace periods can take one good long time.  There are no</i></td></tr>
+<tr><th id="453">453</th><td><i> * read-side primitives similar to rcu_read_lock() and rcu_read_unlock()</i></td></tr>
+<tr><th id="454">454</th><td><i> * because this implementation is intended to get the system into a safe</i></td></tr>
+<tr><th id="455">455</th><td><i> * state for some of the manipulations involved in tracing and the like.</i></td></tr>
+<tr><th id="456">456</th><td><i> * Finally, this implementation does not support high call_rcu_tasks()</i></td></tr>
+<tr><th id="457">457</th><td><i> * rates from multiple CPUs.  If this is required, per-CPU callback lists</i></td></tr>
+<tr><th id="458">458</th><td><i> * will be needed.</i></td></tr>
+<tr><th id="459">459</th><td><i> */</i></td></tr>
+<tr><th id="460">460</th><td></td></tr>
+<tr><th id="461">461</th><td><i>/* Global list of callbacks and associated lock. */</i></td></tr>
+<tr><th id="462">462</th><td><em>static</em> <b>struct</b> rcu_head *rcu_tasks_cbs_head;</td></tr>
+<tr><th id="463">463</th><td><em>static</em> <b>struct</b> rcu_head **rcu_tasks_cbs_tail = &amp;rcu_tasks_cbs_head;</td></tr>
+<tr><th id="464">464</th><td><em>static</em> DECLARE_WAIT_QUEUE_HEAD(rcu_tasks_cbs_wq);</td></tr>
+<tr><th id="465">465</th><td><em>static</em> DEFINE_RAW_SPINLOCK(rcu_tasks_cbs_lock);</td></tr>
+<tr><th id="466">466</th><td></td></tr>
+<tr><th id="467">467</th><td><i>/* Track exiting tasks in order to allow them to be waited for. */</i></td></tr>
+<tr><th id="468">468</th><td>DEFINE_STATIC_SRCU(tasks_rcu_exit_srcu);</td></tr>
+<tr><th id="469">469</th><td></td></tr>
+<tr><th id="470">470</th><td><i>/* Control stall timeouts.  Disable with &lt;= 0, otherwise jiffies till stall. */</i></td></tr>
+<tr><th id="471">471</th><td><u>#define RCU_TASK_STALL_TIMEOUT (HZ * 60 * 10)</u></td></tr>
+<tr><th id="472">472</th><td><em>static</em> <em>int</em> rcu_task_stall_timeout __read_mostly = RCU_TASK_STALL_TIMEOUT;</td></tr>
+<tr><th id="473">473</th><td>module_param(rcu_task_stall_timeout, <em>int</em>, <var>0644</var>);</td></tr>
+<tr><th id="474">474</th><td></td></tr>
+<tr><th id="475">475</th><td><em>static</em> <b>struct</b> task_struct *rcu_tasks_kthread_ptr;</td></tr>
+<tr><th id="476">476</th><td></td></tr>
+<tr><th id="477">477</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="478">478</th><td><i class="doc"> * call_rcu_tasks() - Queue an RCU for invocation task-based grace period</i></td></tr>
+<tr><th id="479">479</th><td><i class="doc"> *<span class="command"> @rhp</span>: structure to be used for queueing the RCU updates.</i></td></tr>
+<tr><th id="480">480</th><td><i class="doc"> *<span class="command"> @func</span>: actual callback function to be invoked after the grace period</i></td></tr>
+<tr><th id="481">481</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="482">482</th><td><i class="doc"> * The callback function will be invoked some time after a full grace</i></td></tr>
+<tr><th id="483">483</th><td><i class="doc"> * period elapses, in other words after all currently executing RCU</i></td></tr>
+<tr><th id="484">484</th><td><i class="doc"> * read-side critical sections have completed. call_rcu_tasks() assumes</i></td></tr>
+<tr><th id="485">485</th><td><i class="doc"> * that the read-side critical sections end at a voluntary context</i></td></tr>
+<tr><th id="486">486</th><td><i class="doc"> * switch (not a preemption!), cond_resched_rcu_qs(), entry into idle,</i></td></tr>
+<tr><th id="487">487</th><td><i class="doc"> * or transition to usermode execution.  As such, there are no read-side</i></td></tr>
+<tr><th id="488">488</th><td><i class="doc"> * primitives analogous to rcu_read_lock() and rcu_read_unlock() because</i></td></tr>
+<tr><th id="489">489</th><td><i class="doc"> * this primitive is intended to determine that all tasks have passed</i></td></tr>
+<tr><th id="490">490</th><td><i class="doc"> * through a safe state, not so much for data-strcuture synchronization.</i></td></tr>
+<tr><th id="491">491</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="492">492</th><td><i class="doc"> * See the description of call_rcu() for more detailed information on</i></td></tr>
+<tr><th id="493">493</th><td><i class="doc"> * memory ordering guarantees.</i></td></tr>
+<tr><th id="494">494</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="495">495</th><td><em>void</em> call_rcu_tasks(<b>struct</b> rcu_head *rhp, rcu_callback_t func)</td></tr>
+<tr><th id="496">496</th><td>{</td></tr>
+<tr><th id="497">497</th><td>	<em>unsigned</em> <em>long</em> flags;</td></tr>
+<tr><th id="498">498</th><td>	bool needwake;</td></tr>
+<tr><th id="499">499</th><td></td></tr>
+<tr><th id="500">500</th><td>	rhp-&gt;next = NULL;</td></tr>
+<tr><th id="501">501</th><td>	rhp-&gt;func = func;</td></tr>
+<tr><th id="502">502</th><td>	raw_spin_lock_irqsave(&amp;rcu_tasks_cbs_lock, flags);</td></tr>
+<tr><th id="503">503</th><td>	needwake = !rcu_tasks_cbs_head;</td></tr>
+<tr><th id="504">504</th><td>	*rcu_tasks_cbs_tail = rhp;</td></tr>
+<tr><th id="505">505</th><td>	rcu_tasks_cbs_tail = &amp;rhp-&gt;next;</td></tr>
+<tr><th id="506">506</th><td>	raw_spin_unlock_irqrestore(&amp;rcu_tasks_cbs_lock, flags);</td></tr>
+<tr><th id="507">507</th><td>	<i>/* We can't create the thread unless interrupts are enabled. */</i></td></tr>
+<tr><th id="508">508</th><td>	<b>if</b> (needwake &amp;&amp; READ_ONCE(rcu_tasks_kthread_ptr))</td></tr>
+<tr><th id="509">509</th><td>		wake_up(&amp;rcu_tasks_cbs_wq);</td></tr>
+<tr><th id="510">510</th><td>}</td></tr>
+<tr><th id="511">511</th><td>EXPORT_SYMBOL_GPL(call_rcu_tasks);</td></tr>
+<tr><th id="512">512</th><td></td></tr>
+<tr><th id="513">513</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="514">514</th><td><i class="doc"> * synchronize_rcu_tasks - wait until an rcu-tasks grace period has elapsed.</i></td></tr>
+<tr><th id="515">515</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="516">516</th><td><i class="doc"> * Control will return to the caller some time after a full rcu-tasks</i></td></tr>
+<tr><th id="517">517</th><td><i class="doc"> * grace period has elapsed, in other words after all currently</i></td></tr>
+<tr><th id="518">518</th><td><i class="doc"> * executing rcu-tasks read-side critical sections have elapsed.  These</i></td></tr>
+<tr><th id="519">519</th><td><i class="doc"> * read-side critical sections are delimited by calls to schedule(),</i></td></tr>
+<tr><th id="520">520</th><td><i class="doc"> * cond_resched_tasks_rcu_qs(), idle execution, userspace execution, calls</i></td></tr>
+<tr><th id="521">521</th><td><i class="doc"> * to synchronize_rcu_tasks(), and (in theory, anyway) cond_resched().</i></td></tr>
+<tr><th id="522">522</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="523">523</th><td><i class="doc"> * This is a very specialized primitive, intended only for a few uses in</i></td></tr>
+<tr><th id="524">524</th><td><i class="doc"> * tracing and other situations requiring manipulation of function</i></td></tr>
+<tr><th id="525">525</th><td><i class="doc"> * preambles and profiling hooks.  The synchronize_rcu_tasks() function</i></td></tr>
+<tr><th id="526">526</th><td><i class="doc"> * is not (yet) intended for heavy use from multiple CPUs.</i></td></tr>
+<tr><th id="527">527</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="528">528</th><td><i class="doc"> * Note that this guarantee implies further memory-ordering guarantees.</i></td></tr>
+<tr><th id="529">529</th><td><i class="doc"> * On systems with more than one CPU, when synchronize_rcu_tasks() returns,</i></td></tr>
+<tr><th id="530">530</th><td><i class="doc"> * each CPU is guaranteed to have executed a full memory barrier since the</i></td></tr>
+<tr><th id="531">531</th><td><i class="doc"> * end of its last RCU-tasks read-side critical section whose beginning</i></td></tr>
+<tr><th id="532">532</th><td><i class="doc"> * preceded the call to synchronize_rcu_tasks().  In addition, each CPU</i></td></tr>
+<tr><th id="533">533</th><td><i class="doc"> * having an RCU-tasks read-side critical section that extends beyond</i></td></tr>
+<tr><th id="534">534</th><td><i class="doc"> * the return from synchronize_rcu_tasks() is guaranteed to have executed</i></td></tr>
+<tr><th id="535">535</th><td><i class="doc"> * a full memory barrier after the beginning of synchronize_rcu_tasks()</i></td></tr>
+<tr><th id="536">536</th><td><i class="doc"> * and before the beginning of that RCU-tasks read-side critical section.</i></td></tr>
+<tr><th id="537">537</th><td><i class="doc"> * Note that these guarantees include CPUs that are offline, idle, or</i></td></tr>
+<tr><th id="538">538</th><td><i class="doc"> * executing in user mode, as well as CPUs that are executing in the kernel.</i></td></tr>
+<tr><th id="539">539</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="540">540</th><td><i class="doc"> * Furthermore, if CPU A invoked synchronize_rcu_tasks(), which returned</i></td></tr>
+<tr><th id="541">541</th><td><i class="doc"> * to its caller on CPU B, then both CPU A and CPU B are guaranteed</i></td></tr>
+<tr><th id="542">542</th><td><i class="doc"> * to have executed a full memory barrier during the execution of</i></td></tr>
+<tr><th id="543">543</th><td><i class="doc"> * synchronize_rcu_tasks() -- even if CPU A and CPU B are the same CPU</i></td></tr>
+<tr><th id="544">544</th><td><i class="doc"> * (but again only if the system has more than one CPU).</i></td></tr>
+<tr><th id="545">545</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="546">546</th><td><em>void</em> synchronize_rcu_tasks(<em>void</em>)</td></tr>
+<tr><th id="547">547</th><td>{</td></tr>
+<tr><th id="548">548</th><td>	<i>/* Complain if the scheduler has not started.  */</i></td></tr>
+<tr><th id="549">549</th><td>	RCU_LOCKDEP_WARN(rcu_scheduler_active == RCU_SCHEDULER_INACTIVE,</td></tr>
+<tr><th id="550">550</th><td>			 <q>"synchronize_rcu_tasks called too soon"</q>);</td></tr>
+<tr><th id="551">551</th><td></td></tr>
+<tr><th id="552">552</th><td>	<i>/* Wait for the grace period. */</i></td></tr>
+<tr><th id="553">553</th><td>	wait_rcu_gp(call_rcu_tasks);</td></tr>
+<tr><th id="554">554</th><td>}</td></tr>
+<tr><th id="555">555</th><td>EXPORT_SYMBOL_GPL(synchronize_rcu_tasks);</td></tr>
+<tr><th id="556">556</th><td></td></tr>
+<tr><th id="557">557</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="558">558</th><td><i class="doc"> * rcu_barrier_tasks - Wait for in-flight call_rcu_tasks() callbacks.</i></td></tr>
+<tr><th id="559">559</th><td><i class="doc"> *</i></td></tr>
+<tr><th id="560">560</th><td><i class="doc"> * Although the current implementation is guaranteed to wait, it is not</i></td></tr>
+<tr><th id="561">561</th><td><i class="doc"> * obligated to, for example, if there are no pending callbacks.</i></td></tr>
+<tr><th id="562">562</th><td><i class="doc"> */</i></td></tr>
+<tr><th id="563">563</th><td><em>void</em> rcu_barrier_tasks(<em>void</em>)</td></tr>
+<tr><th id="564">564</th><td>{</td></tr>
+<tr><th id="565">565</th><td>	<i>/* There is only one callback queue, so this is easy.  ;-) */</i></td></tr>
+<tr><th id="566">566</th><td>	synchronize_rcu_tasks();</td></tr>
+<tr><th id="567">567</th><td>}</td></tr>
+<tr><th id="568">568</th><td>EXPORT_SYMBOL_GPL(rcu_barrier_tasks);</td></tr>
+<tr><th id="569">569</th><td></td></tr>
+<tr><th id="570">570</th><td><i>/* See if tasks are still holding out, complain if so. */</i></td></tr>
+<tr><th id="571">571</th><td><em>static</em> <em>void</em> check_holdout_task(<b>struct</b> task_struct *t,</td></tr>
+<tr><th id="572">572</th><td>			       bool needreport, bool *firstreport)</td></tr>
+<tr><th id="573">573</th><td>{</td></tr>
+<tr><th id="574">574</th><td>	<em>int</em> cpu;</td></tr>
+<tr><th id="575">575</th><td></td></tr>
+<tr><th id="576">576</th><td>	<b>if</b> (!READ_ONCE(t-&gt;rcu_tasks_holdout) ||</td></tr>
+<tr><th id="577">577</th><td>	    t-&gt;rcu_tasks_nvcsw != READ_ONCE(t-&gt;nvcsw) ||</td></tr>
+<tr><th id="578">578</th><td>	    !READ_ONCE(t-&gt;on_rq) ||</td></tr>
+<tr><th id="579">579</th><td>	    (IS_ENABLED(CONFIG_NO_HZ_FULL) &amp;&amp;</td></tr>
+<tr><th id="580">580</th><td>	     !is_idle_task(t) &amp;&amp; t-&gt;rcu_tasks_idle_cpu &gt;= <var>0</var>)) {</td></tr>
+<tr><th id="581">581</th><td>		WRITE_ONCE(t-&gt;rcu_tasks_holdout, false);</td></tr>
+<tr><th id="582">582</th><td>		list_del_init(&amp;t-&gt;rcu_tasks_holdout_list);</td></tr>
+<tr><th id="583">583</th><td>		put_task_struct(t);</td></tr>
+<tr><th id="584">584</th><td>		<b>return</b>;</td></tr>
+<tr><th id="585">585</th><td>	}</td></tr>
+<tr><th id="586">586</th><td>	rcu_request_urgent_qs_task(t);</td></tr>
+<tr><th id="587">587</th><td>	<b>if</b> (!needreport)</td></tr>
+<tr><th id="588">588</th><td>		<b>return</b>;</td></tr>
+<tr><th id="589">589</th><td>	<b>if</b> (*firstreport) {</td></tr>
+<tr><th id="590">590</th><td>		pr_err(<q>"INFO: rcu_tasks detected stalls on tasks:\n"</q>);</td></tr>
+<tr><th id="591">591</th><td>		*firstreport = false;</td></tr>
+<tr><th id="592">592</th><td>	}</td></tr>
+<tr><th id="593">593</th><td>	cpu = task_cpu(t);</td></tr>
+<tr><th id="594">594</th><td>	pr_alert(<q>"%p: %c%c nvcsw: %lu/%lu holdout: %d idle_cpu: %d/%d\n"</q>,</td></tr>
+<tr><th id="595">595</th><td>		 t, <q>".I"</q>[is_idle_task(t)],</td></tr>
+<tr><th id="596">596</th><td>		 <q>"N."</q>[cpu &lt; <var>0</var> || !tick_nohz_full_cpu(cpu)],</td></tr>
+<tr><th id="597">597</th><td>		 t-&gt;rcu_tasks_nvcsw, t-&gt;nvcsw, t-&gt;rcu_tasks_holdout,</td></tr>
+<tr><th id="598">598</th><td>		 t-&gt;rcu_tasks_idle_cpu, cpu);</td></tr>
+<tr><th id="599">599</th><td>	sched_show_task(t);</td></tr>
+<tr><th id="600">600</th><td>}</td></tr>
+<tr><th id="601">601</th><td></td></tr>
+<tr><th id="602">602</th><td><i>/* RCU-tasks kthread that detects grace periods and invokes callbacks. */</i></td></tr>
+<tr><th id="603">603</th><td><em>static</em> <em>int</em> __noreturn rcu_tasks_kthread(<em>void</em> *arg)</td></tr>
+<tr><th id="604">604</th><td>{</td></tr>
+<tr><th id="605">605</th><td>	<em>unsigned</em> <em>long</em> flags;</td></tr>
+<tr><th id="606">606</th><td>	<b>struct</b> task_struct *g, *t;</td></tr>
+<tr><th id="607">607</th><td>	<em>unsigned</em> <em>long</em> lastreport;</td></tr>
+<tr><th id="608">608</th><td>	<b>struct</b> rcu_head *list;</td></tr>
+<tr><th id="609">609</th><td>	<b>struct</b> rcu_head *next;</td></tr>
+<tr><th id="610">610</th><td>	LIST_HEAD(rcu_tasks_holdouts);</td></tr>
+<tr><th id="611">611</th><td>	<em>int</em> fract;</td></tr>
+<tr><th id="612">612</th><td></td></tr>
+<tr><th id="613">613</th><td>	<i>/* Run on housekeeping CPUs by default.  Sysadm can move if desired. */</i></td></tr>
+<tr><th id="614">614</th><td>	housekeeping_affine(current, HK_FLAG_RCU);</td></tr>
+<tr><th id="615">615</th><td></td></tr>
+<tr><th id="616">616</th><td>	<i>/*</i></td></tr>
+<tr><th id="617">617</th><td><i>	 * Each pass through the following loop makes one check for</i></td></tr>
+<tr><th id="618">618</th><td><i>	 * newly arrived callbacks, and, if there are some, waits for</i></td></tr>
+<tr><th id="619">619</th><td><i>	 * one RCU-tasks grace period and then invokes the callbacks.</i></td></tr>
+<tr><th id="620">620</th><td><i>	 * This loop is terminated by the system going down.  ;-)</i></td></tr>
+<tr><th id="621">621</th><td><i>	 */</i></td></tr>
+<tr><th id="622">622</th><td>	<b>for</b> (;;) {</td></tr>
+<tr><th id="623">623</th><td></td></tr>
+<tr><th id="624">624</th><td>		<i>/* Pick up any new callbacks. */</i></td></tr>
+<tr><th id="625">625</th><td>		raw_spin_lock_irqsave(&amp;rcu_tasks_cbs_lock, flags);</td></tr>
+<tr><th id="626">626</th><td>		list = rcu_tasks_cbs_head;</td></tr>
+<tr><th id="627">627</th><td>		rcu_tasks_cbs_head = NULL;</td></tr>
+<tr><th id="628">628</th><td>		rcu_tasks_cbs_tail = &amp;rcu_tasks_cbs_head;</td></tr>
+<tr><th id="629">629</th><td>		raw_spin_unlock_irqrestore(&amp;rcu_tasks_cbs_lock, flags);</td></tr>
+<tr><th id="630">630</th><td></td></tr>
+<tr><th id="631">631</th><td>		<i>/* If there were none, wait a bit and start over. */</i></td></tr>
+<tr><th id="632">632</th><td>		<b>if</b> (!list) {</td></tr>
+<tr><th id="633">633</th><td>			wait_event_interruptible(rcu_tasks_cbs_wq,</td></tr>
+<tr><th id="634">634</th><td>						 rcu_tasks_cbs_head);</td></tr>
+<tr><th id="635">635</th><td>			<b>if</b> (!rcu_tasks_cbs_head) {</td></tr>
+<tr><th id="636">636</th><td>				WARN_ON(signal_pending(current));</td></tr>
+<tr><th id="637">637</th><td>				schedule_timeout_interruptible(HZ/<var>10</var>);</td></tr>
+<tr><th id="638">638</th><td>			}</td></tr>
+<tr><th id="639">639</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="640">640</th><td>		}</td></tr>
+<tr><th id="641">641</th><td></td></tr>
+<tr><th id="642">642</th><td>		<i>/*</i></td></tr>
+<tr><th id="643">643</th><td><i>		 * Wait for all pre-existing t-&gt;on_rq and t-&gt;nvcsw</i></td></tr>
+<tr><th id="644">644</th><td><i>		 * transitions to complete.  Invoking synchronize_rcu()</i></td></tr>
+<tr><th id="645">645</th><td><i>		 * suffices because all these transitions occur with</i></td></tr>
+<tr><th id="646">646</th><td><i>		 * interrupts disabled.  Without this synchronize_rcu(),</i></td></tr>
+<tr><th id="647">647</th><td><i>		 * a read-side critical section that started before the</i></td></tr>
+<tr><th id="648">648</th><td><i>		 * grace period might be incorrectly seen as having started</i></td></tr>
+<tr><th id="649">649</th><td><i>		 * after the grace period.</i></td></tr>
+<tr><th id="650">650</th><td><i>		 *</i></td></tr>
+<tr><th id="651">651</th><td><i>		 * This synchronize_rcu() also dispenses with the</i></td></tr>
+<tr><th id="652">652</th><td><i>		 * need for a memory barrier on the first store to</i></td></tr>
+<tr><th id="653">653</th><td><i>		 * -&gt;rcu_tasks_holdout, as it forces the store to happen</i></td></tr>
+<tr><th id="654">654</th><td><i>		 * after the beginning of the grace period.</i></td></tr>
+<tr><th id="655">655</th><td><i>		 */</i></td></tr>
+<tr><th id="656">656</th><td>		synchronize_rcu();</td></tr>
+<tr><th id="657">657</th><td></td></tr>
+<tr><th id="658">658</th><td>		<i>/*</i></td></tr>
+<tr><th id="659">659</th><td><i>		 * There were callbacks, so we need to wait for an</i></td></tr>
+<tr><th id="660">660</th><td><i>		 * RCU-tasks grace period.  Start off by scanning</i></td></tr>
+<tr><th id="661">661</th><td><i>		 * the task list for tasks that are not already</i></td></tr>
+<tr><th id="662">662</th><td><i>		 * voluntarily blocked.  Mark these tasks and make</i></td></tr>
+<tr><th id="663">663</th><td><i>		 * a list of them in rcu_tasks_holdouts.</i></td></tr>
+<tr><th id="664">664</th><td><i>		 */</i></td></tr>
+<tr><th id="665">665</th><td>		rcu_read_lock();</td></tr>
+<tr><th id="666">666</th><td>		for_each_process_thread(g, t) {</td></tr>
+<tr><th id="667">667</th><td>			<b>if</b> (t != current &amp;&amp; READ_ONCE(t-&gt;on_rq) &amp;&amp;</td></tr>
+<tr><th id="668">668</th><td>			    !is_idle_task(t)) {</td></tr>
+<tr><th id="669">669</th><td>				get_task_struct(t);</td></tr>
+<tr><th id="670">670</th><td>				t-&gt;rcu_tasks_nvcsw = READ_ONCE(t-&gt;nvcsw);</td></tr>
+<tr><th id="671">671</th><td>				WRITE_ONCE(t-&gt;rcu_tasks_holdout, true);</td></tr>
+<tr><th id="672">672</th><td>				list_add(&amp;t-&gt;rcu_tasks_holdout_list,</td></tr>
+<tr><th id="673">673</th><td>					 &amp;rcu_tasks_holdouts);</td></tr>
+<tr><th id="674">674</th><td>			}</td></tr>
+<tr><th id="675">675</th><td>		}</td></tr>
+<tr><th id="676">676</th><td>		rcu_read_unlock();</td></tr>
+<tr><th id="677">677</th><td></td></tr>
+<tr><th id="678">678</th><td>		<i>/*</i></td></tr>
+<tr><th id="679">679</th><td><i>		 * Wait for tasks that are in the process of exiting.</i></td></tr>
+<tr><th id="680">680</th><td><i>		 * This does only part of the job, ensuring that all</i></td></tr>
+<tr><th id="681">681</th><td><i>		 * tasks that were previously exiting reach the point</i></td></tr>
+<tr><th id="682">682</th><td><i>		 * where they have disabled preemption, allowing the</i></td></tr>
+<tr><th id="683">683</th><td><i>		 * later synchronize_rcu() to finish the job.</i></td></tr>
+<tr><th id="684">684</th><td><i>		 */</i></td></tr>
+<tr><th id="685">685</th><td>		synchronize_srcu(&amp;tasks_rcu_exit_srcu);</td></tr>
+<tr><th id="686">686</th><td></td></tr>
+<tr><th id="687">687</th><td>		<i>/*</i></td></tr>
+<tr><th id="688">688</th><td><i>		 * Each pass through the following loop scans the list</i></td></tr>
+<tr><th id="689">689</th><td><i>		 * of holdout tasks, removing any that are no longer</i></td></tr>
+<tr><th id="690">690</th><td><i>		 * holdouts.  When the list is empty, we are done.</i></td></tr>
+<tr><th id="691">691</th><td><i>		 */</i></td></tr>
+<tr><th id="692">692</th><td>		lastreport = jiffies;</td></tr>
+<tr><th id="693">693</th><td></td></tr>
+<tr><th id="694">694</th><td>		<i>/* Start off with HZ/10 wait and slowly back off to 1 HZ wait*/</i></td></tr>
+<tr><th id="695">695</th><td>		fract = <var>10</var>;</td></tr>
+<tr><th id="696">696</th><td></td></tr>
+<tr><th id="697">697</th><td>		<b>for</b> (;;) {</td></tr>
+<tr><th id="698">698</th><td>			bool firstreport;</td></tr>
+<tr><th id="699">699</th><td>			bool needreport;</td></tr>
+<tr><th id="700">700</th><td>			<em>int</em> rtst;</td></tr>
+<tr><th id="701">701</th><td>			<b>struct</b> task_struct *t1;</td></tr>
+<tr><th id="702">702</th><td></td></tr>
+<tr><th id="703">703</th><td>			<b>if</b> (list_empty(&amp;rcu_tasks_holdouts))</td></tr>
+<tr><th id="704">704</th><td>				<b>break</b>;</td></tr>
+<tr><th id="705">705</th><td></td></tr>
+<tr><th id="706">706</th><td>			<i>/* Slowly back off waiting for holdouts */</i></td></tr>
+<tr><th id="707">707</th><td>			schedule_timeout_interruptible(HZ/fract);</td></tr>
+<tr><th id="708">708</th><td></td></tr>
+<tr><th id="709">709</th><td>			<b>if</b> (fract &gt; <var>1</var>)</td></tr>
+<tr><th id="710">710</th><td>				fract--;</td></tr>
+<tr><th id="711">711</th><td></td></tr>
+<tr><th id="712">712</th><td>			rtst = READ_ONCE(rcu_task_stall_timeout);</td></tr>
+<tr><th id="713">713</th><td>			needreport = rtst &gt; <var>0</var> &amp;&amp;</td></tr>
+<tr><th id="714">714</th><td>				     time_after(jiffies, lastreport + rtst);</td></tr>
+<tr><th id="715">715</th><td>			<b>if</b> (needreport)</td></tr>
+<tr><th id="716">716</th><td>				lastreport = jiffies;</td></tr>
+<tr><th id="717">717</th><td>			firstreport = true;</td></tr>
+<tr><th id="718">718</th><td>			WARN_ON(signal_pending(current));</td></tr>
+<tr><th id="719">719</th><td>			list_for_each_entry_safe(t, t1, &amp;rcu_tasks_holdouts,</td></tr>
+<tr><th id="720">720</th><td>						rcu_tasks_holdout_list) {</td></tr>
+<tr><th id="721">721</th><td>				check_holdout_task(t, needreport, &amp;firstreport);</td></tr>
+<tr><th id="722">722</th><td>				cond_resched();</td></tr>
+<tr><th id="723">723</th><td>			}</td></tr>
+<tr><th id="724">724</th><td>		}</td></tr>
+<tr><th id="725">725</th><td></td></tr>
+<tr><th id="726">726</th><td>		<i>/*</i></td></tr>
+<tr><th id="727">727</th><td><i>		 * Because -&gt;on_rq and -&gt;nvcsw are not guaranteed</i></td></tr>
+<tr><th id="728">728</th><td><i>		 * to have a full memory barriers prior to them in the</i></td></tr>
+<tr><th id="729">729</th><td><i>		 * schedule() path, memory reordering on other CPUs could</i></td></tr>
+<tr><th id="730">730</th><td><i>		 * cause their RCU-tasks read-side critical sections to</i></td></tr>
+<tr><th id="731">731</th><td><i>		 * extend past the end of the grace period.  However,</i></td></tr>
+<tr><th id="732">732</th><td><i>		 * because these -&gt;nvcsw updates are carried out with</i></td></tr>
+<tr><th id="733">733</th><td><i>		 * interrupts disabled, we can use synchronize_rcu()</i></td></tr>
+<tr><th id="734">734</th><td><i>		 * to force the needed ordering on all such CPUs.</i></td></tr>
+<tr><th id="735">735</th><td><i>		 *</i></td></tr>
+<tr><th id="736">736</th><td><i>		 * This synchronize_rcu() also confines all</i></td></tr>
+<tr><th id="737">737</th><td><i>		 * -&gt;rcu_tasks_holdout accesses to be within the grace</i></td></tr>
+<tr><th id="738">738</th><td><i>		 * period, avoiding the need for memory barriers for</i></td></tr>
+<tr><th id="739">739</th><td><i>		 * -&gt;rcu_tasks_holdout accesses.</i></td></tr>
+<tr><th id="740">740</th><td><i>		 *</i></td></tr>
+<tr><th id="741">741</th><td><i>		 * In addition, this synchronize_rcu() waits for exiting</i></td></tr>
+<tr><th id="742">742</th><td><i>		 * tasks to complete their final preempt_disable() region</i></td></tr>
+<tr><th id="743">743</th><td><i>		 * of execution, cleaning up after the synchronize_srcu()</i></td></tr>
+<tr><th id="744">744</th><td><i>		 * above.</i></td></tr>
+<tr><th id="745">745</th><td><i>		 */</i></td></tr>
+<tr><th id="746">746</th><td>		synchronize_rcu();</td></tr>
+<tr><th id="747">747</th><td></td></tr>
+<tr><th id="748">748</th><td>		<i>/* Invoke the callbacks. */</i></td></tr>
+<tr><th id="749">749</th><td>		<b>while</b> (list) {</td></tr>
+<tr><th id="750">750</th><td>			next = list-&gt;next;</td></tr>
+<tr><th id="751">751</th><td>			local_bh_disable();</td></tr>
+<tr><th id="752">752</th><td>			list-&gt;func(list);</td></tr>
+<tr><th id="753">753</th><td>			local_bh_enable();</td></tr>
+<tr><th id="754">754</th><td>			list = next;</td></tr>
+<tr><th id="755">755</th><td>			cond_resched();</td></tr>
+<tr><th id="756">756</th><td>		}</td></tr>
+<tr><th id="757">757</th><td>		<i>/* Paranoid sleep to keep this from entering a tight loop */</i></td></tr>
+<tr><th id="758">758</th><td>		schedule_timeout_uninterruptible(HZ/<var>10</var>);</td></tr>
+<tr><th id="759">759</th><td>	}</td></tr>
+<tr><th id="760">760</th><td>}</td></tr>
+<tr><th id="761">761</th><td></td></tr>
+<tr><th id="762">762</th><td><i>/* Spawn rcu_tasks_kthread() at core_initcall() time. */</i></td></tr>
+<tr><th id="763">763</th><td><em>static</em> <em>int</em> __init rcu_spawn_tasks_kthread(<em>void</em>)</td></tr>
+<tr><th id="764">764</th><td>{</td></tr>
+<tr><th id="765">765</th><td>	<b>struct</b> task_struct *t;</td></tr>
+<tr><th id="766">766</th><td></td></tr>
+<tr><th id="767">767</th><td>	t = kthread_run(rcu_tasks_kthread, NULL, <q>"rcu_tasks_kthread"</q>);</td></tr>
+<tr><th id="768">768</th><td>	<b>if</b> (WARN_ONCE(IS_ERR(t), <q>"%s: Could not start Tasks-RCU grace-period kthread, OOM is now expected behavior\n"</q>, <b>__func__</b>))</td></tr>
+<tr><th id="769">769</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="770">770</th><td>	smp_mb(); <i>/* Ensure others see full kthread. */</i></td></tr>
+<tr><th id="771">771</th><td>	WRITE_ONCE(rcu_tasks_kthread_ptr, t);</td></tr>
+<tr><th id="772">772</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="773">773</th><td>}</td></tr>
+<tr><th id="774">774</th><td>core_initcall(rcu_spawn_tasks_kthread);</td></tr>
+<tr><th id="775">775</th><td></td></tr>
+<tr><th id="776">776</th><td><i>/* Do the srcu_read_lock() for the above synchronize_srcu().  */</i></td></tr>
+<tr><th id="777">777</th><td><em>void</em> exit_tasks_rcu_start(<em>void</em>)</td></tr>
+<tr><th id="778">778</th><td>{</td></tr>
+<tr><th id="779">779</th><td>	preempt_disable();</td></tr>
+<tr><th id="780">780</th><td>	current-&gt;rcu_tasks_idx = __srcu_read_lock(&amp;tasks_rcu_exit_srcu);</td></tr>
+<tr><th id="781">781</th><td>	preempt_enable();</td></tr>
+<tr><th id="782">782</th><td>}</td></tr>
+<tr><th id="783">783</th><td></td></tr>
+<tr><th id="784">784</th><td><i>/* Do the srcu_read_unlock() for the above synchronize_srcu().  */</i></td></tr>
+<tr><th id="785">785</th><td><em>void</em> exit_tasks_rcu_finish(<em>void</em>)</td></tr>
+<tr><th id="786">786</th><td>{</td></tr>
+<tr><th id="787">787</th><td>	preempt_disable();</td></tr>
+<tr><th id="788">788</th><td>	__srcu_read_unlock(&amp;tasks_rcu_exit_srcu, current-&gt;rcu_tasks_idx);</td></tr>
+<tr><th id="789">789</th><td>	preempt_enable();</td></tr>
+<tr><th id="790">790</th><td>}</td></tr>
+<tr><th id="791">791</th><td></td></tr>
+<tr><th id="792">792</th><td><u>#<span data-ppcond="447">endif</span> /* #ifdef CONFIG_TASKS_RCU */</u></td></tr>
+<tr><th id="793">793</th><td></td></tr>
+<tr><th id="794">794</th><td><u>#<span data-ppcond="794">ifndef</span> <span class="macro" data-ref="_M/CONFIG_TINY_RCU">CONFIG_TINY_RCU</span></u></td></tr>
+<tr><th id="795">795</th><td></td></tr>
+<tr><th id="796">796</th><td><i  data-doc="rcu_tasks_bootup_oddness">/*</i></td></tr>
+<tr><th id="797">797</th><td><i  data-doc="rcu_tasks_bootup_oddness"> * Print any non-default Tasks RCU settings.</i></td></tr>
+<tr><th id="798">798</th><td><i  data-doc="rcu_tasks_bootup_oddness"> */</i></td></tr>
+<tr><th id="799">799</th><td><em>static</em> <em>void</em> <a class="macro" href="../../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="tu decl def fn" id="rcu_tasks_bootup_oddness" title='rcu_tasks_bootup_oddness' data-type='void rcu_tasks_bootup_oddness()' data-ref="rcu_tasks_bootup_oddness" data-ref-filename="rcu_tasks_bootup_oddness">rcu_tasks_bootup_oddness</dfn>(<em>void</em>)</td></tr>
+<tr><th id="800">800</th><td>{</td></tr>
+<tr><th id="801">801</th><td><u>#<span data-ppcond="801">ifdef</span> <span class="macro" data-ref="_M/CONFIG_TASKS_RCU">CONFIG_TASKS_RCU</span></u></td></tr>
+<tr><th id="802">802</th><td>	<b>if</b> (rcu_task_stall_timeout != RCU_TASK_STALL_TIMEOUT)</td></tr>
+<tr><th id="803">803</th><td>		pr_info(<q>"\tTasks-RCU CPU stall warnings timeout set to %d (rcu_task_stall_timeout).\n"</q>, rcu_task_stall_timeout);</td></tr>
+<tr><th id="804">804</th><td>	<b>else</b></td></tr>
+<tr><th id="805">805</th><td>		pr_info(<q>"\tTasks RCU enabled.\n"</q>);</td></tr>
+<tr><th id="806">806</th><td><u>#<span data-ppcond="801">endif</span> /* #ifdef CONFIG_TASKS_RCU */</u></td></tr>
+<tr><th id="807">807</th><td>}</td></tr>
+<tr><th id="808">808</th><td></td></tr>
+<tr><th id="809">809</th><td><u>#<span data-ppcond="794">endif</span> /* #ifndef CONFIG_TINY_RCU */</u></td></tr>
+<tr><th id="810">810</th><td></td></tr>
+<tr><th id="811">811</th><td><u>#<span data-ppcond="811">ifdef</span> <span class="macro" data-ref="_M/CONFIG_PROVE_RCU">CONFIG_PROVE_RCU</span></u></td></tr>
+<tr><th id="812">812</th><td></td></tr>
+<tr><th id="813">813</th><td><i>/*</i></td></tr>
+<tr><th id="814">814</th><td><i> * Early boot self test parameters.</i></td></tr>
+<tr><th id="815">815</th><td><i> */</i></td></tr>
+<tr><th id="816">816</th><td><em>static</em> bool rcu_self_test;</td></tr>
+<tr><th id="817">817</th><td>module_param(rcu_self_test, bool, <var>0444</var>);</td></tr>
+<tr><th id="818">818</th><td></td></tr>
+<tr><th id="819">819</th><td><em>static</em> <em>int</em> rcu_self_test_counter;</td></tr>
+<tr><th id="820">820</th><td></td></tr>
+<tr><th id="821">821</th><td><em>static</em> <em>void</em> test_callback(<b>struct</b> rcu_head *r)</td></tr>
+<tr><th id="822">822</th><td>{</td></tr>
+<tr><th id="823">823</th><td>	rcu_self_test_counter++;</td></tr>
+<tr><th id="824">824</th><td>	pr_info(<q>"RCU test callback executed %d\n"</q>, rcu_self_test_counter);</td></tr>
+<tr><th id="825">825</th><td>}</td></tr>
+<tr><th id="826">826</th><td></td></tr>
+<tr><th id="827">827</th><td>DEFINE_STATIC_SRCU(early_srcu);</td></tr>
+<tr><th id="828">828</th><td></td></tr>
+<tr><th id="829">829</th><td><em>static</em> <em>void</em> early_boot_test_call_rcu(<em>void</em>)</td></tr>
+<tr><th id="830">830</th><td>{</td></tr>
+<tr><th id="831">831</th><td>	<em>static</em> <b>struct</b> rcu_head head;</td></tr>
+<tr><th id="832">832</th><td>	<em>static</em> <b>struct</b> rcu_head shead;</td></tr>
+<tr><th id="833">833</th><td></td></tr>
+<tr><th id="834">834</th><td>	call_rcu(&amp;head, test_callback);</td></tr>
+<tr><th id="835">835</th><td>	<b>if</b> (IS_ENABLED(CONFIG_SRCU))</td></tr>
+<tr><th id="836">836</th><td>		call_srcu(&amp;early_srcu, &amp;shead, test_callback);</td></tr>
+<tr><th id="837">837</th><td>}</td></tr>
+<tr><th id="838">838</th><td></td></tr>
+<tr><th id="839">839</th><td><em>void</em> rcu_early_boot_tests(<em>void</em>)</td></tr>
+<tr><th id="840">840</th><td>{</td></tr>
+<tr><th id="841">841</th><td>	pr_info(<q>"Running RCU self tests\n"</q>);</td></tr>
+<tr><th id="842">842</th><td></td></tr>
+<tr><th id="843">843</th><td>	<b>if</b> (rcu_self_test)</td></tr>
+<tr><th id="844">844</th><td>		early_boot_test_call_rcu();</td></tr>
+<tr><th id="845">845</th><td>	rcu_test_sync_prims();</td></tr>
+<tr><th id="846">846</th><td>}</td></tr>
+<tr><th id="847">847</th><td></td></tr>
+<tr><th id="848">848</th><td><em>static</em> <em>int</em> rcu_verify_early_boot_tests(<em>void</em>)</td></tr>
+<tr><th id="849">849</th><td>{</td></tr>
+<tr><th id="850">850</th><td>	<em>int</em> ret = <var>0</var>;</td></tr>
+<tr><th id="851">851</th><td>	<em>int</em> early_boot_test_counter = <var>0</var>;</td></tr>
+<tr><th id="852">852</th><td></td></tr>
+<tr><th id="853">853</th><td>	<b>if</b> (rcu_self_test) {</td></tr>
+<tr><th id="854">854</th><td>		early_boot_test_counter++;</td></tr>
+<tr><th id="855">855</th><td>		rcu_barrier();</td></tr>
+<tr><th id="856">856</th><td>		<b>if</b> (IS_ENABLED(CONFIG_SRCU)) {</td></tr>
+<tr><th id="857">857</th><td>			early_boot_test_counter++;</td></tr>
+<tr><th id="858">858</th><td>			srcu_barrier(&amp;early_srcu);</td></tr>
+<tr><th id="859">859</th><td>		}</td></tr>
+<tr><th id="860">860</th><td>	}</td></tr>
+<tr><th id="861">861</th><td>	<b>if</b> (rcu_self_test_counter != early_boot_test_counter) {</td></tr>
+<tr><th id="862">862</th><td>		WARN_ON(<var>1</var>);</td></tr>
+<tr><th id="863">863</th><td>		ret = -<var>1</var>;</td></tr>
+<tr><th id="864">864</th><td>	}</td></tr>
+<tr><th id="865">865</th><td></td></tr>
+<tr><th id="866">866</th><td>	<b>return</b> ret;</td></tr>
+<tr><th id="867">867</th><td>}</td></tr>
+<tr><th id="868">868</th><td>late_initcall(rcu_verify_early_boot_tests);</td></tr>
+<tr><th id="869">869</th><td><u>#<span data-ppcond="811">else</span></u></td></tr>
+<tr><th id="870">870</th><td><em>void</em> <dfn class="decl def fn" id="rcu_early_boot_tests" title='rcu_early_boot_tests' data-ref="rcu_early_boot_tests" data-ref-filename="rcu_early_boot_tests">rcu_early_boot_tests</dfn>(<em>void</em>) {}</td></tr>
+<tr><th id="871">871</th><td><u>#<span data-ppcond="811">endif</span> /* CONFIG_PROVE_RCU */</u></td></tr>
+<tr><th id="872">872</th><td></td></tr>
+<tr><th id="873">873</th><td><u>#<span data-ppcond="873">ifndef</span> <span class="macro" data-ref="_M/CONFIG_TINY_RCU">CONFIG_TINY_RCU</span></u></td></tr>
+<tr><th id="874">874</th><td></td></tr>
+<tr><th id="875">875</th><td><i>/*</i></td></tr>
+<tr><th id="876">876</th><td><i> * Print any significant non-default boot-time settings.</i></td></tr>
+<tr><th id="877">877</th><td><i> */</i></td></tr>
+<tr><th id="878">878</th><td><em>void</em> <a class="macro" href="../../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="decl def fn" id="rcupdate_announce_bootup_oddness" title='rcupdate_announce_bootup_oddness' data-ref="rcupdate_announce_bootup_oddness" data-ref-filename="rcupdate_announce_bootup_oddness">rcupdate_announce_bootup_oddness</dfn>(<em>void</em>)</td></tr>
+<tr><th id="879">879</th><td>{</td></tr>
+<tr><th id="880">880</th><td>	<b>if</b> (<a class="ref" href="#rcu_normal" title='rcu_normal' data-ref="rcu_normal" data-ref-filename="rcu_normal">rcu_normal</a>)</td></tr>
+<tr><th id="881">881</th><td>		<a class="macro" href="../../include/linux/printk.h.html#310" title="printk(&quot;\001&quot; &quot;6&quot; &quot;\tNo expedited grace period (rcu_normal).\n&quot;)" data-ref="_M/pr_info">pr_info</a>(<q>"\tNo expedited grace period (rcu_normal).\n"</q>);</td></tr>
+<tr><th id="882">882</th><td>	<b>else</b> <b>if</b> (<a class="tu ref" href="#rcu_normal_after_boot" title='rcu_normal_after_boot' data-use='r' data-ref="rcu_normal_after_boot" data-ref-filename="rcu_normal_after_boot">rcu_normal_after_boot</a>)</td></tr>
+<tr><th id="883">883</th><td>		<a class="macro" href="../../include/linux/printk.h.html#310" title="printk(&quot;\001&quot; &quot;6&quot; &quot;\tNo expedited grace period (rcu_normal_after_boot).\n&quot;)" data-ref="_M/pr_info">pr_info</a>(<q>"\tNo expedited grace period (rcu_normal_after_boot).\n"</q>);</td></tr>
+<tr><th id="884">884</th><td>	<b>else</b> <b>if</b> (<a class="ref" href="#rcu_expedited" title='rcu_expedited' data-ref="rcu_expedited" data-ref-filename="rcu_expedited">rcu_expedited</a>)</td></tr>
+<tr><th id="885">885</th><td>		<a class="macro" href="../../include/linux/printk.h.html#310" title="printk(&quot;\001&quot; &quot;6&quot; &quot;\tAll grace periods are expedited (rcu_expedited).\n&quot;)" data-ref="_M/pr_info">pr_info</a>(<q>"\tAll grace periods are expedited (rcu_expedited).\n"</q>);</td></tr>
+<tr><th id="886">886</th><td>	<b>if</b> (<a class="ref" href="rcu.h.html#rcu_cpu_stall_suppress" title='rcu_cpu_stall_suppress' data-ref="rcu_cpu_stall_suppress" data-ref-filename="rcu_cpu_stall_suppress">rcu_cpu_stall_suppress</a>)</td></tr>
+<tr><th id="887">887</th><td>		<a class="macro" href="../../include/linux/printk.h.html#310" title="printk(&quot;\001&quot; &quot;6&quot; &quot;\tRCU CPU stall warnings suppressed (rcu_cpu_stall_suppress).\n&quot;)" data-ref="_M/pr_info">pr_info</a>(<q>"\tRCU CPU stall warnings suppressed (rcu_cpu_stall_suppress).\n"</q>);</td></tr>
+<tr><th id="888">888</th><td>	<b>if</b> (<a class="ref" href="rcu.h.html#rcu_cpu_stall_timeout" title='rcu_cpu_stall_timeout' data-ref="rcu_cpu_stall_timeout" data-ref-filename="rcu_cpu_stall_timeout">rcu_cpu_stall_timeout</a> != <a class="macro" href="../../include/generated/autoconf.h.html#1002" title="21" data-ref="_M/CONFIG_RCU_CPU_STALL_TIMEOUT">CONFIG_RCU_CPU_STALL_TIMEOUT</a>)</td></tr>
+<tr><th id="889">889</th><td>		<a class="macro" href="../../include/linux/printk.h.html#310" title="printk(&quot;\001&quot; &quot;6&quot; &quot;\tRCU CPU stall warnings timeout set to %d (rcu_cpu_stall_timeout).\n&quot;, rcu_cpu_stall_timeout)" data-ref="_M/pr_info">pr_info</a>(<q>"\tRCU CPU stall warnings timeout set to %d (rcu_cpu_stall_timeout).\n"</q>, <a class="ref" href="rcu.h.html#rcu_cpu_stall_timeout" title='rcu_cpu_stall_timeout' data-ref="rcu_cpu_stall_timeout" data-ref-filename="rcu_cpu_stall_timeout">rcu_cpu_stall_timeout</a>);</td></tr>
+<tr><th id="890">890</th><td>	<a class="tu ref fn" href="#rcu_tasks_bootup_oddness" title='rcu_tasks_bootup_oddness' data-use='c' data-ref="rcu_tasks_bootup_oddness" data-ref-filename="rcu_tasks_bootup_oddness">rcu_tasks_bootup_oddness</a>();</td></tr>
+<tr><th id="891">891</th><td>}</td></tr>
+<tr><th id="892">892</th><td></td></tr>
+<tr><th id="893">893</th><td><u>#<span data-ppcond="873">endif</span> /* #ifndef CONFIG_TINY_RCU */</u></td></tr>
+<tr><th id="894">894</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

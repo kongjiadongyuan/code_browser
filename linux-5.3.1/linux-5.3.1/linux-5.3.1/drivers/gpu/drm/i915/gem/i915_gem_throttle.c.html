@@ -1,0 +1,91 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>i915_gem_throttle.c source code [linux-5.3.1/drivers/gpu/drm/i915/gem/i915_gem_throttle.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/drivers/gpu/drm/i915/gem/i915_gem_throttle.c'; var root_path = '../../../../../..'; var data_path = '../../../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../../../..'>linux-5.3.1</a>/<a href='../../../..'>drivers</a>/<a href='../../..'>gpu</a>/<a href='../..'>drm</a>/<a href='..'>i915</a>/<a href='./'>gem</a>/<a href='i915_gem_throttle.c.html'>i915_gem_throttle.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/*</i></td></tr>
+<tr><th id="2">2</th><td><i> * SPDX-License-Identifier: MIT</i></td></tr>
+<tr><th id="3">3</th><td><i> *</i></td></tr>
+<tr><th id="4">4</th><td><i> * Copyright © 2014-2016 Intel Corporation</i></td></tr>
+<tr><th id="5">5</th><td><i> */</i></td></tr>
+<tr><th id="6">6</th><td></td></tr>
+<tr><th id="7">7</th><td><u>#include <a href="../../../../../include/linux/jiffies.h.html">&lt;linux/jiffies.h&gt;</a></u></td></tr>
+<tr><th id="8">8</th><td></td></tr>
+<tr><th id="9">9</th><td><u>#include <a href="../../../../../include/drm/drm_file.h.html">&lt;drm/drm_file.h&gt;</a></u></td></tr>
+<tr><th id="10">10</th><td></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../i915_drv.h.html">"i915_drv.h"</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="i915_gem_ioctls.h.html">"i915_gem_ioctls.h"</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="i915_gem_object.h.html">"i915_gem_object.h"</a></u></td></tr>
+<tr><th id="14">14</th><td></td></tr>
+<tr><th id="15">15</th><td><i>/*</i></td></tr>
+<tr><th id="16">16</th><td><i> * 20ms is a fairly arbitrary limit (greater than the average frame time)</i></td></tr>
+<tr><th id="17">17</th><td><i> * chosen to prevent the CPU getting more than a frame ahead of the GPU</i></td></tr>
+<tr><th id="18">18</th><td><i> * (when using lax throttling for the frontbuffer). We also use it to</i></td></tr>
+<tr><th id="19">19</th><td><i> * offer free GPU waitboosts for severely congested workloads.</i></td></tr>
+<tr><th id="20">20</th><td><i> */</i></td></tr>
+<tr><th id="21">21</th><td><u>#define <dfn class="macro" id="_M/DRM_I915_THROTTLE_JIFFIES" data-ref="_M/DRM_I915_THROTTLE_JIFFIES">DRM_I915_THROTTLE_JIFFIES</dfn> <a class="ref fn" href="../../../../../include/linux/jiffies.h.html#msecs_to_jiffies" title='msecs_to_jiffies' data-ref="msecs_to_jiffies" data-ref-filename="msecs_to_jiffies">msecs_to_jiffies</a>(20)</u></td></tr>
+<tr><th id="22">22</th><td></td></tr>
+<tr><th id="23">23</th><td><i>/*</i></td></tr>
+<tr><th id="24">24</th><td><i> * Throttle our rendering by waiting until the ring has completed our requests</i></td></tr>
+<tr><th id="25">25</th><td><i> * emitted over 20 msec ago.</i></td></tr>
+<tr><th id="26">26</th><td><i> *</i></td></tr>
+<tr><th id="27">27</th><td><i> * Note that if we were to use the current jiffies each time around the loop,</i></td></tr>
+<tr><th id="28">28</th><td><i> * we wouldn't escape the function with any frames outstanding if the time to</i></td></tr>
+<tr><th id="29">29</th><td><i> * render a frame was over 20ms.</i></td></tr>
+<tr><th id="30">30</th><td><i> *</i></td></tr>
+<tr><th id="31">31</th><td><i> * This should get us reasonable parallelism between CPU and GPU but also</i></td></tr>
+<tr><th id="32">32</th><td><i> * relatively low latency when blocking on a particular request to finish.</i></td></tr>
+<tr><th id="33">33</th><td><i> */</i></td></tr>
+<tr><th id="34">34</th><td><em>int</em></td></tr>
+<tr><th id="35">35</th><td><dfn class="decl def fn" id="i915_gem_throttle_ioctl" title='i915_gem_throttle_ioctl' data-ref="i915_gem_throttle_ioctl" data-ref-filename="i915_gem_throttle_ioctl">i915_gem_throttle_ioctl</dfn>(<b>struct</b> <a class="type" href="../../../../../include/drm/drm_device.h.html#drm_device" title='drm_device' data-ref="drm_device" data-ref-filename="drm_device">drm_device</a> *<dfn class="local col1 decl" id="1dev" title='dev' data-type='struct drm_device *' data-ref="1dev" data-ref-filename="1dev">dev</dfn>, <em>void</em> *<dfn class="local col2 decl" id="2data" title='data' data-type='void *' data-ref="2data" data-ref-filename="2data">data</dfn>,</td></tr>
+<tr><th id="36">36</th><td>			<b>struct</b> <a class="type" href="../../../../../include/drm/drm_file.h.html#drm_file" title='drm_file' data-ref="drm_file" data-ref-filename="drm_file">drm_file</a> *<dfn class="local col3 decl" id="3file" title='file' data-type='struct drm_file *' data-ref="3file" data-ref-filename="3file">file</dfn>)</td></tr>
+<tr><th id="37">37</th><td>{</td></tr>
+<tr><th id="38">38</th><td>	<b>struct</b> <a class="type" href="../i915_drv.h.html#drm_i915_file_private" title='drm_i915_file_private' data-ref="drm_i915_file_private" data-ref-filename="drm_i915_file_private">drm_i915_file_private</a> *<dfn class="local col4 decl" id="4file_priv" title='file_priv' data-type='struct drm_i915_file_private *' data-ref="4file_priv" data-ref-filename="4file_priv">file_priv</dfn> = <a class="local col3 ref" href="#3file" title='file' data-ref="3file" data-ref-filename="3file">file</a>-&gt;<a class="ref field" href="../../../../../include/drm/drm_file.h.html#drm_file::driver_priv" title='drm_file::driver_priv' data-ref="drm_file::driver_priv" data-ref-filename="drm_file..driver_priv">driver_priv</a>;</td></tr>
+<tr><th id="39">39</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col5 decl" id="5recent_enough" title='recent_enough' data-type='unsigned long' data-ref="5recent_enough" data-ref-filename="5recent_enough">recent_enough</dfn> = <a class="ref" href="../../../../../include/linux/jiffies.h.html#jiffies" title='jiffies' data-ref="jiffies" data-ref-filename="jiffies">jiffies</a> - <a class="macro" href="#21" title="msecs_to_jiffies(20)" data-ref="_M/DRM_I915_THROTTLE_JIFFIES">DRM_I915_THROTTLE_JIFFIES</a>;</td></tr>
+<tr><th id="40">40</th><td>	<b>struct</b> <a class="type" href="../i915_request.h.html#i915_request" title='i915_request' data-ref="i915_request" data-ref-filename="i915_request">i915_request</a> *<dfn class="local col6 decl" id="6request" title='request' data-type='struct i915_request *' data-ref="6request" data-ref-filename="6request">request</dfn>, *<dfn class="local col7 decl" id="7target" title='target' data-type='struct i915_request *' data-ref="7target" data-ref-filename="7target">target</dfn> = <a class="macro" href="../../../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="41">41</th><td>	<em>long</em> <dfn class="local col8 decl" id="8ret" title='ret' data-type='long' data-ref="8ret" data-ref-filename="8ret">ret</dfn>;</td></tr>
+<tr><th id="42">42</th><td></td></tr>
+<tr><th id="43">43</th><td>	<i>/* ABI: return -EIO if already wedged */</i></td></tr>
+<tr><th id="44">44</th><td>	<a class="local col8 ref" href="#8ret" title='ret' data-ref="8ret" data-ref-filename="8ret">ret</a> = <a class="ref fn" href="../gt/intel_reset.h.html#i915_terminally_wedged" title='i915_terminally_wedged' data-ref="i915_terminally_wedged" data-ref-filename="i915_terminally_wedged">i915_terminally_wedged</a>(<a class="ref fn" href="../i915_drv.h.html#to_i915" title='to_i915' data-ref="to_i915" data-ref-filename="to_i915">to_i915</a>(<a class="local col1 ref" href="#1dev" title='dev' data-ref="1dev" data-ref-filename="1dev">dev</a>));</td></tr>
+<tr><th id="45">45</th><td>	<b>if</b> (<a class="local col8 ref" href="#8ret" title='ret' data-ref="8ret" data-ref-filename="8ret">ret</a>)</td></tr>
+<tr><th id="46">46</th><td>		<b>return</b> <a class="local col8 ref" href="#8ret" title='ret' data-ref="8ret" data-ref-filename="8ret">ret</a>;</td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td>	<a class="ref fn" href="../../../../../include/linux/spinlock.h.html#spin_lock" title='spin_lock' data-ref="spin_lock" data-ref-filename="spin_lock">spin_lock</a>(&amp;<a class="local col4 ref" href="#4file_priv" title='file_priv' data-ref="4file_priv" data-ref-filename="4file_priv">file_priv</a>-&gt;<a class="ref field" href="../i915_drv.h.html#drm_i915_file_private::mm" title='drm_i915_file_private::mm' data-ref="drm_i915_file_private::mm" data-ref-filename="drm_i915_file_private..mm">mm</a>.<a class="ref field" href="../i915_drv.h.html#drm_i915_file_private::(anonymous)::lock" title='drm_i915_file_private::(anonymous struct)::lock' data-ref="drm_i915_file_private::(anonymous)::lock" data-ref-filename="drm_i915_file_private..(anonymous)..lock">lock</a>);</td></tr>
+<tr><th id="49">49</th><td>	<a class="macro" href="../../../../../include/linux/list.h.html#576" title="for (request = ({ void *__mptr = (void *)((&amp;file_priv-&gt;mm.request_list)-&gt;next); do { extern void __compiletime_assert_49(void) ; if (!(!(!__builtin_types_compatible_p(typeof(*((&amp;file_priv-&gt;mm.request_list)-&gt;next)), typeof(((typeof(*request) *)0)-&gt;client_link)) &amp;&amp; !__builtin_types_compatible_p(typeof(*((&amp;file_priv-&gt;mm.request_list)-&gt;next)), typeof(void))))) __compiletime_assert_49(); } while (0); ((typeof(*request) *)(__mptr - __builtin_offsetof(typeof(*request), client_link))); }); &amp;request-&gt;client_link != (&amp;file_priv-&gt;mm.request_list); request = ({ void *__mptr = (void *)((request)-&gt;client_link.next); do { extern void __compiletime_assert_49(void) ; if (!(!(!__builtin_types_compatible_p(typeof(*((request)-&gt;client_link.next)), typeof(((typeof(*(request)) *)0)-&gt;client_link)) &amp;&amp; !__builtin_types_compatible_p(typeof(*((request)-&gt;client_link.next)), typeof(void))))) __compiletime_assert_49(); } while (0); ((typeof(*(request)) *)(__mptr - __builtin_offsetof(typeof(*(request)), client_link))); }))" data-ref="_M/list_for_each_entry">list_for_each_entry</a>(<a class="local col6 ref" href="#6request" title='request' data-ref="6request" data-ref-filename="6request">request</a>, &amp;<a class="local col4 ref" href="#4file_priv" title='file_priv' data-ref="4file_priv" data-ref-filename="4file_priv">file_priv</a>-&gt;<a class="ref field" href="../i915_drv.h.html#drm_i915_file_private::mm" title='drm_i915_file_private::mm' data-ref="drm_i915_file_private::mm" data-ref-filename="drm_i915_file_private..mm">mm</a>.<a class="ref field" href="../i915_drv.h.html#drm_i915_file_private::(anonymous)::request_list" title='drm_i915_file_private::(anonymous struct)::request_list' data-ref="drm_i915_file_private::(anonymous)::request_list" data-ref-filename="drm_i915_file_private..(anonymous)..request_list">request_list</a>, <a class="ref field" href="../i915_request.h.html#i915_request::client_link" title='i915_request::client_link' data-ref="i915_request::client_link" data-ref-filename="i915_request..client_link">client_link</a>) {</td></tr>
+<tr><th id="50">50</th><td>		<b>if</b> (<a class="macro" href="../../../../../include/linux/jiffies.h.html#111" title="(({ unsigned long __dummy; typeof(request-&gt;emitted_jiffies) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }) &amp;&amp; ({ unsigned long __dummy; typeof(recent_enough) __dummy2; (void)(&amp;__dummy == &amp;__dummy2); 1; }) &amp;&amp; ((long)((request-&gt;emitted_jiffies) - (recent_enough)) &gt;= 0))" data-ref="_M/time_after_eq">time_after_eq</a>(<a class="local col6 ref" href="#6request" title='request' data-ref="6request" data-ref-filename="6request">request</a>-&gt;<a class="ref field" href="../i915_request.h.html#i915_request::emitted_jiffies" title='i915_request::emitted_jiffies' data-ref="i915_request::emitted_jiffies" data-ref-filename="i915_request..emitted_jiffies">emitted_jiffies</a>, <a class="local col5 ref" href="#5recent_enough" title='recent_enough' data-ref="5recent_enough" data-ref-filename="5recent_enough">recent_enough</a>))</td></tr>
+<tr><th id="51">51</th><td>			<b>break</b>;</td></tr>
+<tr><th id="52">52</th><td></td></tr>
+<tr><th id="53">53</th><td>		<b>if</b> (<a class="local col7 ref" href="#7target" title='target' data-ref="7target" data-ref-filename="7target">target</a>) {</td></tr>
+<tr><th id="54">54</th><td>			<a class="ref fn" href="../../../../../include/linux/list.h.html#list_del" title='list_del' data-ref="list_del" data-ref-filename="list_del">list_del</a>(&amp;<a class="local col7 ref" href="#7target" title='target' data-ref="7target" data-ref-filename="7target">target</a>-&gt;<a class="ref field" href="../i915_request.h.html#i915_request::client_link" title='i915_request::client_link' data-ref="i915_request::client_link" data-ref-filename="i915_request..client_link">client_link</a>);</td></tr>
+<tr><th id="55">55</th><td>			<a class="local col7 ref" href="#7target" title='target' data-ref="7target" data-ref-filename="7target">target</a>-&gt;<a class="ref field" href="../i915_request.h.html#i915_request::file_priv" title='i915_request::file_priv' data-ref="i915_request::file_priv" data-ref-filename="i915_request..file_priv">file_priv</a> = <a class="macro" href="../../../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="56">56</th><td>		}</td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td>		<a class="local col7 ref" href="#7target" title='target' data-ref="7target" data-ref-filename="7target">target</a> = <a class="local col6 ref" href="#6request" title='request' data-ref="6request" data-ref-filename="6request">request</a>;</td></tr>
+<tr><th id="59">59</th><td>	}</td></tr>
+<tr><th id="60">60</th><td>	<b>if</b> (<a class="local col7 ref" href="#7target" title='target' data-ref="7target" data-ref-filename="7target">target</a>)</td></tr>
+<tr><th id="61">61</th><td>		<a class="ref fn" href="../i915_request.h.html#i915_request_get" title='i915_request_get' data-ref="i915_request_get" data-ref-filename="i915_request_get">i915_request_get</a>(<a class="local col7 ref" href="#7target" title='target' data-ref="7target" data-ref-filename="7target">target</a>);</td></tr>
+<tr><th id="62">62</th><td>	<a class="ref fn" href="../../../../../include/linux/spinlock.h.html#spin_unlock" title='spin_unlock' data-ref="spin_unlock" data-ref-filename="spin_unlock">spin_unlock</a>(&amp;<a class="local col4 ref" href="#4file_priv" title='file_priv' data-ref="4file_priv" data-ref-filename="4file_priv">file_priv</a>-&gt;<a class="ref field" href="../i915_drv.h.html#drm_i915_file_private::mm" title='drm_i915_file_private::mm' data-ref="drm_i915_file_private::mm" data-ref-filename="drm_i915_file_private..mm">mm</a>.<a class="ref field" href="../i915_drv.h.html#drm_i915_file_private::(anonymous)::lock" title='drm_i915_file_private::(anonymous struct)::lock' data-ref="drm_i915_file_private::(anonymous)::lock" data-ref-filename="drm_i915_file_private..(anonymous)..lock">lock</a>);</td></tr>
+<tr><th id="63">63</th><td></td></tr>
+<tr><th id="64">64</th><td>	<b>if</b> (!<a class="local col7 ref" href="#7target" title='target' data-ref="7target" data-ref-filename="7target">target</a>)</td></tr>
+<tr><th id="65">65</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="66">66</th><td></td></tr>
+<tr><th id="67">67</th><td>	<a class="local col8 ref" href="#8ret" title='ret' data-ref="8ret" data-ref-filename="8ret">ret</a> = <a class="ref fn" href="../i915_request.h.html#i915_request_wait" title='i915_request_wait' data-ref="i915_request_wait" data-ref-filename="i915_request_wait">i915_request_wait</a>(<a class="local col7 ref" href="#7target" title='target' data-ref="7target" data-ref-filename="7target">target</a>,</td></tr>
+<tr><th id="68">68</th><td>				<a class="macro" href="../i915_request.h.html#309" title="((((1UL))) &lt;&lt; (0))" data-ref="_M/I915_WAIT_INTERRUPTIBLE">I915_WAIT_INTERRUPTIBLE</a>,</td></tr>
+<tr><th id="69">69</th><td>				<a class="macro" href="../../../../../include/linux/sched.h.html#215" title="((long)(~0UL &gt;&gt; 1))" data-ref="_M/MAX_SCHEDULE_TIMEOUT">MAX_SCHEDULE_TIMEOUT</a>);</td></tr>
+<tr><th id="70">70</th><td>	<a class="ref fn" href="../i915_request.h.html#i915_request_put" title='i915_request_put' data-ref="i915_request_put" data-ref-filename="i915_request_put">i915_request_put</a>(<a class="local col7 ref" href="#7target" title='target' data-ref="7target" data-ref-filename="7target">target</a>);</td></tr>
+<tr><th id="71">71</th><td></td></tr>
+<tr><th id="72">72</th><td>	<b>return</b> <a class="local col8 ref" href="#8ret" title='ret' data-ref="8ret" data-ref-filename="8ret">ret</a> &lt; <var>0</var> ? <a class="local col8 ref" href="#8ret" title='ret' data-ref="8ret" data-ref-filename="8ret">ret</a> : <var>0</var>;</td></tr>
+<tr><th id="73">73</th><td>}</td></tr>
+<tr><th id="74">74</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

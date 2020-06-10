@@ -1,0 +1,90 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>mon_stat.c source code [linux-5.3.1/drivers/usb/mon/mon_stat.c] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="snap "/>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/drivers/usb/mon/mon_stat.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>linux-5.3.1</a>/<a href='../..'>drivers</a>/<a href='..'>usb</a>/<a href='./'>mon</a>/<a href='mon_stat.c.html'>mon_stat.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * The USB Monitor, inspired by Dave Harding's USBMon.</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * This is the 's' or 'stat' reader which debugs usbmon itself.</i></td></tr>
+<tr><th id="6">6</th><td><i> * Note that this code blows through locks, so make sure that</i></td></tr>
+<tr><th id="7">7</th><td><i> * /dbg/usbmon/0s is well protected from non-root users.</i></td></tr>
+<tr><th id="8">8</th><td><i> *</i></td></tr>
+<tr><th id="9">9</th><td><i> */</i></td></tr>
+<tr><th id="10">10</th><td></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../../../include/linux/kernel.h.html">&lt;linux/kernel.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="../../../include/linux/slab.h.html">&lt;linux/slab.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="../../../include/linux/export.h.html">&lt;linux/export.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="../../../include/linux/usb.h.html">&lt;linux/usb.h&gt;</a></u></td></tr>
+<tr><th id="15">15</th><td><u>#include <a href="../../../include/linux/fs.h.html">&lt;linux/fs.h&gt;</a></u></td></tr>
+<tr><th id="16">16</th><td><u>#include <a href="../../../include/linux/uaccess.h.html">&lt;linux/uaccess.h&gt;</a></u></td></tr>
+<tr><th id="17">17</th><td></td></tr>
+<tr><th id="18">18</th><td><u>#include <a href="usb_mon.h.html">"usb_mon.h"</a></u></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><u>#define <dfn class="macro" id="_M/STAT_BUF_SIZE" data-ref="_M/STAT_BUF_SIZE">STAT_BUF_SIZE</dfn>  80</u></td></tr>
+<tr><th id="21">21</th><td></td></tr>
+<tr><th id="22">22</th><td><b>struct</b> <dfn class="type def" id="snap" title='snap' data-ref="snap" data-ref-filename="snap">snap</dfn> {</td></tr>
+<tr><th id="23">23</th><td>	<em>int</em> <dfn class="tu decl field" id="snap::slen" title='snap::slen' data-type='int' data-ref="snap::slen" data-ref-filename="snap..slen">slen</dfn>;</td></tr>
+<tr><th id="24">24</th><td>	<em>char</em> <dfn class="tu decl field" id="snap::str" title='snap::str' data-type='char [80]' data-ref="snap::str" data-ref-filename="snap..str">str</dfn>[<a class="macro" href="#20" title="80" data-ref="_M/STAT_BUF_SIZE">STAT_BUF_SIZE</a>];</td></tr>
+<tr><th id="25">25</th><td>};</td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="mon_stat_open" title='mon_stat_open' data-type='int mon_stat_open(struct inode * inode, struct file * file)' data-ref="mon_stat_open" data-ref-filename="mon_stat_open">mon_stat_open</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/fs.h.html#inode" title='inode' data-ref="inode" data-ref-filename="inode">inode</a> *<dfn class="local col1 decl" id="1inode" title='inode' data-type='struct inode *' data-ref="1inode" data-ref-filename="1inode">inode</dfn>, <b>struct</b> <a class="type" href="../../../include/linux/fs.h.html#file" title='file' data-ref="file" data-ref-filename="file">file</a> *<dfn class="local col2 decl" id="2file" title='file' data-type='struct file *' data-ref="2file" data-ref-filename="2file">file</dfn>)</td></tr>
+<tr><th id="28">28</th><td>{</td></tr>
+<tr><th id="29">29</th><td>	<b>struct</b> <a class="type" href="usb_mon.h.html#mon_bus" title='mon_bus' data-ref="mon_bus" data-ref-filename="mon_bus">mon_bus</a> *<dfn class="local col3 decl" id="3mbus" title='mbus' data-type='struct mon_bus *' data-ref="3mbus" data-ref-filename="3mbus">mbus</dfn>;</td></tr>
+<tr><th id="30">30</th><td>	<b>struct</b> <a class="type" href="#snap" title='snap' data-ref="snap" data-ref-filename="snap">snap</a> *<dfn class="local col4 decl" id="4sp" title='sp' data-type='struct snap *' data-ref="4sp" data-ref-filename="4sp">sp</dfn>;</td></tr>
+<tr><th id="31">31</th><td></td></tr>
+<tr><th id="32">32</th><td>	<a class="local col4 ref" href="#4sp" title='sp' data-ref="4sp" data-ref-filename="4sp">sp</a> = <a class="ref fn" href="../../../include/linux/slab.h.html#kmalloc" title='kmalloc' data-ref="kmalloc" data-ref-filename="kmalloc">kmalloc</a>(<b>sizeof</b>(<b>struct</b> <a class="type" href="#snap" title='snap' data-ref="snap" data-ref-filename="snap">snap</a>), <a class="macro" href="../../../include/linux/gfp.h.html#290" title="((( gfp_t)(0x400u|0x800u)) | (( gfp_t)0x40u) | (( gfp_t)0x80u))" data-ref="_M/GFP_KERNEL">GFP_KERNEL</a>);</td></tr>
+<tr><th id="33">33</th><td>	<b>if</b> (<a class="local col4 ref" href="#4sp" title='sp' data-ref="4sp" data-ref-filename="4sp">sp</a> == <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>)</td></tr>
+<tr><th id="34">34</th><td>		<b>return</b> -<a class="macro" href="../../../include/uapi/asm-generic/errno-base.h.html#16" title="12" data-ref="_M/ENOMEM">ENOMEM</a>;</td></tr>
+<tr><th id="35">35</th><td></td></tr>
+<tr><th id="36">36</th><td>	<a class="local col3 ref" href="#3mbus" title='mbus' data-ref="3mbus" data-ref-filename="3mbus">mbus</a> = <a class="local col1 ref" href="#1inode" title='inode' data-ref="1inode" data-ref-filename="1inode">inode</a>-&gt;<a class="ref field" href="../../../include/linux/fs.h.html#inode::i_private" title='inode::i_private' data-ref="inode::i_private" data-ref-filename="inode..i_private">i_private</a>;</td></tr>
+<tr><th id="37">37</th><td></td></tr>
+<tr><th id="38">38</th><td>	<a class="local col4 ref" href="#4sp" title='sp' data-ref="4sp" data-ref-filename="4sp">sp</a>-&gt;<a class="tu ref field" href="#snap::slen" title='snap::slen' data-use='w' data-ref="snap::slen" data-ref-filename="snap..slen">slen</a> = <a class="ref fn" href="../../../include/linux/kernel.h.html#snprintf" title='snprintf' data-ref="snprintf" data-ref-filename="snprintf">snprintf</a>(<a class="local col4 ref" href="#4sp" title='sp' data-ref="4sp" data-ref-filename="4sp">sp</a>-&gt;<a class="tu ref field" href="#snap::str" title='snap::str' data-use='r' data-ref="snap::str" data-ref-filename="snap..str">str</a>, <a class="macro" href="#20" title="80" data-ref="_M/STAT_BUF_SIZE">STAT_BUF_SIZE</a>,</td></tr>
+<tr><th id="39">39</th><td>	    <q>"nreaders %d events %u text_lost %u\n"</q>,</td></tr>
+<tr><th id="40">40</th><td>	    <a class="local col3 ref" href="#3mbus" title='mbus' data-ref="3mbus" data-ref-filename="3mbus">mbus</a>-&gt;<a class="ref field" href="usb_mon.h.html#mon_bus::nreaders" title='mon_bus::nreaders' data-ref="mon_bus::nreaders" data-ref-filename="mon_bus..nreaders">nreaders</a>, <a class="local col3 ref" href="#3mbus" title='mbus' data-ref="3mbus" data-ref-filename="3mbus">mbus</a>-&gt;<a class="ref field" href="usb_mon.h.html#mon_bus::cnt_events" title='mon_bus::cnt_events' data-ref="mon_bus::cnt_events" data-ref-filename="mon_bus..cnt_events">cnt_events</a>, <a class="local col3 ref" href="#3mbus" title='mbus' data-ref="3mbus" data-ref-filename="3mbus">mbus</a>-&gt;<a class="ref field" href="usb_mon.h.html#mon_bus::cnt_text_lost" title='mon_bus::cnt_text_lost' data-ref="mon_bus::cnt_text_lost" data-ref-filename="mon_bus..cnt_text_lost">cnt_text_lost</a>);</td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td>	<a class="local col2 ref" href="#2file" title='file' data-ref="2file" data-ref-filename="2file">file</a>-&gt;<a class="ref field" href="../../../include/linux/fs.h.html#file::private_data" title='file::private_data' data-ref="file::private_data" data-ref-filename="file..private_data">private_data</a> = <a class="local col4 ref" href="#4sp" title='sp' data-ref="4sp" data-ref-filename="4sp">sp</a>;</td></tr>
+<tr><th id="43">43</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="44">44</th><td>}</td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td><em>static</em> <a class="typedef" href="../../../include/linux/types.h.html#ssize_t" title='ssize_t' data-type='__kernel_ssize_t' data-ref="ssize_t" data-ref-filename="ssize_t">ssize_t</a> <dfn class="tu decl def fn" id="mon_stat_read" title='mon_stat_read' data-type='ssize_t mon_stat_read(struct file * file, char * buf, size_t nbytes, loff_t * ppos)' data-ref="mon_stat_read" data-ref-filename="mon_stat_read">mon_stat_read</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/fs.h.html#file" title='file' data-ref="file" data-ref-filename="file">file</a> *<dfn class="local col5 decl" id="5file" title='file' data-type='struct file *' data-ref="5file" data-ref-filename="5file">file</dfn>, <em>char</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#30" title="" data-ref="_M/__user">__user</a> *<dfn class="local col6 decl" id="6buf" title='buf' data-type='char *' data-ref="6buf" data-ref-filename="6buf">buf</dfn>,</td></tr>
+<tr><th id="47">47</th><td>				<a class="typedef" href="../../../include/linux/types.h.html#size_t" title='size_t' data-type='__kernel_size_t' data-ref="size_t" data-ref-filename="size_t">size_t</a> <dfn class="local col7 decl" id="7nbytes" title='nbytes' data-type='size_t' data-ref="7nbytes" data-ref-filename="7nbytes">nbytes</dfn>, <a class="typedef" href="../../../include/linux/types.h.html#loff_t" title='loff_t' data-type='__kernel_loff_t' data-ref="loff_t" data-ref-filename="loff_t">loff_t</a> *<dfn class="local col8 decl" id="8ppos" title='ppos' data-type='loff_t *' data-ref="8ppos" data-ref-filename="8ppos">ppos</dfn>)</td></tr>
+<tr><th id="48">48</th><td>{</td></tr>
+<tr><th id="49">49</th><td>	<b>struct</b> <a class="type" href="#snap" title='snap' data-ref="snap" data-ref-filename="snap">snap</a> *<dfn class="local col9 decl" id="9sp" title='sp' data-type='struct snap *' data-ref="9sp" data-ref-filename="9sp">sp</dfn> = <a class="local col5 ref" href="#5file" title='file' data-ref="5file" data-ref-filename="5file">file</a>-&gt;<a class="ref field" href="../../../include/linux/fs.h.html#file::private_data" title='file::private_data' data-ref="file::private_data" data-ref-filename="file..private_data">private_data</a>;</td></tr>
+<tr><th id="50">50</th><td></td></tr>
+<tr><th id="51">51</th><td>	<b>return</b> <a class="ref fn" href="../../../include/linux/fs.h.html#simple_read_from_buffer" title='simple_read_from_buffer' data-ref="simple_read_from_buffer" data-ref-filename="simple_read_from_buffer">simple_read_from_buffer</a>(<a class="local col6 ref" href="#6buf" title='buf' data-ref="6buf" data-ref-filename="6buf">buf</a>, <a class="local col7 ref" href="#7nbytes" title='nbytes' data-ref="7nbytes" data-ref-filename="7nbytes">nbytes</a>, <a class="local col8 ref" href="#8ppos" title='ppos' data-ref="8ppos" data-ref-filename="8ppos">ppos</a>, <a class="local col9 ref" href="#9sp" title='sp' data-ref="9sp" data-ref-filename="9sp">sp</a>-&gt;<a class="tu ref field" href="#snap::str" title='snap::str' data-use='r' data-ref="snap::str" data-ref-filename="snap..str">str</a>, <a class="local col9 ref" href="#9sp" title='sp' data-ref="9sp" data-ref-filename="9sp">sp</a>-&gt;<a class="tu ref field" href="#snap::slen" title='snap::slen' data-use='r' data-ref="snap::slen" data-ref-filename="snap..slen">slen</a>);</td></tr>
+<tr><th id="52">52</th><td>}</td></tr>
+<tr><th id="53">53</th><td></td></tr>
+<tr><th id="54">54</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="mon_stat_release" title='mon_stat_release' data-type='int mon_stat_release(struct inode * inode, struct file * file)' data-ref="mon_stat_release" data-ref-filename="mon_stat_release">mon_stat_release</dfn>(<b>struct</b> <a class="type" href="../../../include/linux/fs.h.html#inode" title='inode' data-ref="inode" data-ref-filename="inode">inode</a> *<dfn class="local col0 decl" id="10inode" title='inode' data-type='struct inode *' data-ref="10inode" data-ref-filename="10inode">inode</dfn>, <b>struct</b> <a class="type" href="../../../include/linux/fs.h.html#file" title='file' data-ref="file" data-ref-filename="file">file</a> *<dfn class="local col1 decl" id="11file" title='file' data-type='struct file *' data-ref="11file" data-ref-filename="11file">file</dfn>)</td></tr>
+<tr><th id="55">55</th><td>{</td></tr>
+<tr><th id="56">56</th><td>	<b>struct</b> <a class="type" href="#snap" title='snap' data-ref="snap" data-ref-filename="snap">snap</a> *<dfn class="local col2 decl" id="12sp" title='sp' data-type='struct snap *' data-ref="12sp" data-ref-filename="12sp">sp</dfn> = <a class="local col1 ref" href="#11file" title='file' data-ref="11file" data-ref-filename="11file">file</a>-&gt;<a class="ref field" href="../../../include/linux/fs.h.html#file::private_data" title='file::private_data' data-ref="file::private_data" data-ref-filename="file..private_data">private_data</a>;</td></tr>
+<tr><th id="57">57</th><td>	<a class="local col1 ref" href="#11file" title='file' data-ref="11file" data-ref-filename="11file">file</a>-&gt;<a class="ref field" href="../../../include/linux/fs.h.html#file::private_data" title='file::private_data' data-ref="file::private_data" data-ref-filename="file..private_data">private_data</a> = <a class="macro" href="../../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="58">58</th><td>	<a class="ref fn" href="../../../include/linux/slab.h.html#kfree" title='kfree' data-ref="kfree" data-ref-filename="kfree">kfree</a>(<a class="local col2 ref" href="#12sp" title='sp' data-ref="12sp" data-ref-filename="12sp">sp</a>);</td></tr>
+<tr><th id="59">59</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="60">60</th><td>}</td></tr>
+<tr><th id="61">61</th><td></td></tr>
+<tr><th id="62">62</th><td><em>const</em> <b>struct</b> <a class="type" href="../../../include/linux/fs.h.html#file_operations" title='file_operations' data-ref="file_operations" data-ref-filename="file_operations">file_operations</a> <dfn class="decl def" id="mon_fops_stat" title='mon_fops_stat' data-ref="mon_fops_stat" data-ref-filename="mon_fops_stat">mon_fops_stat</dfn> = {</td></tr>
+<tr><th id="63">63</th><td>	.<a class="ref field" href="../../../include/linux/fs.h.html#file_operations::owner" title='file_operations::owner' data-ref="file_operations::owner" data-ref-filename="file_operations..owner">owner</a> =	<a class="macro" href="../../../include/linux/export.h.html#18" title="((struct module *)0)" data-ref="_M/THIS_MODULE">THIS_MODULE</a>,</td></tr>
+<tr><th id="64">64</th><td>	.<a class="ref field" href="../../../include/linux/fs.h.html#file_operations::open" title='file_operations::open' data-ref="file_operations::open" data-ref-filename="file_operations..open">open</a> =		<a class="tu ref fn" href="#mon_stat_open" title='mon_stat_open' data-ref="mon_stat_open" data-ref-filename="mon_stat_open">mon_stat_open</a>,</td></tr>
+<tr><th id="65">65</th><td>	.<a class="ref field" href="../../../include/linux/fs.h.html#file_operations::llseek" title='file_operations::llseek' data-ref="file_operations::llseek" data-ref-filename="file_operations..llseek">llseek</a> =	<a class="ref fn" href="../../../include/linux/fs.h.html#no_llseek" title='no_llseek' data-ref="no_llseek" data-ref-filename="no_llseek">no_llseek</a>,</td></tr>
+<tr><th id="66">66</th><td>	.<a class="ref field" href="../../../include/linux/fs.h.html#file_operations::read" title='file_operations::read' data-ref="file_operations::read" data-ref-filename="file_operations..read">read</a> =		<a class="tu ref fn" href="#mon_stat_read" title='mon_stat_read' data-ref="mon_stat_read" data-ref-filename="mon_stat_read">mon_stat_read</a>,</td></tr>
+<tr><th id="67">67</th><td>	<i>/* .write =	mon_stat_write, */</i></td></tr>
+<tr><th id="68">68</th><td>	<i>/* .poll =		mon_stat_poll, */</i></td></tr>
+<tr><th id="69">69</th><td>	<i>/* .unlocked_ioctl =	mon_stat_ioctl, */</i></td></tr>
+<tr><th id="70">70</th><td>	.<a class="ref field" href="../../../include/linux/fs.h.html#file_operations::release" title='file_operations::release' data-ref="file_operations::release" data-ref-filename="file_operations..release">release</a> =	<a class="tu ref fn" href="#mon_stat_release" title='mon_stat_release' data-ref="mon_stat_release" data-ref-filename="mon_stat_release">mon_stat_release</a>,</td></tr>
+<tr><th id="71">71</th><td>};</td></tr>
+<tr><th id="72">72</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

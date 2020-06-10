@@ -1,0 +1,30 @@
+<dec f='linux-5.3.1/drivers/usb/host/xhci.h' l='177' type='__le32'/>
+<offset>0</offset>
+<use f='linux-5.3.1/drivers/usb/host/xhci-hub.c' l='1697' u='a' c='xhci_bus_resume'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-hub.c' l='1699' u='a' c='xhci_bus_resume'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-hub.c' l='1771' u='a' c='xhci_bus_resume'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-hub.c' l='1775' u='a' c='xhci_bus_resume'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-hub.c' l='1777' u='a' c='xhci_bus_resume'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-hub.c' l='1778' u='a' c='xhci_bus_resume'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci-ring.c' l='1633' u='a' c='handle_port_status'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='98' u='a' c='xhci_quiesce'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='100' u='a' c='xhci_quiesce'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='136' u='a' c='xhci_start'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='140' u='a' c='xhci_start'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='185' u='a' c='xhci_reset'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='187' u='a' c='xhci_reset'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='199' u='a' c='xhci_reset'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='252' u='a' c='xhci_zero_64b_regs'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='254' u='a' c='xhci_zero_64b_regs'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='668' u='a' c='xhci_run'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='672' u='a' c='xhci_run'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='801' u='a' c='xhci_save_registers'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='814' u='a' c='xhci_restore_registers'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='1011' u='a' c='xhci_suspend'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='1013' u='a' c='xhci_suspend'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='1030' u='a' c='xhci_suspend'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='1032' u='a' c='xhci_suspend'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='1117' u='a' c='xhci_resume'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='1119' u='a' c='xhci_resume'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='1194' u='a' c='xhci_resume'/>
+<use f='linux-5.3.1/drivers/usb/host/xhci.c' l='1196' u='a' c='xhci_resume'/>

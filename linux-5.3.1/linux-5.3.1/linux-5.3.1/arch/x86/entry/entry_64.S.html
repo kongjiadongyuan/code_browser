@@ -1,0 +1,1763 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>entry_64.S source code [linux-5.3.1/arch/x86/entry/entry_64.S] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/arch/x86/entry/entry_64.S'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>linux-5.3.1</a>/<a href='../..'>arch</a>/<a href='..'>x86</a>/<a href='./'>entry</a>/<a href='entry_64.S.html'>entry_64.S</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0 */</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> *  linux/arch/x86_64/entry.S</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> *  Copyright (C) 1991, 1992  Linus Torvalds</i></td></tr>
+<tr><th id="6">6</th><td><i> *  Copyright (C) 2000, 2001, 2002  Andi Kleen SuSE Labs</i></td></tr>
+<tr><th id="7">7</th><td><i> *  Copyright (C) 2000  Pavel Machek &lt;pavel@suse.cz&gt;</i></td></tr>
+<tr><th id="8">8</th><td><i> *</i></td></tr>
+<tr><th id="9">9</th><td><i> * entry.S contains the system-call and fault low-level handling routines.</i></td></tr>
+<tr><th id="10">10</th><td><i> *</i></td></tr>
+<tr><th id="11">11</th><td><i> * Some of this is documented in Documentation/x86/entry_64.rst</i></td></tr>
+<tr><th id="12">12</th><td><i> *</i></td></tr>
+<tr><th id="13">13</th><td><i> * A note on terminology:</i></td></tr>
+<tr><th id="14">14</th><td><i> * - iret frame:	Architecture defined interrupt frame from SS to RIP</i></td></tr>
+<tr><th id="15">15</th><td><i> *			at the top of the kernel process stack.</i></td></tr>
+<tr><th id="16">16</th><td><i> *</i></td></tr>
+<tr><th id="17">17</th><td><i> * Some macro usage:</i></td></tr>
+<tr><th id="18">18</th><td><i> * - ENTRY/END:		Define functions in the symbol table.</i></td></tr>
+<tr><th id="19">19</th><td><i> * - TRACE_IRQ_*:	Trace hardirq state for lock debugging.</i></td></tr>
+<tr><th id="20">20</th><td><i> * - idtentry:		Define exception entry points.</i></td></tr>
+<tr><th id="21">21</th><td><i> */</i></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../../../include/linux/linkage.h.html">&lt;linux/linkage.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../include/asm/segment.h.html">&lt;asm/segment.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td><u>#include <a href="../include/asm/cache.h.html">&lt;asm/cache.h&gt;</a></u></td></tr>
+<tr><th id="25">25</th><td><u>#include <a href="../include/uapi/asm/errno.h.html">&lt;asm/errno.h&gt;</a></u></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="../include/asm/asm-offsets.h.html">&lt;asm/asm-offsets.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="../include/asm/msr.h.html">&lt;asm/msr.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td><u>#include <a href="../include/asm/unistd.h.html">&lt;asm/unistd.h&gt;</a></u></td></tr>
+<tr><th id="29">29</th><td><u>#include <a href="../include/asm/thread_info.h.html">&lt;asm/thread_info.h&gt;</a></u></td></tr>
+<tr><th id="30">30</th><td><u>#include <a href="../include/asm/hw_irq.h.html">&lt;asm/hw_irq.h&gt;</a></u></td></tr>
+<tr><th id="31">31</th><td><u>#include <a href="../include/asm/page_types.h.html">&lt;asm/page_types.h&gt;</a></u></td></tr>
+<tr><th id="32">32</th><td><u>#include <a href="../include/asm/irqflags.h.html">&lt;asm/irqflags.h&gt;</a></u></td></tr>
+<tr><th id="33">33</th><td><u>#include <a href="../include/asm/paravirt.h.html">&lt;asm/paravirt.h&gt;</a></u></td></tr>
+<tr><th id="34">34</th><td><u>#include <a href="../include/asm/percpu.h.html">&lt;asm/percpu.h&gt;</a></u></td></tr>
+<tr><th id="35">35</th><td><u>#include <a href="../include/asm/asm.h.html">&lt;asm/asm.h&gt;</a></u></td></tr>
+<tr><th id="36">36</th><td><u>#include <a href="../include/asm/smap.h.html">&lt;asm/smap.h&gt;</a></u></td></tr>
+<tr><th id="37">37</th><td><u>#include <a href="../include/asm/pgtable_types.h.html">&lt;asm/pgtable_types.h&gt;</a></u></td></tr>
+<tr><th id="38">38</th><td><u>#include <a href="../include/generated/asm/export.h.html">&lt;asm/export.h&gt;</a></u></td></tr>
+<tr><th id="39">39</th><td><u>#include <a href="../include/asm/frame.h.html">&lt;asm/frame.h&gt;</a></u></td></tr>
+<tr><th id="40">40</th><td><u>#include <a href="../include/asm/nospec-branch.h.html">&lt;asm/nospec-branch.h&gt;</a></u></td></tr>
+<tr><th id="41">41</th><td><u>#include <a href="../../../include/linux/err.h.html">&lt;linux/err.h&gt;</a></u></td></tr>
+<tr><th id="42">42</th><td></td></tr>
+<tr><th id="43">43</th><td><u>#include <a href="calling.h.html">"calling.h"</a></u></td></tr>
+<tr><th id="44">44</th><td></td></tr>
+<tr><th id="45">45</th><td>.code64</td></tr>
+<tr><th id="46">46</th><td>.section .entry.text, <q>"ax"</q></td></tr>
+<tr><th id="47">47</th><td></td></tr>
+<tr><th id="48">48</th><td><u>#<span data-ppcond="48">ifdef</span> <span class="macro" data-ref="_M/CONFIG_PARAVIRT">CONFIG_PARAVIRT</span></u></td></tr>
+<tr><th id="49">49</th><td>ENTRY(native_usergs_sysret64)</td></tr>
+<tr><th id="50">50</th><td>	UNWIND_HINT_EMPTY</td></tr>
+<tr><th id="51">51</th><td>	swapgs</td></tr>
+<tr><th id="52">52</th><td>	sysretq</td></tr>
+<tr><th id="53">53</th><td>END(native_usergs_sysret64)</td></tr>
+<tr><th id="54">54</th><td><u>#<span data-ppcond="48">endif</span> /* CONFIG_PARAVIRT */</u></td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td>.macro TRACE_IRQS_FLAGS flags:req</td></tr>
+<tr><th id="57">57</th><td><u>#<span data-ppcond="57">ifdef</span> <span class="macro" data-ref="_M/CONFIG_TRACE_IRQFLAGS">CONFIG_TRACE_IRQFLAGS</span></u></td></tr>
+<tr><th id="58">58</th><td>	btl	$<var>9</var>, \flags		<i>/* interrupts off? */</i></td></tr>
+<tr><th id="59">59</th><td>	jnc	<var>1f</var></td></tr>
+<tr><th id="60">60</th><td>	TRACE_IRQS_ON</td></tr>
+<tr><th id="61">61</th><td><var>1</var>:</td></tr>
+<tr><th id="62">62</th><td><u>#<span data-ppcond="57">endif</span></u></td></tr>
+<tr><th id="63">63</th><td>.endm</td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td>.macro TRACE_IRQS_IRETQ</td></tr>
+<tr><th id="66">66</th><td>	TRACE_IRQS_FLAGS <a class="macro" href="calling.h.html#94" title="18*8" data-ref="_M/EFLAGS">EFLAGS</a>(%rsp)</td></tr>
+<tr><th id="67">67</th><td>.endm</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td><i>/*</i></td></tr>
+<tr><th id="70">70</th><td><i> * When dynamic function tracer is enabled it will add a breakpoint</i></td></tr>
+<tr><th id="71">71</th><td><i> * to all locations that it is about to modify, sync CPUs, update</i></td></tr>
+<tr><th id="72">72</th><td><i> * all the code, sync CPUs, then remove the breakpoints. In this time</i></td></tr>
+<tr><th id="73">73</th><td><i> * if lockdep is enabled, it might jump back into the debug handler</i></td></tr>
+<tr><th id="74">74</th><td><i> * outside the updating of the IST protection. (TRACE_IRQS_ON/OFF).</i></td></tr>
+<tr><th id="75">75</th><td><i> *</i></td></tr>
+<tr><th id="76">76</th><td><i> * We need to change the IDT table before calling TRACE_IRQS_ON/OFF to</i></td></tr>
+<tr><th id="77">77</th><td><i> * make sure the stack pointer does not get reset back to the top</i></td></tr>
+<tr><th id="78">78</th><td><i> * of the debug stack, and instead just reuses the current stack.</i></td></tr>
+<tr><th id="79">79</th><td><i> */</i></td></tr>
+<tr><th id="80">80</th><td><u>#<span data-ppcond="80">if</span> defined(<span class="macro" data-ref="_M/CONFIG_DYNAMIC_FTRACE">CONFIG_DYNAMIC_FTRACE</span>) &amp;&amp; defined(<span class="macro" data-ref="_M/CONFIG_TRACE_IRQFLAGS">CONFIG_TRACE_IRQFLAGS</span>)</u></td></tr>
+<tr><th id="81">81</th><td></td></tr>
+<tr><th id="82">82</th><td>.macro TRACE_IRQS_OFF_DEBUG</td></tr>
+<tr><th id="83">83</th><td>	call	debug_stack_set_zero</td></tr>
+<tr><th id="84">84</th><td>	TRACE_IRQS_OFF</td></tr>
+<tr><th id="85">85</th><td>	call	debug_stack_reset</td></tr>
+<tr><th id="86">86</th><td>.endm</td></tr>
+<tr><th id="87">87</th><td></td></tr>
+<tr><th id="88">88</th><td>.macro TRACE_IRQS_ON_DEBUG</td></tr>
+<tr><th id="89">89</th><td>	call	debug_stack_set_zero</td></tr>
+<tr><th id="90">90</th><td>	TRACE_IRQS_ON</td></tr>
+<tr><th id="91">91</th><td>	call	debug_stack_reset</td></tr>
+<tr><th id="92">92</th><td>.endm</td></tr>
+<tr><th id="93">93</th><td></td></tr>
+<tr><th id="94">94</th><td>.macro TRACE_IRQS_IRETQ_DEBUG</td></tr>
+<tr><th id="95">95</th><td>	btl	$<var>9</var>, EFLAGS(%rsp)		<i>/* interrupts off? */</i></td></tr>
+<tr><th id="96">96</th><td>	jnc	<var>1f</var></td></tr>
+<tr><th id="97">97</th><td>	TRACE_IRQS_ON_DEBUG</td></tr>
+<tr><th id="98">98</th><td><var>1</var>:</td></tr>
+<tr><th id="99">99</th><td>.endm</td></tr>
+<tr><th id="100">100</th><td></td></tr>
+<tr><th id="101">101</th><td><u>#<span data-ppcond="80">else</span></u></td></tr>
+<tr><th id="102">102</th><td><u># define <dfn class="macro" id="_M/TRACE_IRQS_OFF_DEBUG" data-ref="_M/TRACE_IRQS_OFF_DEBUG">TRACE_IRQS_OFF_DEBUG</dfn>			TRACE_IRQS_OFF</u></td></tr>
+<tr><th id="103">103</th><td><u># define <dfn class="macro" id="_M/TRACE_IRQS_ON_DEBUG" data-ref="_M/TRACE_IRQS_ON_DEBUG">TRACE_IRQS_ON_DEBUG</dfn>			TRACE_IRQS_ON</u></td></tr>
+<tr><th id="104">104</th><td><u># define <dfn class="macro" id="_M/TRACE_IRQS_IRETQ_DEBUG" data-ref="_M/TRACE_IRQS_IRETQ_DEBUG">TRACE_IRQS_IRETQ_DEBUG</dfn>			TRACE_IRQS_IRETQ</u></td></tr>
+<tr><th id="105">105</th><td><u>#<span data-ppcond="80">endif</span></u></td></tr>
+<tr><th id="106">106</th><td></td></tr>
+<tr><th id="107">107</th><td><i>/*</i></td></tr>
+<tr><th id="108">108</th><td><i> * 64-bit SYSCALL instruction entry. Up to 6 arguments in registers.</i></td></tr>
+<tr><th id="109">109</th><td><i> *</i></td></tr>
+<tr><th id="110">110</th><td><i> * This is the only entry point used for 64-bit system calls.  The</i></td></tr>
+<tr><th id="111">111</th><td><i> * hardware interface is reasonably well designed and the register to</i></td></tr>
+<tr><th id="112">112</th><td><i> * argument mapping Linux uses fits well with the registers that are</i></td></tr>
+<tr><th id="113">113</th><td><i> * available when SYSCALL is used.</i></td></tr>
+<tr><th id="114">114</th><td><i> *</i></td></tr>
+<tr><th id="115">115</th><td><i> * SYSCALL instructions can be found inlined in libc implementations as</i></td></tr>
+<tr><th id="116">116</th><td><i> * well as some other programs and libraries.  There are also a handful</i></td></tr>
+<tr><th id="117">117</th><td><i> * of SYSCALL instructions in the vDSO used, for example, as a</i></td></tr>
+<tr><th id="118">118</th><td><i> * clock_gettimeofday fallback.</i></td></tr>
+<tr><th id="119">119</th><td><i> *</i></td></tr>
+<tr><th id="120">120</th><td><i> * 64-bit SYSCALL saves rip to rcx, clears rflags.RF, then saves rflags to r11,</i></td></tr>
+<tr><th id="121">121</th><td><i> * then loads new ss, cs, and rip from previously programmed MSRs.</i></td></tr>
+<tr><th id="122">122</th><td><i> * rflags gets masked by a value from another MSR (so CLD and CLAC</i></td></tr>
+<tr><th id="123">123</th><td><i> * are not needed). SYSCALL does not save anything on the stack</i></td></tr>
+<tr><th id="124">124</th><td><i> * and does not change rsp.</i></td></tr>
+<tr><th id="125">125</th><td><i> *</i></td></tr>
+<tr><th id="126">126</th><td><i> * Registers on entry:</i></td></tr>
+<tr><th id="127">127</th><td><i> * rax  system call number</i></td></tr>
+<tr><th id="128">128</th><td><i> * rcx  return address</i></td></tr>
+<tr><th id="129">129</th><td><i> * r11  saved rflags (note: r11 is callee-clobbered register in C ABI)</i></td></tr>
+<tr><th id="130">130</th><td><i> * rdi  arg0</i></td></tr>
+<tr><th id="131">131</th><td><i> * rsi  arg1</i></td></tr>
+<tr><th id="132">132</th><td><i> * rdx  arg2</i></td></tr>
+<tr><th id="133">133</th><td><i> * r10  arg3 (needs to be moved to rcx to conform to C ABI)</i></td></tr>
+<tr><th id="134">134</th><td><i> * r8   arg4</i></td></tr>
+<tr><th id="135">135</th><td><i> * r9   arg5</i></td></tr>
+<tr><th id="136">136</th><td><i> * (note: r12-r15, rbp, rbx are callee-preserved in C ABI)</i></td></tr>
+<tr><th id="137">137</th><td><i> *</i></td></tr>
+<tr><th id="138">138</th><td><i> * Only called from user space.</i></td></tr>
+<tr><th id="139">139</th><td><i> *</i></td></tr>
+<tr><th id="140">140</th><td><i> * When user can change pt_regs-&gt;foo always force IRET. That is because</i></td></tr>
+<tr><th id="141">141</th><td><i> * it deals with uncanonical addresses better. SYSRET has trouble</i></td></tr>
+<tr><th id="142">142</th><td><i> * with them due to bugs in both AMD and Intel CPUs.</i></td></tr>
+<tr><th id="143">143</th><td><i> */</i></td></tr>
+<tr><th id="144">144</th><td></td></tr>
+<tr><th id="145">145</th><td><a class="macro" href="../../../include/linux/linkage.h.html#89" title=".globl entry_SYSCALL_64 ; .p2align 4, 0x90 ; entry_SYSCALL_64:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="entry_SYSCALL_64" title='entry_SYSCALL_64' data-ref="entry_SYSCALL_64" data-ref-filename="entry_SYSCALL_64">entry_SYSCALL_64</dfn></span>)</td></tr>
+<tr><th id="146">146</th><td>	<span class='error' title="unknown type name &apos;UNWIND_HINT_EMPTY&apos;">UNWIND_HINT_EMPTY</span></td></tr>
+<tr><th id="147">147</th><td>	<i>/*</i></td></tr>
+<tr><th id="148">148</th><td><i>	 * Interrupts are off on entry.</i></td></tr>
+<tr><th id="149">149</th><td><i>	 * We do not frame this tiny irq-off block with TRACE_IRQS_OFF/ON,</i></td></tr>
+<tr><th id="150">150</th><td><i>	 * it is too small to ever cause noticeable irq latency.</i></td></tr>
+<tr><th id="151">151</th><td><i>	 */</i></td></tr>
+<tr><th id="152">152</th><td></td></tr>
+<tr><th id="153">153</th><td>	<dfn class="tu decl def" id="swapgs" title='swapgs' data-type='int' data-ref="swapgs" data-ref-filename="swapgs">swapgs</dfn><span class='error' title="expected &apos;;&apos; after top level declarator"></span></td></tr>
+<tr><th id="154">154</th><td>	<i>/* tss.sp2 is scratch space. */</i></td></tr>
+<tr><th id="155">155</th><td>	movq	%rsp, <a class="macro" href="../include/asm/percpu.h.html#31" title="%gs:cpu_tss_rw + 20" data-ref="_M/PER_CPU_VAR">PER_CPU_VAR</a>(cpu_tss_rw + <a class="macro" href="../../../include/generated/asm-offsets.h.html#83" title="20" data-ref="_M/TSS_sp2">TSS_sp2</a>)</td></tr>
+<tr><th id="156">156</th><td>	SWITCH_TO_KERNEL_CR3 scratch_reg=%rsp</td></tr>
+<tr><th id="157">157</th><td>	movq	<a class="macro" href="../include/asm/percpu.h.html#31" title="%gs:(cpu_tss_rw + 12)" data-ref="_M/PER_CPU_VAR">PER_CPU_VAR</a>(<a class="macro" href="../include/asm/thread_info.h.html#219" title="(cpu_tss_rw + 12)" data-ref="_M/cpu_current_top_of_stack">cpu_current_top_of_stack</a>), %rsp</td></tr>
+<tr><th id="158">158</th><td></td></tr>
+<tr><th id="159">159</th><td>	<i>/* Construct struct pt_regs on stack */</i></td></tr>
+<tr><th id="160">160</th><td>	pushq	$<a class="macro" href="../include/asm/segment.h.html#206" title="(5*8 + 3)" data-ref="_M/__USER_DS">__USER_DS</a>				<i>/* pt_regs-&gt;ss */</i></td></tr>
+<tr><th id="161">161</th><td>	pushq	<a class="macro" href="../include/asm/percpu.h.html#31" title="%gs:cpu_tss_rw + 20" data-ref="_M/PER_CPU_VAR">PER_CPU_VAR</a>(cpu_tss_rw + <a class="macro" href="../../../include/generated/asm-offsets.h.html#83" title="20" data-ref="_M/TSS_sp2">TSS_sp2</a>)	<i>/* pt_regs-&gt;sp */</i></td></tr>
+<tr><th id="162">162</th><td>	pushq	%r11					<i>/* pt_regs-&gt;flags */</i></td></tr>
+<tr><th id="163">163</th><td>	pushq	$<a class="macro" href="../include/asm/segment.h.html#208" title="(6*8 + 3)" data-ref="_M/__USER_CS">__USER_CS</a>				<i>/* pt_regs-&gt;cs */</i></td></tr>
+<tr><th id="164">164</th><td>	pushq	%rcx					<i>/* pt_regs-&gt;ip */</i></td></tr>
+<tr><th id="165">165</th><td><a class="macro" href="../include/asm/linkage.h.html#16" title=".globl entry_SYSCALL_64_after_hwframe; entry_SYSCALL_64_after_hwframe:" data-ref="_M/GLOBAL">GLOBAL</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="entry_SYSCALL_64_after_hwframe" title='entry_SYSCALL_64_after_hwframe' data-ref="entry_SYSCALL_64_after_hwframe" data-ref-filename="entry_SYSCALL_64_after_hwframe">entry_SYSCALL_64_after_hwframe</dfn></span>)</td></tr>
+<tr><th id="166">166</th><td>	<span class='error' title="unknown type name &apos;pushq&apos;">pushq</span>	<span class='error' title="expected identifier or &apos;(&apos;">%</span>rax					<i>/* pt_regs-&gt;orig_ax */</i></td></tr>
+<tr><th id="167">167</th><td></td></tr>
+<tr><th id="168">168</th><td>	PUSH_AND_CLEAR_REGS rax=$-<a class="macro" href="../../../include/uapi/asm-generic/errno.h.html#18" title="38" data-ref="_M/ENOSYS">ENOSYS</a></td></tr>
+<tr><th id="169">169</th><td></td></tr>
+<tr><th id="170">170</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#181" title="" data-ref="_M/TRACE_IRQS_OFF">TRACE_IRQS_OFF</a></td></tr>
+<tr><th id="171">171</th><td></td></tr>
+<tr><th id="172">172</th><td>	<i>/* IRQs are off. */</i></td></tr>
+<tr><th id="173">173</th><td>	movq	%rax, %rdi</td></tr>
+<tr><th id="174">174</th><td>	movq	%rsp, %rsi</td></tr>
+<tr><th id="175">175</th><td>	call	do_syscall_64		<i>/* returns with IRQs disabled */</i></td></tr>
+<tr><th id="176">176</th><td></td></tr>
+<tr><th id="177">177</th><td>	TRACE_IRQS_IRETQ		<i>/* we're about to change IF */</i></td></tr>
+<tr><th id="178">178</th><td></td></tr>
+<tr><th id="179">179</th><td>	<i>/*</i></td></tr>
+<tr><th id="180">180</th><td><i>	 * Try to use SYSRET instead of IRET if we're returning to</i></td></tr>
+<tr><th id="181">181</th><td><i>	 * a completely clean 64-bit userspace context.  If we're not,</i></td></tr>
+<tr><th id="182">182</th><td><i>	 * go to the slow exit path.</i></td></tr>
+<tr><th id="183">183</th><td><i>	 */</i></td></tr>
+<tr><th id="184">184</th><td>	movq	<a class="macro" href="calling.h.html#82" title="11*8" data-ref="_M/RCX">RCX</a>(%rsp), %rcx</td></tr>
+<tr><th id="185">185</th><td>	movq	<a class="macro" href="calling.h.html#92" title="16*8" data-ref="_M/RIP">RIP</a>(%rsp), %r11</td></tr>
+<tr><th id="186">186</th><td></td></tr>
+<tr><th id="187">187</th><td>	cmpq	%rcx, %r11	<i>/* SYSRET requires RCX == RIP */</i></td></tr>
+<tr><th id="188">188</th><td>	jne	swapgs_restore_regs_and_return_to_usermode</td></tr>
+<tr><th id="189">189</th><td></td></tr>
+<tr><th id="190">190</th><td>	<i>/*</i></td></tr>
+<tr><th id="191">191</th><td><i>	 * On Intel CPUs, SYSRET with non-canonical RCX/RIP will #GP</i></td></tr>
+<tr><th id="192">192</th><td><i>	 * in kernel space.  This essentially lets the user take over</i></td></tr>
+<tr><th id="193">193</th><td><i>	 * the kernel, since userspace controls RSP.</i></td></tr>
+<tr><th id="194">194</th><td><i>	 *</i></td></tr>
+<tr><th id="195">195</th><td><i>	 * If width of "canonical tail" ever becomes variable, this will need</i></td></tr>
+<tr><th id="196">196</th><td><i>	 * to be updated to remain correct on both old and new CPUs.</i></td></tr>
+<tr><th id="197">197</th><td><i>	 *</i></td></tr>
+<tr><th id="198">198</th><td><i>	 * Change top bits to match most significant bit (47th or 56th bit</i></td></tr>
+<tr><th id="199">199</th><td><i>	 * depending on paging mode) in the address.</i></td></tr>
+<tr><th id="200">200</th><td><i>	 */</i></td></tr>
+<tr><th id="201">201</th><td><u>#<span data-ppcond="201">ifdef</span> <span class="macro" data-ref="_M/CONFIG_X86_5LEVEL">CONFIG_X86_5LEVEL</span></u></td></tr>
+<tr><th id="202">202</th><td>	ALTERNATIVE <q>"shl $(64 - 48), %rcx; sar $(64 - 48), %rcx"</q>, \</td></tr>
+<tr><th id="203">203</th><td>		<q>"shl $(64 - 57), %rcx; sar $(64 - 57), %rcx"</q>, X86_FEATURE_LA57</td></tr>
+<tr><th id="204">204</th><td><u>#<span data-ppcond="201">else</span></u></td></tr>
+<tr><th id="205">205</th><td>	shl	$(<var>64</var> - (<a class="macro" href="../include/asm/page_64_types.h.html#58" title="47" data-ref="_M/__VIRTUAL_MASK_SHIFT">__VIRTUAL_MASK_SHIFT</a>+<var>1</var>)), %rcx</td></tr>
+<tr><th id="206">206</th><td>	sar	$(<var>64</var> - (<a class="macro" href="../include/asm/page_64_types.h.html#58" title="47" data-ref="_M/__VIRTUAL_MASK_SHIFT">__VIRTUAL_MASK_SHIFT</a>+<var>1</var>)), %rcx</td></tr>
+<tr><th id="207">207</th><td><u>#<span data-ppcond="201">endif</span></u></td></tr>
+<tr><th id="208">208</th><td></td></tr>
+<tr><th id="209">209</th><td>	<i>/* If this changed %rcx, it was not canonical */</i></td></tr>
+<tr><th id="210">210</th><td>	cmpq	%rcx, %r11</td></tr>
+<tr><th id="211">211</th><td>	jne	swapgs_restore_regs_and_return_to_usermode</td></tr>
+<tr><th id="212">212</th><td></td></tr>
+<tr><th id="213">213</th><td>	cmpq	$<a class="macro" href="../include/asm/segment.h.html#208" title="(6*8 + 3)" data-ref="_M/__USER_CS">__USER_CS</a>, <a class="macro" href="calling.h.html#93" title="17*8" data-ref="_M/CS">CS</a>(%rsp)		<i>/* CS must match SYSRET */</i></td></tr>
+<tr><th id="214">214</th><td>	jne	swapgs_restore_regs_and_return_to_usermode</td></tr>
+<tr><th id="215">215</th><td></td></tr>
+<tr><th id="216">216</th><td>	movq	<a class="macro" href="calling.h.html#77" title="6*8" data-ref="_M/R11">R11</a>(%rsp), %r11</td></tr>
+<tr><th id="217">217</th><td>	cmpq	%r11, <a class="macro" href="calling.h.html#94" title="18*8" data-ref="_M/EFLAGS">EFLAGS</a>(%rsp)		<i>/* R11 == RFLAGS */</i></td></tr>
+<tr><th id="218">218</th><td>	jne	swapgs_restore_regs_and_return_to_usermode</td></tr>
+<tr><th id="219">219</th><td></td></tr>
+<tr><th id="220">220</th><td>	<i>/*</i></td></tr>
+<tr><th id="221">221</th><td><i>	 * SYSCALL clears RF when it saves RFLAGS in R11 and SYSRET cannot</i></td></tr>
+<tr><th id="222">222</th><td><i>	 * restore RF properly. If the slowpath sets it for whatever reason, we</i></td></tr>
+<tr><th id="223">223</th><td><i>	 * need to restore it correctly.</i></td></tr>
+<tr><th id="224">224</th><td><i>	 *</i></td></tr>
+<tr><th id="225">225</th><td><i>	 * SYSRET can restore TF, but unlike IRET, restoring TF results in a</i></td></tr>
+<tr><th id="226">226</th><td><i>	 * trap from userspace immediately after SYSRET.  This would cause an</i></td></tr>
+<tr><th id="227">227</th><td><i>	 * infinite loop whenever #DB happens with register state that satisfies</i></td></tr>
+<tr><th id="228">228</th><td><i>	 * the opportunistic SYSRET conditions.  For example, single-stepping</i></td></tr>
+<tr><th id="229">229</th><td><i>	 * this user code:</i></td></tr>
+<tr><th id="230">230</th><td><i>	 *</i></td></tr>
+<tr><th id="231">231</th><td><i>	 *           movq	$stuck_here, %rcx</i></td></tr>
+<tr><th id="232">232</th><td><i>	 *           pushfq</i></td></tr>
+<tr><th id="233">233</th><td><i>	 *           popq %r11</i></td></tr>
+<tr><th id="234">234</th><td><i>	 *   stuck_here:</i></td></tr>
+<tr><th id="235">235</th><td><i>	 *</i></td></tr>
+<tr><th id="236">236</th><td><i>	 * would never get past 'stuck_here'.</i></td></tr>
+<tr><th id="237">237</th><td><i>	 */</i></td></tr>
+<tr><th id="238">238</th><td>	testq	$(<a class="macro" href="../include/uapi/asm/processor-flags.h.html#36" title="((1) &lt;&lt; (16))" data-ref="_M/X86_EFLAGS_RF">X86_EFLAGS_RF</a>|<a class="macro" href="../include/uapi/asm/processor-flags.h.html#24" title="((1) &lt;&lt; (8))" data-ref="_M/X86_EFLAGS_TF">X86_EFLAGS_TF</a>), %r11</td></tr>
+<tr><th id="239">239</th><td>	jnz	swapgs_restore_regs_and_return_to_usermode</td></tr>
+<tr><th id="240">240</th><td></td></tr>
+<tr><th id="241">241</th><td>	<i>/* nothing to check for RSP */</i></td></tr>
+<tr><th id="242">242</th><td></td></tr>
+<tr><th id="243">243</th><td>	cmpq	$<a class="macro" href="../include/asm/segment.h.html#206" title="(5*8 + 3)" data-ref="_M/__USER_DS">__USER_DS</a>, <a class="macro" href="calling.h.html#96" title="20*8" data-ref="_M/SS">SS</a>(%rsp)		<i>/* SS must match SYSRET */</i></td></tr>
+<tr><th id="244">244</th><td>	jne	swapgs_restore_regs_and_return_to_usermode</td></tr>
+<tr><th id="245">245</th><td></td></tr>
+<tr><th id="246">246</th><td>	<i>/*</i></td></tr>
+<tr><th id="247">247</th><td><i>	 * We win! This label is here just for ease of understanding</i></td></tr>
+<tr><th id="248">248</th><td><i>	 * perf profiles. Nothing jumps here.</i></td></tr>
+<tr><th id="249">249</th><td><i>	 */</i></td></tr>
+<tr><th id="250">250</th><td>syscall_return_via_sysret:</td></tr>
+<tr><th id="251">251</th><td>	<i>/* rcx and r11 are already restored (see code above) */</i></td></tr>
+<tr><th id="252">252</th><td>	UNWIND_HINT_EMPTY</td></tr>
+<tr><th id="253">253</th><td>	POP_REGS pop_rdi=<var>0</var> skip_r11rcx=<var>1</var></td></tr>
+<tr><th id="254">254</th><td></td></tr>
+<tr><th id="255">255</th><td>	<i>/*</i></td></tr>
+<tr><th id="256">256</th><td><i>	 * Now all regs are restored except RSP and RDI.</i></td></tr>
+<tr><th id="257">257</th><td><i>	 * Save old stack pointer and switch to trampoline stack.</i></td></tr>
+<tr><th id="258">258</th><td><i>	 */</i></td></tr>
+<tr><th id="259">259</th><td>	movq	%rsp, %rdi</td></tr>
+<tr><th id="260">260</th><td>	movq	<a class="macro" href="../include/asm/percpu.h.html#31" title="%gs:cpu_tss_rw + 4" data-ref="_M/PER_CPU_VAR">PER_CPU_VAR</a>(cpu_tss_rw + <a class="macro" href="../../../include/generated/asm-offsets.h.html#81" title="4" data-ref="_M/TSS_sp0">TSS_sp0</a>), %rsp</td></tr>
+<tr><th id="261">261</th><td></td></tr>
+<tr><th id="262">262</th><td>	pushq	<a class="macro" href="calling.h.html#95" title="19*8" data-ref="_M/RSP">RSP</a>-<a class="macro" href="calling.h.html#85" title="14*8" data-ref="_M/RDI">RDI</a>(%rdi)	<i>/* RSP */</i></td></tr>
+<tr><th id="263">263</th><td>	pushq	(%rdi)		<i>/* RDI */</i></td></tr>
+<tr><th id="264">264</th><td></td></tr>
+<tr><th id="265">265</th><td>	<i>/*</i></td></tr>
+<tr><th id="266">266</th><td><i>	 * We are on the trampoline stack.  All regs except RDI are live.</i></td></tr>
+<tr><th id="267">267</th><td><i>	 * We can do future final exit work right here.</i></td></tr>
+<tr><th id="268">268</th><td><i>	 */</i></td></tr>
+<tr><th id="269">269</th><td>	STACKLEAK_ERASE_NOCLOBBER</td></tr>
+<tr><th id="270">270</th><td></td></tr>
+<tr><th id="271">271</th><td>	SWITCH_TO_USER_CR3_STACK scratch_reg=%rdi</td></tr>
+<tr><th id="272">272</th><td></td></tr>
+<tr><th id="273">273</th><td>	popq	%rdi</td></tr>
+<tr><th id="274">274</th><td>	popq	%rsp</td></tr>
+<tr><th id="275">275</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#147" title="swapgs; sysretq;" data-ref="_M/USERGS_SYSRET64">USERGS_SYSRET64</a></td></tr>
+<tr><th id="276">276</th><td><a class="macro" href="../../../include/linux/linkage.h.html#104" title=".size entry_SYSCALL_64, .-entry_SYSCALL_64" data-ref="_M/END">END</a>(entry_SYSCALL_64)</td></tr>
+<tr><th id="277">277</th><td></td></tr>
+<tr><th id="278">278</th><td><i>/*</i></td></tr>
+<tr><th id="279">279</th><td><i> * %rdi: prev task</i></td></tr>
+<tr><th id="280">280</th><td><i> * %rsi: next task</i></td></tr>
+<tr><th id="281">281</th><td><i> */</i></td></tr>
+<tr><th id="282">282</th><td><a class="macro" href="../../../include/linux/linkage.h.html#89" title=".globl __switch_to_asm ; .p2align 4, 0x90 ; __switch_to_asm:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="__switch_to_asm" title='__switch_to_asm' data-ref="__switch_to_asm" data-ref-filename="__switch_to_asm">__switch_to_asm</dfn></span>)</td></tr>
+<tr><th id="283">283</th><td>	<span class='error' title="unknown type name &apos;UNWIND_HINT_FUNC&apos;">UNWIND_HINT_FUNC</span></td></tr>
+<tr><th id="284">284</th><td>	<i>/*</i></td></tr>
+<tr><th id="285">285</th><td><i>	 * Save callee-saved registers</i></td></tr>
+<tr><th id="286">286</th><td><i>	 * This must match the order in inactive_task_frame</i></td></tr>
+<tr><th id="287">287</th><td><i>	 */</i></td></tr>
+<tr><th id="288">288</th><td>	<dfn class="tu decl def" id="pushq" title='pushq' data-type='int' data-ref="pushq" data-ref-filename="pushq">pushq</dfn><span class='error' title="expected &apos;;&apos; after top level declarator"></span>	%rbp</td></tr>
+<tr><th id="289">289</th><td>	pushq	%rbx</td></tr>
+<tr><th id="290">290</th><td>	pushq	%r12</td></tr>
+<tr><th id="291">291</th><td>	pushq	%r13</td></tr>
+<tr><th id="292">292</th><td>	pushq	%r14</td></tr>
+<tr><th id="293">293</th><td>	pushq	%r15</td></tr>
+<tr><th id="294">294</th><td></td></tr>
+<tr><th id="295">295</th><td>	<i>/* switch stack */</i></td></tr>
+<tr><th id="296">296</th><td>	movq	%rsp, <a class="macro" href="../../../include/generated/asm-offsets.h.html#43" title="2392" data-ref="_M/TASK_threadsp">TASK_threadsp</a>(%rdi)</td></tr>
+<tr><th id="297">297</th><td>	movq	<a class="macro" href="../../../include/generated/asm-offsets.h.html#43" title="2392" data-ref="_M/TASK_threadsp">TASK_threadsp</a>(%rsi), %rsp</td></tr>
+<tr><th id="298">298</th><td></td></tr>
+<tr><th id="299">299</th><td><u>#<span data-ppcond="299">ifdef</span> <a class="macro" href="../../../include/generated/autoconf.h.html#1132" data-ref="_M/CONFIG_STACKPROTECTOR">CONFIG_STACKPROTECTOR</a></u></td></tr>
+<tr><th id="300">300</th><td>	movq	<a class="macro" href="../../../include/generated/asm-offsets.h.html#44" title="1176" data-ref="_M/TASK_stack_canary">TASK_stack_canary</a>(%rsi), %rbx</td></tr>
+<tr><th id="301">301</th><td>	movq	%rbx, <a class="macro" href="../include/asm/percpu.h.html#31" title="%gs:fixed_percpu_data" data-ref="_M/PER_CPU_VAR">PER_CPU_VAR</a>(fixed_percpu_data) + <a class="macro" href="../../../include/generated/asm-offsets.h.html#36" title="40" data-ref="_M/stack_canary_offset">stack_canary_offset</a></td></tr>
+<tr><th id="302">302</th><td><u>#<span data-ppcond="299">endif</span></u></td></tr>
+<tr><th id="303">303</th><td></td></tr>
+<tr><th id="304">304</th><td><u>#<span data-ppcond="304">ifdef</span> <a class="macro" href="../../../include/generated/autoconf.h.html#728" data-ref="_M/CONFIG_RETPOLINE">CONFIG_RETPOLINE</a></u></td></tr>
+<tr><th id="305">305</th><td>	<i>/*</i></td></tr>
+<tr><th id="306">306</th><td><i>	 * When switching from a shallower to a deeper call stack</i></td></tr>
+<tr><th id="307">307</th><td><i>	 * the RSB may either underflow or use entries populated</i></td></tr>
+<tr><th id="308">308</th><td><i>	 * with userspace addresses. On CPUs where those concerns</i></td></tr>
+<tr><th id="309">309</th><td><i>	 * exist, overwrite the RSB with entries which capture</i></td></tr>
+<tr><th id="310">310</th><td><i>	 * speculative execution to prevent attack.</i></td></tr>
+<tr><th id="311">311</th><td><i>	 */</i></td></tr>
+<tr><th id="312">312</th><td>	FILL_RETURN_BUFFER %r12, <a class="macro" href="../include/asm/nospec-branch.h.html#39" title="32" data-ref="_M/RSB_CLEAR_LOOPS">RSB_CLEAR_LOOPS</a>, <a class="macro" href="../include/asm/cpufeatures.h.html#212" title="( 7*32+19)" data-ref="_M/X86_FEATURE_RSB_CTXSW">X86_FEATURE_RSB_CTXSW</a></td></tr>
+<tr><th id="313">313</th><td><u>#<span data-ppcond="304">endif</span></u></td></tr>
+<tr><th id="314">314</th><td></td></tr>
+<tr><th id="315">315</th><td>	<i>/* restore callee-saved registers */</i></td></tr>
+<tr><th id="316">316</th><td>	popq	%r15</td></tr>
+<tr><th id="317">317</th><td>	popq	%r14</td></tr>
+<tr><th id="318">318</th><td>	popq	%r13</td></tr>
+<tr><th id="319">319</th><td>	popq	%r12</td></tr>
+<tr><th id="320">320</th><td>	popq	%rbx</td></tr>
+<tr><th id="321">321</th><td>	popq	%rbp</td></tr>
+<tr><th id="322">322</th><td></td></tr>
+<tr><th id="323">323</th><td>	jmp	__switch_to</td></tr>
+<tr><th id="324">324</th><td><a class="macro" href="../../../include/linux/linkage.h.html#104" title=".size __switch_to_asm, .-__switch_to_asm" data-ref="_M/END">END</a>(__switch_to_asm)</td></tr>
+<tr><th id="325">325</th><td></td></tr>
+<tr><th id="326">326</th><td><i>/*</i></td></tr>
+<tr><th id="327">327</th><td><i> * A newly forked process directly context switches into this address.</i></td></tr>
+<tr><th id="328">328</th><td><i> *</i></td></tr>
+<tr><th id="329">329</th><td><i> * rax: prev task we switched from</i></td></tr>
+<tr><th id="330">330</th><td><i> * rbx: kernel thread func (NULL for user thread)</i></td></tr>
+<tr><th id="331">331</th><td><i> * r12: kernel thread arg</i></td></tr>
+<tr><th id="332">332</th><td><i> */</i></td></tr>
+<tr><th id="333">333</th><td><a class="macro" href="../../../include/linux/linkage.h.html#89" title=".globl ret_from_fork ; .p2align 4, 0x90 ; ret_from_fork:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="ret_from_fork" title='ret_from_fork' data-ref="ret_from_fork" data-ref-filename="ret_from_fork">ret_from_fork</dfn></span>)</td></tr>
+<tr><th id="334">334</th><td>	<span class='error' title="unknown type name &apos;UNWIND_HINT_EMPTY&apos;">UNWIND_HINT_EMPTY</span></td></tr>
+<tr><th id="335">335</th><td>	<dfn class="tu decl def" id="movq" title='movq' data-type='int' data-ref="movq" data-ref-filename="movq">movq</dfn><span class='error' title="expected &apos;;&apos; after top level declarator"></span>	%rax, %rdi</td></tr>
+<tr><th id="336">336</th><td>	call	schedule_tail			<i>/* rdi: 'prev' task parameter */</i></td></tr>
+<tr><th id="337">337</th><td></td></tr>
+<tr><th id="338">338</th><td>	testq	%rbx, %rbx			<i>/* from kernel_thread? */</i></td></tr>
+<tr><th id="339">339</th><td>	jnz	<var>1f</var>				<i>/* kernel threads are uncommon */</i></td></tr>
+<tr><th id="340">340</th><td></td></tr>
+<tr><th id="341">341</th><td><var>2</var>:</td></tr>
+<tr><th id="342">342</th><td>	UNWIND_HINT_REGS</td></tr>
+<tr><th id="343">343</th><td>	movq	%rsp, %rdi</td></tr>
+<tr><th id="344">344</th><td>	call	syscall_return_slowpath	<i>/* returns with IRQs disabled */</i></td></tr>
+<tr><th id="345">345</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#180" title="" data-ref="_M/TRACE_IRQS_ON">TRACE_IRQS_ON</a>			<i>/* user mode is traced as IRQS on */</i></td></tr>
+<tr><th id="346">346</th><td>	jmp	swapgs_restore_regs_and_return_to_usermode</td></tr>
+<tr><th id="347">347</th><td></td></tr>
+<tr><th id="348">348</th><td><var>1</var>:</td></tr>
+<tr><th id="349">349</th><td>	<i>/* kernel thread */</i></td></tr>
+<tr><th id="350">350</th><td>	UNWIND_HINT_EMPTY</td></tr>
+<tr><th id="351">351</th><td>	movq	%r12, %rdi</td></tr>
+<tr><th id="352">352</th><td>	CALL_NOSPEC %rbx</td></tr>
+<tr><th id="353">353</th><td>	<i>/*</i></td></tr>
+<tr><th id="354">354</th><td><i>	 * A kernel thread is allowed to return here after successfully</i></td></tr>
+<tr><th id="355">355</th><td><i>	 * calling do_execve().  Exit to userspace to complete the execve()</i></td></tr>
+<tr><th id="356">356</th><td><i>	 * syscall.</i></td></tr>
+<tr><th id="357">357</th><td><i>	 */</i></td></tr>
+<tr><th id="358">358</th><td>	movq	$<var>0</var>, <a class="macro" href="calling.h.html#81" title="10*8" data-ref="_M/RAX">RAX</a>(%rsp)</td></tr>
+<tr><th id="359">359</th><td>	jmp	<var>2b</var></td></tr>
+<tr><th id="360">360</th><td><a class="macro" href="../../../include/linux/linkage.h.html#104" title=".size ret_from_fork, .-ret_from_fork" data-ref="_M/END">END</a>(ret_from_fork)</td></tr>
+<tr><th id="361">361</th><td></td></tr>
+<tr><th id="362">362</th><td><i>/*</i></td></tr>
+<tr><th id="363">363</th><td><i> * Build the entry stubs with some assembler magic.</i></td></tr>
+<tr><th id="364">364</th><td><i> * We pack 1 stub into every 8-byte block.</i></td></tr>
+<tr><th id="365">365</th><td><i> */</i></td></tr>
+<tr><th id="366">366</th><td>	.align <var>8</var></td></tr>
+<tr><th id="367">367</th><td><a class="macro" href="../../../include/linux/linkage.h.html#89" title=".globl irq_entries_start ; .p2align 4, 0x90 ; irq_entries_start:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="irq_entries_start" title='irq_entries_start' data-ref="irq_entries_start" data-ref-filename="irq_entries_start">irq_entries_start</dfn></span>)</td></tr>
+<tr><th id="368">368</th><td>    <span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="vector" title='vector' data-ref="vector" data-ref-filename="vector">vector</dfn></span>=<a class="macro" href="../include/asm/irq_vectors.h.html#36" title="0x20" data-ref="_M/FIRST_EXTERNAL_VECTOR">FIRST_EXTERNAL_VECTOR</a></td></tr>
+<tr><th id="369">369</th><td>    <span class='error' title="member reference base type &apos;int&apos; is not a structure or union">.</span>rept (<a class="macro" href="../include/asm/irq_vectors.h.html#112" title="0xec" data-ref="_M/FIRST_SYSTEM_VECTOR">FIRST_SYSTEM_VECTOR</a> - <a class="macro" href="../include/asm/irq_vectors.h.html#36" title="0x20" data-ref="_M/FIRST_EXTERNAL_VECTOR">FIRST_EXTERNAL_VECTOR</a>)</td></tr>
+<tr><th id="370">370</th><td>	UNWIND_HINT_IRET_REGS</td></tr>
+<tr><th id="371">371</th><td>	pushq	$(~vector+<var>0x80</var>)			<i>/* Note: always in signed byte range */</i></td></tr>
+<tr><th id="372">372</th><td>	jmp	common_interrupt</td></tr>
+<tr><th id="373">373</th><td>	.align	<var>8</var></td></tr>
+<tr><th id="374">374</th><td>	vector=vector+<var>1</var></td></tr>
+<tr><th id="375">375</th><td>    .endr</td></tr>
+<tr><th id="376">376</th><td><a class="macro" href="../../../include/linux/linkage.h.html#104" title=".size irq_entries_start, .-irq_entries_start" data-ref="_M/END">END</a>(irq_entries_start)</td></tr>
+<tr><th id="377">377</th><td></td></tr>
+<tr><th id="378">378</th><td>	.align <var>8</var></td></tr>
+<tr><th id="379">379</th><td><a class="macro" href="../../../include/linux/linkage.h.html#89" title=".globl spurious_entries_start ; .p2align 4, 0x90 ; spurious_entries_start:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="spurious_entries_start" title='spurious_entries_start' data-ref="spurious_entries_start" data-ref-filename="spurious_entries_start">spurious_entries_start</dfn></span>)</td></tr>
+<tr><th id="380">380</th><td>    <span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="vector" title='vector' data-ref="vector" data-ref-filename="vector">vector</dfn></span>=<a class="macro" href="../include/asm/irq_vectors.h.html#112" title="0xec" data-ref="_M/FIRST_SYSTEM_VECTOR">FIRST_SYSTEM_VECTOR</a></td></tr>
+<tr><th id="381">381</th><td>    <span class='error' title="member reference base type &apos;int&apos; is not a structure or union">.</span>rept (<a class="macro" href="../include/asm/irq_vectors.h.html#109" title="256" data-ref="_M/NR_VECTORS">NR_VECTORS</a> - <a class="macro" href="../include/asm/irq_vectors.h.html#112" title="0xec" data-ref="_M/FIRST_SYSTEM_VECTOR">FIRST_SYSTEM_VECTOR</a>)</td></tr>
+<tr><th id="382">382</th><td>	UNWIND_HINT_IRET_REGS</td></tr>
+<tr><th id="383">383</th><td>	pushq	$(~vector+<var>0x80</var>)			<i>/* Note: always in signed byte range */</i></td></tr>
+<tr><th id="384">384</th><td>	jmp	common_spurious</td></tr>
+<tr><th id="385">385</th><td>	.align	<var>8</var></td></tr>
+<tr><th id="386">386</th><td>	vector=vector+<var>1</var></td></tr>
+<tr><th id="387">387</th><td>    .endr</td></tr>
+<tr><th id="388">388</th><td><a class="macro" href="../../../include/linux/linkage.h.html#104" title=".size spurious_entries_start, .-spurious_entries_start" data-ref="_M/END">END</a>(spurious_entries_start)</td></tr>
+<tr><th id="389">389</th><td></td></tr>
+<tr><th id="390">390</th><td>.macro DEBUG_ENTRY_ASSERT_IRQS_OFF</td></tr>
+<tr><th id="391">391</th><td><u>#<span data-ppcond="391">ifdef</span> <span class="macro" data-ref="_M/CONFIG_DEBUG_ENTRY">CONFIG_DEBUG_ENTRY</span></u></td></tr>
+<tr><th id="392">392</th><td>	pushq %rax</td></tr>
+<tr><th id="393">393</th><td>	SAVE_FLAGS(CLBR_RAX)</td></tr>
+<tr><th id="394">394</th><td>	testl $X86_EFLAGS_IF, %eax</td></tr>
+<tr><th id="395">395</th><td>	jz .Lokay_\@</td></tr>
+<tr><th id="396">396</th><td>	ud2</td></tr>
+<tr><th id="397">397</th><td>.Lokay_\@:</td></tr>
+<tr><th id="398">398</th><td>	popq %rax</td></tr>
+<tr><th id="399">399</th><td><u>#<span data-ppcond="391">endif</span></u></td></tr>
+<tr><th id="400">400</th><td>.endm</td></tr>
+<tr><th id="401">401</th><td></td></tr>
+<tr><th id="402">402</th><td><i>/*</i></td></tr>
+<tr><th id="403">403</th><td><i> * Enters the IRQ stack if we're not already using it.  NMI-safe.  Clobbers</i></td></tr>
+<tr><th id="404">404</th><td><i> * flags and puts old RSP into old_rsp, and leaves all other GPRs alone.</i></td></tr>
+<tr><th id="405">405</th><td><i> * Requires kernel GSBASE.</i></td></tr>
+<tr><th id="406">406</th><td><i> *</i></td></tr>
+<tr><th id="407">407</th><td><i> * The invariant is that, if irq_count != -1, then the IRQ stack is in use.</i></td></tr>
+<tr><th id="408">408</th><td><i> */</i></td></tr>
+<tr><th id="409">409</th><td>.macro ENTER_IRQ_STACK regs=<var>1</var> old_rsp save_ret=<var>0</var></td></tr>
+<tr><th id="410">410</th><td>	DEBUG_ENTRY_ASSERT_IRQS_OFF</td></tr>
+<tr><th id="411">411</th><td></td></tr>
+<tr><th id="412">412</th><td>	.<b>if</b> \save_ret</td></tr>
+<tr><th id="413">413</th><td>	<i>/*</i></td></tr>
+<tr><th id="414">414</th><td><i>	 * If save_ret is set, the original stack contains one additional</i></td></tr>
+<tr><th id="415">415</th><td><i>	 * entry -- the return address. Therefore, move the address one</i></td></tr>
+<tr><th id="416">416</th><td><i>	 * entry below %rsp to \old_rsp.</i></td></tr>
+<tr><th id="417">417</th><td><i>	 */</i></td></tr>
+<tr><th id="418">418</th><td>	leaq	<var>8</var>(%rsp), \old_rsp</td></tr>
+<tr><th id="419">419</th><td>	.<b>else</b></td></tr>
+<tr><th id="420">420</th><td>	movq	%rsp, \old_rsp</td></tr>
+<tr><th id="421">421</th><td>	.endif</td></tr>
+<tr><th id="422">422</th><td></td></tr>
+<tr><th id="423">423</th><td>	.<b>if</b> \regs</td></tr>
+<tr><th id="424">424</th><td>	UNWIND_HINT_REGS base=\old_rsp</td></tr>
+<tr><th id="425">425</th><td>	.endif</td></tr>
+<tr><th id="426">426</th><td></td></tr>
+<tr><th id="427">427</th><td>	incl	<a class="macro" href="../include/asm/percpu.h.html#31" title="%gs:irq_count" data-ref="_M/PER_CPU_VAR">PER_CPU_VAR</a>(irq_count)</td></tr>
+<tr><th id="428">428</th><td>	jnz	.Lirq_stack_push_old_rsp_\@</td></tr>
+<tr><th id="429">429</th><td></td></tr>
+<tr><th id="430">430</th><td>	<i>/*</i></td></tr>
+<tr><th id="431">431</th><td><i>	 * Right now, if we just incremented irq_count to zero, we've</i></td></tr>
+<tr><th id="432">432</th><td><i>	 * claimed the IRQ stack but we haven't switched to it yet.</i></td></tr>
+<tr><th id="433">433</th><td><i>	 *</i></td></tr>
+<tr><th id="434">434</th><td><i>	 * If anything is added that can interrupt us here without using IST,</i></td></tr>
+<tr><th id="435">435</th><td><i>	 * it must be *extremely* careful to limit its stack usage.  This</i></td></tr>
+<tr><th id="436">436</th><td><i>	 * could include kprobes and a hypothetical future IST-less #DB</i></td></tr>
+<tr><th id="437">437</th><td><i>	 * handler.</i></td></tr>
+<tr><th id="438">438</th><td><i>	 *</i></td></tr>
+<tr><th id="439">439</th><td><i>	 * The OOPS unwinder relies on the word at the top of the IRQ</i></td></tr>
+<tr><th id="440">440</th><td><i>	 * stack linking back to the previous RSP for the entire time we're</i></td></tr>
+<tr><th id="441">441</th><td><i>	 * on the IRQ stack.  For this to work reliably, we need to write</i></td></tr>
+<tr><th id="442">442</th><td><i>	 * it before we actually move ourselves to the IRQ stack.</i></td></tr>
+<tr><th id="443">443</th><td><i>	 */</i></td></tr>
+<tr><th id="444">444</th><td></td></tr>
+<tr><th id="445">445</th><td>	movq	\old_rsp, <a class="macro" href="../include/asm/percpu.h.html#31" title="%gs:irq_stack_backing_store + ((1 &lt;&lt; 12) &lt;&lt; (2 + 0)) - 8" data-ref="_M/PER_CPU_VAR">PER_CPU_VAR</a>(irq_stack_backing_store + <a class="macro" href="../include/asm/page_64_types.h.html#22" title="((1 &lt;&lt; 12) &lt;&lt; (2 + 0))" data-ref="_M/IRQ_STACK_SIZE">IRQ_STACK_SIZE</a> - <var>8</var>)</td></tr>
+<tr><th id="446">446</th><td>	movq	<a class="macro" href="../include/asm/percpu.h.html#31" title="%gs:hardirq_stack_ptr" data-ref="_M/PER_CPU_VAR">PER_CPU_VAR</a>(hardirq_stack_ptr), %rsp</td></tr>
+<tr><th id="447">447</th><td></td></tr>
+<tr><th id="448">448</th><td><u>#<span data-ppcond="448">ifdef</span> <span class="macro" data-ref="_M/CONFIG_DEBUG_ENTRY">CONFIG_DEBUG_ENTRY</span></u></td></tr>
+<tr><th id="449">449</th><td>	<i>/*</i></td></tr>
+<tr><th id="450">450</th><td><i>	 * If the first movq above becomes wrong due to IRQ stack layout</i></td></tr>
+<tr><th id="451">451</th><td><i>	 * changes, the only way we'll notice is if we try to unwind right</i></td></tr>
+<tr><th id="452">452</th><td><i>	 * here.  Assert that we set up the stack right to catch this type</i></td></tr>
+<tr><th id="453">453</th><td><i>	 * of bug quickly.</i></td></tr>
+<tr><th id="454">454</th><td><i>	 */</i></td></tr>
+<tr><th id="455">455</th><td>	cmpq	-<var>8</var>(%rsp), \old_rsp</td></tr>
+<tr><th id="456">456</th><td>	je	.Lirq_stack_okay\@</td></tr>
+<tr><th id="457">457</th><td>	ud2</td></tr>
+<tr><th id="458">458</th><td>	.Lirq_stack_okay\@:</td></tr>
+<tr><th id="459">459</th><td><u>#<span data-ppcond="448">endif</span></u></td></tr>
+<tr><th id="460">460</th><td></td></tr>
+<tr><th id="461">461</th><td>.Lirq_stack_push_old_rsp_\@:</td></tr>
+<tr><th id="462">462</th><td>	pushq	\old_rsp</td></tr>
+<tr><th id="463">463</th><td></td></tr>
+<tr><th id="464">464</th><td>	.<b>if</b> \regs</td></tr>
+<tr><th id="465">465</th><td>	UNWIND_HINT_REGS indirect=<var>1</var></td></tr>
+<tr><th id="466">466</th><td>	.endif</td></tr>
+<tr><th id="467">467</th><td></td></tr>
+<tr><th id="468">468</th><td>	.<b>if</b> \save_ret</td></tr>
+<tr><th id="469">469</th><td>	<i>/*</i></td></tr>
+<tr><th id="470">470</th><td><i>	 * Push the return address to the stack. This return address can</i></td></tr>
+<tr><th id="471">471</th><td><i>	 * be found at the "real" original RSP, which was offset by 8 at</i></td></tr>
+<tr><th id="472">472</th><td><i>	 * the beginning of this macro.</i></td></tr>
+<tr><th id="473">473</th><td><i>	 */</i></td></tr>
+<tr><th id="474">474</th><td>	pushq	-<var>8</var>(\old_rsp)</td></tr>
+<tr><th id="475">475</th><td>	.endif</td></tr>
+<tr><th id="476">476</th><td>.endm</td></tr>
+<tr><th id="477">477</th><td></td></tr>
+<tr><th id="478">478</th><td><i>/*</i></td></tr>
+<tr><th id="479">479</th><td><i> * Undoes ENTER_IRQ_STACK.</i></td></tr>
+<tr><th id="480">480</th><td><i> */</i></td></tr>
+<tr><th id="481">481</th><td>.macro LEAVE_IRQ_STACK regs=<var>1</var></td></tr>
+<tr><th id="482">482</th><td>	DEBUG_ENTRY_ASSERT_IRQS_OFF</td></tr>
+<tr><th id="483">483</th><td>	<i>/* We need to be off the IRQ stack before decrementing irq_count. */</i></td></tr>
+<tr><th id="484">484</th><td>	popq	%rsp</td></tr>
+<tr><th id="485">485</th><td></td></tr>
+<tr><th id="486">486</th><td>	.<b>if</b> \regs</td></tr>
+<tr><th id="487">487</th><td>	UNWIND_HINT_REGS</td></tr>
+<tr><th id="488">488</th><td>	.endif</td></tr>
+<tr><th id="489">489</th><td></td></tr>
+<tr><th id="490">490</th><td>	<i>/*</i></td></tr>
+<tr><th id="491">491</th><td><i>	 * As in ENTER_IRQ_STACK, irq_count == 0, we are still claiming</i></td></tr>
+<tr><th id="492">492</th><td><i>	 * the irq stack but we're not on it.</i></td></tr>
+<tr><th id="493">493</th><td><i>	 */</i></td></tr>
+<tr><th id="494">494</th><td></td></tr>
+<tr><th id="495">495</th><td>	decl	<a class="macro" href="../include/asm/percpu.h.html#31" title="%gs:irq_count" data-ref="_M/PER_CPU_VAR">PER_CPU_VAR</a>(irq_count)</td></tr>
+<tr><th id="496">496</th><td>.endm</td></tr>
+<tr><th id="497">497</th><td></td></tr>
+<tr><th id="498">498</th><td><i>/*</i></td></tr>
+<tr><th id="499">499</th><td><i> * Interrupt entry helper function.</i></td></tr>
+<tr><th id="500">500</th><td><i> *</i></td></tr>
+<tr><th id="501">501</th><td><i> * Entry runs with interrupts off. Stack layout at entry:</i></td></tr>
+<tr><th id="502">502</th><td><i> * +----------------------------------------------------+</i></td></tr>
+<tr><th id="503">503</th><td><i> * | regs-&gt;ss						|</i></td></tr>
+<tr><th id="504">504</th><td><i> * | regs-&gt;rsp						|</i></td></tr>
+<tr><th id="505">505</th><td><i> * | regs-&gt;eflags					|</i></td></tr>
+<tr><th id="506">506</th><td><i> * | regs-&gt;cs						|</i></td></tr>
+<tr><th id="507">507</th><td><i> * | regs-&gt;ip						|</i></td></tr>
+<tr><th id="508">508</th><td><i> * +----------------------------------------------------+</i></td></tr>
+<tr><th id="509">509</th><td><i> * | regs-&gt;orig_ax = ~(interrupt number)		|</i></td></tr>
+<tr><th id="510">510</th><td><i> * +----------------------------------------------------+</i></td></tr>
+<tr><th id="511">511</th><td><i> * | return address					|</i></td></tr>
+<tr><th id="512">512</th><td><i> * +----------------------------------------------------+</i></td></tr>
+<tr><th id="513">513</th><td><i> */</i></td></tr>
+<tr><th id="514">514</th><td><a class="macro" href="../../../include/linux/linkage.h.html#89" title=".globl interrupt_entry ; .p2align 4, 0x90 ; interrupt_entry:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="interrupt_entry" title='interrupt_entry' data-ref="interrupt_entry" data-ref-filename="interrupt_entry">interrupt_entry</dfn></span>)</td></tr>
+<tr><th id="515">515</th><td>	<span class='error' title="unknown type name &apos;UNWIND_HINT_FUNC&apos;">UNWIND_HINT_FUNC</span></td></tr>
+<tr><th id="516">516</th><td>	<a class="macro" href="../include/asm/smap.h.html#25" title="ALTERNATIVE &quot;&quot;, &quot;.byte 0x0f,0x01,0xca&quot;, ( 9*32+20)" data-ref="_M/ASM_CLAC">ASM_CLAC</a></td></tr>
+<tr><th id="517">517</th><td>	cld</td></tr>
+<tr><th id="518">518</th><td></td></tr>
+<tr><th id="519">519</th><td>	testb	$<var>3</var>, <a class="macro" href="calling.h.html#93" title="17*8" data-ref="_M/CS">CS</a>-<a class="macro" href="calling.h.html#90" title="15*8" data-ref="_M/ORIG_RAX">ORIG_RAX</a>+<var>8</var>(%rsp)</td></tr>
+<tr><th id="520">520</th><td>	jz	<var>1f</var></td></tr>
+<tr><th id="521">521</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#134" title="swapgs" data-ref="_M/SWAPGS">SWAPGS</a></td></tr>
+<tr><th id="522">522</th><td>	FENCE_SWAPGS_USER_ENTRY</td></tr>
+<tr><th id="523">523</th><td>	<i>/*</i></td></tr>
+<tr><th id="524">524</th><td><i>	 * Switch to the thread stack. The IRET frame and orig_ax are</i></td></tr>
+<tr><th id="525">525</th><td><i>	 * on the stack, as well as the return address. RDI..R12 are</i></td></tr>
+<tr><th id="526">526</th><td><i>	 * not (yet) on the stack and space has not (yet) been</i></td></tr>
+<tr><th id="527">527</th><td><i>	 * allocated for them.</i></td></tr>
+<tr><th id="528">528</th><td><i>	 */</i></td></tr>
+<tr><th id="529">529</th><td>	pushq	%rdi</td></tr>
+<tr><th id="530">530</th><td></td></tr>
+<tr><th id="531">531</th><td>	<i>/* Need to switch before accessing the thread stack. */</i></td></tr>
+<tr><th id="532">532</th><td>	SWITCH_TO_KERNEL_CR3 scratch_reg=%rdi</td></tr>
+<tr><th id="533">533</th><td>	movq	%rsp, %rdi</td></tr>
+<tr><th id="534">534</th><td>	movq	<a class="macro" href="../include/asm/percpu.h.html#31" title="%gs:(cpu_tss_rw + 12)" data-ref="_M/PER_CPU_VAR">PER_CPU_VAR</a>(<a class="macro" href="../include/asm/thread_info.h.html#219" title="(cpu_tss_rw + 12)" data-ref="_M/cpu_current_top_of_stack">cpu_current_top_of_stack</a>), %rsp</td></tr>
+<tr><th id="535">535</th><td></td></tr>
+<tr><th id="536">536</th><td>	 <i>/*</i></td></tr>
+<tr><th id="537">537</th><td><i>	  * We have RDI, return address, and orig_ax on the stack on</i></td></tr>
+<tr><th id="538">538</th><td><i>	  * top of the IRET frame. That means offset=24</i></td></tr>
+<tr><th id="539">539</th><td><i>	  */</i></td></tr>
+<tr><th id="540">540</th><td>	UNWIND_HINT_IRET_REGS base=%rdi offset=<var>24</var></td></tr>
+<tr><th id="541">541</th><td></td></tr>
+<tr><th id="542">542</th><td>	pushq	<var>7</var>*<var>8</var>(%rdi)		<i>/* regs-&gt;ss */</i></td></tr>
+<tr><th id="543">543</th><td>	pushq	<var>6</var>*<var>8</var>(%rdi)		<i>/* regs-&gt;rsp */</i></td></tr>
+<tr><th id="544">544</th><td>	pushq	<var>5</var>*<var>8</var>(%rdi)		<i>/* regs-&gt;eflags */</i></td></tr>
+<tr><th id="545">545</th><td>	pushq	<var>4</var>*<var>8</var>(%rdi)		<i>/* regs-&gt;cs */</i></td></tr>
+<tr><th id="546">546</th><td>	pushq	<var>3</var>*<var>8</var>(%rdi)		<i>/* regs-&gt;ip */</i></td></tr>
+<tr><th id="547">547</th><td>	pushq	<var>2</var>*<var>8</var>(%rdi)		<i>/* regs-&gt;orig_ax */</i></td></tr>
+<tr><th id="548">548</th><td>	pushq	<var>8</var>(%rdi)			<i>/* return address */</i></td></tr>
+<tr><th id="549">549</th><td>	UNWIND_HINT_FUNC</td></tr>
+<tr><th id="550">550</th><td></td></tr>
+<tr><th id="551">551</th><td>	movq	(%rdi), %rdi</td></tr>
+<tr><th id="552">552</th><td>	jmp	<var>2f</var></td></tr>
+<tr><th id="553">553</th><td><var>1</var>:</td></tr>
+<tr><th id="554">554</th><td>	FENCE_SWAPGS_KERNEL_ENTRY</td></tr>
+<tr><th id="555">555</th><td><var>2</var>:</td></tr>
+<tr><th id="556">556</th><td>	PUSH_AND_CLEAR_REGS save_ret=<var>1</var></td></tr>
+<tr><th id="557">557</th><td>	ENCODE_FRAME_POINTER <var>8</var></td></tr>
+<tr><th id="558">558</th><td></td></tr>
+<tr><th id="559">559</th><td>	testb	$<var>3</var>, <a class="macro" href="calling.h.html#93" title="17*8" data-ref="_M/CS">CS</a>+<var>8</var>(%rsp)</td></tr>
+<tr><th id="560">560</th><td>	jz	<var>1f</var></td></tr>
+<tr><th id="561">561</th><td></td></tr>
+<tr><th id="562">562</th><td>	<i>/*</i></td></tr>
+<tr><th id="563">563</th><td><i>	 * IRQ from user mode.</i></td></tr>
+<tr><th id="564">564</th><td><i>	 *</i></td></tr>
+<tr><th id="565">565</th><td><i>	 * We need to tell lockdep that IRQs are off.  We can't do this until</i></td></tr>
+<tr><th id="566">566</th><td><i>	 * we fix gsbase, and we should do it before enter_from_user_mode</i></td></tr>
+<tr><th id="567">567</th><td><i>	 * (which can take locks).  Since TRACE_IRQS_OFF is idempotent,</i></td></tr>
+<tr><th id="568">568</th><td><i>	 * the simplest way to handle it is to just call it twice if</i></td></tr>
+<tr><th id="569">569</th><td><i>	 * we enter from user mode.  There's no reason to optimize this since</i></td></tr>
+<tr><th id="570">570</th><td><i>	 * TRACE_IRQS_OFF is a no-op if lockdep is off.</i></td></tr>
+<tr><th id="571">571</th><td><i>	 */</i></td></tr>
+<tr><th id="572">572</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#181" title="" data-ref="_M/TRACE_IRQS_OFF">TRACE_IRQS_OFF</a></td></tr>
+<tr><th id="573">573</th><td></td></tr>
+<tr><th id="574">574</th><td>	CALL_enter_from_user_mode</td></tr>
+<tr><th id="575">575</th><td></td></tr>
+<tr><th id="576">576</th><td><var>1</var>:</td></tr>
+<tr><th id="577">577</th><td>	ENTER_IRQ_STACK old_rsp=%rdi save_ret=<var>1</var></td></tr>
+<tr><th id="578">578</th><td>	<i>/* We entered an interrupt context - irqs are off: */</i></td></tr>
+<tr><th id="579">579</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#181" title="" data-ref="_M/TRACE_IRQS_OFF">TRACE_IRQS_OFF</a></td></tr>
+<tr><th id="580">580</th><td></td></tr>
+<tr><th id="581">581</th><td>	ret</td></tr>
+<tr><th id="582">582</th><td><a class="macro" href="../../../include/linux/linkage.h.html#104" title=".size interrupt_entry, .-interrupt_entry" data-ref="_M/END">END</a>(interrupt_entry)</td></tr>
+<tr><th id="583">583</th><td><a class="macro" href="../include/asm/asm.h.html#145" title=".pushsection &quot;_kprobe_blacklist&quot;,&quot;aw&quot; ; .balign 8 ; .quad (interrupt_entry); .popsection" data-ref="_M/_ASM_NOKPROBE">_ASM_NOKPROBE</a>(interrupt_entry)</td></tr>
+<tr><th id="584">584</th><td></td></tr>
+<tr><th id="585">585</th><td></td></tr>
+<tr><th id="586">586</th><td><i>/* Interrupt entry/exit. */</i></td></tr>
+<tr><th id="587">587</th><td></td></tr>
+<tr><th id="588">588</th><td><i>/*</i></td></tr>
+<tr><th id="589">589</th><td><i> * The interrupt stubs push (~vector+0x80) onto the stack and</i></td></tr>
+<tr><th id="590">590</th><td><i> * then jump to common_spurious/interrupt.</i></td></tr>
+<tr><th id="591">591</th><td><i> */</i></td></tr>
+<tr><th id="592">592</th><td>common_spurious:</td></tr>
+<tr><th id="593">593</th><td>	addq	$-<var>0x80</var>, (%rsp)			<i>/* Adjust vector to [-256, -1] range */</i></td></tr>
+<tr><th id="594">594</th><td>	call	interrupt_entry</td></tr>
+<tr><th id="595">595</th><td>	UNWIND_HINT_REGS indirect=<var>1</var></td></tr>
+<tr><th id="596">596</th><td>	call	smp_spurious_interrupt		<i>/* rdi points to pt_regs */</i></td></tr>
+<tr><th id="597">597</th><td>	jmp	ret_from_intr</td></tr>
+<tr><th id="598">598</th><td><a class="macro" href="../../../include/linux/linkage.h.html#104" title=".size common_spurious, .-common_spurious" data-ref="_M/END">END</a>(common_spurious)</td></tr>
+<tr><th id="599">599</th><td><a class="macro" href="../include/asm/asm.h.html#145" title=".pushsection &quot;_kprobe_blacklist&quot;,&quot;aw&quot; ; .balign 8 ; .quad (common_spurious); .popsection" data-ref="_M/_ASM_NOKPROBE">_ASM_NOKPROBE</a>(common_spurious)</td></tr>
+<tr><th id="600">600</th><td></td></tr>
+<tr><th id="601">601</th><td><i>/* common_interrupt is a hotpath. Align it */</i></td></tr>
+<tr><th id="602">602</th><td>	.p2align <a class="macro" href="../../../include/generated/autoconf.h.html#1339" title="6" data-ref="_M/CONFIG_X86_L1_CACHE_SHIFT">CONFIG_X86_L1_CACHE_SHIFT</a></td></tr>
+<tr><th id="603">603</th><td>common_interrupt:</td></tr>
+<tr><th id="604">604</th><td>	addq	$-<var>0x80</var>, (%rsp)			<i>/* Adjust vector to [-256, -1] range */</i></td></tr>
+<tr><th id="605">605</th><td>	call	interrupt_entry</td></tr>
+<tr><th id="606">606</th><td>	UNWIND_HINT_REGS indirect=<var>1</var></td></tr>
+<tr><th id="607">607</th><td>	call	do_IRQ	<i>/* rdi points to pt_regs */</i></td></tr>
+<tr><th id="608">608</th><td>	<i>/* 0(%rsp): old RSP */</i></td></tr>
+<tr><th id="609">609</th><td>ret_from_intr:</td></tr>
+<tr><th id="610">610</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#127" title="cli" data-ref="_M/DISABLE_INTERRUPTS">DISABLE_INTERRUPTS</a>(CLBR_ANY)</td></tr>
+<tr><th id="611">611</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#181" title="" data-ref="_M/TRACE_IRQS_OFF">TRACE_IRQS_OFF</a></td></tr>
+<tr><th id="612">612</th><td></td></tr>
+<tr><th id="613">613</th><td>	LEAVE_IRQ_STACK</td></tr>
+<tr><th id="614">614</th><td></td></tr>
+<tr><th id="615">615</th><td>	testb	$<var>3</var>, <a class="macro" href="calling.h.html#93" title="17*8" data-ref="_M/CS">CS</a>(%rsp)</td></tr>
+<tr><th id="616">616</th><td>	jz	retint_kernel</td></tr>
+<tr><th id="617">617</th><td></td></tr>
+<tr><th id="618">618</th><td>	<i>/* Interrupt came from user space */</i></td></tr>
+<tr><th id="619">619</th><td><a class="macro" href="../include/asm/linkage.h.html#16" title=".globl retint_user; retint_user:" data-ref="_M/GLOBAL">GLOBAL</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="retint_user" title='retint_user' data-ref="retint_user" data-ref-filename="retint_user">retint_user</dfn></span>)</td></tr>
+<tr><th id="620">620</th><td>	<span class='error' title="unknown type name &apos;mov&apos;">mov</span>	<span class='error' title="expected identifier or &apos;(&apos;">%</span>rsp,%rdi</td></tr>
+<tr><th id="621">621</th><td>	call	prepare_exit_to_usermode</td></tr>
+<tr><th id="622">622</th><td>	TRACE_IRQS_IRETQ</td></tr>
+<tr><th id="623">623</th><td></td></tr>
+<tr><th id="624">624</th><td><a class="macro" href="../include/asm/linkage.h.html#16" title=".globl swapgs_restore_regs_and_return_to_usermode; swapgs_restore_regs_and_return_to_usermode:" data-ref="_M/GLOBAL">GLOBAL</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="swapgs_restore_regs_and_return_to_usermode" title='swapgs_restore_regs_and_return_to_usermode' data-ref="swapgs_restore_regs_and_return_to_usermode" data-ref-filename="swapgs_restore_regs_and_return_to_usermode">swapgs_restore_regs_and_return_to_usermode</dfn></span>)</td></tr>
+<tr><th id="625">625</th><td><u>#<span data-ppcond="625">ifdef</span> <span class="macro" data-ref="_M/CONFIG_DEBUG_ENTRY">CONFIG_DEBUG_ENTRY</span></u></td></tr>
+<tr><th id="626">626</th><td>	<i>/* Assert that pt_regs indicates user mode. */</i></td></tr>
+<tr><th id="627">627</th><td>	testb	$<var>3</var>, CS(%rsp)</td></tr>
+<tr><th id="628">628</th><td>	jnz	<var>1f</var></td></tr>
+<tr><th id="629">629</th><td>	ud2</td></tr>
+<tr><th id="630">630</th><td><var>1</var>:</td></tr>
+<tr><th id="631">631</th><td><u>#<span data-ppcond="625">endif</span></u></td></tr>
+<tr><th id="632">632</th><td>	<span class='error' title="unknown type name &apos;POP_REGS&apos;">POP_REGS</span> <dfn class="tu decl def" id="pop_rdi" title='pop_rdi' data-type='int' data-ref="pop_rdi" data-ref-filename="pop_rdi">pop_rdi</dfn>=<var>0</var><span class='error' title="expected &apos;;&apos; after top level declarator"></span></td></tr>
+<tr><th id="633">633</th><td></td></tr>
+<tr><th id="634">634</th><td>	<i>/*</i></td></tr>
+<tr><th id="635">635</th><td><i>	 * The stack is now user RDI, orig_ax, RIP, CS, EFLAGS, RSP, SS.</i></td></tr>
+<tr><th id="636">636</th><td><i>	 * Save old stack pointer and switch to trampoline stack.</i></td></tr>
+<tr><th id="637">637</th><td><i>	 */</i></td></tr>
+<tr><th id="638">638</th><td>	movq	%rsp, %rdi</td></tr>
+<tr><th id="639">639</th><td>	movq	<a class="macro" href="../include/asm/percpu.h.html#31" title="%gs:cpu_tss_rw + 4" data-ref="_M/PER_CPU_VAR">PER_CPU_VAR</a>(cpu_tss_rw + <a class="macro" href="../../../include/generated/asm-offsets.h.html#81" title="4" data-ref="_M/TSS_sp0">TSS_sp0</a>), %rsp</td></tr>
+<tr><th id="640">640</th><td></td></tr>
+<tr><th id="641">641</th><td>	<i>/* Copy the IRET frame to the trampoline stack. */</i></td></tr>
+<tr><th id="642">642</th><td>	pushq	<var>6</var>*<var>8</var>(%rdi)	<i>/* SS */</i></td></tr>
+<tr><th id="643">643</th><td>	pushq	<var>5</var>*<var>8</var>(%rdi)	<i>/* RSP */</i></td></tr>
+<tr><th id="644">644</th><td>	pushq	<var>4</var>*<var>8</var>(%rdi)	<i>/* EFLAGS */</i></td></tr>
+<tr><th id="645">645</th><td>	pushq	<var>3</var>*<var>8</var>(%rdi)	<i>/* CS */</i></td></tr>
+<tr><th id="646">646</th><td>	pushq	<var>2</var>*<var>8</var>(%rdi)	<i>/* RIP */</i></td></tr>
+<tr><th id="647">647</th><td></td></tr>
+<tr><th id="648">648</th><td>	<i>/* Push user RDI on the trampoline stack. */</i></td></tr>
+<tr><th id="649">649</th><td>	pushq	(%rdi)</td></tr>
+<tr><th id="650">650</th><td></td></tr>
+<tr><th id="651">651</th><td>	<i>/*</i></td></tr>
+<tr><th id="652">652</th><td><i>	 * We are on the trampoline stack.  All regs except RDI are live.</i></td></tr>
+<tr><th id="653">653</th><td><i>	 * We can do future final exit work right here.</i></td></tr>
+<tr><th id="654">654</th><td><i>	 */</i></td></tr>
+<tr><th id="655">655</th><td>	STACKLEAK_ERASE_NOCLOBBER</td></tr>
+<tr><th id="656">656</th><td></td></tr>
+<tr><th id="657">657</th><td>	SWITCH_TO_USER_CR3_STACK scratch_reg=%rdi</td></tr>
+<tr><th id="658">658</th><td></td></tr>
+<tr><th id="659">659</th><td>	<i>/* Restore RDI. */</i></td></tr>
+<tr><th id="660">660</th><td>	popq	%rdi</td></tr>
+<tr><th id="661">661</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#134" title="swapgs" data-ref="_M/SWAPGS">SWAPGS</a></td></tr>
+<tr><th id="662">662</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#146" title="jmp native_iret" data-ref="_M/INTERRUPT_RETURN">INTERRUPT_RETURN</a></td></tr>
+<tr><th id="663">663</th><td></td></tr>
+<tr><th id="664">664</th><td></td></tr>
+<tr><th id="665">665</th><td><i>/* Returning to kernel space */</i></td></tr>
+<tr><th id="666">666</th><td>retint_kernel:</td></tr>
+<tr><th id="667">667</th><td><u>#<span data-ppcond="667">ifdef</span> <span class="macro" data-ref="_M/CONFIG_PREEMPT">CONFIG_PREEMPT</span></u></td></tr>
+<tr><th id="668">668</th><td>	<i>/* Interrupts are off */</i></td></tr>
+<tr><th id="669">669</th><td>	<i>/* Check if we need preemption */</i></td></tr>
+<tr><th id="670">670</th><td>	btl	$<var>9</var>, EFLAGS(%rsp)		<i>/* were interrupts off? */</i></td></tr>
+<tr><th id="671">671</th><td>	jnc	<var>1f</var></td></tr>
+<tr><th id="672">672</th><td>	cmpl	$<var>0</var>, PER_CPU_VAR(__preempt_count)</td></tr>
+<tr><th id="673">673</th><td>	jnz	<var>1f</var></td></tr>
+<tr><th id="674">674</th><td>	call	preempt_schedule_irq</td></tr>
+<tr><th id="675">675</th><td><var>1</var>:</td></tr>
+<tr><th id="676">676</th><td><u>#<span data-ppcond="667">endif</span></u></td></tr>
+<tr><th id="677">677</th><td>	<i>/*</i></td></tr>
+<tr><th id="678">678</th><td><i>	 * The iretq could re-enable interrupts:</i></td></tr>
+<tr><th id="679">679</th><td><i>	 */</i></td></tr>
+<tr><th id="680">680</th><td>	TRACE_IRQS_IRETQ</td></tr>
+<tr><th id="681">681</th><td></td></tr>
+<tr><th id="682">682</th><td><a class="macro" href="../include/asm/linkage.h.html#16" title=".globl restore_regs_and_return_to_kernel; restore_regs_and_return_to_kernel:" data-ref="_M/GLOBAL">GLOBAL</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="restore_regs_and_return_to_kernel" title='restore_regs_and_return_to_kernel' data-ref="restore_regs_and_return_to_kernel" data-ref-filename="restore_regs_and_return_to_kernel">restore_regs_and_return_to_kernel</dfn></span>)</td></tr>
+<tr><th id="683">683</th><td><u>#<span data-ppcond="683">ifdef</span> <span class="macro" data-ref="_M/CONFIG_DEBUG_ENTRY">CONFIG_DEBUG_ENTRY</span></u></td></tr>
+<tr><th id="684">684</th><td>	<i>/* Assert that pt_regs indicates kernel mode. */</i></td></tr>
+<tr><th id="685">685</th><td>	testb	$<var>3</var>, CS(%rsp)</td></tr>
+<tr><th id="686">686</th><td>	jz	<var>1f</var></td></tr>
+<tr><th id="687">687</th><td>	ud2</td></tr>
+<tr><th id="688">688</th><td><var>1</var>:</td></tr>
+<tr><th id="689">689</th><td><u>#<span data-ppcond="683">endif</span></u></td></tr>
+<tr><th id="690">690</th><td>	<span class='error' title="unknown type name &apos;POP_REGS&apos;">POP_REGS</span></td></tr>
+<tr><th id="691">691</th><td>	<dfn class="tu decl def" id="addq" title='addq' data-type='int' data-ref="addq" data-ref-filename="addq">addq</dfn><span class='error' title="expected &apos;;&apos; after top level declarator"></span>	$<var>8</var>, %rsp	<i>/* skip regs-&gt;orig_ax */</i></td></tr>
+<tr><th id="692">692</th><td>	<i>/*</i></td></tr>
+<tr><th id="693">693</th><td><i>	 * ARCH_HAS_MEMBARRIER_SYNC_CORE rely on IRET core serialization</i></td></tr>
+<tr><th id="694">694</th><td><i>	 * when returning from IPI handler.</i></td></tr>
+<tr><th id="695">695</th><td><i>	 */</i></td></tr>
+<tr><th id="696">696</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#146" title="jmp native_iret" data-ref="_M/INTERRUPT_RETURN">INTERRUPT_RETURN</a></td></tr>
+<tr><th id="697">697</th><td></td></tr>
+<tr><th id="698">698</th><td><a class="macro" href="../../../include/linux/linkage.h.html#89" title=".globl native_iret ; .p2align 4, 0x90 ; native_iret:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="native_iret" title='native_iret' data-ref="native_iret" data-ref-filename="native_iret">native_iret</dfn></span>)</td></tr>
+<tr><th id="699">699</th><td>	<span class='error' title="unknown type name &apos;UNWIND_HINT_IRET_REGS&apos;">UNWIND_HINT_IRET_REGS</span></td></tr>
+<tr><th id="700">700</th><td>	<i>/*</i></td></tr>
+<tr><th id="701">701</th><td><i>	 * Are we returning to a stack segment from the LDT?  Note: in</i></td></tr>
+<tr><th id="702">702</th><td><i>	 * 64-bit mode SS:RSP on the exception stack is always valid.</i></td></tr>
+<tr><th id="703">703</th><td><i>	 */</i></td></tr>
+<tr><th id="704">704</th><td><u>#<span data-ppcond="704">ifdef</span> <a class="macro" href="../../../include/generated/autoconf.h.html#742" data-ref="_M/CONFIG_X86_ESPFIX64">CONFIG_X86_ESPFIX64</a></u></td></tr>
+<tr><th id="705">705</th><td>	<dfn class="tu decl def" id="testb" title='testb' data-type='int' data-ref="testb" data-ref-filename="testb">testb</dfn><span class='error' title="expected &apos;;&apos; after top level declarator"></span>	$<var>4</var>, (<a class="macro" href="calling.h.html#96" title="20*8" data-ref="_M/SS">SS</a>-<a class="macro" href="calling.h.html#92" title="16*8" data-ref="_M/RIP">RIP</a>)(%rsp)</td></tr>
+<tr><th id="706">706</th><td>	jnz	native_irq_return_ldt</td></tr>
+<tr><th id="707">707</th><td><u>#<span data-ppcond="704">endif</span></u></td></tr>
+<tr><th id="708">708</th><td></td></tr>
+<tr><th id="709">709</th><td>.global native_irq_return_iret</td></tr>
+<tr><th id="710">710</th><td>native_irq_return_iret:</td></tr>
+<tr><th id="711">711</th><td>	<i>/*</i></td></tr>
+<tr><th id="712">712</th><td><i>	 * This may fault.  Non-paranoid faults on return to userspace are</i></td></tr>
+<tr><th id="713">713</th><td><i>	 * handled by fixup_bad_iret.  These include #SS, #GP, and #NP.</i></td></tr>
+<tr><th id="714">714</th><td><i>	 * Double-faults due to espfix64 are handled in do_double_fault.</i></td></tr>
+<tr><th id="715">715</th><td><i>	 * Other faults here are fatal.</i></td></tr>
+<tr><th id="716">716</th><td><i>	 */</i></td></tr>
+<tr><th id="717">717</th><td>	iretq</td></tr>
+<tr><th id="718">718</th><td></td></tr>
+<tr><th id="719">719</th><td><u>#<span data-ppcond="719">ifdef</span> <a class="macro" href="../../../include/generated/autoconf.h.html#742" data-ref="_M/CONFIG_X86_ESPFIX64">CONFIG_X86_ESPFIX64</a></u></td></tr>
+<tr><th id="720">720</th><td>native_irq_return_ldt:</td></tr>
+<tr><th id="721">721</th><td>	<i>/*</i></td></tr>
+<tr><th id="722">722</th><td><i>	 * We are running with user GSBASE.  All GPRs contain their user</i></td></tr>
+<tr><th id="723">723</th><td><i>	 * values.  We have a percpu ESPFIX stack that is eight slots</i></td></tr>
+<tr><th id="724">724</th><td><i>	 * long (see ESPFIX_STACK_SIZE).  espfix_waddr points to the bottom</i></td></tr>
+<tr><th id="725">725</th><td><i>	 * of the ESPFIX stack.</i></td></tr>
+<tr><th id="726">726</th><td><i>	 *</i></td></tr>
+<tr><th id="727">727</th><td><i>	 * We clobber RAX and RDI in this code.  We stash RDI on the</i></td></tr>
+<tr><th id="728">728</th><td><i>	 * normal stack and RAX on the ESPFIX stack.</i></td></tr>
+<tr><th id="729">729</th><td><i>	 *</i></td></tr>
+<tr><th id="730">730</th><td><i>	 * The ESPFIX stack layout we set up looks like this:</i></td></tr>
+<tr><th id="731">731</th><td><i>	 *</i></td></tr>
+<tr><th id="732">732</th><td><i>	 * --- top of ESPFIX stack ---</i></td></tr>
+<tr><th id="733">733</th><td><i>	 * SS</i></td></tr>
+<tr><th id="734">734</th><td><i>	 * RSP</i></td></tr>
+<tr><th id="735">735</th><td><i>	 * RFLAGS</i></td></tr>
+<tr><th id="736">736</th><td><i>	 * CS</i></td></tr>
+<tr><th id="737">737</th><td><i>	 * RIP  &lt;-- RSP points here when we're done</i></td></tr>
+<tr><th id="738">738</th><td><i>	 * RAX  &lt;-- espfix_waddr points here</i></td></tr>
+<tr><th id="739">739</th><td><i>	 * --- bottom of ESPFIX stack ---</i></td></tr>
+<tr><th id="740">740</th><td><i>	 */</i></td></tr>
+<tr><th id="741">741</th><td></td></tr>
+<tr><th id="742">742</th><td>	pushq	%rdi				<i>/* Stash user RDI */</i></td></tr>
+<tr><th id="743">743</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#134" title="swapgs" data-ref="_M/SWAPGS">SWAPGS</a>					<i>/* to kernel GS */</i></td></tr>
+<tr><th id="744">744</th><td>	SWITCH_TO_KERNEL_CR3 scratch_reg=%rdi	<i>/* to kernel CR3 */</i></td></tr>
+<tr><th id="745">745</th><td></td></tr>
+<tr><th id="746">746</th><td>	movq	<a class="macro" href="../include/asm/percpu.h.html#31" title="%gs:espfix_waddr" data-ref="_M/PER_CPU_VAR">PER_CPU_VAR</a>(espfix_waddr), %rdi</td></tr>
+<tr><th id="747">747</th><td>	movq	%rax, (<var>0</var>*<var>8</var>)(%rdi)		<i>/* user RAX */</i></td></tr>
+<tr><th id="748">748</th><td>	movq	(<var>1</var>*<var>8</var>)(%rsp), %rax		<i>/* user RIP */</i></td></tr>
+<tr><th id="749">749</th><td>	movq	%rax, (<var>1</var>*<var>8</var>)(%rdi)</td></tr>
+<tr><th id="750">750</th><td>	movq	(<var>2</var>*<var>8</var>)(%rsp), %rax		<i>/* user CS */</i></td></tr>
+<tr><th id="751">751</th><td>	movq	%rax, (<var>2</var>*<var>8</var>)(%rdi)</td></tr>
+<tr><th id="752">752</th><td>	movq	(<var>3</var>*<var>8</var>)(%rsp), %rax		<i>/* user RFLAGS */</i></td></tr>
+<tr><th id="753">753</th><td>	movq	%rax, (<var>3</var>*<var>8</var>)(%rdi)</td></tr>
+<tr><th id="754">754</th><td>	movq	(<var>5</var>*<var>8</var>)(%rsp), %rax		<i>/* user SS */</i></td></tr>
+<tr><th id="755">755</th><td>	movq	%rax, (<var>5</var>*<var>8</var>)(%rdi)</td></tr>
+<tr><th id="756">756</th><td>	movq	(<var>4</var>*<var>8</var>)(%rsp), %rax		<i>/* user RSP */</i></td></tr>
+<tr><th id="757">757</th><td>	movq	%rax, (<var>4</var>*<var>8</var>)(%rdi)</td></tr>
+<tr><th id="758">758</th><td>	<i>/* Now RAX == RSP. */</i></td></tr>
+<tr><th id="759">759</th><td></td></tr>
+<tr><th id="760">760</th><td>	andl	$<var>0xffff0000</var>, %eax		<i>/* RAX = (RSP &amp; 0xffff0000) */</i></td></tr>
+<tr><th id="761">761</th><td></td></tr>
+<tr><th id="762">762</th><td>	<i>/*</i></td></tr>
+<tr><th id="763">763</th><td><i>	 * espfix_stack[31:16] == 0.  The page tables are set up such that</i></td></tr>
+<tr><th id="764">764</th><td><i>	 * (espfix_stack | (X &amp; 0xffff0000)) points to a read-only alias of</i></td></tr>
+<tr><th id="765">765</th><td><i>	 * espfix_waddr for any X.  That is, there are 65536 RO aliases of</i></td></tr>
+<tr><th id="766">766</th><td><i>	 * the same page.  Set up RSP so that RSP[31:16] contains the</i></td></tr>
+<tr><th id="767">767</th><td><i>	 * respective 16 bits of the /userspace/ RSP and RSP nonetheless</i></td></tr>
+<tr><th id="768">768</th><td><i>	 * still points to an RO alias of the ESPFIX stack.</i></td></tr>
+<tr><th id="769">769</th><td><i>	 */</i></td></tr>
+<tr><th id="770">770</th><td>	orq	<a class="macro" href="../include/asm/percpu.h.html#31" title="%gs:espfix_stack" data-ref="_M/PER_CPU_VAR">PER_CPU_VAR</a>(espfix_stack), %rax</td></tr>
+<tr><th id="771">771</th><td></td></tr>
+<tr><th id="772">772</th><td>	SWITCH_TO_USER_CR3_STACK scratch_reg=%rdi</td></tr>
+<tr><th id="773">773</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#134" title="swapgs" data-ref="_M/SWAPGS">SWAPGS</a>					<i>/* to user GS */</i></td></tr>
+<tr><th id="774">774</th><td>	popq	%rdi				<i>/* Restore user RDI */</i></td></tr>
+<tr><th id="775">775</th><td></td></tr>
+<tr><th id="776">776</th><td>	movq	%rax, %rsp</td></tr>
+<tr><th id="777">777</th><td>	UNWIND_HINT_IRET_REGS offset=<var>8</var></td></tr>
+<tr><th id="778">778</th><td></td></tr>
+<tr><th id="779">779</th><td>	<i>/*</i></td></tr>
+<tr><th id="780">780</th><td><i>	 * At this point, we cannot write to the stack any more, but we can</i></td></tr>
+<tr><th id="781">781</th><td><i>	 * still read.</i></td></tr>
+<tr><th id="782">782</th><td><i>	 */</i></td></tr>
+<tr><th id="783">783</th><td>	popq	%rax				<i>/* Restore user RAX */</i></td></tr>
+<tr><th id="784">784</th><td></td></tr>
+<tr><th id="785">785</th><td>	<i>/*</i></td></tr>
+<tr><th id="786">786</th><td><i>	 * RSP now points to an ordinary IRET frame, except that the page</i></td></tr>
+<tr><th id="787">787</th><td><i>	 * is read-only and RSP[31:16] are preloaded with the userspace</i></td></tr>
+<tr><th id="788">788</th><td><i>	 * values.  We can now IRET back to userspace.</i></td></tr>
+<tr><th id="789">789</th><td><i>	 */</i></td></tr>
+<tr><th id="790">790</th><td>	jmp	native_irq_return_iret</td></tr>
+<tr><th id="791">791</th><td><u>#<span data-ppcond="719">endif</span></u></td></tr>
+<tr><th id="792">792</th><td><a class="macro" href="../../../include/linux/linkage.h.html#104" title=".size common_interrupt, .-common_interrupt" data-ref="_M/END">END</a>(common_interrupt)</td></tr>
+<tr><th id="793">793</th><td><a class="macro" href="../include/asm/asm.h.html#145" title=".pushsection &quot;_kprobe_blacklist&quot;,&quot;aw&quot; ; .balign 8 ; .quad (common_interrupt); .popsection" data-ref="_M/_ASM_NOKPROBE">_ASM_NOKPROBE</a>(common_interrupt)</td></tr>
+<tr><th id="794">794</th><td></td></tr>
+<tr><th id="795">795</th><td><i>/*</i></td></tr>
+<tr><th id="796">796</th><td><i> * APIC interrupts.</i></td></tr>
+<tr><th id="797">797</th><td><i> */</i></td></tr>
+<tr><th id="798">798</th><td>.macro apicinterrupt3 num sym do_sym</td></tr>
+<tr><th id="799">799</th><td><a class="macro" href="../../../include/linux/linkage.h.html#89" title=".globl \sym ; .p2align 4, 0x90 ; \sym:" data-ref="_M/ENTRY">ENTRY</a>(<span class='error' title="expected identifier or &apos;(&apos;">\</span>sym)</td></tr>
+<tr><th id="800">800</th><td>	UNWIND_HINT_IRET_REGS</td></tr>
+<tr><th id="801">801</th><td>	pushq	$~(\num)</td></tr>
+<tr><th id="802">802</th><td>.Lcommon_\sym:</td></tr>
+<tr><th id="803">803</th><td>	call	interrupt_entry</td></tr>
+<tr><th id="804">804</th><td>	UNWIND_HINT_REGS indirect=<var>1</var></td></tr>
+<tr><th id="805">805</th><td>	call	\do_sym	<i>/* rdi points to pt_regs */</i></td></tr>
+<tr><th id="806">806</th><td>	jmp	ret_from_intr</td></tr>
+<tr><th id="807">807</th><td><a class="macro" href="../../../include/linux/linkage.h.html#104" title=".size \sym, .-\sym" data-ref="_M/END">END</a>(\sym)</td></tr>
+<tr><th id="808">808</th><td><a class="macro" href="../include/asm/asm.h.html#145" title=".pushsection &quot;_kprobe_blacklist&quot;,&quot;aw&quot; ; .balign 8 ; .quad (\sym); .popsection" data-ref="_M/_ASM_NOKPROBE">_ASM_NOKPROBE</a>(\sym)</td></tr>
+<tr><th id="809">809</th><td>.endm</td></tr>
+<tr><th id="810">810</th><td></td></tr>
+<tr><th id="811">811</th><td><i>/* Make sure APIC interrupt handlers end up in the irqentry section: */</i></td></tr>
+<tr><th id="812">812</th><td><u>#define <dfn class="macro" id="_M/PUSH_SECTION_IRQENTRY" data-ref="_M/PUSH_SECTION_IRQENTRY">PUSH_SECTION_IRQENTRY</dfn>	.pushsection .irqentry.text, "ax"</u></td></tr>
+<tr><th id="813">813</th><td><u>#define <dfn class="macro" id="_M/POP_SECTION_IRQENTRY" data-ref="_M/POP_SECTION_IRQENTRY">POP_SECTION_IRQENTRY</dfn>	.popsection</u></td></tr>
+<tr><th id="814">814</th><td></td></tr>
+<tr><th id="815">815</th><td>.macro apicinterrupt num sym do_sym</td></tr>
+<tr><th id="816">816</th><td><a class="macro" href="#812" title=".pushsection .irqentry.text, &quot;ax&quot;" data-ref="_M/PUSH_SECTION_IRQENTRY">PUSH_SECTION_IRQENTRY</a></td></tr>
+<tr><th id="817">817</th><td>apicinterrupt3 \num \sym \do_sym</td></tr>
+<tr><th id="818">818</th><td><a class="macro" href="#813" title=".popsection" data-ref="_M/POP_SECTION_IRQENTRY">POP_SECTION_IRQENTRY</a></td></tr>
+<tr><th id="819">819</th><td>.endm</td></tr>
+<tr><th id="820">820</th><td></td></tr>
+<tr><th id="821">821</th><td><u>#<span data-ppcond="821">ifdef</span> <a class="macro" href="../../../include/generated/autoconf.h.html#860" data-ref="_M/CONFIG_SMP">CONFIG_SMP</a></u></td></tr>
+<tr><th id="822">822</th><td>apicinterrupt3 <a class="macro" href="../include/asm/irq_vectors.h.html#43" title="0x20" data-ref="_M/IRQ_MOVE_CLEANUP_VECTOR">IRQ_MOVE_CLEANUP_VECTOR</a>		irq_move_cleanup_interrupt	smp_irq_move_cleanup_interrupt</td></tr>
+<tr><th id="823">823</th><td>apicinterrupt3 <a class="macro" href="../include/asm/irq_vectors.h.html#75" title="0xf8" data-ref="_M/REBOOT_VECTOR">REBOOT_VECTOR</a>			reboot_interrupt		smp_reboot_interrupt</td></tr>
+<tr><th id="824">824</th><td><u>#<span data-ppcond="821">endif</span></u></td></tr>
+<tr><th id="825">825</th><td></td></tr>
+<tr><th id="826">826</th><td><u>#<span data-ppcond="826">ifdef</span> <span class="macro" data-ref="_M/CONFIG_X86_UV">CONFIG_X86_UV</span></u></td></tr>
+<tr><th id="827">827</th><td>apicinterrupt3 UV_BAU_MESSAGE			uv_bau_message_intr1		uv_bau_message_interrupt</td></tr>
+<tr><th id="828">828</th><td><u>#<span data-ppcond="826">endif</span></u></td></tr>
+<tr><th id="829">829</th><td></td></tr>
+<tr><th id="830">830</th><td>apicinterrupt <a class="macro" href="../include/asm/irq_vectors.h.html#107" title="0xec" data-ref="_M/LOCAL_TIMER_VECTOR">LOCAL_TIMER_VECTOR</a>		apic_timer_interrupt		smp_apic_timer_interrupt</td></tr>
+<tr><th id="831">831</th><td>apicinterrupt <a class="macro" href="../include/asm/irq_vectors.h.html#80" title="0xf7" data-ref="_M/X86_PLATFORM_IPI_VECTOR">X86_PLATFORM_IPI_VECTOR</a>		x86_platform_ipi		smp_x86_platform_ipi</td></tr>
+<tr><th id="832">832</th><td></td></tr>
+<tr><th id="833">833</th><td><u>#<span data-ppcond="833">ifdef</span> <a class="macro" href="../../../include/generated/autoconf.h.html#466" data-ref="_M/CONFIG_HAVE_KVM">CONFIG_HAVE_KVM</a></u></td></tr>
+<tr><th id="834">834</th><td>apicinterrupt3 <a class="macro" href="../include/asm/irq_vectors.h.html#95" title="0xf2" data-ref="_M/POSTED_INTR_VECTOR">POSTED_INTR_VECTOR</a>		kvm_posted_intr_ipi		smp_kvm_posted_intr_ipi</td></tr>
+<tr><th id="835">835</th><td>apicinterrupt3 <a class="macro" href="../include/asm/irq_vectors.h.html#96" title="0xf1" data-ref="_M/POSTED_INTR_WAKEUP_VECTOR">POSTED_INTR_WAKEUP_VECTOR</a>	kvm_posted_intr_wakeup_ipi	smp_kvm_posted_intr_wakeup_ipi</td></tr>
+<tr><th id="836">836</th><td>apicinterrupt3 <a class="macro" href="../include/asm/irq_vectors.h.html#97" title="0xf0" data-ref="_M/POSTED_INTR_NESTED_VECTOR">POSTED_INTR_NESTED_VECTOR</a>	kvm_posted_intr_nested_ipi	smp_kvm_posted_intr_nested_ipi</td></tr>
+<tr><th id="837">837</th><td><u>#<span data-ppcond="833">endif</span></u></td></tr>
+<tr><th id="838">838</th><td></td></tr>
+<tr><th id="839">839</th><td><u>#<span data-ppcond="839">ifdef</span> <a class="macro" href="../../../include/generated/autoconf.h.html#909" data-ref="_M/CONFIG_X86_MCE_THRESHOLD">CONFIG_X86_MCE_THRESHOLD</a></u></td></tr>
+<tr><th id="840">840</th><td>apicinterrupt <a class="macro" href="../include/asm/irq_vectors.h.html#74" title="0xf9" data-ref="_M/THRESHOLD_APIC_VECTOR">THRESHOLD_APIC_VECTOR</a>		threshold_interrupt		smp_threshold_interrupt</td></tr>
+<tr><th id="841">841</th><td><u>#<span data-ppcond="839">endif</span></u></td></tr>
+<tr><th id="842">842</th><td></td></tr>
+<tr><th id="843">843</th><td><u>#<span data-ppcond="843">ifdef</span> <a class="macro" href="../../../include/generated/autoconf.h.html#196" data-ref="_M/CONFIG_X86_MCE_AMD">CONFIG_X86_MCE_AMD</a></u></td></tr>
+<tr><th id="844">844</th><td>apicinterrupt <a class="macro" href="../include/asm/irq_vectors.h.html#88" title="0xf4" data-ref="_M/DEFERRED_ERROR_VECTOR">DEFERRED_ERROR_VECTOR</a>		deferred_error_interrupt	smp_deferred_error_interrupt</td></tr>
+<tr><th id="845">845</th><td><u>#<span data-ppcond="843">endif</span></u></td></tr>
+<tr><th id="846">846</th><td></td></tr>
+<tr><th id="847">847</th><td><u>#<span data-ppcond="847">ifdef</span> <a class="macro" href="../../../include/generated/autoconf.h.html#985" data-ref="_M/CONFIG_X86_THERMAL_VECTOR">CONFIG_X86_THERMAL_VECTOR</a></u></td></tr>
+<tr><th id="848">848</th><td>apicinterrupt <a class="macro" href="../include/asm/irq_vectors.h.html#73" title="0xfa" data-ref="_M/THERMAL_APIC_VECTOR">THERMAL_APIC_VECTOR</a>		thermal_interrupt		smp_thermal_interrupt</td></tr>
+<tr><th id="849">849</th><td><u>#<span data-ppcond="847">endif</span></u></td></tr>
+<tr><th id="850">850</th><td></td></tr>
+<tr><th id="851">851</th><td><u>#<span data-ppcond="851">ifdef</span> <a class="macro" href="../../../include/generated/autoconf.h.html#860" data-ref="_M/CONFIG_SMP">CONFIG_SMP</a></u></td></tr>
+<tr><th id="852">852</th><td>apicinterrupt <a class="macro" href="../include/asm/irq_vectors.h.html#72" title="0xfb" data-ref="_M/CALL_FUNCTION_SINGLE_VECTOR">CALL_FUNCTION_SINGLE_VECTOR</a>	call_function_single_interrupt	smp_call_function_single_interrupt</td></tr>
+<tr><th id="853">853</th><td>apicinterrupt <a class="macro" href="../include/asm/irq_vectors.h.html#71" title="0xfc" data-ref="_M/CALL_FUNCTION_VECTOR">CALL_FUNCTION_VECTOR</a>		call_function_interrupt		smp_call_function_interrupt</td></tr>
+<tr><th id="854">854</th><td>apicinterrupt <a class="macro" href="../include/asm/irq_vectors.h.html#70" title="0xfd" data-ref="_M/RESCHEDULE_VECTOR">RESCHEDULE_VECTOR</a>			reschedule_interrupt		smp_reschedule_interrupt</td></tr>
+<tr><th id="855">855</th><td><u>#<span data-ppcond="851">endif</span></u></td></tr>
+<tr><th id="856">856</th><td></td></tr>
+<tr><th id="857">857</th><td>apicinterrupt <a class="macro" href="../include/asm/irq_vectors.h.html#69" title="0xfe" data-ref="_M/ERROR_APIC_VECTOR">ERROR_APIC_VECTOR</a>			error_interrupt			smp_error_interrupt</td></tr>
+<tr><th id="858">858</th><td>apicinterrupt <a class="macro" href="../include/asm/irq_vectors.h.html#61" title="0xff" data-ref="_M/SPURIOUS_APIC_VECTOR">SPURIOUS_APIC_VECTOR</a>		spurious_interrupt		smp_spurious_interrupt</td></tr>
+<tr><th id="859">859</th><td></td></tr>
+<tr><th id="860">860</th><td><u>#<span data-ppcond="860">ifdef</span> <a class="macro" href="../../../include/generated/autoconf.h.html#301" data-ref="_M/CONFIG_IRQ_WORK">CONFIG_IRQ_WORK</a></u></td></tr>
+<tr><th id="861">861</th><td>apicinterrupt <a class="macro" href="../include/asm/irq_vectors.h.html#85" title="0xf6" data-ref="_M/IRQ_WORK_VECTOR">IRQ_WORK_VECTOR</a>			irq_work_interrupt		smp_irq_work_interrupt</td></tr>
+<tr><th id="862">862</th><td><u>#<span data-ppcond="860">endif</span></u></td></tr>
+<tr><th id="863">863</th><td></td></tr>
+<tr><th id="864">864</th><td><i>/*</i></td></tr>
+<tr><th id="865">865</th><td><i> * Exception entry points.</i></td></tr>
+<tr><th id="866">866</th><td><i> */</i></td></tr>
+<tr><th id="867">867</th><td><u>#define <dfn class="macro" id="_M/CPU_TSS_IST" data-ref="_M/CPU_TSS_IST">CPU_TSS_IST</dfn>(x) PER_CPU_VAR(cpu_tss_rw) + (TSS_ist + (x) * 8)</u></td></tr>
+<tr><th id="868">868</th><td></td></tr>
+<tr><th id="869">869</th><td>.macro idtentry_part do_sym, has_error_code:req, read_cr2:req, paranoid:req, shift_ist=-<var>1</var>, ist_offset=<var>0</var></td></tr>
+<tr><th id="870">870</th><td></td></tr>
+<tr><th id="871">871</th><td>	.<b>if</b> \paranoid</td></tr>
+<tr><th id="872">872</th><td>	call	paranoid_entry</td></tr>
+<tr><th id="873">873</th><td>	<i>/* returned flag: ebx=0: need swapgs on exit, ebx=1: don't need it */</i></td></tr>
+<tr><th id="874">874</th><td>	.<b>else</b></td></tr>
+<tr><th id="875">875</th><td>	call	error_entry</td></tr>
+<tr><th id="876">876</th><td>	.endif</td></tr>
+<tr><th id="877">877</th><td>	UNWIND_HINT_REGS</td></tr>
+<tr><th id="878">878</th><td></td></tr>
+<tr><th id="879">879</th><td>	.<b>if</b> \read_cr2</td></tr>
+<tr><th id="880">880</th><td>	<i>/*</i></td></tr>
+<tr><th id="881">881</th><td><i>	 * Store CR2 early so subsequent faults cannot clobber it. Use R12 as</i></td></tr>
+<tr><th id="882">882</th><td><i>	 * intermediate storage as RDX can be clobbered in enter_from_user_mode().</i></td></tr>
+<tr><th id="883">883</th><td><i>	 * GET_CR2_INTO can clobber RAX.</i></td></tr>
+<tr><th id="884">884</th><td><i>	 */</i></td></tr>
+<tr><th id="885">885</th><td>	<a class="macro" href="calling.h.html#367" title="movq %cr2, %r12" data-ref="_M/GET_CR2_INTO">GET_CR2_INTO</a>(%r12);</td></tr>
+<tr><th id="886">886</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>endif</td></tr>
+<tr><th id="887">887</th><td></td></tr>
+<tr><th id="888">888</th><td>	.<b>if</b> \shift_ist != -<var>1</var></td></tr>
+<tr><th id="889">889</th><td>	<a class="macro" href="#102" title="" data-ref="_M/TRACE_IRQS_OFF_DEBUG">TRACE_IRQS_OFF_DEBUG</a>			<i>/* reload IDT in case of recursion */</i></td></tr>
+<tr><th id="890">890</th><td>	.<b>else</b></td></tr>
+<tr><th id="891">891</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#181" title="" data-ref="_M/TRACE_IRQS_OFF">TRACE_IRQS_OFF</a></td></tr>
+<tr><th id="892">892</th><td>	.endif</td></tr>
+<tr><th id="893">893</th><td></td></tr>
+<tr><th id="894">894</th><td>	.<b>if</b> \paranoid == <var>0</var></td></tr>
+<tr><th id="895">895</th><td>	testb	$<var>3</var>, <a class="macro" href="calling.h.html#93" title="17*8" data-ref="_M/CS">CS</a>(%rsp)</td></tr>
+<tr><th id="896">896</th><td>	jz	.Lfrom_kernel_no_context_tracking_\@</td></tr>
+<tr><th id="897">897</th><td>	CALL_enter_from_user_mode</td></tr>
+<tr><th id="898">898</th><td>.Lfrom_kernel_no_context_tracking_\@:</td></tr>
+<tr><th id="899">899</th><td>	.endif</td></tr>
+<tr><th id="900">900</th><td></td></tr>
+<tr><th id="901">901</th><td>	movq	%rsp, %rdi			<i>/* pt_regs pointer */</i></td></tr>
+<tr><th id="902">902</th><td></td></tr>
+<tr><th id="903">903</th><td>	.<b>if</b> \has_error_code</td></tr>
+<tr><th id="904">904</th><td>	movq	<a class="macro" href="calling.h.html#90" title="15*8" data-ref="_M/ORIG_RAX">ORIG_RAX</a>(%rsp), %rsi		<i>/* get error code */</i></td></tr>
+<tr><th id="905">905</th><td>	movq	$-<var>1</var>, <a class="macro" href="calling.h.html#90" title="15*8" data-ref="_M/ORIG_RAX">ORIG_RAX</a>(%rsp)		<i>/* no syscall to restart */</i></td></tr>
+<tr><th id="906">906</th><td>	.<b>else</b></td></tr>
+<tr><th id="907">907</th><td>	xorl	%esi, %esi			<i>/* no error code */</i></td></tr>
+<tr><th id="908">908</th><td>	.endif</td></tr>
+<tr><th id="909">909</th><td></td></tr>
+<tr><th id="910">910</th><td>	.<b>if</b> \shift_ist != -<var>1</var></td></tr>
+<tr><th id="911">911</th><td>	subq	$\ist_offset, <a class="macro" href="#867" title="%gs:cpu_tss_rw + (36 + (\shift_ist) * 8)" data-ref="_M/CPU_TSS_IST">CPU_TSS_IST</a>(\shift_ist)</td></tr>
+<tr><th id="912">912</th><td>	.endif</td></tr>
+<tr><th id="913">913</th><td></td></tr>
+<tr><th id="914">914</th><td>	.<b>if</b> \read_cr2</td></tr>
+<tr><th id="915">915</th><td>	movq	%r12, %rdx			<i>/* Move CR2 into 3rd argument */</i></td></tr>
+<tr><th id="916">916</th><td>	.endif</td></tr>
+<tr><th id="917">917</th><td></td></tr>
+<tr><th id="918">918</th><td>	call	\do_sym</td></tr>
+<tr><th id="919">919</th><td></td></tr>
+<tr><th id="920">920</th><td>	.<b>if</b> \shift_ist != -<var>1</var></td></tr>
+<tr><th id="921">921</th><td>	addq	$\ist_offset, <a class="macro" href="#867" title="%gs:cpu_tss_rw + (36 + (\shift_ist) * 8)" data-ref="_M/CPU_TSS_IST">CPU_TSS_IST</a>(\shift_ist)</td></tr>
+<tr><th id="922">922</th><td>	.endif</td></tr>
+<tr><th id="923">923</th><td></td></tr>
+<tr><th id="924">924</th><td>	.<b>if</b> \paranoid</td></tr>
+<tr><th id="925">925</th><td>	<i>/* this procedure expect "no swapgs" flag in ebx */</i></td></tr>
+<tr><th id="926">926</th><td>	jmp	paranoid_exit</td></tr>
+<tr><th id="927">927</th><td>	.<b>else</b></td></tr>
+<tr><th id="928">928</th><td>	jmp	error_exit</td></tr>
+<tr><th id="929">929</th><td>	.endif</td></tr>
+<tr><th id="930">930</th><td></td></tr>
+<tr><th id="931">931</th><td>.endm</td></tr>
+<tr><th id="932">932</th><td></td></tr>
+<tr><th id="933">933</th><td><i class="doc">/**</i></td></tr>
+<tr><th id="934">934</th><td><i class="doc"> * idtentry - Generate an IDT entry stub</i></td></tr>
+<tr><th id="935">935</th><td><i class="doc"> *<span class="command"> @sym</span>:		Name of the generated entry point</i></td></tr>
+<tr><th id="936">936</th><td><i class="doc"> * <span class="command">@do<span class="verb">_sym:		C function to be called</span></span></i></td></tr>
+<tr><th id="937">937</th><td><i class="doc"><span class="command"><span class="verb"></span></span> *<span class="verb"> @has_error_code:	True if this IDT vector has an error code on the stack</span></i></td></tr>
+<tr><th id="938">938</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> @paranoid:		non-zero means that this vector may be invoked from</span></i></td></tr>
+<tr><th id="939">939</th><td><i class="doc"><span class="verb"></span> *<span class="verb">			kernel mode with user GSBASE and/or user CR3.</span></i></td></tr>
+<tr><th id="940">940</th><td><i class="doc"><span class="verb"></span> *<span class="verb">			2 is special -- see below.</span></i></td></tr>
+<tr><th id="941">941</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> @shift_ist:		Set to an IST index if entries from kernel mode should</span></i></td></tr>
+<tr><th id="942">942</th><td><i class="doc"><span class="verb"></span> *<span class="verb">			decrement the IST stack so that nested entries get a</span></i></td></tr>
+<tr><th id="943">943</th><td><i class="doc"><span class="verb"></span> *<span class="verb">			fresh stack.  (This is for #DB, which has a nasty habit</span></i></td></tr>
+<tr><th id="944">944</th><td><i class="doc"><span class="verb"></span> *<span class="verb">			of recursing.)</span></i></td></tr>
+<tr><th id="945">945</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> @create_gap:		create a 6-word stack gap when coming from kernel mode.</span></i></td></tr>
+<tr><th id="946">946</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> @read_cr2:		load CR2 into the 3rd argument; done before calling any C code</span></i></td></tr>
+<tr><th id="947">947</th><td><i class="doc"><span class="verb"></span> *<span class="verb"></span></i></td></tr>
+<tr><th id="948">948</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> idtentry generates an IDT stub that sets up a usable kernel context,</span></i></td></tr>
+<tr><th id="949">949</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> creates struct pt_regs, and calls @do_sym.  The stub has the following</span></i></td></tr>
+<tr><th id="950">950</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> special behaviors:</span></i></td></tr>
+<tr><th id="951">951</th><td><i class="doc"><span class="verb"></span> *<span class="verb"></span></i></td></tr>
+<tr><th id="952">952</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> On an entry from user mode, the stub switches from the trampoline or</span></i></td></tr>
+<tr><th id="953">953</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> IST stack to the normal thread stack.  On an exit to user mode, the</span></i></td></tr>
+<tr><th id="954">954</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> normal exit-to-usermode path is invoked.</span></i></td></tr>
+<tr><th id="955">955</th><td><i class="doc"><span class="verb"></span> *<span class="verb"></span></i></td></tr>
+<tr><th id="956">956</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> On an exit to kernel mode, if @paranoid == 0, we check for preemption,</span></i></td></tr>
+<tr><th id="957">957</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> whereas we omit the preemption check if @paranoid != 0.  This is purely</span></i></td></tr>
+<tr><th id="958">958</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> because the implementation is simpler this way.  The kernel only needs</span></i></td></tr>
+<tr><th id="959">959</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> to check for asynchronous kernel preemption when IRQ handlers return.</span></i></td></tr>
+<tr><th id="960">960</th><td><i class="doc"><span class="verb"></span> *<span class="verb"></span></i></td></tr>
+<tr><th id="961">961</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> If @paranoid == 0, then the stub will handle IRET faults by pretending</span></i></td></tr>
+<tr><th id="962">962</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> that the fault came from user mode.  It will handle gs_change faults by</span></i></td></tr>
+<tr><th id="963">963</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> pretending that the fault happened with kernel GSBASE.  Since this handling</span></i></td></tr>
+<tr><th id="964">964</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> is omitted for @paranoid != 0, the #GP, #SS, and #NP stubs must have</span></i></td></tr>
+<tr><th id="965">965</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> @paranoid == 0.  This special handling will do the wrong thing for</span></i></td></tr>
+<tr><th id="966">966</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> espfix-induced #DF on IRET, so #DF must not use @paranoid == 0.</span></i></td></tr>
+<tr><th id="967">967</th><td><i class="doc"><span class="verb"></span> *<span class="verb"></span></i></td></tr>
+<tr><th id="968">968</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> @paranoid == 2 is special: the stub will never switch stacks.  This is for</span></i></td></tr>
+<tr><th id="969">969</th><td><i class="doc"><span class="verb"></span> *<span class="verb"> #DF: if the thread stack is somehow unusable, we'll still get a useful OOPS.</span></i></td></tr>
+<tr><th id="970">970</th><td><i class="doc"><span class="verb"></span><span class="verb"> *</span>/</i><span class="verb"></span></td></tr>
+<tr><th id="971">971</th><td><span class="verb"></span>.macro idtentry sym do_sym has_error_code:req paranoid=<var>0</var> shift_ist=-<var>1</var> ist_offset=<var>0</var> create_gap=<var>0</var> read_cr2=<var>0</var></td></tr>
+<tr><th id="972">972</th><td><a class="macro" href="../../../include/linux/linkage.h.html#89" title=".globl \sym ; .p2align 4, 0x90 ; \sym:" data-ref="_M/ENTRY">ENTRY</a>(<span class='error' title="expected identifier or &apos;(&apos;">\</span>sym)</td></tr>
+<tr><th id="973">973</th><td>	UNWIND_HINT_IRET_REGS offset=\has_error_code*<var>8</var></td></tr>
+<tr><th id="974">974</th><td></td></tr>
+<tr><th id="975">975</th><td>	<i>/* Sanity check */</i></td></tr>
+<tr><th id="976">976</th><td>	.<b>if</b> \shift_ist != -<var>1</var> &amp;&amp; \paranoid != <var>1</var></td></tr>
+<tr><th id="977">977</th><td>	.error <q>"using shift_ist requires paranoid=1"</q></td></tr>
+<tr><th id="978">978</th><td>	.endif</td></tr>
+<tr><th id="979">979</th><td></td></tr>
+<tr><th id="980">980</th><td>	.<b>if</b> \create_gap &amp;&amp; \paranoid</td></tr>
+<tr><th id="981">981</th><td>	.error <q>"using create_gap requires paranoid=0"</q></td></tr>
+<tr><th id="982">982</th><td>	.endif</td></tr>
+<tr><th id="983">983</th><td></td></tr>
+<tr><th id="984">984</th><td>	<a class="macro" href="../include/asm/smap.h.html#25" title="ALTERNATIVE &quot;&quot;, &quot;.byte 0x0f,0x01,0xca&quot;, ( 9*32+20)" data-ref="_M/ASM_CLAC">ASM_CLAC</a></td></tr>
+<tr><th id="985">985</th><td></td></tr>
+<tr><th id="986">986</th><td>	.<b>if</b> \has_error_code == <var>0</var></td></tr>
+<tr><th id="987">987</th><td>	pushq	$-<var>1</var>				<i>/* ORIG_RAX: no syscall to restart */</i></td></tr>
+<tr><th id="988">988</th><td>	.endif</td></tr>
+<tr><th id="989">989</th><td></td></tr>
+<tr><th id="990">990</th><td>	.<b>if</b> \paranoid == <var>1</var></td></tr>
+<tr><th id="991">991</th><td>	testb	$<var>3</var>, <a class="macro" href="calling.h.html#93" title="17*8" data-ref="_M/CS">CS</a>-<a class="macro" href="calling.h.html#90" title="15*8" data-ref="_M/ORIG_RAX">ORIG_RAX</a>(%rsp)		<i>/* If coming from userspace, switch stacks */</i></td></tr>
+<tr><th id="992">992</th><td>	jnz	.Lfrom_usermode_switch_stack_\@</td></tr>
+<tr><th id="993">993</th><td>	.endif</td></tr>
+<tr><th id="994">994</th><td></td></tr>
+<tr><th id="995">995</th><td>	.<b>if</b> \create_gap == <var>1</var></td></tr>
+<tr><th id="996">996</th><td>	<i>/*</i></td></tr>
+<tr><th id="997">997</th><td><i>	 * If coming from kernel space, create a 6-word gap to allow the</i></td></tr>
+<tr><th id="998">998</th><td><i>	 * int3 handler to emulate a call instruction.</i></td></tr>
+<tr><th id="999">999</th><td><i>	 */</i></td></tr>
+<tr><th id="1000">1000</th><td>	testb	$<var>3</var>, <a class="macro" href="calling.h.html#93" title="17*8" data-ref="_M/CS">CS</a>-<a class="macro" href="calling.h.html#90" title="15*8" data-ref="_M/ORIG_RAX">ORIG_RAX</a>(%rsp)</td></tr>
+<tr><th id="1001">1001</th><td>	jnz	.Lfrom_usermode_no_gap_\@</td></tr>
+<tr><th id="1002">1002</th><td>	.rept	<var>6</var></td></tr>
+<tr><th id="1003">1003</th><td>	pushq	<var>5</var>*<var>8</var>(%rsp)</td></tr>
+<tr><th id="1004">1004</th><td>	.endr</td></tr>
+<tr><th id="1005">1005</th><td>	UNWIND_HINT_IRET_REGS offset=<var>8</var></td></tr>
+<tr><th id="1006">1006</th><td>.Lfrom_usermode_no_gap_\@:</td></tr>
+<tr><th id="1007">1007</th><td>	.endif</td></tr>
+<tr><th id="1008">1008</th><td></td></tr>
+<tr><th id="1009">1009</th><td>	idtentry_part \do_sym, \has_error_code, \read_cr2, \paranoid, \shift_ist, \ist_offset</td></tr>
+<tr><th id="1010">1010</th><td></td></tr>
+<tr><th id="1011">1011</th><td>	.<b>if</b> \paranoid == <var>1</var></td></tr>
+<tr><th id="1012">1012</th><td>	<i>/*</i></td></tr>
+<tr><th id="1013">1013</th><td><i>	 * Entry from userspace.  Switch stacks and treat it</i></td></tr>
+<tr><th id="1014">1014</th><td><i>	 * as a normal entry.  This means that paranoid handlers</i></td></tr>
+<tr><th id="1015">1015</th><td><i>	 * run in real process context if user_mode(regs).</i></td></tr>
+<tr><th id="1016">1016</th><td><i>	 */</i></td></tr>
+<tr><th id="1017">1017</th><td>.Lfrom_usermode_switch_stack_\@:</td></tr>
+<tr><th id="1018">1018</th><td>	idtentry_part \do_sym, \has_error_code, \read_cr2, paranoid=<var>0</var></td></tr>
+<tr><th id="1019">1019</th><td>	.endif</td></tr>
+<tr><th id="1020">1020</th><td></td></tr>
+<tr><th id="1021">1021</th><td><a class="macro" href="../include/asm/asm.h.html#145" title=".pushsection &quot;_kprobe_blacklist&quot;,&quot;aw&quot; ; .balign 8 ; .quad (\sym); .popsection" data-ref="_M/_ASM_NOKPROBE">_ASM_NOKPROBE</a>(\sym)</td></tr>
+<tr><th id="1022">1022</th><td><a class="macro" href="../../../include/linux/linkage.h.html#104" title=".size \sym, .-\sym" data-ref="_M/END">END</a>(\sym)</td></tr>
+<tr><th id="1023">1023</th><td>.endm</td></tr>
+<tr><th id="1024">1024</th><td></td></tr>
+<tr><th id="1025">1025</th><td>idtentry divide_error			do_divide_error			has_error_code=<var>0</var></td></tr>
+<tr><th id="1026">1026</th><td>idtentry overflow			do_overflow			has_error_code=<var>0</var></td></tr>
+<tr><th id="1027">1027</th><td>idtentry bounds				do_bounds			has_error_code=<var>0</var></td></tr>
+<tr><th id="1028">1028</th><td>idtentry invalid_op			do_invalid_op			has_error_code=<var>0</var></td></tr>
+<tr><th id="1029">1029</th><td>idtentry device_not_available		do_device_not_available		has_error_code=<var>0</var></td></tr>
+<tr><th id="1030">1030</th><td>idtentry double_fault			do_double_fault			has_error_code=<var>1</var> paranoid=<var>2</var> read_cr2=<var>1</var></td></tr>
+<tr><th id="1031">1031</th><td>idtentry coprocessor_segment_overrun	do_coprocessor_segment_overrun	has_error_code=<var>0</var></td></tr>
+<tr><th id="1032">1032</th><td>idtentry invalid_TSS			do_invalid_TSS			has_error_code=<var>1</var></td></tr>
+<tr><th id="1033">1033</th><td>idtentry segment_not_present		do_segment_not_present		has_error_code=<var>1</var></td></tr>
+<tr><th id="1034">1034</th><td>idtentry spurious_interrupt_bug		do_spurious_interrupt_bug	has_error_code=<var>0</var></td></tr>
+<tr><th id="1035">1035</th><td>idtentry coprocessor_error		do_coprocessor_error		has_error_code=<var>0</var></td></tr>
+<tr><th id="1036">1036</th><td>idtentry alignment_check		do_alignment_check		has_error_code=<var>1</var></td></tr>
+<tr><th id="1037">1037</th><td>idtentry simd_coprocessor_error		do_simd_coprocessor_error	has_error_code=<var>0</var></td></tr>
+<tr><th id="1038">1038</th><td></td></tr>
+<tr><th id="1039">1039</th><td></td></tr>
+<tr><th id="1040">1040</th><td>	<i>/*</i></td></tr>
+<tr><th id="1041">1041</th><td><i>	 * Reload gs selector with exception handling</i></td></tr>
+<tr><th id="1042">1042</th><td><i>	 * edi:  new selector</i></td></tr>
+<tr><th id="1043">1043</th><td><i>	 */</i></td></tr>
+<tr><th id="1044">1044</th><td><a class="macro" href="../../../include/linux/linkage.h.html#89" title=".globl native_load_gs_index ; .p2align 4, 0x90 ; native_load_gs_index:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="native_load_gs_index" title='native_load_gs_index' data-ref="native_load_gs_index" data-ref-filename="native_load_gs_index">native_load_gs_index</dfn></span>)</td></tr>
+<tr><th id="1045">1045</th><td>	<a class="macro" href="../include/asm/frame.h.html#88" title="" data-ref="_M/FRAME_BEGIN">FRAME_BEGIN</a></td></tr>
+<tr><th id="1046">1046</th><td>	<span class='error' title="unknown type name &apos;pushfq&apos;">pushfq</span></td></tr>
+<tr><th id="1047">1047</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#127" title="cli" data-ref="_M/DISABLE_INTERRUPTS">DISABLE_INTERRUPTS</a>(CLBR_ANY &amp; ~CLBR_RDI)<span class='error' title="expected &apos;;&apos; after top level declarator"></span></td></tr>
+<tr><th id="1048">1048</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#181" title="" data-ref="_M/TRACE_IRQS_OFF">TRACE_IRQS_OFF</a></td></tr>
+<tr><th id="1049">1049</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#134" title="swapgs" data-ref="_M/SWAPGS">SWAPGS</a></td></tr>
+<tr><th id="1050">1050</th><td>.Lgs_change:</td></tr>
+<tr><th id="1051">1051</th><td>	movl	%edi, %gs</td></tr>
+<tr><th id="1052">1052</th><td><var>2</var>:	ALTERNATIVE <q>""</q>, <q>"mfence"</q>, <a class="macro" href="../include/asm/cpufeatures.h.html#389" title="(19*32 + (11))" data-ref="_M/X86_BUG_SWAPGS_FENCE">X86_BUG_SWAPGS_FENCE</a></td></tr>
+<tr><th id="1053">1053</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#134" title="swapgs" data-ref="_M/SWAPGS">SWAPGS</a></td></tr>
+<tr><th id="1054">1054</th><td>	TRACE_IRQS_FLAGS (%rsp)</td></tr>
+<tr><th id="1055">1055</th><td>	popfq</td></tr>
+<tr><th id="1056">1056</th><td>	<a class="macro" href="../include/asm/frame.h.html#89" title="" data-ref="_M/FRAME_END">FRAME_END</a></td></tr>
+<tr><th id="1057">1057</th><td>	ret</td></tr>
+<tr><th id="1058">1058</th><td><a class="macro" href="../../../include/linux/linkage.h.html#113" title=".type native_load_gs_index, @function ; .size native_load_gs_index, .-native_load_gs_index" data-ref="_M/ENDPROC">ENDPROC</a>(native_load_gs_index)</td></tr>
+<tr><th id="1059">1059</th><td><a class="macro" href="../../../include/asm-generic/export.h.html#87" title="___EXPORT_SYMBOL native_load_gs_index, native_load_gs_index," data-ref="_M/EXPORT_SYMBOL">EXPORT_SYMBOL</a>(native_load_gs_index)</td></tr>
+<tr><th id="1060">1060</th><td></td></tr>
+<tr><th id="1061">1061</th><td>	<a class="macro" href="../include/asm/asm.h.html#130" title=".pushsection &quot;__ex_table&quot;,&quot;a&quot; ; .balign 4 ; .long (.Lgs_change) - . ; .long (bad_gs) - . ; .long (ex_handler_default) - . ; .popsection" data-ref="_M/_ASM_EXTABLE">_ASM_EXTABLE</a>(.Lgs_change, bad_gs)</td></tr>
+<tr><th id="1062">1062</th><td>	.section .fixup, <q>"ax"</q></td></tr>
+<tr><th id="1063">1063</th><td>	<i>/* running with kernelgs */</i></td></tr>
+<tr><th id="1064">1064</th><td>bad_gs:</td></tr>
+<tr><th id="1065">1065</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#134" title="swapgs" data-ref="_M/SWAPGS">SWAPGS</a>					<i>/* switch back to user gs */</i></td></tr>
+<tr><th id="1066">1066</th><td>.macro ZAP_GS</td></tr>
+<tr><th id="1067">1067</th><td>	<i>/* This can't be a string because the preprocessor needs to see it. */</i></td></tr>
+<tr><th id="1068">1068</th><td>	movl $<a class="macro" href="../include/asm/segment.h.html#206" title="(5*8 + 3)" data-ref="_M/__USER_DS">__USER_DS</a>, %eax</td></tr>
+<tr><th id="1069">1069</th><td>	movl %eax, %gs</td></tr>
+<tr><th id="1070">1070</th><td>.endm</td></tr>
+<tr><th id="1071">1071</th><td>	ALTERNATIVE <q>""</q>, <q>"ZAP_GS"</q>, <a class="macro" href="../include/asm/cpufeatures.h.html#388" title="(19*32 + (10))" data-ref="_M/X86_BUG_NULL_SEG">X86_BUG_NULL_SEG</a></td></tr>
+<tr><th id="1072">1072</th><td>	xorl	%eax, %eax</td></tr>
+<tr><th id="1073">1073</th><td>	movl	%eax, %gs</td></tr>
+<tr><th id="1074">1074</th><td>	jmp	<var>2b</var></td></tr>
+<tr><th id="1075">1075</th><td>	.previous</td></tr>
+<tr><th id="1076">1076</th><td></td></tr>
+<tr><th id="1077">1077</th><td><i>/* Call softirq on interrupt stack. Interrupts are off. */</i></td></tr>
+<tr><th id="1078">1078</th><td><a class="macro" href="../../../include/linux/linkage.h.html#89" title=".globl do_softirq_own_stack ; .p2align 4, 0x90 ; do_softirq_own_stack:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="do_softirq_own_stack" title='do_softirq_own_stack' data-ref="do_softirq_own_stack" data-ref-filename="do_softirq_own_stack">do_softirq_own_stack</dfn></span>)</td></tr>
+<tr><th id="1079">1079</th><td>	<span class='error' title="unknown type name &apos;pushq&apos;">pushq</span>	<span class='error' title="expected identifier or &apos;(&apos;">%</span>rbp</td></tr>
+<tr><th id="1080">1080</th><td>	mov	%rsp, %rbp</td></tr>
+<tr><th id="1081">1081</th><td>	ENTER_IRQ_STACK regs=<var>0</var> old_rsp=%r11</td></tr>
+<tr><th id="1082">1082</th><td>	call	__do_softirq</td></tr>
+<tr><th id="1083">1083</th><td>	LEAVE_IRQ_STACK regs=<var>0</var></td></tr>
+<tr><th id="1084">1084</th><td>	leaveq</td></tr>
+<tr><th id="1085">1085</th><td>	ret</td></tr>
+<tr><th id="1086">1086</th><td><a class="macro" href="../../../include/linux/linkage.h.html#113" title=".type do_softirq_own_stack, @function ; .size do_softirq_own_stack, .-do_softirq_own_stack" data-ref="_M/ENDPROC">ENDPROC</a>(do_softirq_own_stack)</td></tr>
+<tr><th id="1087">1087</th><td></td></tr>
+<tr><th id="1088">1088</th><td><u>#<span data-ppcond="1088">ifdef</span> <span class="macro" data-ref="_M/CONFIG_XEN_PV">CONFIG_XEN_PV</span></u></td></tr>
+<tr><th id="1089">1089</th><td>idtentry hypervisor_callback xen_do_hypervisor_callback has_error_code=<var>0</var></td></tr>
+<tr><th id="1090">1090</th><td></td></tr>
+<tr><th id="1091">1091</th><td><i>/*</i></td></tr>
+<tr><th id="1092">1092</th><td><i> * A note on the "critical region" in our callback handler.</i></td></tr>
+<tr><th id="1093">1093</th><td><i> * We want to avoid stacking callback handlers due to events occurring</i></td></tr>
+<tr><th id="1094">1094</th><td><i> * during handling of the last event. To do this, we keep events disabled</i></td></tr>
+<tr><th id="1095">1095</th><td><i> * until we've done all processing. HOWEVER, we must enable events before</i></td></tr>
+<tr><th id="1096">1096</th><td><i> * popping the stack frame (can't be done atomically) and so it would still</i></td></tr>
+<tr><th id="1097">1097</th><td><i> * be possible to get enough handler activations to overflow the stack.</i></td></tr>
+<tr><th id="1098">1098</th><td><i> * Although unlikely, bugs of that kind are hard to track down, so we'd</i></td></tr>
+<tr><th id="1099">1099</th><td><i> * like to avoid the possibility.</i></td></tr>
+<tr><th id="1100">1100</th><td><i> * So, on entry to the handler we detect whether we interrupted an</i></td></tr>
+<tr><th id="1101">1101</th><td><i> * existing activation in its critical region -- if so, we pop the current</i></td></tr>
+<tr><th id="1102">1102</th><td><i> * activation and restart the handler using the previous one.</i></td></tr>
+<tr><th id="1103">1103</th><td><i> */</i></td></tr>
+<tr><th id="1104">1104</th><td>ENTRY(xen_do_hypervisor_callback)		<i>/* do_hypervisor_callback(struct *pt_regs) */</i></td></tr>
+<tr><th id="1105">1105</th><td></td></tr>
+<tr><th id="1106">1106</th><td><i>/*</i></td></tr>
+<tr><th id="1107">1107</th><td><i> * Since we don't modify %rdi, evtchn_do_upall(struct *pt_regs) will</i></td></tr>
+<tr><th id="1108">1108</th><td><i> * see the correct pointer to the pt_regs</i></td></tr>
+<tr><th id="1109">1109</th><td><i> */</i></td></tr>
+<tr><th id="1110">1110</th><td>	UNWIND_HINT_FUNC</td></tr>
+<tr><th id="1111">1111</th><td>	movq	%rdi, %rsp			<i>/* we don't return, adjust the stack frame */</i></td></tr>
+<tr><th id="1112">1112</th><td>	UNWIND_HINT_REGS</td></tr>
+<tr><th id="1113">1113</th><td></td></tr>
+<tr><th id="1114">1114</th><td>	ENTER_IRQ_STACK old_rsp=%r10</td></tr>
+<tr><th id="1115">1115</th><td>	call	xen_evtchn_do_upcall</td></tr>
+<tr><th id="1116">1116</th><td>	LEAVE_IRQ_STACK</td></tr>
+<tr><th id="1117">1117</th><td></td></tr>
+<tr><th id="1118">1118</th><td><u>#ifndef CONFIG_PREEMPT</u></td></tr>
+<tr><th id="1119">1119</th><td>	call	xen_maybe_preempt_hcall</td></tr>
+<tr><th id="1120">1120</th><td><u>#endif</u></td></tr>
+<tr><th id="1121">1121</th><td>	jmp	error_exit</td></tr>
+<tr><th id="1122">1122</th><td>END(xen_do_hypervisor_callback)</td></tr>
+<tr><th id="1123">1123</th><td></td></tr>
+<tr><th id="1124">1124</th><td><i>/*</i></td></tr>
+<tr><th id="1125">1125</th><td><i> * Hypervisor uses this for application faults while it executes.</i></td></tr>
+<tr><th id="1126">1126</th><td><i> * We get here for two reasons:</i></td></tr>
+<tr><th id="1127">1127</th><td><i> *  1. Fault while reloading DS, ES, FS or GS</i></td></tr>
+<tr><th id="1128">1128</th><td><i> *  2. Fault while executing IRET</i></td></tr>
+<tr><th id="1129">1129</th><td><i> * Category 1 we do not need to fix up as Xen has already reloaded all segment</i></td></tr>
+<tr><th id="1130">1130</th><td><i> * registers that could be reloaded and zeroed the others.</i></td></tr>
+<tr><th id="1131">1131</th><td><i> * Category 2 we fix up by killing the current process. We cannot use the</i></td></tr>
+<tr><th id="1132">1132</th><td><i> * normal Linux return path in this case because if we use the IRET hypercall</i></td></tr>
+<tr><th id="1133">1133</th><td><i> * to pop the stack frame we end up in an infinite loop of failsafe callbacks.</i></td></tr>
+<tr><th id="1134">1134</th><td><i> * We distinguish between categories by comparing each saved segment register</i></td></tr>
+<tr><th id="1135">1135</th><td><i> * with its current contents: any discrepancy means we in category 1.</i></td></tr>
+<tr><th id="1136">1136</th><td><i> */</i></td></tr>
+<tr><th id="1137">1137</th><td>ENTRY(xen_failsafe_callback)</td></tr>
+<tr><th id="1138">1138</th><td>	UNWIND_HINT_EMPTY</td></tr>
+<tr><th id="1139">1139</th><td>	movl	%ds, %ecx</td></tr>
+<tr><th id="1140">1140</th><td>	cmpw	%cx, <var>0x10</var>(%rsp)</td></tr>
+<tr><th id="1141">1141</th><td>	jne	<var>1f</var></td></tr>
+<tr><th id="1142">1142</th><td>	movl	%es, %ecx</td></tr>
+<tr><th id="1143">1143</th><td>	cmpw	%cx, <var>0x18</var>(%rsp)</td></tr>
+<tr><th id="1144">1144</th><td>	jne	<var>1f</var></td></tr>
+<tr><th id="1145">1145</th><td>	movl	%fs, %ecx</td></tr>
+<tr><th id="1146">1146</th><td>	cmpw	%cx, <var>0x20</var>(%rsp)</td></tr>
+<tr><th id="1147">1147</th><td>	jne	<var>1f</var></td></tr>
+<tr><th id="1148">1148</th><td>	movl	%gs, %ecx</td></tr>
+<tr><th id="1149">1149</th><td>	cmpw	%cx, <var>0x28</var>(%rsp)</td></tr>
+<tr><th id="1150">1150</th><td>	jne	<var>1f</var></td></tr>
+<tr><th id="1151">1151</th><td>	<i>/* All segments match their saved values =&gt; Category 2 (Bad IRET). */</i></td></tr>
+<tr><th id="1152">1152</th><td>	movq	(%rsp), %rcx</td></tr>
+<tr><th id="1153">1153</th><td>	movq	<var>8</var>(%rsp), %r11</td></tr>
+<tr><th id="1154">1154</th><td>	addq	$<var>0x30</var>, %rsp</td></tr>
+<tr><th id="1155">1155</th><td>	pushq	$<var>0</var>				<i>/* RIP */</i></td></tr>
+<tr><th id="1156">1156</th><td>	UNWIND_HINT_IRET_REGS offset=<var>8</var></td></tr>
+<tr><th id="1157">1157</th><td>	jmp	general_protection</td></tr>
+<tr><th id="1158">1158</th><td><var>1</var>:	<i>/* Segment mismatch =&gt; Category 1 (Bad segment). Retry the IRET. */</i></td></tr>
+<tr><th id="1159">1159</th><td>	movq	(%rsp), %rcx</td></tr>
+<tr><th id="1160">1160</th><td>	movq	<var>8</var>(%rsp), %r11</td></tr>
+<tr><th id="1161">1161</th><td>	addq	$<var>0x30</var>, %rsp</td></tr>
+<tr><th id="1162">1162</th><td>	UNWIND_HINT_IRET_REGS</td></tr>
+<tr><th id="1163">1163</th><td>	pushq	$-<var>1</var> <i>/* orig_ax = -1 =&gt; not a system call */</i></td></tr>
+<tr><th id="1164">1164</th><td>	PUSH_AND_CLEAR_REGS</td></tr>
+<tr><th id="1165">1165</th><td>	ENCODE_FRAME_POINTER</td></tr>
+<tr><th id="1166">1166</th><td>	jmp	error_exit</td></tr>
+<tr><th id="1167">1167</th><td>END(xen_failsafe_callback)</td></tr>
+<tr><th id="1168">1168</th><td><u>#<span data-ppcond="1088">endif</span> /* CONFIG_XEN_PV */</u></td></tr>
+<tr><th id="1169">1169</th><td></td></tr>
+<tr><th id="1170">1170</th><td><u>#<span data-ppcond="1170">ifdef</span> <span class="macro" data-ref="_M/CONFIG_XEN_PVHVM">CONFIG_XEN_PVHVM</span></u></td></tr>
+<tr><th id="1171">1171</th><td>apicinterrupt3 HYPERVISOR_CALLBACK_VECTOR \</td></tr>
+<tr><th id="1172">1172</th><td>	xen_hvm_callback_vector xen_evtchn_do_upcall</td></tr>
+<tr><th id="1173">1173</th><td><u>#<span data-ppcond="1170">endif</span></u></td></tr>
+<tr><th id="1174">1174</th><td></td></tr>
+<tr><th id="1175">1175</th><td></td></tr>
+<tr><th id="1176">1176</th><td><u>#<span data-ppcond="1176">if</span> <a class="macro" href="../../../include/linux/kconfig.h.html#71" title="0" data-ref="_M/IS_ENABLED">IS_ENABLED</a>(CONFIG_HYPERV)</u></td></tr>
+<tr><th id="1177">1177</th><td>apicinterrupt3 HYPERVISOR_CALLBACK_VECTOR \</td></tr>
+<tr><th id="1178">1178</th><td>	hyperv_callback_vector hyperv_vector_handler</td></tr>
+<tr><th id="1179">1179</th><td></td></tr>
+<tr><th id="1180">1180</th><td>apicinterrupt3 HYPERV_REENLIGHTENMENT_VECTOR \</td></tr>
+<tr><th id="1181">1181</th><td>	hyperv_reenlightenment_vector hyperv_reenlightenment_intr</td></tr>
+<tr><th id="1182">1182</th><td></td></tr>
+<tr><th id="1183">1183</th><td>apicinterrupt3 HYPERV_STIMER0_VECTOR \</td></tr>
+<tr><th id="1184">1184</th><td>	hv_stimer0_callback_vector hv_stimer0_vector_handler</td></tr>
+<tr><th id="1185">1185</th><td><u>#<span data-ppcond="1176">endif</span> /* CONFIG_HYPERV */</u></td></tr>
+<tr><th id="1186">1186</th><td></td></tr>
+<tr><th id="1187">1187</th><td><u>#<span data-ppcond="1187">if</span> <a class="macro" href="../../../include/linux/kconfig.h.html#71" title="0" data-ref="_M/IS_ENABLED">IS_ENABLED</a>(CONFIG_ACRN_GUEST)</u></td></tr>
+<tr><th id="1188">1188</th><td>apicinterrupt3 HYPERVISOR_CALLBACK_VECTOR \</td></tr>
+<tr><th id="1189">1189</th><td>	acrn_hv_callback_vector acrn_hv_vector_handler</td></tr>
+<tr><th id="1190">1190</th><td><u>#<span data-ppcond="1187">endif</span></u></td></tr>
+<tr><th id="1191">1191</th><td></td></tr>
+<tr><th id="1192">1192</th><td>idtentry debug			do_debug		has_error_code=<var>0</var>	paranoid=<var>1</var> shift_ist=<a class="macro" href="../include/asm/page_64_types.h.html#29" title="2" data-ref="_M/IST_INDEX_DB">IST_INDEX_DB</a> ist_offset=<a class="macro" href="../../../include/generated/asm-offsets.h.html#34" title="8192" data-ref="_M/DB_STACK_OFFSET">DB_STACK_OFFSET</a></td></tr>
+<tr><th id="1193">1193</th><td>idtentry int3			do_int3			has_error_code=<var>0</var>	create_gap=<var>1</var></td></tr>
+<tr><th id="1194">1194</th><td>idtentry stack_segment		do_stack_segment	has_error_code=<var>1</var></td></tr>
+<tr><th id="1195">1195</th><td></td></tr>
+<tr><th id="1196">1196</th><td><u>#<span data-ppcond="1196">ifdef</span> <span class="macro" data-ref="_M/CONFIG_XEN_PV">CONFIG_XEN_PV</span></u></td></tr>
+<tr><th id="1197">1197</th><td>idtentry xennmi			do_nmi			has_error_code=<var>0</var></td></tr>
+<tr><th id="1198">1198</th><td>idtentry xendebug		do_debug		has_error_code=<var>0</var></td></tr>
+<tr><th id="1199">1199</th><td><u>#<span data-ppcond="1196">endif</span></u></td></tr>
+<tr><th id="1200">1200</th><td></td></tr>
+<tr><th id="1201">1201</th><td>idtentry general_protection	do_general_protection	has_error_code=<var>1</var></td></tr>
+<tr><th id="1202">1202</th><td>idtentry page_fault		do_page_fault		has_error_code=<var>1</var>	read_cr2=<var>1</var></td></tr>
+<tr><th id="1203">1203</th><td></td></tr>
+<tr><th id="1204">1204</th><td><u>#<span data-ppcond="1204">ifdef</span> <span class="macro" data-ref="_M/CONFIG_KVM_GUEST">CONFIG_KVM_GUEST</span></u></td></tr>
+<tr><th id="1205">1205</th><td>idtentry async_page_fault	do_async_page_fault	has_error_code=<var>1</var>	read_cr2=<var>1</var></td></tr>
+<tr><th id="1206">1206</th><td><u>#<span data-ppcond="1204">endif</span></u></td></tr>
+<tr><th id="1207">1207</th><td></td></tr>
+<tr><th id="1208">1208</th><td><u>#<span data-ppcond="1208">ifdef</span> <a class="macro" href="../../../include/generated/autoconf.h.html#23" data-ref="_M/CONFIG_X86_MCE">CONFIG_X86_MCE</a></u></td></tr>
+<tr><th id="1209">1209</th><td>idtentry machine_check		do_mce			has_error_code=<var>0</var>	paranoid=<var>1</var></td></tr>
+<tr><th id="1210">1210</th><td><u>#<span data-ppcond="1208">endif</span></u></td></tr>
+<tr><th id="1211">1211</th><td></td></tr>
+<tr><th id="1212">1212</th><td><i>/*</i></td></tr>
+<tr><th id="1213">1213</th><td><i> * Save all registers in pt_regs, and switch gs if needed.</i></td></tr>
+<tr><th id="1214">1214</th><td><i> * Use slow, but surefire "are we in kernel?" check.</i></td></tr>
+<tr><th id="1215">1215</th><td><i> * Return: ebx=0: need swapgs on exit, ebx=1: otherwise</i></td></tr>
+<tr><th id="1216">1216</th><td><i> */</i></td></tr>
+<tr><th id="1217">1217</th><td><a class="macro" href="../../../include/linux/linkage.h.html#89" title=".globl paranoid_entry ; .p2align 4, 0x90 ; paranoid_entry:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="paranoid_entry" title='paranoid_entry' data-ref="paranoid_entry" data-ref-filename="paranoid_entry">paranoid_entry</dfn></span>)</td></tr>
+<tr><th id="1218">1218</th><td>	<span class='error' title="unknown type name &apos;UNWIND_HINT_FUNC&apos;">UNWIND_HINT_FUNC</span></td></tr>
+<tr><th id="1219">1219</th><td>	<dfn class="tu decl def" id="cld" title='cld' data-type='int' data-ref="cld" data-ref-filename="cld">cld</dfn><span class='error' title="expected &apos;;&apos; after top level declarator"></span></td></tr>
+<tr><th id="1220">1220</th><td>	PUSH_AND_CLEAR_REGS save_ret=<var>1</var></td></tr>
+<tr><th id="1221">1221</th><td>	ENCODE_FRAME_POINTER <var>8</var></td></tr>
+<tr><th id="1222">1222</th><td>	movl	$<var>1</var>, %ebx</td></tr>
+<tr><th id="1223">1223</th><td>	movl	$<a class="macro" href="../include/asm/msr-index.h.html#21" title="0xc0000101" data-ref="_M/MSR_GS_BASE">MSR_GS_BASE</a>, %ecx</td></tr>
+<tr><th id="1224">1224</th><td>	rdmsr</td></tr>
+<tr><th id="1225">1225</th><td>	testl	%edx, %edx</td></tr>
+<tr><th id="1226">1226</th><td>	js	<var>1f</var>				<i>/* negative -&gt; in kernel */</i></td></tr>
+<tr><th id="1227">1227</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#134" title="swapgs" data-ref="_M/SWAPGS">SWAPGS</a></td></tr>
+<tr><th id="1228">1228</th><td>	xorl	%ebx, %ebx</td></tr>
+<tr><th id="1229">1229</th><td></td></tr>
+<tr><th id="1230">1230</th><td><var>1</var>:</td></tr>
+<tr><th id="1231">1231</th><td>	<i>/*</i></td></tr>
+<tr><th id="1232">1232</th><td><i>	 * Always stash CR3 in %r14.  This value will be restored,</i></td></tr>
+<tr><th id="1233">1233</th><td><i>	 * verbatim, at exit.  Needed if paranoid_entry interrupted</i></td></tr>
+<tr><th id="1234">1234</th><td><i>	 * another entry that already switched to the user CR3 value</i></td></tr>
+<tr><th id="1235">1235</th><td><i>	 * but has not yet returned to userspace.</i></td></tr>
+<tr><th id="1236">1236</th><td><i>	 *</i></td></tr>
+<tr><th id="1237">1237</th><td><i>	 * This is also why CS (stashed in the "iret frame" by the</i></td></tr>
+<tr><th id="1238">1238</th><td><i>	 * hardware at entry) can not be used: this may be a return</i></td></tr>
+<tr><th id="1239">1239</th><td><i>	 * to kernel code, but with a user CR3 value.</i></td></tr>
+<tr><th id="1240">1240</th><td><i>	 */</i></td></tr>
+<tr><th id="1241">1241</th><td>	SAVE_AND_SWITCH_TO_KERNEL_CR3 scratch_reg=%rax save_reg=%r14</td></tr>
+<tr><th id="1242">1242</th><td></td></tr>
+<tr><th id="1243">1243</th><td>	<i>/*</i></td></tr>
+<tr><th id="1244">1244</th><td><i>	 * The above SAVE_AND_SWITCH_TO_KERNEL_CR3 macro doesn't do an</i></td></tr>
+<tr><th id="1245">1245</th><td><i>	 * unconditional CR3 write, even in the PTI case.  So do an lfence</i></td></tr>
+<tr><th id="1246">1246</th><td><i>	 * to prevent GS speculation, regardless of whether PTI is enabled.</i></td></tr>
+<tr><th id="1247">1247</th><td><i>	 */</i></td></tr>
+<tr><th id="1248">1248</th><td>	FENCE_SWAPGS_KERNEL_ENTRY</td></tr>
+<tr><th id="1249">1249</th><td></td></tr>
+<tr><th id="1250">1250</th><td>	ret</td></tr>
+<tr><th id="1251">1251</th><td><a class="macro" href="../../../include/linux/linkage.h.html#104" title=".size paranoid_entry, .-paranoid_entry" data-ref="_M/END">END</a>(paranoid_entry)</td></tr>
+<tr><th id="1252">1252</th><td></td></tr>
+<tr><th id="1253">1253</th><td><i>/*</i></td></tr>
+<tr><th id="1254">1254</th><td><i> * "Paranoid" exit path from exception stack.  This is invoked</i></td></tr>
+<tr><th id="1255">1255</th><td><i> * only on return from non-NMI IST interrupts that came</i></td></tr>
+<tr><th id="1256">1256</th><td><i> * from kernel space.</i></td></tr>
+<tr><th id="1257">1257</th><td><i> *</i></td></tr>
+<tr><th id="1258">1258</th><td><i> * We may be returning to very strange contexts (e.g. very early</i></td></tr>
+<tr><th id="1259">1259</th><td><i> * in syscall entry), so checking for preemption here would</i></td></tr>
+<tr><th id="1260">1260</th><td><i> * be complicated.  Fortunately, we there's no good reason</i></td></tr>
+<tr><th id="1261">1261</th><td><i> * to try to handle preemption here.</i></td></tr>
+<tr><th id="1262">1262</th><td><i> *</i></td></tr>
+<tr><th id="1263">1263</th><td><i> * On entry, ebx is "no swapgs" flag (1: don't need swapgs, 0: need it)</i></td></tr>
+<tr><th id="1264">1264</th><td><i> */</i></td></tr>
+<tr><th id="1265">1265</th><td><a class="macro" href="../../../include/linux/linkage.h.html#89" title=".globl paranoid_exit ; .p2align 4, 0x90 ; paranoid_exit:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="paranoid_exit" title='paranoid_exit' data-ref="paranoid_exit" data-ref-filename="paranoid_exit">paranoid_exit</dfn></span>)</td></tr>
+<tr><th id="1266">1266</th><td>	<span class='error' title="unknown type name &apos;UNWIND_HINT_REGS&apos;">UNWIND_HINT_REGS</span></td></tr>
+<tr><th id="1267">1267</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#127" title="cli" data-ref="_M/DISABLE_INTERRUPTS">DISABLE_INTERRUPTS</a>(CLBR_ANY)<span class='error' title="expected &apos;;&apos; after top level declarator"></span></td></tr>
+<tr><th id="1268">1268</th><td>	<a class="macro" href="#102" title="" data-ref="_M/TRACE_IRQS_OFF_DEBUG">TRACE_IRQS_OFF_DEBUG</a></td></tr>
+<tr><th id="1269">1269</th><td>	testl	%ebx, %ebx			<i>/* swapgs needed? */</i></td></tr>
+<tr><th id="1270">1270</th><td>	jnz	.Lparanoid_exit_no_swapgs</td></tr>
+<tr><th id="1271">1271</th><td>	TRACE_IRQS_IRETQ</td></tr>
+<tr><th id="1272">1272</th><td>	<i>/* Always restore stashed CR3 value (see paranoid_entry) */</i></td></tr>
+<tr><th id="1273">1273</th><td>	RESTORE_CR3	scratch_reg=%rbx save_reg=%r14</td></tr>
+<tr><th id="1274">1274</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#144" title="swapgs" data-ref="_M/SWAPGS_UNSAFE_STACK">SWAPGS_UNSAFE_STACK</a></td></tr>
+<tr><th id="1275">1275</th><td>	jmp	.Lparanoid_exit_restore</td></tr>
+<tr><th id="1276">1276</th><td>.Lparanoid_exit_no_swapgs:</td></tr>
+<tr><th id="1277">1277</th><td>	<a class="macro" href="#104" title="TRACE_IRQS_IRETQ" data-ref="_M/TRACE_IRQS_IRETQ_DEBUG">TRACE_IRQS_IRETQ_DEBUG</a></td></tr>
+<tr><th id="1278">1278</th><td>	<i>/* Always restore stashed CR3 value (see paranoid_entry) */</i></td></tr>
+<tr><th id="1279">1279</th><td>	RESTORE_CR3	scratch_reg=%rbx save_reg=%r14</td></tr>
+<tr><th id="1280">1280</th><td>.Lparanoid_exit_restore:</td></tr>
+<tr><th id="1281">1281</th><td>	jmp restore_regs_and_return_to_kernel</td></tr>
+<tr><th id="1282">1282</th><td><a class="macro" href="../../../include/linux/linkage.h.html#104" title=".size paranoid_exit, .-paranoid_exit" data-ref="_M/END">END</a>(paranoid_exit)</td></tr>
+<tr><th id="1283">1283</th><td></td></tr>
+<tr><th id="1284">1284</th><td><i>/*</i></td></tr>
+<tr><th id="1285">1285</th><td><i> * Save all registers in pt_regs, and switch GS if needed.</i></td></tr>
+<tr><th id="1286">1286</th><td><i> */</i></td></tr>
+<tr><th id="1287">1287</th><td><a class="macro" href="../../../include/linux/linkage.h.html#89" title=".globl error_entry ; .p2align 4, 0x90 ; error_entry:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="error_entry" title='error_entry' data-ref="error_entry" data-ref-filename="error_entry">error_entry</dfn></span>)</td></tr>
+<tr><th id="1288">1288</th><td>	<span class='error' title="unknown type name &apos;UNWIND_HINT_FUNC&apos;">UNWIND_HINT_FUNC</span></td></tr>
+<tr><th id="1289">1289</th><td>	<dfn class="tu decl def" id="cld" title='cld' data-type='int' data-ref="cld" data-ref-filename="cld">cld</dfn><span class='error' title="expected &apos;;&apos; after top level declarator"></span></td></tr>
+<tr><th id="1290">1290</th><td>	PUSH_AND_CLEAR_REGS save_ret=<var>1</var></td></tr>
+<tr><th id="1291">1291</th><td>	ENCODE_FRAME_POINTER <var>8</var></td></tr>
+<tr><th id="1292">1292</th><td>	testb	$<var>3</var>, <a class="macro" href="calling.h.html#93" title="17*8" data-ref="_M/CS">CS</a>+<var>8</var>(%rsp)</td></tr>
+<tr><th id="1293">1293</th><td>	jz	.Lerror_kernelspace</td></tr>
+<tr><th id="1294">1294</th><td></td></tr>
+<tr><th id="1295">1295</th><td>	<i>/*</i></td></tr>
+<tr><th id="1296">1296</th><td><i>	 * We entered from user mode or we're pretending to have entered</i></td></tr>
+<tr><th id="1297">1297</th><td><i>	 * from user mode due to an IRET fault.</i></td></tr>
+<tr><th id="1298">1298</th><td><i>	 */</i></td></tr>
+<tr><th id="1299">1299</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#134" title="swapgs" data-ref="_M/SWAPGS">SWAPGS</a></td></tr>
+<tr><th id="1300">1300</th><td>	FENCE_SWAPGS_USER_ENTRY</td></tr>
+<tr><th id="1301">1301</th><td>	<i>/* We have user CR3.  Change to kernel CR3. */</i></td></tr>
+<tr><th id="1302">1302</th><td>	SWITCH_TO_KERNEL_CR3 scratch_reg=%rax</td></tr>
+<tr><th id="1303">1303</th><td></td></tr>
+<tr><th id="1304">1304</th><td>.Lerror_entry_from_usermode_after_swapgs:</td></tr>
+<tr><th id="1305">1305</th><td>	<i>/* Put us onto the real thread stack. */</i></td></tr>
+<tr><th id="1306">1306</th><td>	popq	%r12				<i>/* save return addr in %12 */</i></td></tr>
+<tr><th id="1307">1307</th><td>	movq	%rsp, %rdi			<i>/* arg0 = pt_regs pointer */</i></td></tr>
+<tr><th id="1308">1308</th><td>	call	sync_regs</td></tr>
+<tr><th id="1309">1309</th><td>	movq	%rax, %rsp			<i>/* switch stack */</i></td></tr>
+<tr><th id="1310">1310</th><td>	ENCODE_FRAME_POINTER</td></tr>
+<tr><th id="1311">1311</th><td>	pushq	%r12</td></tr>
+<tr><th id="1312">1312</th><td>	ret</td></tr>
+<tr><th id="1313">1313</th><td></td></tr>
+<tr><th id="1314">1314</th><td>.Lerror_entry_done_lfence:</td></tr>
+<tr><th id="1315">1315</th><td>	FENCE_SWAPGS_KERNEL_ENTRY</td></tr>
+<tr><th id="1316">1316</th><td>.Lerror_entry_done:</td></tr>
+<tr><th id="1317">1317</th><td>	ret</td></tr>
+<tr><th id="1318">1318</th><td></td></tr>
+<tr><th id="1319">1319</th><td>	<i>/*</i></td></tr>
+<tr><th id="1320">1320</th><td><i>	 * There are two places in the kernel that can potentially fault with</i></td></tr>
+<tr><th id="1321">1321</th><td><i>	 * usergs. Handle them here.  B stepping K8s sometimes report a</i></td></tr>
+<tr><th id="1322">1322</th><td><i>	 * truncated RIP for IRET exceptions returning to compat mode. Check</i></td></tr>
+<tr><th id="1323">1323</th><td><i>	 * for these here too.</i></td></tr>
+<tr><th id="1324">1324</th><td><i>	 */</i></td></tr>
+<tr><th id="1325">1325</th><td>.Lerror_kernelspace:</td></tr>
+<tr><th id="1326">1326</th><td>	leaq	native_irq_return_iret(%rip), %rcx</td></tr>
+<tr><th id="1327">1327</th><td>	cmpq	%rcx, <a class="macro" href="calling.h.html#92" title="16*8" data-ref="_M/RIP">RIP</a>+<var>8</var>(%rsp)</td></tr>
+<tr><th id="1328">1328</th><td>	je	.Lerror_bad_iret</td></tr>
+<tr><th id="1329">1329</th><td>	movl	%ecx, %eax			<i>/* zero extend */</i></td></tr>
+<tr><th id="1330">1330</th><td>	cmpq	%rax, <a class="macro" href="calling.h.html#92" title="16*8" data-ref="_M/RIP">RIP</a>+<var>8</var>(%rsp)</td></tr>
+<tr><th id="1331">1331</th><td>	je	.Lbstep_iret</td></tr>
+<tr><th id="1332">1332</th><td>	cmpq	$.Lgs_change, <a class="macro" href="calling.h.html#92" title="16*8" data-ref="_M/RIP">RIP</a>+<var>8</var>(%rsp)</td></tr>
+<tr><th id="1333">1333</th><td>	jne	.Lerror_entry_done_lfence</td></tr>
+<tr><th id="1334">1334</th><td></td></tr>
+<tr><th id="1335">1335</th><td>	<i>/*</i></td></tr>
+<tr><th id="1336">1336</th><td><i>	 * hack: .Lgs_change can fail with user gsbase.  If this happens, fix up</i></td></tr>
+<tr><th id="1337">1337</th><td><i>	 * gsbase and proceed.  We'll fix up the exception and land in</i></td></tr>
+<tr><th id="1338">1338</th><td><i>	 * .Lgs_change's error handler with kernel gsbase.</i></td></tr>
+<tr><th id="1339">1339</th><td><i>	 */</i></td></tr>
+<tr><th id="1340">1340</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#134" title="swapgs" data-ref="_M/SWAPGS">SWAPGS</a></td></tr>
+<tr><th id="1341">1341</th><td>	FENCE_SWAPGS_USER_ENTRY</td></tr>
+<tr><th id="1342">1342</th><td>	SWITCH_TO_KERNEL_CR3 scratch_reg=%rax</td></tr>
+<tr><th id="1343">1343</th><td>	jmp .Lerror_entry_done</td></tr>
+<tr><th id="1344">1344</th><td></td></tr>
+<tr><th id="1345">1345</th><td>.Lbstep_iret:</td></tr>
+<tr><th id="1346">1346</th><td>	<i>/* Fix truncated RIP */</i></td></tr>
+<tr><th id="1347">1347</th><td>	movq	%rcx, <a class="macro" href="calling.h.html#92" title="16*8" data-ref="_M/RIP">RIP</a>+<var>8</var>(%rsp)</td></tr>
+<tr><th id="1348">1348</th><td>	<i>/* fall through */</i></td></tr>
+<tr><th id="1349">1349</th><td></td></tr>
+<tr><th id="1350">1350</th><td>.Lerror_bad_iret:</td></tr>
+<tr><th id="1351">1351</th><td>	<i>/*</i></td></tr>
+<tr><th id="1352">1352</th><td><i>	 * We came from an IRET to user mode, so we have user</i></td></tr>
+<tr><th id="1353">1353</th><td><i>	 * gsbase and CR3.  Switch to kernel gsbase and CR3:</i></td></tr>
+<tr><th id="1354">1354</th><td><i>	 */</i></td></tr>
+<tr><th id="1355">1355</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#134" title="swapgs" data-ref="_M/SWAPGS">SWAPGS</a></td></tr>
+<tr><th id="1356">1356</th><td>	FENCE_SWAPGS_USER_ENTRY</td></tr>
+<tr><th id="1357">1357</th><td>	SWITCH_TO_KERNEL_CR3 scratch_reg=%rax</td></tr>
+<tr><th id="1358">1358</th><td></td></tr>
+<tr><th id="1359">1359</th><td>	<i>/*</i></td></tr>
+<tr><th id="1360">1360</th><td><i>	 * Pretend that the exception came from user mode: set up pt_regs</i></td></tr>
+<tr><th id="1361">1361</th><td><i>	 * as if we faulted immediately after IRET.</i></td></tr>
+<tr><th id="1362">1362</th><td><i>	 */</i></td></tr>
+<tr><th id="1363">1363</th><td>	mov	%rsp, %rdi</td></tr>
+<tr><th id="1364">1364</th><td>	call	fixup_bad_iret</td></tr>
+<tr><th id="1365">1365</th><td>	mov	%rax, %rsp</td></tr>
+<tr><th id="1366">1366</th><td>	jmp	.Lerror_entry_from_usermode_after_swapgs</td></tr>
+<tr><th id="1367">1367</th><td><a class="macro" href="../../../include/linux/linkage.h.html#104" title=".size error_entry, .-error_entry" data-ref="_M/END">END</a>(error_entry)</td></tr>
+<tr><th id="1368">1368</th><td></td></tr>
+<tr><th id="1369">1369</th><td><a class="macro" href="../../../include/linux/linkage.h.html#89" title=".globl error_exit ; .p2align 4, 0x90 ; error_exit:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="error_exit" title='error_exit' data-ref="error_exit" data-ref-filename="error_exit">error_exit</dfn></span>)</td></tr>
+<tr><th id="1370">1370</th><td>	<span class='error' title="unknown type name &apos;UNWIND_HINT_REGS&apos;">UNWIND_HINT_REGS</span></td></tr>
+<tr><th id="1371">1371</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#127" title="cli" data-ref="_M/DISABLE_INTERRUPTS">DISABLE_INTERRUPTS</a>(CLBR_ANY)<span class='error' title="expected &apos;;&apos; after top level declarator"></span></td></tr>
+<tr><th id="1372">1372</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#181" title="" data-ref="_M/TRACE_IRQS_OFF">TRACE_IRQS_OFF</a></td></tr>
+<tr><th id="1373">1373</th><td>	testb	$<var>3</var>, <a class="macro" href="calling.h.html#93" title="17*8" data-ref="_M/CS">CS</a>(%rsp)</td></tr>
+<tr><th id="1374">1374</th><td>	jz	retint_kernel</td></tr>
+<tr><th id="1375">1375</th><td>	jmp	retint_user</td></tr>
+<tr><th id="1376">1376</th><td><a class="macro" href="../../../include/linux/linkage.h.html#104" title=".size error_exit, .-error_exit" data-ref="_M/END">END</a>(error_exit)</td></tr>
+<tr><th id="1377">1377</th><td></td></tr>
+<tr><th id="1378">1378</th><td><i>/*</i></td></tr>
+<tr><th id="1379">1379</th><td><i> * Runs on exception stack.  Xen PV does not go through this path at all,</i></td></tr>
+<tr><th id="1380">1380</th><td><i> * so we can use real assembly here.</i></td></tr>
+<tr><th id="1381">1381</th><td><i> *</i></td></tr>
+<tr><th id="1382">1382</th><td><i> * Registers:</i></td></tr>
+<tr><th id="1383">1383</th><td><i> *	%r14: Used to save/restore the CR3 of the interrupted context</i></td></tr>
+<tr><th id="1384">1384</th><td><i> *	      when PAGE_TABLE_ISOLATION is in use.  Do not clobber.</i></td></tr>
+<tr><th id="1385">1385</th><td><i> */</i></td></tr>
+<tr><th id="1386">1386</th><td><a class="macro" href="../../../include/linux/linkage.h.html#89" title=".globl nmi ; .p2align 4, 0x90 ; nmi:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="nmi" title='nmi' data-ref="nmi" data-ref-filename="nmi">nmi</dfn></span>)</td></tr>
+<tr><th id="1387">1387</th><td>	<span class='error' title="unknown type name &apos;UNWIND_HINT_IRET_REGS&apos;">UNWIND_HINT_IRET_REGS</span></td></tr>
+<tr><th id="1388">1388</th><td></td></tr>
+<tr><th id="1389">1389</th><td>	<i>/*</i></td></tr>
+<tr><th id="1390">1390</th><td><i>	 * We allow breakpoints in NMIs. If a breakpoint occurs, then</i></td></tr>
+<tr><th id="1391">1391</th><td><i>	 * the iretq it performs will take us out of NMI context.</i></td></tr>
+<tr><th id="1392">1392</th><td><i>	 * This means that we can have nested NMIs where the next</i></td></tr>
+<tr><th id="1393">1393</th><td><i>	 * NMI is using the top of the stack of the previous NMI. We</i></td></tr>
+<tr><th id="1394">1394</th><td><i>	 * can't let it execute because the nested NMI will corrupt the</i></td></tr>
+<tr><th id="1395">1395</th><td><i>	 * stack of the previous NMI. NMI handlers are not re-entrant</i></td></tr>
+<tr><th id="1396">1396</th><td><i>	 * anyway.</i></td></tr>
+<tr><th id="1397">1397</th><td><i>	 *</i></td></tr>
+<tr><th id="1398">1398</th><td><i>	 * To handle this case we do the following:</i></td></tr>
+<tr><th id="1399">1399</th><td><i>	 *  Check the a special location on the stack that contains</i></td></tr>
+<tr><th id="1400">1400</th><td><i>	 *  a variable that is set when NMIs are executing.</i></td></tr>
+<tr><th id="1401">1401</th><td><i>	 *  The interrupted task's stack is also checked to see if it</i></td></tr>
+<tr><th id="1402">1402</th><td><i>	 *  is an NMI stack.</i></td></tr>
+<tr><th id="1403">1403</th><td><i>	 *  If the variable is not set and the stack is not the NMI</i></td></tr>
+<tr><th id="1404">1404</th><td><i>	 *  stack then:</i></td></tr>
+<tr><th id="1405">1405</th><td><i>	 *    o Set the special variable on the stack</i></td></tr>
+<tr><th id="1406">1406</th><td><i>	 *    o Copy the interrupt frame into an "outermost" location on the</i></td></tr>
+<tr><th id="1407">1407</th><td><i>	 *      stack</i></td></tr>
+<tr><th id="1408">1408</th><td><i>	 *    o Copy the interrupt frame into an "iret" location on the stack</i></td></tr>
+<tr><th id="1409">1409</th><td><i>	 *    o Continue processing the NMI</i></td></tr>
+<tr><th id="1410">1410</th><td><i>	 *  If the variable is set or the previous stack is the NMI stack:</i></td></tr>
+<tr><th id="1411">1411</th><td><i>	 *    o Modify the "iret" location to jump to the repeat_nmi</i></td></tr>
+<tr><th id="1412">1412</th><td><i>	 *    o return back to the first NMI</i></td></tr>
+<tr><th id="1413">1413</th><td><i>	 *</i></td></tr>
+<tr><th id="1414">1414</th><td><i>	 * Now on exit of the first NMI, we first clear the stack variable</i></td></tr>
+<tr><th id="1415">1415</th><td><i>	 * The NMI stack will tell any nested NMIs at that point that it is</i></td></tr>
+<tr><th id="1416">1416</th><td><i>	 * nested. Then we pop the stack normally with iret, and if there was</i></td></tr>
+<tr><th id="1417">1417</th><td><i>	 * a nested NMI that updated the copy interrupt stack frame, a</i></td></tr>
+<tr><th id="1418">1418</th><td><i>	 * jump will be made to the repeat_nmi code that will handle the second</i></td></tr>
+<tr><th id="1419">1419</th><td><i>	 * NMI.</i></td></tr>
+<tr><th id="1420">1420</th><td><i>	 *</i></td></tr>
+<tr><th id="1421">1421</th><td><i>	 * However, espfix prevents us from directly returning to userspace</i></td></tr>
+<tr><th id="1422">1422</th><td><i>	 * with a single IRET instruction.  Similarly, IRET to user mode</i></td></tr>
+<tr><th id="1423">1423</th><td><i>	 * can fault.  We therefore handle NMIs from user space like</i></td></tr>
+<tr><th id="1424">1424</th><td><i>	 * other IST entries.</i></td></tr>
+<tr><th id="1425">1425</th><td><i>	 */</i></td></tr>
+<tr><th id="1426">1426</th><td></td></tr>
+<tr><th id="1427">1427</th><td>	<a class="macro" href="../include/asm/smap.h.html#25" title="ALTERNATIVE &quot;&quot;, &quot;.byte 0x0f,0x01,0xca&quot;, ( 9*32+20)" data-ref="_M/ASM_CLAC">ASM_CLAC</a></td></tr>
+<tr><th id="1428">1428</th><td></td></tr>
+<tr><th id="1429">1429</th><td>	<i>/* Use %rdx as our temp variable throughout */</i></td></tr>
+<tr><th id="1430">1430</th><td>	pushq	%rdx</td></tr>
+<tr><th id="1431">1431</th><td></td></tr>
+<tr><th id="1432">1432</th><td>	testb	$<var>3</var>, <a class="macro" href="calling.h.html#93" title="17*8" data-ref="_M/CS">CS</a>-<a class="macro" href="calling.h.html#92" title="16*8" data-ref="_M/RIP">RIP</a>+<var>8</var>(%rsp)</td></tr>
+<tr><th id="1433">1433</th><td>	jz	.Lnmi_from_kernel</td></tr>
+<tr><th id="1434">1434</th><td></td></tr>
+<tr><th id="1435">1435</th><td>	<i>/*</i></td></tr>
+<tr><th id="1436">1436</th><td><i>	 * NMI from user mode.  We need to run on the thread stack, but we</i></td></tr>
+<tr><th id="1437">1437</th><td><i>	 * can't go through the normal entry paths: NMIs are masked, and</i></td></tr>
+<tr><th id="1438">1438</th><td><i>	 * we don't want to enable interrupts, because then we'll end</i></td></tr>
+<tr><th id="1439">1439</th><td><i>	 * up in an awkward situation in which IRQs are on but NMIs</i></td></tr>
+<tr><th id="1440">1440</th><td><i>	 * are off.</i></td></tr>
+<tr><th id="1441">1441</th><td><i>	 *</i></td></tr>
+<tr><th id="1442">1442</th><td><i>	 * We also must not push anything to the stack before switching</i></td></tr>
+<tr><th id="1443">1443</th><td><i>	 * stacks lest we corrupt the "NMI executing" variable.</i></td></tr>
+<tr><th id="1444">1444</th><td><i>	 */</i></td></tr>
+<tr><th id="1445">1445</th><td></td></tr>
+<tr><th id="1446">1446</th><td>	swapgs</td></tr>
+<tr><th id="1447">1447</th><td>	cld</td></tr>
+<tr><th id="1448">1448</th><td>	FENCE_SWAPGS_USER_ENTRY</td></tr>
+<tr><th id="1449">1449</th><td>	SWITCH_TO_KERNEL_CR3 scratch_reg=%rdx</td></tr>
+<tr><th id="1450">1450</th><td>	movq	%rsp, %rdx</td></tr>
+<tr><th id="1451">1451</th><td>	movq	<a class="macro" href="../include/asm/percpu.h.html#31" title="%gs:(cpu_tss_rw + 12)" data-ref="_M/PER_CPU_VAR">PER_CPU_VAR</a>(<a class="macro" href="../include/asm/thread_info.h.html#219" title="(cpu_tss_rw + 12)" data-ref="_M/cpu_current_top_of_stack">cpu_current_top_of_stack</a>), %rsp</td></tr>
+<tr><th id="1452">1452</th><td>	UNWIND_HINT_IRET_REGS base=%rdx offset=<var>8</var></td></tr>
+<tr><th id="1453">1453</th><td>	pushq	<var>5</var>*<var>8</var>(%rdx)	<i>/* pt_regs-&gt;ss */</i></td></tr>
+<tr><th id="1454">1454</th><td>	pushq	<var>4</var>*<var>8</var>(%rdx)	<i>/* pt_regs-&gt;rsp */</i></td></tr>
+<tr><th id="1455">1455</th><td>	pushq	<var>3</var>*<var>8</var>(%rdx)	<i>/* pt_regs-&gt;flags */</i></td></tr>
+<tr><th id="1456">1456</th><td>	pushq	<var>2</var>*<var>8</var>(%rdx)	<i>/* pt_regs-&gt;cs */</i></td></tr>
+<tr><th id="1457">1457</th><td>	pushq	<var>1</var>*<var>8</var>(%rdx)	<i>/* pt_regs-&gt;rip */</i></td></tr>
+<tr><th id="1458">1458</th><td>	UNWIND_HINT_IRET_REGS</td></tr>
+<tr><th id="1459">1459</th><td>	pushq   $-<var>1</var>		<i>/* pt_regs-&gt;orig_ax */</i></td></tr>
+<tr><th id="1460">1460</th><td>	PUSH_AND_CLEAR_REGS rdx=(%rdx)</td></tr>
+<tr><th id="1461">1461</th><td>	ENCODE_FRAME_POINTER</td></tr>
+<tr><th id="1462">1462</th><td></td></tr>
+<tr><th id="1463">1463</th><td>	<i>/*</i></td></tr>
+<tr><th id="1464">1464</th><td><i>	 * At this point we no longer need to worry about stack damage</i></td></tr>
+<tr><th id="1465">1465</th><td><i>	 * due to nesting -- we're on the normal thread stack and we're</i></td></tr>
+<tr><th id="1466">1466</th><td><i>	 * done with the NMI stack.</i></td></tr>
+<tr><th id="1467">1467</th><td><i>	 */</i></td></tr>
+<tr><th id="1468">1468</th><td></td></tr>
+<tr><th id="1469">1469</th><td>	movq	%rsp, %rdi</td></tr>
+<tr><th id="1470">1470</th><td>	movq	$-<var>1</var>, %rsi</td></tr>
+<tr><th id="1471">1471</th><td>	call	do_nmi</td></tr>
+<tr><th id="1472">1472</th><td></td></tr>
+<tr><th id="1473">1473</th><td>	<i>/*</i></td></tr>
+<tr><th id="1474">1474</th><td><i>	 * Return back to user mode.  We must *not* do the normal exit</i></td></tr>
+<tr><th id="1475">1475</th><td><i>	 * work, because we don't want to enable interrupts.</i></td></tr>
+<tr><th id="1476">1476</th><td><i>	 */</i></td></tr>
+<tr><th id="1477">1477</th><td>	jmp	swapgs_restore_regs_and_return_to_usermode</td></tr>
+<tr><th id="1478">1478</th><td></td></tr>
+<tr><th id="1479">1479</th><td>.Lnmi_from_kernel:</td></tr>
+<tr><th id="1480">1480</th><td>	<i>/*</i></td></tr>
+<tr><th id="1481">1481</th><td><i>	 * Here's what our stack frame will look like:</i></td></tr>
+<tr><th id="1482">1482</th><td><i>	 * +---------------------------------------------------------+</i></td></tr>
+<tr><th id="1483">1483</th><td><i>	 * | original SS                                             |</i></td></tr>
+<tr><th id="1484">1484</th><td><i>	 * | original Return RSP                                     |</i></td></tr>
+<tr><th id="1485">1485</th><td><i>	 * | original RFLAGS                                         |</i></td></tr>
+<tr><th id="1486">1486</th><td><i>	 * | original CS                                             |</i></td></tr>
+<tr><th id="1487">1487</th><td><i>	 * | original RIP                                            |</i></td></tr>
+<tr><th id="1488">1488</th><td><i>	 * +---------------------------------------------------------+</i></td></tr>
+<tr><th id="1489">1489</th><td><i>	 * | temp storage for rdx                                    |</i></td></tr>
+<tr><th id="1490">1490</th><td><i>	 * +---------------------------------------------------------+</i></td></tr>
+<tr><th id="1491">1491</th><td><i>	 * | "NMI executing" variable                                |</i></td></tr>
+<tr><th id="1492">1492</th><td><i>	 * +---------------------------------------------------------+</i></td></tr>
+<tr><th id="1493">1493</th><td><i>	 * | iret SS          } Copied from "outermost" frame        |</i></td></tr>
+<tr><th id="1494">1494</th><td><i>	 * | iret Return RSP  } on each loop iteration; overwritten  |</i></td></tr>
+<tr><th id="1495">1495</th><td><i>	 * | iret RFLAGS      } by a nested NMI to force another     |</i></td></tr>
+<tr><th id="1496">1496</th><td><i>	 * | iret CS          } iteration if needed.                 |</i></td></tr>
+<tr><th id="1497">1497</th><td><i>	 * | iret RIP         }                                      |</i></td></tr>
+<tr><th id="1498">1498</th><td><i>	 * +---------------------------------------------------------+</i></td></tr>
+<tr><th id="1499">1499</th><td><i>	 * | outermost SS          } initialized in first_nmi;       |</i></td></tr>
+<tr><th id="1500">1500</th><td><i>	 * | outermost Return RSP  } will not be changed before      |</i></td></tr>
+<tr><th id="1501">1501</th><td><i>	 * | outermost RFLAGS      } NMI processing is done.         |</i></td></tr>
+<tr><th id="1502">1502</th><td><i>	 * | outermost CS          } Copied to "iret" frame on each  |</i></td></tr>
+<tr><th id="1503">1503</th><td><i>	 * | outermost RIP         } iteration.                      |</i></td></tr>
+<tr><th id="1504">1504</th><td><i>	 * +---------------------------------------------------------+</i></td></tr>
+<tr><th id="1505">1505</th><td><i>	 * | pt_regs                                                 |</i></td></tr>
+<tr><th id="1506">1506</th><td><i>	 * +---------------------------------------------------------+</i></td></tr>
+<tr><th id="1507">1507</th><td><i>	 *</i></td></tr>
+<tr><th id="1508">1508</th><td><i>	 * The "original" frame is used by hardware.  Before re-enabling</i></td></tr>
+<tr><th id="1509">1509</th><td><i>	 * NMIs, we need to be done with it, and we need to leave enough</i></td></tr>
+<tr><th id="1510">1510</th><td><i>	 * space for the asm code here.</i></td></tr>
+<tr><th id="1511">1511</th><td><i>	 *</i></td></tr>
+<tr><th id="1512">1512</th><td><i>	 * We return by executing IRET while RSP points to the "iret" frame.</i></td></tr>
+<tr><th id="1513">1513</th><td><i>	 * That will either return for real or it will loop back into NMI</i></td></tr>
+<tr><th id="1514">1514</th><td><i>	 * processing.</i></td></tr>
+<tr><th id="1515">1515</th><td><i>	 *</i></td></tr>
+<tr><th id="1516">1516</th><td><i>	 * The "outermost" frame is copied to the "iret" frame on each</i></td></tr>
+<tr><th id="1517">1517</th><td><i>	 * iteration of the loop, so each iteration starts with the "iret"</i></td></tr>
+<tr><th id="1518">1518</th><td><i>	 * frame pointing to the final return target.</i></td></tr>
+<tr><th id="1519">1519</th><td><i>	 */</i></td></tr>
+<tr><th id="1520">1520</th><td></td></tr>
+<tr><th id="1521">1521</th><td>	<i>/*</i></td></tr>
+<tr><th id="1522">1522</th><td><i>	 * Determine whether we're a nested NMI.</i></td></tr>
+<tr><th id="1523">1523</th><td><i>	 *</i></td></tr>
+<tr><th id="1524">1524</th><td><i>	 * If we interrupted kernel code between repeat_nmi and</i></td></tr>
+<tr><th id="1525">1525</th><td><i>	 * end_repeat_nmi, then we are a nested NMI.  We must not</i></td></tr>
+<tr><th id="1526">1526</th><td><i>	 * modify the "iret" frame because it's being written by</i></td></tr>
+<tr><th id="1527">1527</th><td><i>	 * the outer NMI.  That's okay; the outer NMI handler is</i></td></tr>
+<tr><th id="1528">1528</th><td><i>	 * about to about to call do_nmi anyway, so we can just</i></td></tr>
+<tr><th id="1529">1529</th><td><i>	 * resume the outer NMI.</i></td></tr>
+<tr><th id="1530">1530</th><td><i>	 */</i></td></tr>
+<tr><th id="1531">1531</th><td></td></tr>
+<tr><th id="1532">1532</th><td>	movq	$repeat_nmi, %rdx</td></tr>
+<tr><th id="1533">1533</th><td>	cmpq	<var>8</var>(%rsp), %rdx</td></tr>
+<tr><th id="1534">1534</th><td>	ja	<var>1f</var></td></tr>
+<tr><th id="1535">1535</th><td>	movq	$end_repeat_nmi, %rdx</td></tr>
+<tr><th id="1536">1536</th><td>	cmpq	<var>8</var>(%rsp), %rdx</td></tr>
+<tr><th id="1537">1537</th><td>	ja	nested_nmi_out</td></tr>
+<tr><th id="1538">1538</th><td><var>1</var>:</td></tr>
+<tr><th id="1539">1539</th><td></td></tr>
+<tr><th id="1540">1540</th><td>	<i>/*</i></td></tr>
+<tr><th id="1541">1541</th><td><i>	 * Now check "NMI executing".  If it's set, then we're nested.</i></td></tr>
+<tr><th id="1542">1542</th><td><i>	 * This will not detect if we interrupted an outer NMI just</i></td></tr>
+<tr><th id="1543">1543</th><td><i>	 * before IRET.</i></td></tr>
+<tr><th id="1544">1544</th><td><i>	 */</i></td></tr>
+<tr><th id="1545">1545</th><td>	cmpl	$<var>1</var>, -<var>8</var>(%rsp)</td></tr>
+<tr><th id="1546">1546</th><td>	je	nested_nmi</td></tr>
+<tr><th id="1547">1547</th><td></td></tr>
+<tr><th id="1548">1548</th><td>	<i>/*</i></td></tr>
+<tr><th id="1549">1549</th><td><i>	 * Now test if the previous stack was an NMI stack.  This covers</i></td></tr>
+<tr><th id="1550">1550</th><td><i>	 * the case where we interrupt an outer NMI after it clears</i></td></tr>
+<tr><th id="1551">1551</th><td><i>	 * "NMI executing" but before IRET.  We need to be careful, though:</i></td></tr>
+<tr><th id="1552">1552</th><td><i>	 * there is one case in which RSP could point to the NMI stack</i></td></tr>
+<tr><th id="1553">1553</th><td><i>	 * despite there being no NMI active: naughty userspace controls</i></td></tr>
+<tr><th id="1554">1554</th><td><i>	 * RSP at the very beginning of the SYSCALL targets.  We can</i></td></tr>
+<tr><th id="1555">1555</th><td><i>	 * pull a fast one on naughty userspace, though: we program</i></td></tr>
+<tr><th id="1556">1556</th><td><i>	 * SYSCALL to mask DF, so userspace cannot cause DF to be set</i></td></tr>
+<tr><th id="1557">1557</th><td><i>	 * if it controls the kernel's RSP.  We set DF before we clear</i></td></tr>
+<tr><th id="1558">1558</th><td><i>	 * "NMI executing".</i></td></tr>
+<tr><th id="1559">1559</th><td><i>	 */</i></td></tr>
+<tr><th id="1560">1560</th><td>	lea	<var>6</var>*<var>8</var>(%rsp), %rdx</td></tr>
+<tr><th id="1561">1561</th><td>	<i>/* Compare the NMI stack (rdx) with the stack we came from (4*8(%rsp)) */</i></td></tr>
+<tr><th id="1562">1562</th><td>	cmpq	%rdx, <var>4</var>*<var>8</var>(%rsp)</td></tr>
+<tr><th id="1563">1563</th><td>	<i>/* If the stack pointer is above the NMI stack, this is a normal NMI */</i></td></tr>
+<tr><th id="1564">1564</th><td>	ja	first_nmi</td></tr>
+<tr><th id="1565">1565</th><td></td></tr>
+<tr><th id="1566">1566</th><td>	subq	$<a class="macro" href="../include/asm/page_64_types.h.html#19" title="((1 &lt;&lt; 12) &lt;&lt; (0 + 0))" data-ref="_M/EXCEPTION_STKSZ">EXCEPTION_STKSZ</a>, %rdx</td></tr>
+<tr><th id="1567">1567</th><td>	cmpq	%rdx, <var>4</var>*<var>8</var>(%rsp)</td></tr>
+<tr><th id="1568">1568</th><td>	<i>/* If it is below the NMI stack, it is a normal NMI */</i></td></tr>
+<tr><th id="1569">1569</th><td>	jb	first_nmi</td></tr>
+<tr><th id="1570">1570</th><td></td></tr>
+<tr><th id="1571">1571</th><td>	<i>/* Ah, it is within the NMI stack. */</i></td></tr>
+<tr><th id="1572">1572</th><td></td></tr>
+<tr><th id="1573">1573</th><td>	testb	$(<a class="macro" href="../include/uapi/asm/processor-flags.h.html#28" title="((1) &lt;&lt; (10))" data-ref="_M/X86_EFLAGS_DF">X86_EFLAGS_DF</a> &gt;&gt; <var>8</var>), (<var>3</var>*<var>8</var> + <var>1</var>)(%rsp)</td></tr>
+<tr><th id="1574">1574</th><td>	jz	first_nmi	<i>/* RSP was user controlled. */</i></td></tr>
+<tr><th id="1575">1575</th><td></td></tr>
+<tr><th id="1576">1576</th><td>	<i>/* This is a nested NMI. */</i></td></tr>
+<tr><th id="1577">1577</th><td></td></tr>
+<tr><th id="1578">1578</th><td>nested_nmi:</td></tr>
+<tr><th id="1579">1579</th><td>	<i>/*</i></td></tr>
+<tr><th id="1580">1580</th><td><i>	 * Modify the "iret" frame to point to repeat_nmi, forcing another</i></td></tr>
+<tr><th id="1581">1581</th><td><i>	 * iteration of NMI handling.</i></td></tr>
+<tr><th id="1582">1582</th><td><i>	 */</i></td></tr>
+<tr><th id="1583">1583</th><td>	subq	$<var>8</var>, %rsp</td></tr>
+<tr><th id="1584">1584</th><td>	leaq	-<var>10</var>*<var>8</var>(%rsp), %rdx</td></tr>
+<tr><th id="1585">1585</th><td>	pushq	$<a class="macro" href="../include/asm/segment.h.html#204" title="(3*8)" data-ref="_M/__KERNEL_DS">__KERNEL_DS</a></td></tr>
+<tr><th id="1586">1586</th><td>	pushq	%rdx</td></tr>
+<tr><th id="1587">1587</th><td>	pushfq</td></tr>
+<tr><th id="1588">1588</th><td>	pushq	$<a class="macro" href="../include/asm/segment.h.html#203" title="(2*8)" data-ref="_M/__KERNEL_CS">__KERNEL_CS</a></td></tr>
+<tr><th id="1589">1589</th><td>	pushq	$repeat_nmi</td></tr>
+<tr><th id="1590">1590</th><td></td></tr>
+<tr><th id="1591">1591</th><td>	<i>/* Put stack back */</i></td></tr>
+<tr><th id="1592">1592</th><td>	addq	$(<var>6</var>*<var>8</var>), %rsp</td></tr>
+<tr><th id="1593">1593</th><td></td></tr>
+<tr><th id="1594">1594</th><td>nested_nmi_out:</td></tr>
+<tr><th id="1595">1595</th><td>	popq	%rdx</td></tr>
+<tr><th id="1596">1596</th><td></td></tr>
+<tr><th id="1597">1597</th><td>	<i>/* We are returning to kernel mode, so this cannot result in a fault. */</i></td></tr>
+<tr><th id="1598">1598</th><td>	iretq</td></tr>
+<tr><th id="1599">1599</th><td></td></tr>
+<tr><th id="1600">1600</th><td>first_nmi:</td></tr>
+<tr><th id="1601">1601</th><td>	<i>/* Restore rdx. */</i></td></tr>
+<tr><th id="1602">1602</th><td>	movq	(%rsp), %rdx</td></tr>
+<tr><th id="1603">1603</th><td></td></tr>
+<tr><th id="1604">1604</th><td>	<i>/* Make room for "NMI executing". */</i></td></tr>
+<tr><th id="1605">1605</th><td>	pushq	$<var>0</var></td></tr>
+<tr><th id="1606">1606</th><td></td></tr>
+<tr><th id="1607">1607</th><td>	<i>/* Leave room for the "iret" frame */</i></td></tr>
+<tr><th id="1608">1608</th><td>	subq	$(<var>5</var>*<var>8</var>), %rsp</td></tr>
+<tr><th id="1609">1609</th><td></td></tr>
+<tr><th id="1610">1610</th><td>	<i>/* Copy the "original" frame to the "outermost" frame */</i></td></tr>
+<tr><th id="1611">1611</th><td>	.rept <var>5</var></td></tr>
+<tr><th id="1612">1612</th><td>	pushq	<var>11</var>*<var>8</var>(%rsp)</td></tr>
+<tr><th id="1613">1613</th><td>	.endr</td></tr>
+<tr><th id="1614">1614</th><td>	UNWIND_HINT_IRET_REGS</td></tr>
+<tr><th id="1615">1615</th><td></td></tr>
+<tr><th id="1616">1616</th><td>	<i>/* Everything up to here is safe from nested NMIs */</i></td></tr>
+<tr><th id="1617">1617</th><td></td></tr>
+<tr><th id="1618">1618</th><td><u>#<span data-ppcond="1618">ifdef</span> <span class="macro" data-ref="_M/CONFIG_DEBUG_ENTRY">CONFIG_DEBUG_ENTRY</span></u></td></tr>
+<tr><th id="1619">1619</th><td>	<i>/*</i></td></tr>
+<tr><th id="1620">1620</th><td><i>	 * For ease of testing, unmask NMIs right away.  Disabled by</i></td></tr>
+<tr><th id="1621">1621</th><td><i>	 * default because IRET is very expensive.</i></td></tr>
+<tr><th id="1622">1622</th><td><i>	 */</i></td></tr>
+<tr><th id="1623">1623</th><td>	pushq	$<var>0</var>		<i>/* SS */</i></td></tr>
+<tr><th id="1624">1624</th><td>	pushq	%rsp		<i>/* RSP (minus 8 because of the previous push) */</i></td></tr>
+<tr><th id="1625">1625</th><td>	addq	$<var>8</var>, (%rsp)	<i>/* Fix up RSP */</i></td></tr>
+<tr><th id="1626">1626</th><td>	pushfq			<i>/* RFLAGS */</i></td></tr>
+<tr><th id="1627">1627</th><td>	pushq	$__KERNEL_CS	<i>/* CS */</i></td></tr>
+<tr><th id="1628">1628</th><td>	pushq	$<var>1f</var>		<i>/* RIP */</i></td></tr>
+<tr><th id="1629">1629</th><td>	iretq			<i>/* continues at repeat_nmi below */</i></td></tr>
+<tr><th id="1630">1630</th><td>	UNWIND_HINT_IRET_REGS</td></tr>
+<tr><th id="1631">1631</th><td><var>1</var>:</td></tr>
+<tr><th id="1632">1632</th><td><u>#<span data-ppcond="1618">endif</span></u></td></tr>
+<tr><th id="1633">1633</th><td></td></tr>
+<tr><th id="1634">1634</th><td>repeat_nmi:</td></tr>
+<tr><th id="1635">1635</th><td>	<i>/*</i></td></tr>
+<tr><th id="1636">1636</th><td><i>	 * If there was a nested NMI, the first NMI's iret will return</i></td></tr>
+<tr><th id="1637">1637</th><td><i>	 * here. But NMIs are still enabled and we can take another</i></td></tr>
+<tr><th id="1638">1638</th><td><i>	 * nested NMI. The nested NMI checks the interrupted RIP to see</i></td></tr>
+<tr><th id="1639">1639</th><td><i>	 * if it is between repeat_nmi and end_repeat_nmi, and if so</i></td></tr>
+<tr><th id="1640">1640</th><td><i>	 * it will just return, as we are about to repeat an NMI anyway.</i></td></tr>
+<tr><th id="1641">1641</th><td><i>	 * This makes it safe to copy to the stack frame that a nested</i></td></tr>
+<tr><th id="1642">1642</th><td><i>	 * NMI will update.</i></td></tr>
+<tr><th id="1643">1643</th><td><i>	 *</i></td></tr>
+<tr><th id="1644">1644</th><td><i>	 * RSP is pointing to "outermost RIP".  gsbase is unknown, but, if</i></td></tr>
+<tr><th id="1645">1645</th><td><i>	 * we're repeating an NMI, gsbase has the same value that it had on</i></td></tr>
+<tr><th id="1646">1646</th><td><i>	 * the first iteration.  paranoid_entry will load the kernel</i></td></tr>
+<tr><th id="1647">1647</th><td><i>	 * gsbase if needed before we call do_nmi.  "NMI executing"</i></td></tr>
+<tr><th id="1648">1648</th><td><i>	 * is zero.</i></td></tr>
+<tr><th id="1649">1649</th><td><i>	 */</i></td></tr>
+<tr><th id="1650">1650</th><td>	movq	$<var>1</var>, <var>10</var>*<var>8</var>(%rsp)		<i>/* Set "NMI executing". */</i></td></tr>
+<tr><th id="1651">1651</th><td></td></tr>
+<tr><th id="1652">1652</th><td>	<i>/*</i></td></tr>
+<tr><th id="1653">1653</th><td><i>	 * Copy the "outermost" frame to the "iret" frame.  NMIs that nest</i></td></tr>
+<tr><th id="1654">1654</th><td><i>	 * here must not modify the "iret" frame while we're writing to</i></td></tr>
+<tr><th id="1655">1655</th><td><i>	 * it or it will end up containing garbage.</i></td></tr>
+<tr><th id="1656">1656</th><td><i>	 */</i></td></tr>
+<tr><th id="1657">1657</th><td>	addq	$(<var>10</var>*<var>8</var>), %rsp</td></tr>
+<tr><th id="1658">1658</th><td>	.rept <var>5</var></td></tr>
+<tr><th id="1659">1659</th><td>	pushq	-<var>6</var>*<var>8</var>(%rsp)</td></tr>
+<tr><th id="1660">1660</th><td>	.endr</td></tr>
+<tr><th id="1661">1661</th><td>	subq	$(<var>5</var>*<var>8</var>), %rsp</td></tr>
+<tr><th id="1662">1662</th><td>end_repeat_nmi:</td></tr>
+<tr><th id="1663">1663</th><td></td></tr>
+<tr><th id="1664">1664</th><td>	<i>/*</i></td></tr>
+<tr><th id="1665">1665</th><td><i>	 * Everything below this point can be preempted by a nested NMI.</i></td></tr>
+<tr><th id="1666">1666</th><td><i>	 * If this happens, then the inner NMI will change the "iret"</i></td></tr>
+<tr><th id="1667">1667</th><td><i>	 * frame to point back to repeat_nmi.</i></td></tr>
+<tr><th id="1668">1668</th><td><i>	 */</i></td></tr>
+<tr><th id="1669">1669</th><td>	pushq	$-<var>1</var>				<i>/* ORIG_RAX: no syscall to restart */</i></td></tr>
+<tr><th id="1670">1670</th><td></td></tr>
+<tr><th id="1671">1671</th><td>	<i>/*</i></td></tr>
+<tr><th id="1672">1672</th><td><i>	 * Use paranoid_entry to handle SWAPGS, but no need to use paranoid_exit</i></td></tr>
+<tr><th id="1673">1673</th><td><i>	 * as we should not be calling schedule in NMI context.</i></td></tr>
+<tr><th id="1674">1674</th><td><i>	 * Even with normal interrupts enabled. An NMI should not be</i></td></tr>
+<tr><th id="1675">1675</th><td><i>	 * setting NEED_RESCHED or anything that normal interrupts and</i></td></tr>
+<tr><th id="1676">1676</th><td><i>	 * exceptions might do.</i></td></tr>
+<tr><th id="1677">1677</th><td><i>	 */</i></td></tr>
+<tr><th id="1678">1678</th><td>	call	paranoid_entry</td></tr>
+<tr><th id="1679">1679</th><td>	UNWIND_HINT_REGS</td></tr>
+<tr><th id="1680">1680</th><td></td></tr>
+<tr><th id="1681">1681</th><td>	<i>/* paranoidentry do_nmi, 0; without TRACE_IRQS_OFF */</i></td></tr>
+<tr><th id="1682">1682</th><td>	movq	%rsp, %rdi</td></tr>
+<tr><th id="1683">1683</th><td>	movq	$-<var>1</var>, %rsi</td></tr>
+<tr><th id="1684">1684</th><td>	call	do_nmi</td></tr>
+<tr><th id="1685">1685</th><td></td></tr>
+<tr><th id="1686">1686</th><td>	<i>/* Always restore stashed CR3 value (see paranoid_entry) */</i></td></tr>
+<tr><th id="1687">1687</th><td>	RESTORE_CR3 scratch_reg=%r15 save_reg=%r14</td></tr>
+<tr><th id="1688">1688</th><td></td></tr>
+<tr><th id="1689">1689</th><td>	testl	%ebx, %ebx			<i>/* swapgs needed? */</i></td></tr>
+<tr><th id="1690">1690</th><td>	jnz	nmi_restore</td></tr>
+<tr><th id="1691">1691</th><td>nmi_swapgs:</td></tr>
+<tr><th id="1692">1692</th><td>	<a class="macro" href="../include/asm/irqflags.h.html#144" title="swapgs" data-ref="_M/SWAPGS_UNSAFE_STACK">SWAPGS_UNSAFE_STACK</a></td></tr>
+<tr><th id="1693">1693</th><td>nmi_restore:</td></tr>
+<tr><th id="1694">1694</th><td>	POP_REGS</td></tr>
+<tr><th id="1695">1695</th><td></td></tr>
+<tr><th id="1696">1696</th><td>	<i>/*</i></td></tr>
+<tr><th id="1697">1697</th><td><i>	 * Skip orig_ax and the "outermost" frame to point RSP at the "iret"</i></td></tr>
+<tr><th id="1698">1698</th><td><i>	 * at the "iret" frame.</i></td></tr>
+<tr><th id="1699">1699</th><td><i>	 */</i></td></tr>
+<tr><th id="1700">1700</th><td>	addq	$<var>6</var>*<var>8</var>, %rsp</td></tr>
+<tr><th id="1701">1701</th><td></td></tr>
+<tr><th id="1702">1702</th><td>	<i>/*</i></td></tr>
+<tr><th id="1703">1703</th><td><i>	 * Clear "NMI executing".  Set DF first so that we can easily</i></td></tr>
+<tr><th id="1704">1704</th><td><i>	 * distinguish the remaining code between here and IRET from</i></td></tr>
+<tr><th id="1705">1705</th><td><i>	 * the SYSCALL entry and exit paths.</i></td></tr>
+<tr><th id="1706">1706</th><td><i>	 *</i></td></tr>
+<tr><th id="1707">1707</th><td><i>	 * We arguably should just inspect RIP instead, but I (Andy) wrote</i></td></tr>
+<tr><th id="1708">1708</th><td><i>	 * this code when I had the misapprehension that Xen PV supported</i></td></tr>
+<tr><th id="1709">1709</th><td><i>	 * NMIs, and Xen PV would break that approach.</i></td></tr>
+<tr><th id="1710">1710</th><td><i>	 */</i></td></tr>
+<tr><th id="1711">1711</th><td>	std</td></tr>
+<tr><th id="1712">1712</th><td>	movq	$<var>0</var>, <var>5</var>*<var>8</var>(%rsp)		<i>/* clear "NMI executing" */</i></td></tr>
+<tr><th id="1713">1713</th><td></td></tr>
+<tr><th id="1714">1714</th><td>	<i>/*</i></td></tr>
+<tr><th id="1715">1715</th><td><i>	 * iretq reads the "iret" frame and exits the NMI stack in a</i></td></tr>
+<tr><th id="1716">1716</th><td><i>	 * single instruction.  We are returning to kernel mode, so this</i></td></tr>
+<tr><th id="1717">1717</th><td><i>	 * cannot result in a fault.  Similarly, we don't need to worry</i></td></tr>
+<tr><th id="1718">1718</th><td><i>	 * about espfix64 on the way back to kernel mode.</i></td></tr>
+<tr><th id="1719">1719</th><td><i>	 */</i></td></tr>
+<tr><th id="1720">1720</th><td>	iretq</td></tr>
+<tr><th id="1721">1721</th><td><a class="macro" href="../../../include/linux/linkage.h.html#104" title=".size nmi, .-nmi" data-ref="_M/END">END</a>(nmi)</td></tr>
+<tr><th id="1722">1722</th><td></td></tr>
+<tr><th id="1723">1723</th><td><u>#<span data-ppcond="1723">ifndef</span> <a class="macro" href="../../../include/generated/autoconf.h.html#107" data-ref="_M/CONFIG_IA32_EMULATION">CONFIG_IA32_EMULATION</a></u></td></tr>
+<tr><th id="1724">1724</th><td><i>/*</i></td></tr>
+<tr><th id="1725">1725</th><td><i> * This handles SYSCALL from 32-bit code.  There is no way to program</i></td></tr>
+<tr><th id="1726">1726</th><td><i> * MSRs to fully disable 32-bit SYSCALL.</i></td></tr>
+<tr><th id="1727">1727</th><td><i> */</i></td></tr>
+<tr><th id="1728">1728</th><td>ENTRY(ignore_sysret)</td></tr>
+<tr><th id="1729">1729</th><td>	UNWIND_HINT_EMPTY</td></tr>
+<tr><th id="1730">1730</th><td>	mov	$-ENOSYS, %eax</td></tr>
+<tr><th id="1731">1731</th><td>	sysret</td></tr>
+<tr><th id="1732">1732</th><td>END(ignore_sysret)</td></tr>
+<tr><th id="1733">1733</th><td><u>#<span data-ppcond="1723">endif</span></u></td></tr>
+<tr><th id="1734">1734</th><td></td></tr>
+<tr><th id="1735">1735</th><td><a class="macro" href="../../../include/linux/linkage.h.html#89" title=".globl rewind_stack_do_exit ; .p2align 4, 0x90 ; rewind_stack_do_exit:" data-ref="_M/ENTRY">ENTRY</a>(<span class='warning' title="type specifier missing, defaults to &apos;int&apos;"><dfn class="decl def" id="rewind_stack_do_exit" title='rewind_stack_do_exit' data-ref="rewind_stack_do_exit" data-ref-filename="rewind_stack_do_exit">rewind_stack_do_exit</dfn></span>)</td></tr>
+<tr><th id="1736">1736</th><td>	<span class='error' title="unknown type name &apos;UNWIND_HINT_FUNC&apos;">UNWIND_HINT_FUNC</span></td></tr>
+<tr><th id="1737">1737</th><td>	<i>/* Prevent any naive code from trying to unwind to our caller. */</i></td></tr>
+<tr><th id="1738">1738</th><td>	<dfn class="tu decl def" id="xorl" title='xorl' data-type='int' data-ref="xorl" data-ref-filename="xorl">xorl</dfn><span class='error' title="expected &apos;;&apos; after top level declarator"></span>	%ebp, %ebp</td></tr>
+<tr><th id="1739">1739</th><td></td></tr>
+<tr><th id="1740">1740</th><td>	movq	<a class="macro" href="../include/asm/percpu.h.html#31" title="%gs:(cpu_tss_rw + 12)" data-ref="_M/PER_CPU_VAR">PER_CPU_VAR</a>(<a class="macro" href="../include/asm/thread_info.h.html#219" title="(cpu_tss_rw + 12)" data-ref="_M/cpu_current_top_of_stack">cpu_current_top_of_stack</a>), %rax</td></tr>
+<tr><th id="1741">1741</th><td>	leaq	-<a class="macro" href="../../../include/generated/asm-offsets.h.html#76" title="168" data-ref="_M/PTREGS_SIZE">PTREGS_SIZE</a>(%rax), %rsp</td></tr>
+<tr><th id="1742">1742</th><td>	UNWIND_HINT_FUNC sp_offset=<a class="macro" href="../../../include/generated/asm-offsets.h.html#76" title="168" data-ref="_M/PTREGS_SIZE">PTREGS_SIZE</a></td></tr>
+<tr><th id="1743">1743</th><td></td></tr>
+<tr><th id="1744">1744</th><td>	call	do_exit</td></tr>
+<tr><th id="1745">1745</th><td><a class="macro" href="../../../include/linux/linkage.h.html#104" title=".size rewind_stack_do_exit, .-rewind_stack_do_exit" data-ref="_M/END">END</a>(rewind_stack_do_exit)</td></tr>
+<tr><th id="1746">1746</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

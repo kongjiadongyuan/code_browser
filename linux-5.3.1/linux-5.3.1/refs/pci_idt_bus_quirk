@@ -1,0 +1,28 @@
+<dec f='linux-5.3.1/drivers/pci/pci.h' l='244' type='int pci_idt_bus_quirk(struct pci_bus * bus, int devfn, u32 * pl, int crs_timeout)'/>
+<use f='linux-5.3.1/drivers/pci/probe.c' l='2513' u='c' c='pci_bus_read_dev_vendor_id'/>
+<def f='linux-5.3.1/drivers/pci/quirks.c' l='5069' ll='5097' type='int pci_idt_bus_quirk(struct pci_bus * bus, int devfn, u32 * l, int timeout)'/>
+<doc f='linux-5.3.1/drivers/pci/quirks.c' l='5044'>/*
+ * Some IDT switches incorrectly flag an ACS Source Validation error on
+ * completions for config read requests even though PCIe r4.0, sec
+ * 6.12.1.1, says that completions are never affected by ACS Source
+ * Validation.  Here&apos;s the text of IDT 89H32H8G3-YC, erratum #36:
+ *
+ *   Item #36 - Downstream port applies ACS Source Validation to Completions
+ *   Section 6.12.1.1 of the PCI Express Base Specification 3.1 states that
+ *   completions are never affected by ACS Source Validation.  However,
+ *   completions received by a downstream port of the PCIe switch from a
+ *   device that has not yet captured a PCIe bus number are incorrectly
+ *   dropped by ACS Source Validation by the switch downstream port.
+ *
+ * The workaround suggested by IDT is to issue a config write to the
+ * downstream device before issuing the first config read.  This allows the
+ * downstream device to capture its bus and device numbers (see PCIe r4.0,
+ * sec 2.2.9), thus avoiding the ACS error on the completion.
+ *
+ * However, we don&apos;t know when the device is ready to accept the config
+ * write, so we do config reads until we receive a non-Config Request Retry
+ * Status, then do the config write.
+ *
+ * To avoid hitting the erratum when doing the config reads, we disable ACS
+ * SV around this process.
+ */</doc>

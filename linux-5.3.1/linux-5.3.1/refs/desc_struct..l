@@ -1,0 +1,34 @@
+<dec f='linux-5.3.1/arch/x86/include/asm/desc_defs.h' l='20' type='u16'/>
+<use f='linux-5.3.1/arch/x86/include/asm/desc.h' l='40' u='w' c='fill_ldt'/>
+<offset>53</offset>
+<use f='linux-5.3.1/arch/x86/boot/compressed/eboot.c' l='849' u='w' c='efi_main'/>
+<use f='linux-5.3.1/arch/x86/boot/compressed/eboot.c' l='872' u='w' c='efi_main'/>
+<use f='linux-5.3.1/arch/x86/boot/compressed/eboot.c' l='875' u='w' c='efi_main'/>
+<use f='linux-5.3.1/arch/x86/boot/compressed/eboot.c' l='892' u='w' c='efi_main'/>
+<use f='linux-5.3.1/arch/x86/boot/compressed/eboot.c' l='909' u='w' c='efi_main'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/common.c' l='124' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/common.c' l='125' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/common.c' l='126' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/common.c' l='127' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/common.c' l='128' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/common.c' l='129' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/common.c' l='124' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/common.c' l='125' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/common.c' l='126' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/common.c' l='127' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/common.c' l='128' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/common.c' l='129' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/common.c' l='124' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/common.c' l='125' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/common.c' l='126' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/common.c' l='127' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/common.c' l='128' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/common.c' l='129' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/common.c' l='124' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/common.c' l='125' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/common.c' l='126' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/common.c' l='127' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/common.c' l='128' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/cpu/common.c' l='129' macro='1' u='w'/>
+<use f='linux-5.3.1/arch/x86/kernel/tls.c' l='216' u='r' c='fill_user_desc'/>
+<use f='linux-5.3.1/arch/x86/lib/insn-eval.c' l='768' u='r' c='insn_get_code_seg_params'/>

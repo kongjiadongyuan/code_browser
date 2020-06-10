@@ -1,0 +1,494 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>ac.c source code [linux-5.3.1/drivers/acpi/ac.c] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="acpi_ac,acpi_ac_bl "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/drivers/acpi/ac.c'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>drivers</a>/<a href='./'>acpi</a>/<a href='ac.c.html'>ac.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0-or-later</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> *  acpi_ac.c - ACPI AC Adapter Driver ($Revision: 27 $)</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> *  Copyright (C) 2001, 2002 Andy Grover &lt;andrew.grover@intel.com&gt;</i></td></tr>
+<tr><th id="6">6</th><td><i> *  Copyright (C) 2001, 2002 Paul Diefenbaugh &lt;paul.s.diefenbaugh@intel.com&gt;</i></td></tr>
+<tr><th id="7">7</th><td><i> */</i></td></tr>
+<tr><th id="8">8</th><td></td></tr>
+<tr><th id="9">9</th><td><u>#include <a href="../../include/linux/kernel.h.html">&lt;linux/kernel.h&gt;</a></u></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="../../include/linux/module.h.html">&lt;linux/module.h&gt;</a></u></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../../include/linux/slab.h.html">&lt;linux/slab.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td><u>#include <a href="../../include/linux/init.h.html">&lt;linux/init.h&gt;</a></u></td></tr>
+<tr><th id="13">13</th><td><u>#include <a href="../../include/linux/types.h.html">&lt;linux/types.h&gt;</a></u></td></tr>
+<tr><th id="14">14</th><td><u>#include <a href="../../include/linux/dmi.h.html">&lt;linux/dmi.h&gt;</a></u></td></tr>
+<tr><th id="15">15</th><td><u>#include <a href="../../include/linux/delay.h.html">&lt;linux/delay.h&gt;</a></u></td></tr>
+<tr><th id="16">16</th><td><u>#<span data-ppcond="16">ifdef</span> <span class="macro" data-ref="_M/CONFIG_ACPI_PROCFS_POWER">CONFIG_ACPI_PROCFS_POWER</span></u></td></tr>
+<tr><th id="17">17</th><td><u>#include &lt;linux/proc_fs.h&gt;</u></td></tr>
+<tr><th id="18">18</th><td><u>#include &lt;linux/seq_file.h&gt;</u></td></tr>
+<tr><th id="19">19</th><td><u>#<span data-ppcond="16">endif</span></u></td></tr>
+<tr><th id="20">20</th><td><u>#include <a href="../../include/linux/platform_device.h.html">&lt;linux/platform_device.h&gt;</a></u></td></tr>
+<tr><th id="21">21</th><td><u>#include <a href="../../include/linux/power_supply.h.html">&lt;linux/power_supply.h&gt;</a></u></td></tr>
+<tr><th id="22">22</th><td><u>#include <a href="../../include/linux/acpi.h.html">&lt;linux/acpi.h&gt;</a></u></td></tr>
+<tr><th id="23">23</th><td><u>#include <a href="../../include/acpi/battery.h.html">&lt;acpi/battery.h&gt;</a></u></td></tr>
+<tr><th id="24">24</th><td></td></tr>
+<tr><th id="25">25</th><td><u>#define <dfn class="macro" id="_M/PREFIX" data-ref="_M/PREFIX">PREFIX</dfn> "ACPI: "</u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><u>#define <dfn class="macro" id="_M/ACPI_AC_CLASS" data-ref="_M/ACPI_AC_CLASS">ACPI_AC_CLASS</dfn>			"ac_adapter"</u></td></tr>
+<tr><th id="28">28</th><td><u>#define <dfn class="macro" id="_M/ACPI_AC_DEVICE_NAME" data-ref="_M/ACPI_AC_DEVICE_NAME">ACPI_AC_DEVICE_NAME</dfn>		"AC Adapter"</u></td></tr>
+<tr><th id="29">29</th><td><u>#define <dfn class="macro" id="_M/ACPI_AC_FILE_STATE" data-ref="_M/ACPI_AC_FILE_STATE">ACPI_AC_FILE_STATE</dfn>		"state"</u></td></tr>
+<tr><th id="30">30</th><td><u>#define <dfn class="macro" id="_M/ACPI_AC_NOTIFY_STATUS" data-ref="_M/ACPI_AC_NOTIFY_STATUS">ACPI_AC_NOTIFY_STATUS</dfn>		0x80</u></td></tr>
+<tr><th id="31">31</th><td><u>#define <dfn class="macro" id="_M/ACPI_AC_STATUS_OFFLINE" data-ref="_M/ACPI_AC_STATUS_OFFLINE">ACPI_AC_STATUS_OFFLINE</dfn>		0x00</u></td></tr>
+<tr><th id="32">32</th><td><u>#define <dfn class="macro" id="_M/ACPI_AC_STATUS_ONLINE" data-ref="_M/ACPI_AC_STATUS_ONLINE">ACPI_AC_STATUS_ONLINE</dfn>		0x01</u></td></tr>
+<tr><th id="33">33</th><td><u>#define <dfn class="macro" id="_M/ACPI_AC_STATUS_UNKNOWN" data-ref="_M/ACPI_AC_STATUS_UNKNOWN">ACPI_AC_STATUS_UNKNOWN</dfn>		0xFF</u></td></tr>
+<tr><th id="34">34</th><td></td></tr>
+<tr><th id="35">35</th><td><u>#define <dfn class="macro" id="_M/_COMPONENT" data-ref="_M/_COMPONENT">_COMPONENT</dfn>		ACPI_AC_COMPONENT</u></td></tr>
+<tr><th id="36">36</th><td><a class="macro" href="../../include/acpi/acoutput.h.html#181" title="static const char __attribute__ ((unused)) _acpi_module_name[] = &quot;ac&quot;;" data-ref="_M/ACPI_MODULE_NAME">ACPI_MODULE_NAME</a>(<q>"ac"</q>);</td></tr>
+<tr><th id="37">37</th><td></td></tr>
+<tr><th id="38">38</th><td><a class="macro" href="../../include/linux/module.h.html#222" title="static const char __UNIQUE_ID_author28[] __attribute__((__used__)) __attribute__((section(&quot;.modinfo&quot;), unused, aligned(1))) = &quot;ac&quot; &quot;.&quot; &quot;author&quot; &quot;=&quot; &quot;Paul Diefenbaugh&quot;" data-ref="_M/MODULE_AUTHOR">MODULE_AUTHOR</a>(<q>"Paul Diefenbaugh"</q>);</td></tr>
+<tr><th id="39">39</th><td><a class="macro" href="../../include/linux/module.h.html#225" title="static const char __UNIQUE_ID_description30[] __attribute__((__used__)) __attribute__((section(&quot;.modinfo&quot;), unused, aligned(1))) = &quot;ac&quot; &quot;.&quot; &quot;description&quot; &quot;=&quot; &quot;ACPI AC Adapter Driver&quot;" data-ref="_M/MODULE_DESCRIPTION">MODULE_DESCRIPTION</a>(<q>"ACPI AC Adapter Driver"</q>);</td></tr>
+<tr><th id="40">40</th><td><a class="macro" href="../../include/linux/module.h.html#216" title="static const char __UNIQUE_ID_license32[] __attribute__((__used__)) __attribute__((section(&quot;.modinfo&quot;), unused, aligned(1))) = &quot;ac&quot; &quot;.&quot; &quot;license&quot; &quot;=&quot; &quot;GPL&quot;" data-ref="_M/MODULE_LICENSE">MODULE_LICENSE</a>(<q>"GPL"</q>);</td></tr>
+<tr><th id="41">41</th><td></td></tr>
+<tr><th id="42">42</th><td></td></tr>
+<tr><th id="43">43</th><td><em>static</em> <em>int</em> <a class="tu decl fn" href="#acpi_ac_add" title='acpi_ac_add' data-type='int acpi_ac_add(struct acpi_device * device)' data-ref="acpi_ac_add" data-ref-filename="acpi_ac_add">acpi_ac_add</a>(<b>struct</b> <a class="type" href="../../include/acpi/acpi_bus.h.html#acpi_device" title='acpi_device' data-ref="acpi_device" data-ref-filename="acpi_device">acpi_device</a> *<dfn class="local col0 decl" id="160device" title='device' data-type='struct acpi_device *' data-ref="160device" data-ref-filename="160device">device</dfn>);</td></tr>
+<tr><th id="44">44</th><td><em>static</em> <em>int</em> <a class="tu decl fn" href="#acpi_ac_remove" title='acpi_ac_remove' data-type='int acpi_ac_remove(struct acpi_device * device)' data-ref="acpi_ac_remove" data-ref-filename="acpi_ac_remove">acpi_ac_remove</a>(<b>struct</b> <a class="type" href="../../include/acpi/acpi_bus.h.html#acpi_device" title='acpi_device' data-ref="acpi_device" data-ref-filename="acpi_device">acpi_device</a> *<dfn class="local col1 decl" id="161device" title='device' data-type='struct acpi_device *' data-ref="161device" data-ref-filename="161device">device</dfn>);</td></tr>
+<tr><th id="45">45</th><td><em>static</em> <em>void</em> <a class="tu decl fn" href="#acpi_ac_notify" title='acpi_ac_notify' data-type='void acpi_ac_notify(struct acpi_device * device, u32 event)' data-ref="acpi_ac_notify" data-ref-filename="acpi_ac_notify">acpi_ac_notify</a>(<b>struct</b> <a class="type" href="../../include/acpi/acpi_bus.h.html#acpi_device" title='acpi_device' data-ref="acpi_device" data-ref-filename="acpi_device">acpi_device</a> *<dfn class="local col2 decl" id="162device" title='device' data-type='struct acpi_device *' data-ref="162device" data-ref-filename="162device">device</dfn>, <a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col3 decl" id="163event" title='event' data-type='u32' data-ref="163event" data-ref-filename="163event">event</dfn>);</td></tr>
+<tr><th id="46">46</th><td></td></tr>
+<tr><th id="47">47</th><td><b>struct</b> <dfn class="type def" id="acpi_ac_bl" title='acpi_ac_bl' data-ref="acpi_ac_bl" data-ref-filename="acpi_ac_bl">acpi_ac_bl</dfn> {</td></tr>
+<tr><th id="48">48</th><td>	<em>const</em> <em>char</em> *<dfn class="tu decl field" id="acpi_ac_bl::hid" title='acpi_ac_bl::hid' data-type='const char *' data-ref="acpi_ac_bl::hid" data-ref-filename="acpi_ac_bl..hid">hid</dfn>;</td></tr>
+<tr><th id="49">49</th><td>	<em>int</em> <dfn class="tu decl field" id="acpi_ac_bl::hrv" title='acpi_ac_bl::hrv' data-type='int' data-ref="acpi_ac_bl::hrv" data-ref-filename="acpi_ac_bl..hrv">hrv</dfn>;</td></tr>
+<tr><th id="50">50</th><td>};</td></tr>
+<tr><th id="51">51</th><td></td></tr>
+<tr><th id="52">52</th><td><em>static</em> <em>const</em> <b>struct</b> <a class="type" href="../../include/linux/mod_devicetable.h.html#acpi_device_id" title='acpi_device_id' data-ref="acpi_device_id" data-ref-filename="acpi_device_id">acpi_device_id</a> <dfn class="tu decl def" id="ac_device_ids" title='ac_device_ids' data-type='const struct acpi_device_id [2]' data-ref="ac_device_ids" data-ref-filename="ac_device_ids">ac_device_ids</dfn>[] = {</td></tr>
+<tr><th id="53">53</th><td>	{<q>"ACPI0003"</q>, <var>0</var>},</td></tr>
+<tr><th id="54">54</th><td>	{<q>""</q>, <var>0</var>},</td></tr>
+<tr><th id="55">55</th><td>};</td></tr>
+<tr><th id="56">56</th><td><a class="macro" href="../../include/linux/module.h.html#233" title="" data-ref="_M/MODULE_DEVICE_TABLE">MODULE_DEVICE_TABLE</a>(acpi, ac_device_ids);</td></tr>
+<tr><th id="57">57</th><td></td></tr>
+<tr><th id="58">58</th><td><i  data-doc="acpi_ac_blacklist">/* Lists of PMIC ACPI HIDs with an (often better) native charger driver */</i></td></tr>
+<tr><th id="59">59</th><td><em>static</em> <em>const</em> <b>struct</b> <a class="type" href="#acpi_ac_bl" title='acpi_ac_bl' data-ref="acpi_ac_bl" data-ref-filename="acpi_ac_bl">acpi_ac_bl</a> <dfn class="tu decl def" id="acpi_ac_blacklist" title='acpi_ac_blacklist' data-type='const struct acpi_ac_bl [2]' data-ref="acpi_ac_blacklist" data-ref-filename="acpi_ac_blacklist">acpi_ac_blacklist</dfn>[] = {</td></tr>
+<tr><th id="60">60</th><td>	{ <q>"INT33F4"</q>, -<var>1</var> }, <i>/* X-Powers AXP288 PMIC */</i></td></tr>
+<tr><th id="61">61</th><td>	{ <q>"INT34D3"</q>,  <var>3</var> }, <i>/* Intel Cherrytrail Whiskey Cove PMIC */</i></td></tr>
+<tr><th id="62">62</th><td>};</td></tr>
+<tr><th id="63">63</th><td></td></tr>
+<tr><th id="64">64</th><td><u>#<span data-ppcond="64">ifdef</span> <a class="macro" href="../../include/generated/autoconf.h.html#663" data-ref="_M/CONFIG_PM_SLEEP">CONFIG_PM_SLEEP</a></u></td></tr>
+<tr><th id="65">65</th><td><em>static</em> <em>int</em> <a class="tu decl fn" href="#acpi_ac_resume" title='acpi_ac_resume' data-type='int acpi_ac_resume(struct device * dev)' data-ref="acpi_ac_resume" data-ref-filename="acpi_ac_resume">acpi_ac_resume</a>(<b>struct</b> <a class="type" href="../../include/linux/device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col4 decl" id="164dev" title='dev' data-type='struct device *' data-ref="164dev" data-ref-filename="164dev">dev</dfn>);</td></tr>
+<tr><th id="66">66</th><td><u>#<span data-ppcond="64">endif</span></u></td></tr>
+<tr><th id="67">67</th><td><em>static</em> <a class="macro" href="../../include/linux/pm.h.html#353" title="const struct dev_pm_ops acpi_ac_pm = { .suspend = ((void *)0), .resume = acpi_ac_resume, .freeze = ((void *)0), .thaw = acpi_ac_resume, .poweroff = ((void *)0), .restore = acpi_ac_resume, }" data-ref="_M/SIMPLE_DEV_PM_OPS">SIMPLE_DEV_PM_OPS</a>(<dfn class="tu decl def" id="acpi_ac_pm" title='acpi_ac_pm' data-type='const struct dev_pm_ops' data-ref="acpi_ac_pm" data-ref-filename="acpi_ac_pm">acpi_ac_pm</dfn>, <a class="macro" href="../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>, <a class="tu ref fn" href="#acpi_ac_resume" title='acpi_ac_resume' data-ref="acpi_ac_resume" data-ref-filename="acpi_ac_resume">acpi_ac_resume</a>);</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td><u>#<span data-ppcond="69">ifdef</span> <span class="macro" data-ref="_M/CONFIG_ACPI_PROCFS_POWER">CONFIG_ACPI_PROCFS_POWER</span></u></td></tr>
+<tr><th id="70">70</th><td><b>extern</b> <b>struct</b> proc_dir_entry *acpi_lock_ac_dir(<em>void</em>);</td></tr>
+<tr><th id="71">71</th><td><b>extern</b> <em>void</em> *acpi_unlock_ac_dir(<b>struct</b> proc_dir_entry *acpi_ac_dir);</td></tr>
+<tr><th id="72">72</th><td><u>#<span data-ppcond="69">endif</span></u></td></tr>
+<tr><th id="73">73</th><td></td></tr>
+<tr><th id="74">74</th><td></td></tr>
+<tr><th id="75">75</th><td><em>static</em> <em>int</em> <dfn class="tu decl def" id="ac_sleep_before_get_state_ms" title='ac_sleep_before_get_state_ms' data-type='int' data-ref="ac_sleep_before_get_state_ms" data-ref-filename="ac_sleep_before_get_state_ms">ac_sleep_before_get_state_ms</dfn>;</td></tr>
+<tr><th id="76">76</th><td><em>static</em> <em>int</em> <dfn class="tu decl def" id="ac_check_pmic" title='ac_check_pmic' data-type='int' data-ref="ac_check_pmic" data-ref-filename="ac_check_pmic">ac_check_pmic</dfn> = <var>1</var>;</td></tr>
+<tr><th id="77">77</th><td></td></tr>
+<tr><th id="78">78</th><td><em>static</em> <b>struct</b> <a class="type" href="../../include/acpi/acpi_bus.h.html#acpi_driver" title='acpi_driver' data-ref="acpi_driver" data-ref-filename="acpi_driver">acpi_driver</a> <dfn class="tu decl def" id="acpi_ac_driver" title='acpi_ac_driver' data-type='struct acpi_driver' data-ref="acpi_ac_driver" data-ref-filename="acpi_ac_driver">acpi_ac_driver</dfn> = {</td></tr>
+<tr><th id="79">79</th><td>	.<a class="ref field" href="../../include/acpi/acpi_bus.h.html#acpi_driver::name" title='acpi_driver::name' data-ref="acpi_driver::name" data-ref-filename="acpi_driver..name">name</a> = <q>"ac"</q>,</td></tr>
+<tr><th id="80">80</th><td>	.<a class="ref field" href="../../include/acpi/acpi_bus.h.html#acpi_driver::class" title='acpi_driver::class' data-ref="acpi_driver::class" data-ref-filename="acpi_driver..class">class</a> = <a class="macro" href="#27" title="&quot;ac_adapter&quot;" data-ref="_M/ACPI_AC_CLASS">ACPI_AC_CLASS</a>,</td></tr>
+<tr><th id="81">81</th><td>	.<a class="ref field" href="../../include/acpi/acpi_bus.h.html#acpi_driver::ids" title='acpi_driver::ids' data-ref="acpi_driver::ids" data-ref-filename="acpi_driver..ids">ids</a> = <a class="tu ref" href="#ac_device_ids" title='ac_device_ids' data-ref="ac_device_ids" data-ref-filename="ac_device_ids">ac_device_ids</a>,</td></tr>
+<tr><th id="82">82</th><td>	.<a class="ref field" href="../../include/acpi/acpi_bus.h.html#acpi_driver::flags" title='acpi_driver::flags' data-ref="acpi_driver::flags" data-ref-filename="acpi_driver..flags">flags</a> = <a class="macro" href="../../include/acpi/acpi_bus.h.html#162" title="0x1" data-ref="_M/ACPI_DRIVER_ALL_NOTIFY_EVENTS">ACPI_DRIVER_ALL_NOTIFY_EVENTS</a>,</td></tr>
+<tr><th id="83">83</th><td>	.<a class="ref field" href="../../include/acpi/acpi_bus.h.html#acpi_driver::ops" title='acpi_driver::ops' data-ref="acpi_driver::ops" data-ref-filename="acpi_driver..ops">ops</a> = {</td></tr>
+<tr><th id="84">84</th><td>		.<a class="ref field" href="../../include/acpi/acpi_bus.h.html#acpi_device_ops::add" title='acpi_device_ops::add' data-ref="acpi_device_ops::add" data-ref-filename="acpi_device_ops..add">add</a> = <a class="tu ref fn" href="#acpi_ac_add" title='acpi_ac_add' data-ref="acpi_ac_add" data-ref-filename="acpi_ac_add">acpi_ac_add</a>,</td></tr>
+<tr><th id="85">85</th><td>		.<a class="ref field" href="../../include/acpi/acpi_bus.h.html#acpi_device_ops::remove" title='acpi_device_ops::remove' data-ref="acpi_device_ops::remove" data-ref-filename="acpi_device_ops..remove">remove</a> = <a class="tu ref fn" href="#acpi_ac_remove" title='acpi_ac_remove' data-ref="acpi_ac_remove" data-ref-filename="acpi_ac_remove">acpi_ac_remove</a>,</td></tr>
+<tr><th id="86">86</th><td>		.<a class="ref field" href="../../include/acpi/acpi_bus.h.html#acpi_device_ops::notify" title='acpi_device_ops::notify' data-ref="acpi_device_ops::notify" data-ref-filename="acpi_device_ops..notify">notify</a> = <a class="tu ref fn" href="#acpi_ac_notify" title='acpi_ac_notify' data-ref="acpi_ac_notify" data-ref-filename="acpi_ac_notify">acpi_ac_notify</a>,</td></tr>
+<tr><th id="87">87</th><td>		},</td></tr>
+<tr><th id="88">88</th><td>	.<a class="ref field" href="../../include/acpi/acpi_bus.h.html#acpi_driver::drv" title='acpi_driver::drv' data-ref="acpi_driver::drv" data-ref-filename="acpi_driver..drv">drv</a>.<a class="ref field" href="../../include/linux/device.h.html#device_driver::pm" title='device_driver::pm' data-ref="device_driver::pm" data-ref-filename="device_driver..pm">pm</a> = &amp;<a class="tu ref" href="#67" title='acpi_ac_pm' data-use='a' data-ref="acpi_ac_pm" data-ref-filename="acpi_ac_pm">acpi_ac_pm</a>,</td></tr>
+<tr><th id="89">89</th><td>};</td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td><b>struct</b> <dfn class="type def" id="acpi_ac" title='acpi_ac' data-ref="acpi_ac" data-ref-filename="acpi_ac">acpi_ac</dfn> {</td></tr>
+<tr><th id="92">92</th><td>	<b>struct</b> <a class="type" href="../../include/linux/power_supply.h.html#power_supply" title='power_supply' data-ref="power_supply" data-ref-filename="power_supply">power_supply</a> *<dfn class="tu decl field" id="acpi_ac::charger" title='acpi_ac::charger' data-type='struct power_supply *' data-ref="acpi_ac::charger" data-ref-filename="acpi_ac..charger">charger</dfn>;</td></tr>
+<tr><th id="93">93</th><td>	<b>struct</b> <a class="type" href="../../include/linux/power_supply.h.html#power_supply_desc" title='power_supply_desc' data-ref="power_supply_desc" data-ref-filename="power_supply_desc">power_supply_desc</a> <dfn class="tu decl field" id="acpi_ac::charger_desc" title='acpi_ac::charger_desc' data-type='struct power_supply_desc' data-ref="acpi_ac::charger_desc" data-ref-filename="acpi_ac..charger_desc">charger_desc</dfn>;</td></tr>
+<tr><th id="94">94</th><td>	<b>struct</b> <a class="type" href="../../include/acpi/acpi_bus.h.html#acpi_device" title='acpi_device' data-ref="acpi_device" data-ref-filename="acpi_device">acpi_device</a> * <dfn class="tu decl field" id="acpi_ac::device" title='acpi_ac::device' data-type='struct acpi_device *' data-ref="acpi_ac::device" data-ref-filename="acpi_ac..device">device</dfn>;</td></tr>
+<tr><th id="95">95</th><td>	<em>unsigned</em> <em>long</em> <em>long</em> <dfn class="tu decl field" id="acpi_ac::state" title='acpi_ac::state' data-type='unsigned long long' data-ref="acpi_ac::state" data-ref-filename="acpi_ac..state">state</dfn>;</td></tr>
+<tr><th id="96">96</th><td>	<b>struct</b> <a class="type" href="../../include/linux/notifier.h.html#notifier_block" title='notifier_block' data-ref="notifier_block" data-ref-filename="notifier_block">notifier_block</a> <dfn class="tu decl field" id="acpi_ac::battery_nb" title='acpi_ac::battery_nb' data-type='struct notifier_block' data-ref="acpi_ac::battery_nb" data-ref-filename="acpi_ac..battery_nb">battery_nb</dfn>;</td></tr>
+<tr><th id="97">97</th><td>};</td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td><u>#define <dfn class="macro" id="_M/to_acpi_ac" data-ref="_M/to_acpi_ac">to_acpi_ac</dfn>(x) <a class="ref fn" href="../../include/linux/power_supply.h.html#power_supply_get_drvdata" title='power_supply_get_drvdata' data-ref="power_supply_get_drvdata" data-ref-filename="power_supply_get_drvdata">power_supply_get_drvdata</a>(x)</u></td></tr>
+<tr><th id="100">100</th><td></td></tr>
+<tr><th id="101">101</th><td><i  data-doc="acpi_ac_get_state">/* --------------------------------------------------------------------------</i></td></tr>
+<tr><th id="102">102</th><td><i  data-doc="acpi_ac_get_state">                               AC Adapter Management</i></td></tr>
+<tr><th id="103">103</th><td><i  data-doc="acpi_ac_get_state">   -------------------------------------------------------------------------- */</i></td></tr>
+<tr><th id="104">104</th><td></td></tr>
+<tr><th id="105">105</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="acpi_ac_get_state" title='acpi_ac_get_state' data-type='int acpi_ac_get_state(struct acpi_ac * ac)' data-ref="acpi_ac_get_state" data-ref-filename="acpi_ac_get_state">acpi_ac_get_state</dfn>(<b>struct</b> <a class="type" href="#acpi_ac" title='acpi_ac' data-ref="acpi_ac" data-ref-filename="acpi_ac">acpi_ac</a> *<dfn class="local col5 decl" id="165ac" title='ac' data-type='struct acpi_ac *' data-ref="165ac" data-ref-filename="165ac">ac</dfn>)</td></tr>
+<tr><th id="106">106</th><td>{</td></tr>
+<tr><th id="107">107</th><td>	<a class="typedef" href="../../include/acpi/actypes.h.html#acpi_status" title='acpi_status' data-type='u32' data-ref="acpi_status" data-ref-filename="acpi_status">acpi_status</a> <dfn class="local col6 decl" id="166status" title='status' data-type='acpi_status' data-ref="166status" data-ref-filename="166status">status</dfn> = <a class="macro" href="../../include/acpi/acexcep.h.html#60" title="(acpi_status) 0x0000" data-ref="_M/AE_OK">AE_OK</a>;</td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td>	<b>if</b> (!<a class="local col5 ref" href="#165ac" title='ac' data-ref="165ac" data-ref-filename="165ac">ac</a>)</td></tr>
+<tr><th id="110">110</th><td>		<b>return</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="111">111</th><td></td></tr>
+<tr><th id="112">112</th><td>	<a class="local col6 ref" href="#166status" title='status' data-ref="166status" data-ref-filename="166status">status</a> = <a class="ref fn" href="../../include/acpi/acpi_bus.h.html#acpi_evaluate_integer" title='acpi_evaluate_integer' data-ref="acpi_evaluate_integer" data-ref-filename="acpi_evaluate_integer">acpi_evaluate_integer</a>(<a class="local col5 ref" href="#165ac" title='ac' data-ref="165ac" data-ref-filename="165ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::device" title='acpi_ac::device' data-use='r' data-ref="acpi_ac::device" data-ref-filename="acpi_ac..device">device</a>-&gt;<a class="ref field" href="../../include/acpi/acpi_bus.h.html#acpi_device::handle" title='acpi_device::handle' data-ref="acpi_device::handle" data-ref-filename="acpi_device..handle">handle</a>, <q>"_PSR"</q>, <a class="macro" href="../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>,</td></tr>
+<tr><th id="113">113</th><td>				       &amp;<a class="local col5 ref" href="#165ac" title='ac' data-ref="165ac" data-ref-filename="165ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::state" title='acpi_ac::state' data-use='a' data-ref="acpi_ac::state" data-ref-filename="acpi_ac..state">state</a>);</td></tr>
+<tr><th id="114">114</th><td>	<b>if</b> (<a class="macro" href="../../include/acpi/acexcep.h.html#58" title="(status)" data-ref="_M/ACPI_FAILURE">ACPI_FAILURE</a>(<a class="local col6 ref" href="#166status" title='status' data-ref="166status" data-ref-filename="166status">status</a>)) {</td></tr>
+<tr><th id="115">115</th><td>		<a class="macro" href="../../include/acpi/acoutput.h.html#204" title="acpi_exception (_acpi_module_name, 115, status, &quot;Error reading AC Adapter state&quot;)" data-ref="_M/ACPI_EXCEPTION">ACPI_EXCEPTION</a>((<a class="macro" href="../../include/acpi/acoutput.h.html#195" title="_acpi_module_name, 115" data-ref="_M/AE_INFO">AE_INFO</a>, <a class="local col6 ref" href="#166status" title='status' data-ref="166status" data-ref-filename="166status">status</a>,</td></tr>
+<tr><th id="116">116</th><td>				<q>"Error reading AC Adapter state"</q>));</td></tr>
+<tr><th id="117">117</th><td>		<a class="local col5 ref" href="#165ac" title='ac' data-ref="165ac" data-ref-filename="165ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::state" title='acpi_ac::state' data-use='w' data-ref="acpi_ac::state" data-ref-filename="acpi_ac..state">state</a> = <a class="macro" href="#33" title="0xFF" data-ref="_M/ACPI_AC_STATUS_UNKNOWN">ACPI_AC_STATUS_UNKNOWN</a>;</td></tr>
+<tr><th id="118">118</th><td>		<b>return</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#23" title="19" data-ref="_M/ENODEV">ENODEV</a>;</td></tr>
+<tr><th id="119">119</th><td>	}</td></tr>
+<tr><th id="120">120</th><td></td></tr>
+<tr><th id="121">121</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="122">122</th><td>}</td></tr>
+<tr><th id="123">123</th><td></td></tr>
+<tr><th id="124">124</th><td><i  data-doc="get_ac_property">/* --------------------------------------------------------------------------</i></td></tr>
+<tr><th id="125">125</th><td><i  data-doc="get_ac_property">                            sysfs I/F</i></td></tr>
+<tr><th id="126">126</th><td><i  data-doc="get_ac_property">   -------------------------------------------------------------------------- */</i></td></tr>
+<tr><th id="127">127</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="get_ac_property" title='get_ac_property' data-type='int get_ac_property(struct power_supply * psy, enum power_supply_property psp, union power_supply_propval * val)' data-ref="get_ac_property" data-ref-filename="get_ac_property">get_ac_property</dfn>(<b>struct</b> <a class="type" href="../../include/linux/power_supply.h.html#power_supply" title='power_supply' data-ref="power_supply" data-ref-filename="power_supply">power_supply</a> *<dfn class="local col7 decl" id="167psy" title='psy' data-type='struct power_supply *' data-ref="167psy" data-ref-filename="167psy">psy</dfn>,</td></tr>
+<tr><th id="128">128</th><td>			   <b>enum</b> <a class="type" href="../../include/linux/power_supply.h.html#power_supply_property" title='power_supply_property' data-ref="power_supply_property" data-ref-filename="power_supply_property">power_supply_property</a> <dfn class="local col8 decl" id="168psp" title='psp' data-type='enum power_supply_property' data-ref="168psp" data-ref-filename="168psp">psp</dfn>,</td></tr>
+<tr><th id="129">129</th><td>			   <b>union</b> <a class="type" href="../../include/linux/power_supply.h.html#power_supply_propval" title='power_supply_propval' data-ref="power_supply_propval" data-ref-filename="power_supply_propval">power_supply_propval</a> *<dfn class="local col9 decl" id="169val" title='val' data-type='union power_supply_propval *' data-ref="169val" data-ref-filename="169val">val</dfn>)</td></tr>
+<tr><th id="130">130</th><td>{</td></tr>
+<tr><th id="131">131</th><td>	<b>struct</b> <a class="type" href="#acpi_ac" title='acpi_ac' data-ref="acpi_ac" data-ref-filename="acpi_ac">acpi_ac</a> *<dfn class="local col0 decl" id="170ac" title='ac' data-type='struct acpi_ac *' data-ref="170ac" data-ref-filename="170ac">ac</dfn> = <a class="macro" href="#99" title="power_supply_get_drvdata(psy)" data-ref="_M/to_acpi_ac">to_acpi_ac</a>(<a class="local col7 ref" href="#167psy" title='psy' data-ref="167psy" data-ref-filename="167psy">psy</a>);</td></tr>
+<tr><th id="132">132</th><td></td></tr>
+<tr><th id="133">133</th><td>	<b>if</b> (!<a class="local col0 ref" href="#170ac" title='ac' data-ref="170ac" data-ref-filename="170ac">ac</a>)</td></tr>
+<tr><th id="134">134</th><td>		<b>return</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#23" title="19" data-ref="_M/ENODEV">ENODEV</a>;</td></tr>
+<tr><th id="135">135</th><td></td></tr>
+<tr><th id="136">136</th><td>	<b>if</b> (<a class="tu ref fn" href="#acpi_ac_get_state" title='acpi_ac_get_state' data-use='c' data-ref="acpi_ac_get_state" data-ref-filename="acpi_ac_get_state">acpi_ac_get_state</a>(<a class="local col0 ref" href="#170ac" title='ac' data-ref="170ac" data-ref-filename="170ac">ac</a>))</td></tr>
+<tr><th id="137">137</th><td>		<b>return</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#23" title="19" data-ref="_M/ENODEV">ENODEV</a>;</td></tr>
+<tr><th id="138">138</th><td></td></tr>
+<tr><th id="139">139</th><td>	<b>switch</b> (<a class="local col8 ref" href="#168psp" title='psp' data-ref="168psp" data-ref-filename="168psp">psp</a>) {</td></tr>
+<tr><th id="140">140</th><td>	<b>case</b> <a class="enum" href="../../include/linux/power_supply.h.html#POWER_SUPPLY_PROP_ONLINE" title='POWER_SUPPLY_PROP_ONLINE' data-ref="POWER_SUPPLY_PROP_ONLINE" data-ref-filename="POWER_SUPPLY_PROP_ONLINE">POWER_SUPPLY_PROP_ONLINE</a>:</td></tr>
+<tr><th id="141">141</th><td>		<a class="local col9 ref" href="#169val" title='val' data-ref="169val" data-ref-filename="169val">val</a>-&gt;<a class="ref field" href="../../include/linux/power_supply.h.html#power_supply_propval::intval" title='power_supply_propval::intval' data-ref="power_supply_propval::intval" data-ref-filename="power_supply_propval..intval">intval</a> = <a class="local col0 ref" href="#170ac" title='ac' data-ref="170ac" data-ref-filename="170ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::state" title='acpi_ac::state' data-use='r' data-ref="acpi_ac::state" data-ref-filename="acpi_ac..state">state</a>;</td></tr>
+<tr><th id="142">142</th><td>		<b>break</b>;</td></tr>
+<tr><th id="143">143</th><td>	<b>default</b>:</td></tr>
+<tr><th id="144">144</th><td>		<b>return</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="145">145</th><td>	}</td></tr>
+<tr><th id="146">146</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="147">147</th><td>}</td></tr>
+<tr><th id="148">148</th><td></td></tr>
+<tr><th id="149">149</th><td><em>static</em> <b>enum</b> <a class="type" href="../../include/linux/power_supply.h.html#power_supply_property" title='power_supply_property' data-ref="power_supply_property" data-ref-filename="power_supply_property">power_supply_property</a> <dfn class="tu decl def" id="ac_props" title='ac_props' data-type='enum power_supply_property [1]' data-ref="ac_props" data-ref-filename="ac_props">ac_props</dfn>[] = {</td></tr>
+<tr><th id="150">150</th><td>	<a class="enum" href="../../include/linux/power_supply.h.html#POWER_SUPPLY_PROP_ONLINE" title='POWER_SUPPLY_PROP_ONLINE' data-ref="POWER_SUPPLY_PROP_ONLINE" data-ref-filename="POWER_SUPPLY_PROP_ONLINE">POWER_SUPPLY_PROP_ONLINE</a>,</td></tr>
+<tr><th id="151">151</th><td>};</td></tr>
+<tr><th id="152">152</th><td></td></tr>
+<tr><th id="153">153</th><td><u>#<span data-ppcond="153">ifdef</span> <span class="macro" data-ref="_M/CONFIG_ACPI_PROCFS_POWER">CONFIG_ACPI_PROCFS_POWER</span></u></td></tr>
+<tr><th id="154">154</th><td><i>/* --------------------------------------------------------------------------</i></td></tr>
+<tr><th id="155">155</th><td><i>                              FS Interface (/proc)</i></td></tr>
+<tr><th id="156">156</th><td><i>   -------------------------------------------------------------------------- */</i></td></tr>
+<tr><th id="157">157</th><td></td></tr>
+<tr><th id="158">158</th><td><em>static</em> <b>struct</b> proc_dir_entry *acpi_ac_dir;</td></tr>
+<tr><th id="159">159</th><td></td></tr>
+<tr><th id="160">160</th><td><em>static</em> <em>int</em> acpi_ac_seq_show(<b>struct</b> seq_file *seq, <em>void</em> *offset)</td></tr>
+<tr><th id="161">161</th><td>{</td></tr>
+<tr><th id="162">162</th><td>	<b>struct</b> acpi_ac *ac = seq-&gt;private;</td></tr>
+<tr><th id="163">163</th><td></td></tr>
+<tr><th id="164">164</th><td></td></tr>
+<tr><th id="165">165</th><td>	<b>if</b> (!ac)</td></tr>
+<tr><th id="166">166</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="167">167</th><td></td></tr>
+<tr><th id="168">168</th><td>	<b>if</b> (acpi_ac_get_state(ac)) {</td></tr>
+<tr><th id="169">169</th><td>		seq_puts(seq, <q>"ERROR: Unable to read AC Adapter state\n"</q>);</td></tr>
+<tr><th id="170">170</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="171">171</th><td>	}</td></tr>
+<tr><th id="172">172</th><td></td></tr>
+<tr><th id="173">173</th><td>	seq_puts(seq, <q>"state:                   "</q>);</td></tr>
+<tr><th id="174">174</th><td>	<b>switch</b> (ac-&gt;state) {</td></tr>
+<tr><th id="175">175</th><td>	<b>case</b> ACPI_AC_STATUS_OFFLINE:</td></tr>
+<tr><th id="176">176</th><td>		seq_puts(seq, <q>"off-line\n"</q>);</td></tr>
+<tr><th id="177">177</th><td>		<b>break</b>;</td></tr>
+<tr><th id="178">178</th><td>	<b>case</b> ACPI_AC_STATUS_ONLINE:</td></tr>
+<tr><th id="179">179</th><td>		seq_puts(seq, <q>"on-line\n"</q>);</td></tr>
+<tr><th id="180">180</th><td>		<b>break</b>;</td></tr>
+<tr><th id="181">181</th><td>	<b>default</b>:</td></tr>
+<tr><th id="182">182</th><td>		seq_puts(seq, <q>"unknown\n"</q>);</td></tr>
+<tr><th id="183">183</th><td>		<b>break</b>;</td></tr>
+<tr><th id="184">184</th><td>	}</td></tr>
+<tr><th id="185">185</th><td></td></tr>
+<tr><th id="186">186</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="187">187</th><td>}</td></tr>
+<tr><th id="188">188</th><td></td></tr>
+<tr><th id="189">189</th><td><em>static</em> <em>int</em> acpi_ac_add_fs(<b>struct</b> acpi_ac *ac)</td></tr>
+<tr><th id="190">190</th><td>{</td></tr>
+<tr><th id="191">191</th><td>	<b>struct</b> proc_dir_entry *entry = NULL;</td></tr>
+<tr><th id="192">192</th><td></td></tr>
+<tr><th id="193">193</th><td>	printk(KERN_WARNING PREFIX <q>"Deprecated procfs I/F for AC is loaded,"</q></td></tr>
+<tr><th id="194">194</th><td>			<q>" please retry with CONFIG_ACPI_PROCFS_POWER cleared\n"</q>);</td></tr>
+<tr><th id="195">195</th><td>	<b>if</b> (!acpi_device_dir(ac-&gt;device)) {</td></tr>
+<tr><th id="196">196</th><td>		acpi_device_dir(ac-&gt;device) =</td></tr>
+<tr><th id="197">197</th><td>			proc_mkdir(acpi_device_bid(ac-&gt;device), acpi_ac_dir);</td></tr>
+<tr><th id="198">198</th><td>		<b>if</b> (!acpi_device_dir(ac-&gt;device))</td></tr>
+<tr><th id="199">199</th><td>			<b>return</b> -ENODEV;</td></tr>
+<tr><th id="200">200</th><td>	}</td></tr>
+<tr><th id="201">201</th><td></td></tr>
+<tr><th id="202">202</th><td>	<i>/* 'state' [R] */</i></td></tr>
+<tr><th id="203">203</th><td>	entry = proc_create_single_data(ACPI_AC_FILE_STATE, S_IRUGO,</td></tr>
+<tr><th id="204">204</th><td>			acpi_device_dir(ac-&gt;device), acpi_ac_seq_show, ac);</td></tr>
+<tr><th id="205">205</th><td>	<b>if</b> (!entry)</td></tr>
+<tr><th id="206">206</th><td>		<b>return</b> -ENODEV;</td></tr>
+<tr><th id="207">207</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="208">208</th><td>}</td></tr>
+<tr><th id="209">209</th><td></td></tr>
+<tr><th id="210">210</th><td><em>static</em> <em>int</em> acpi_ac_remove_fs(<b>struct</b> acpi_ac *ac)</td></tr>
+<tr><th id="211">211</th><td>{</td></tr>
+<tr><th id="212">212</th><td></td></tr>
+<tr><th id="213">213</th><td>	<b>if</b> (acpi_device_dir(ac-&gt;device)) {</td></tr>
+<tr><th id="214">214</th><td>		remove_proc_entry(ACPI_AC_FILE_STATE,</td></tr>
+<tr><th id="215">215</th><td>				  acpi_device_dir(ac-&gt;device));</td></tr>
+<tr><th id="216">216</th><td>		remove_proc_entry(acpi_device_bid(ac-&gt;device), acpi_ac_dir);</td></tr>
+<tr><th id="217">217</th><td>		acpi_device_dir(ac-&gt;device) = NULL;</td></tr>
+<tr><th id="218">218</th><td>	}</td></tr>
+<tr><th id="219">219</th><td></td></tr>
+<tr><th id="220">220</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="221">221</th><td>}</td></tr>
+<tr><th id="222">222</th><td><u>#<span data-ppcond="153">endif</span></u></td></tr>
+<tr><th id="223">223</th><td></td></tr>
+<tr><th id="224">224</th><td><i  data-doc="acpi_ac_notify">/* --------------------------------------------------------------------------</i></td></tr>
+<tr><th id="225">225</th><td><i  data-doc="acpi_ac_notify">                                   Driver Model</i></td></tr>
+<tr><th id="226">226</th><td><i  data-doc="acpi_ac_notify">   -------------------------------------------------------------------------- */</i></td></tr>
+<tr><th id="227">227</th><td></td></tr>
+<tr><th id="228">228</th><td><em>static</em> <em>void</em> <dfn class="tu decl def fn" id="acpi_ac_notify" title='acpi_ac_notify' data-type='void acpi_ac_notify(struct acpi_device * device, u32 event)' data-ref="acpi_ac_notify" data-ref-filename="acpi_ac_notify">acpi_ac_notify</dfn>(<b>struct</b> <a class="type" href="../../include/acpi/acpi_bus.h.html#acpi_device" title='acpi_device' data-ref="acpi_device" data-ref-filename="acpi_device">acpi_device</a> *<dfn class="local col1 decl" id="171device" title='device' data-type='struct acpi_device *' data-ref="171device" data-ref-filename="171device">device</dfn>, <a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col2 decl" id="172event" title='event' data-type='u32' data-ref="172event" data-ref-filename="172event">event</dfn>)</td></tr>
+<tr><th id="229">229</th><td>{</td></tr>
+<tr><th id="230">230</th><td>	<b>struct</b> <a class="type" href="#acpi_ac" title='acpi_ac' data-ref="acpi_ac" data-ref-filename="acpi_ac">acpi_ac</a> *<dfn class="local col3 decl" id="173ac" title='ac' data-type='struct acpi_ac *' data-ref="173ac" data-ref-filename="173ac">ac</dfn> = <a class="ref fn" href="../../include/acpi/acpi_bus.h.html#acpi_driver_data" title='acpi_driver_data' data-ref="acpi_driver_data" data-ref-filename="acpi_driver_data">acpi_driver_data</a>(<a class="local col1 ref" href="#171device" title='device' data-ref="171device" data-ref-filename="171device">device</a>);</td></tr>
+<tr><th id="231">231</th><td></td></tr>
+<tr><th id="232">232</th><td>	<b>if</b> (!<a class="local col3 ref" href="#173ac" title='ac' data-ref="173ac" data-ref-filename="173ac">ac</a>)</td></tr>
+<tr><th id="233">233</th><td>		<b>return</b>;</td></tr>
+<tr><th id="234">234</th><td></td></tr>
+<tr><th id="235">235</th><td>	<b>switch</b> (<a class="local col2 ref" href="#172event" title='event' data-ref="172event" data-ref-filename="172event">event</a>) {</td></tr>
+<tr><th id="236">236</th><td>	<b>default</b>:</td></tr>
+<tr><th id="237">237</th><td>		<a class="macro" href="../../include/acpi/acoutput.h.html#436" title="" data-ref="_M/ACPI_DEBUG_PRINT">ACPI_DEBUG_PRINT</a>((ACPI_DB_INFO,</td></tr>
+<tr><th id="238">238</th><td>				  <q>"Unsupported event [0x%x]\n"</q>, event));</td></tr>
+<tr><th id="239">239</th><td>	<i>/* fall through */</i></td></tr>
+<tr><th id="240">240</th><td>	<b>case</b> <a class="macro" href="#30" title="0x80" data-ref="_M/ACPI_AC_NOTIFY_STATUS">ACPI_AC_NOTIFY_STATUS</a>:</td></tr>
+<tr><th id="241">241</th><td>	<b>case</b> <a class="macro" href="../../include/acpi/actypes.h.html#605" title="(u8) 0x00" data-ref="_M/ACPI_NOTIFY_BUS_CHECK">ACPI_NOTIFY_BUS_CHECK</a>:</td></tr>
+<tr><th id="242">242</th><td>	<b>case</b> <a class="macro" href="../../include/acpi/actypes.h.html#606" title="(u8) 0x01" data-ref="_M/ACPI_NOTIFY_DEVICE_CHECK">ACPI_NOTIFY_DEVICE_CHECK</a>:</td></tr>
+<tr><th id="243">243</th><td>		<i>/*</i></td></tr>
+<tr><th id="244">244</th><td><i>		 * A buggy BIOS may notify AC first and then sleep for</i></td></tr>
+<tr><th id="245">245</th><td><i>		 * a specific time before doing actual operations in the</i></td></tr>
+<tr><th id="246">246</th><td><i>		 * EC event handler (_Qxx). This will cause the AC state</i></td></tr>
+<tr><th id="247">247</th><td><i>		 * reported by the ACPI event to be incorrect, so wait for a</i></td></tr>
+<tr><th id="248">248</th><td><i>		 * specific time for the EC event handler to make progress.</i></td></tr>
+<tr><th id="249">249</th><td><i>		 */</i></td></tr>
+<tr><th id="250">250</th><td>		<b>if</b> (<a class="tu ref" href="#ac_sleep_before_get_state_ms" title='ac_sleep_before_get_state_ms' data-use='r' data-ref="ac_sleep_before_get_state_ms" data-ref-filename="ac_sleep_before_get_state_ms">ac_sleep_before_get_state_ms</a> &gt; <var>0</var>)</td></tr>
+<tr><th id="251">251</th><td>			<a class="ref fn" href="../../include/linux/delay.h.html#msleep" title='msleep' data-ref="msleep" data-ref-filename="msleep">msleep</a>(<a class="tu ref" href="#ac_sleep_before_get_state_ms" title='ac_sleep_before_get_state_ms' data-use='r' data-ref="ac_sleep_before_get_state_ms" data-ref-filename="ac_sleep_before_get_state_ms">ac_sleep_before_get_state_ms</a>);</td></tr>
+<tr><th id="252">252</th><td></td></tr>
+<tr><th id="253">253</th><td>		<a class="tu ref fn" href="#acpi_ac_get_state" title='acpi_ac_get_state' data-use='c' data-ref="acpi_ac_get_state" data-ref-filename="acpi_ac_get_state">acpi_ac_get_state</a>(<a class="local col3 ref" href="#173ac" title='ac' data-ref="173ac" data-ref-filename="173ac">ac</a>);</td></tr>
+<tr><th id="254">254</th><td>		<a class="ref fn" href="../../include/acpi/acpi_bus.h.html#acpi_bus_generate_netlink_event" title='acpi_bus_generate_netlink_event' data-ref="acpi_bus_generate_netlink_event" data-ref-filename="acpi_bus_generate_netlink_event">acpi_bus_generate_netlink_event</a>(<a class="local col1 ref" href="#171device" title='device' data-ref="171device" data-ref-filename="171device">device</a>-&gt;<a class="ref field" href="../../include/acpi/acpi_bus.h.html#acpi_device::pnp" title='acpi_device::pnp' data-ref="acpi_device::pnp" data-ref-filename="acpi_device..pnp">pnp</a>.<a class="ref field" href="../../include/acpi/acpi_bus.h.html#acpi_device_pnp::device_class" title='acpi_device_pnp::device_class' data-ref="acpi_device_pnp::device_class" data-ref-filename="acpi_device_pnp..device_class">device_class</a>,</td></tr>
+<tr><th id="255">255</th><td>						  <a class="ref fn" href="../../include/linux/device.h.html#dev_name" title='dev_name' data-ref="dev_name" data-ref-filename="dev_name">dev_name</a>(&amp;<a class="local col1 ref" href="#171device" title='device' data-ref="171device" data-ref-filename="171device">device</a>-&gt;<a class="ref field" href="../../include/acpi/acpi_bus.h.html#acpi_device::dev" title='acpi_device::dev' data-ref="acpi_device::dev" data-ref-filename="acpi_device..dev">dev</a>), <a class="local col2 ref" href="#172event" title='event' data-ref="172event" data-ref-filename="172event">event</a>,</td></tr>
+<tr><th id="256">256</th><td>						  (<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>) <a class="local col3 ref" href="#173ac" title='ac' data-ref="173ac" data-ref-filename="173ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::state" title='acpi_ac::state' data-use='r' data-ref="acpi_ac::state" data-ref-filename="acpi_ac..state">state</a>);</td></tr>
+<tr><th id="257">257</th><td>		<a class="ref fn" href="../../include/acpi/acpi_bus.h.html#acpi_notifier_call_chain" title='acpi_notifier_call_chain' data-ref="acpi_notifier_call_chain" data-ref-filename="acpi_notifier_call_chain">acpi_notifier_call_chain</a>(<a class="local col1 ref" href="#171device" title='device' data-ref="171device" data-ref-filename="171device">device</a>, <a class="local col2 ref" href="#172event" title='event' data-ref="172event" data-ref-filename="172event">event</a>, (<a class="typedef" href="../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>) <a class="local col3 ref" href="#173ac" title='ac' data-ref="173ac" data-ref-filename="173ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::state" title='acpi_ac::state' data-use='r' data-ref="acpi_ac::state" data-ref-filename="acpi_ac..state">state</a>);</td></tr>
+<tr><th id="258">258</th><td>		<a class="ref fn" href="../../include/linux/kobject.h.html#kobject_uevent" title='kobject_uevent' data-ref="kobject_uevent" data-ref-filename="kobject_uevent">kobject_uevent</a>(&amp;<a class="local col3 ref" href="#173ac" title='ac' data-ref="173ac" data-ref-filename="173ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::charger" title='acpi_ac::charger' data-use='r' data-ref="acpi_ac::charger" data-ref-filename="acpi_ac..charger">charger</a>-&gt;<a class="ref field" href="../../include/linux/power_supply.h.html#power_supply::dev" title='power_supply::dev' data-ref="power_supply::dev" data-ref-filename="power_supply..dev">dev</a>.<a class="ref field" href="../../include/linux/device.h.html#device::kobj" title='device::kobj' data-ref="device::kobj" data-ref-filename="device..kobj">kobj</a>, <a class="enum" href="../../include/linux/kobject.h.html#KOBJ_CHANGE" title='KOBJ_CHANGE' data-ref="KOBJ_CHANGE" data-ref-filename="KOBJ_CHANGE">KOBJ_CHANGE</a>);</td></tr>
+<tr><th id="259">259</th><td>	}</td></tr>
+<tr><th id="260">260</th><td></td></tr>
+<tr><th id="261">261</th><td>	<b>return</b>;</td></tr>
+<tr><th id="262">262</th><td>}</td></tr>
+<tr><th id="263">263</th><td></td></tr>
+<tr><th id="264">264</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="acpi_ac_battery_notify" title='acpi_ac_battery_notify' data-type='int acpi_ac_battery_notify(struct notifier_block * nb, unsigned long action, void * data)' data-ref="acpi_ac_battery_notify" data-ref-filename="acpi_ac_battery_notify">acpi_ac_battery_notify</dfn>(<b>struct</b> <a class="type" href="../../include/linux/notifier.h.html#notifier_block" title='notifier_block' data-ref="notifier_block" data-ref-filename="notifier_block">notifier_block</a> *<dfn class="local col4 decl" id="174nb" title='nb' data-type='struct notifier_block *' data-ref="174nb" data-ref-filename="174nb">nb</dfn>,</td></tr>
+<tr><th id="265">265</th><td>				  <em>unsigned</em> <em>long</em> <dfn class="local col5 decl" id="175action" title='action' data-type='unsigned long' data-ref="175action" data-ref-filename="175action">action</dfn>, <em>void</em> *<dfn class="local col6 decl" id="176data" title='data' data-type='void *' data-ref="176data" data-ref-filename="176data">data</dfn>)</td></tr>
+<tr><th id="266">266</th><td>{</td></tr>
+<tr><th id="267">267</th><td>	<b>struct</b> <a class="type" href="#acpi_ac" title='acpi_ac' data-ref="acpi_ac" data-ref-filename="acpi_ac">acpi_ac</a> *<dfn class="local col7 decl" id="177ac" title='ac' data-type='struct acpi_ac *' data-ref="177ac" data-ref-filename="177ac">ac</dfn> = <a class="macro" href="../../include/linux/kernel.h.html#971" title="({ void *__mptr = (void *)(nb); do { extern void __compiletime_assert_267(void) ; if (!(!(!__builtin_types_compatible_p(typeof(*(nb)), typeof(((struct acpi_ac *)0)-&gt;battery_nb)) &amp;&amp; !__builtin_types_compatible_p(typeof(*(nb)), typeof(void))))) __compiletime_assert_267(); } while (0); ((struct acpi_ac *)(__mptr - __builtin_offsetof(struct acpi_ac, battery_nb))); })" data-ref="_M/container_of">container_of</a>(<a class="local col4 ref" href="#174nb" title='nb' data-ref="174nb" data-ref-filename="174nb">nb</a>, <b>struct</b> <a class="type" href="#acpi_ac" title='acpi_ac' data-ref="acpi_ac" data-ref-filename="acpi_ac">acpi_ac</a>, <a class="tu ref field" href="#acpi_ac::battery_nb" title='acpi_ac::battery_nb' data-use='r' data-ref="acpi_ac::battery_nb" data-ref-filename="acpi_ac..battery_nb">battery_nb</a>);</td></tr>
+<tr><th id="268">268</th><td>	<b>struct</b> <a class="type" href="../../include/acpi/acpi_bus.h.html#acpi_bus_event" title='acpi_bus_event' data-ref="acpi_bus_event" data-ref-filename="acpi_bus_event">acpi_bus_event</a> *<dfn class="local col8 decl" id="178event" title='event' data-type='struct acpi_bus_event *' data-ref="178event" data-ref-filename="178event">event</dfn> = (<b>struct</b> <a class="type" href="../../include/acpi/acpi_bus.h.html#acpi_bus_event" title='acpi_bus_event' data-ref="acpi_bus_event" data-ref-filename="acpi_bus_event">acpi_bus_event</a> *)<a class="local col6 ref" href="#176data" title='data' data-ref="176data" data-ref-filename="176data">data</a>;</td></tr>
+<tr><th id="269">269</th><td></td></tr>
+<tr><th id="270">270</th><td>	<i>/*</i></td></tr>
+<tr><th id="271">271</th><td><i>	 * On HP Pavilion dv6-6179er AC status notifications aren't triggered</i></td></tr>
+<tr><th id="272">272</th><td><i>	 * when adapter is plugged/unplugged. However, battery status</i></td></tr>
+<tr><th id="273">273</th><td><i>	 * notifcations are triggered when battery starts charging or</i></td></tr>
+<tr><th id="274">274</th><td><i>	 * discharging. Re-reading AC status triggers lost AC notifications,</i></td></tr>
+<tr><th id="275">275</th><td><i>	 * if AC status has changed.</i></td></tr>
+<tr><th id="276">276</th><td><i>	 */</i></td></tr>
+<tr><th id="277">277</th><td>	<b>if</b> (<a class="ref fn" href="../../arch/x86/include/asm/string_64.h.html#strcmp" title='strcmp' data-ref="strcmp" data-ref-filename="strcmp">strcmp</a>(<a class="local col8 ref" href="#178event" title='event' data-ref="178event" data-ref-filename="178event">event</a>-&gt;<a class="ref field" href="../../include/acpi/acpi_bus.h.html#acpi_bus_event::device_class" title='acpi_bus_event::device_class' data-ref="acpi_bus_event::device_class" data-ref-filename="acpi_bus_event..device_class">device_class</a>, <a class="macro" href="../../include/acpi/battery.h.html#5" title="&quot;battery&quot;" data-ref="_M/ACPI_BATTERY_CLASS">ACPI_BATTERY_CLASS</a>) == <var>0</var> &amp;&amp;</td></tr>
+<tr><th id="278">278</th><td>	    <a class="local col8 ref" href="#178event" title='event' data-ref="178event" data-ref-filename="178event">event</a>-&gt;<a class="ref field" href="../../include/acpi/acpi_bus.h.html#acpi_bus_event::type" title='acpi_bus_event::type' data-ref="acpi_bus_event::type" data-ref-filename="acpi_bus_event..type">type</a> == <a class="macro" href="../../include/acpi/battery.h.html#7" title="0x80" data-ref="_M/ACPI_BATTERY_NOTIFY_STATUS">ACPI_BATTERY_NOTIFY_STATUS</a>)</td></tr>
+<tr><th id="279">279</th><td>		<a class="tu ref fn" href="#acpi_ac_get_state" title='acpi_ac_get_state' data-use='c' data-ref="acpi_ac_get_state" data-ref-filename="acpi_ac_get_state">acpi_ac_get_state</a>(<a class="local col7 ref" href="#177ac" title='ac' data-ref="177ac" data-ref-filename="177ac">ac</a>);</td></tr>
+<tr><th id="280">280</th><td></td></tr>
+<tr><th id="281">281</th><td>	<b>return</b> <a class="macro" href="../../include/linux/notifier.h.html#184" title="0x0001" data-ref="_M/NOTIFY_OK">NOTIFY_OK</a>;</td></tr>
+<tr><th id="282">282</th><td>}</td></tr>
+<tr><th id="283">283</th><td></td></tr>
+<tr><th id="284">284</th><td><em>static</em> <em>int</em> <a class="macro" href="../../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="tu decl def fn" id="thinkpad_e530_quirk" title='thinkpad_e530_quirk' data-type='int thinkpad_e530_quirk(const struct dmi_system_id * d)' data-ref="thinkpad_e530_quirk" data-ref-filename="thinkpad_e530_quirk">thinkpad_e530_quirk</dfn>(<em>const</em> <b>struct</b> <a class="type" href="../../include/linux/mod_devicetable.h.html#dmi_system_id" title='dmi_system_id' data-ref="dmi_system_id" data-ref-filename="dmi_system_id">dmi_system_id</a> *<dfn class="local col9 decl" id="179d" title='d' data-type='const struct dmi_system_id *' data-ref="179d" data-ref-filename="179d">d</dfn>)</td></tr>
+<tr><th id="285">285</th><td>{</td></tr>
+<tr><th id="286">286</th><td>	<a class="tu ref" href="#ac_sleep_before_get_state_ms" title='ac_sleep_before_get_state_ms' data-use='w' data-ref="ac_sleep_before_get_state_ms" data-ref-filename="ac_sleep_before_get_state_ms">ac_sleep_before_get_state_ms</a> = <var>1000</var>;</td></tr>
+<tr><th id="287">287</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="288">288</th><td>}</td></tr>
+<tr><th id="289">289</th><td></td></tr>
+<tr><th id="290">290</th><td><em>static</em> <em>int</em> <a class="macro" href="../../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="tu decl def fn" id="ac_do_not_check_pmic_quirk" title='ac_do_not_check_pmic_quirk' data-type='int ac_do_not_check_pmic_quirk(const struct dmi_system_id * d)' data-ref="ac_do_not_check_pmic_quirk" data-ref-filename="ac_do_not_check_pmic_quirk">ac_do_not_check_pmic_quirk</dfn>(<em>const</em> <b>struct</b> <a class="type" href="../../include/linux/mod_devicetable.h.html#dmi_system_id" title='dmi_system_id' data-ref="dmi_system_id" data-ref-filename="dmi_system_id">dmi_system_id</a> *<dfn class="local col0 decl" id="180d" title='d' data-type='const struct dmi_system_id *' data-ref="180d" data-ref-filename="180d">d</dfn>)</td></tr>
+<tr><th id="291">291</th><td>{</td></tr>
+<tr><th id="292">292</th><td>	<a class="tu ref" href="#ac_check_pmic" title='ac_check_pmic' data-use='w' data-ref="ac_check_pmic" data-ref-filename="ac_check_pmic">ac_check_pmic</a> = <var>0</var>;</td></tr>
+<tr><th id="293">293</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="294">294</th><td>}</td></tr>
+<tr><th id="295">295</th><td></td></tr>
+<tr><th id="296">296</th><td><em>static</em> <em>const</em> <b>struct</b> <a class="type" href="../../include/linux/mod_devicetable.h.html#dmi_system_id" title='dmi_system_id' data-ref="dmi_system_id" data-ref-filename="dmi_system_id">dmi_system_id</a> <dfn class="tu decl def" id="ac_dmi_table" title='ac_dmi_table' data-type='const struct dmi_system_id [4]' data-ref="ac_dmi_table" data-ref-filename="ac_dmi_table">ac_dmi_table</dfn>[]  <a class="macro" href="../../include/linux/init.h.html#52" title="__attribute__((__section__(&quot;.init.rodata&quot;)))" data-ref="_M/__initconst">__initconst</a> = {</td></tr>
+<tr><th id="297">297</th><td>	{</td></tr>
+<tr><th id="298">298</th><td>	<i>/* Thinkpad e530 */</i></td></tr>
+<tr><th id="299">299</th><td>	.<a class="ref field" href="../../include/linux/mod_devicetable.h.html#dmi_system_id::callback" title='dmi_system_id::callback' data-ref="dmi_system_id::callback" data-ref-filename="dmi_system_id..callback">callback</a> = <a class="tu ref fn" href="#thinkpad_e530_quirk" title='thinkpad_e530_quirk' data-ref="thinkpad_e530_quirk" data-ref-filename="thinkpad_e530_quirk">thinkpad_e530_quirk</a>,</td></tr>
+<tr><th id="300">300</th><td>	.<a class="ref field" href="../../include/linux/mod_devicetable.h.html#dmi_system_id::matches" title='dmi_system_id::matches' data-ref="dmi_system_id::matches" data-ref-filename="dmi_system_id..matches">matches</a> = {</td></tr>
+<tr><th id="301">301</th><td>		<a class="macro" href="../../include/linux/mod_devicetable.h.html#576" title="{ .slot = DMI_SYS_VENDOR, .substr = &quot;LENOVO&quot; }" data-ref="_M/DMI_MATCH">DMI_MATCH</a>(<a class="enum" href="../../include/linux/mod_devicetable.h.html#DMI_SYS_VENDOR" title='DMI_SYS_VENDOR' data-ref="DMI_SYS_VENDOR" data-ref-filename="DMI_SYS_VENDOR">DMI_SYS_VENDOR</a>, <q>"LENOVO"</q>),</td></tr>
+<tr><th id="302">302</th><td>		<a class="macro" href="../../include/linux/mod_devicetable.h.html#576" title="{ .slot = DMI_PRODUCT_NAME, .substr = &quot;32597CG&quot; }" data-ref="_M/DMI_MATCH">DMI_MATCH</a>(<a class="enum" href="../../include/linux/mod_devicetable.h.html#DMI_PRODUCT_NAME" title='DMI_PRODUCT_NAME' data-ref="DMI_PRODUCT_NAME" data-ref-filename="DMI_PRODUCT_NAME">DMI_PRODUCT_NAME</a>, <q>"32597CG"</q>),</td></tr>
+<tr><th id="303">303</th><td>		},</td></tr>
+<tr><th id="304">304</th><td>	},</td></tr>
+<tr><th id="305">305</th><td>	{</td></tr>
+<tr><th id="306">306</th><td>		<i>/* ECS EF20EA */</i></td></tr>
+<tr><th id="307">307</th><td>		.<a class="ref field" href="../../include/linux/mod_devicetable.h.html#dmi_system_id::callback" title='dmi_system_id::callback' data-ref="dmi_system_id::callback" data-ref-filename="dmi_system_id..callback">callback</a> = <a class="tu ref fn" href="#ac_do_not_check_pmic_quirk" title='ac_do_not_check_pmic_quirk' data-ref="ac_do_not_check_pmic_quirk" data-ref-filename="ac_do_not_check_pmic_quirk">ac_do_not_check_pmic_quirk</a>,</td></tr>
+<tr><th id="308">308</th><td>		.<a class="ref field" href="../../include/linux/mod_devicetable.h.html#dmi_system_id::matches" title='dmi_system_id::matches' data-ref="dmi_system_id::matches" data-ref-filename="dmi_system_id..matches">matches</a> = {</td></tr>
+<tr><th id="309">309</th><td>			<a class="macro" href="../../include/linux/mod_devicetable.h.html#576" title="{ .slot = DMI_PRODUCT_NAME, .substr = &quot;EF20EA&quot; }" data-ref="_M/DMI_MATCH">DMI_MATCH</a>(<a class="enum" href="../../include/linux/mod_devicetable.h.html#DMI_PRODUCT_NAME" title='DMI_PRODUCT_NAME' data-ref="DMI_PRODUCT_NAME" data-ref-filename="DMI_PRODUCT_NAME">DMI_PRODUCT_NAME</a>, <q>"EF20EA"</q>),</td></tr>
+<tr><th id="310">310</th><td>		},</td></tr>
+<tr><th id="311">311</th><td>	},</td></tr>
+<tr><th id="312">312</th><td>	{</td></tr>
+<tr><th id="313">313</th><td>		<i>/* Lenovo Ideapad Miix 320 */</i></td></tr>
+<tr><th id="314">314</th><td>		.<a class="ref field" href="../../include/linux/mod_devicetable.h.html#dmi_system_id::callback" title='dmi_system_id::callback' data-ref="dmi_system_id::callback" data-ref-filename="dmi_system_id..callback">callback</a> = <a class="tu ref fn" href="#ac_do_not_check_pmic_quirk" title='ac_do_not_check_pmic_quirk' data-ref="ac_do_not_check_pmic_quirk" data-ref-filename="ac_do_not_check_pmic_quirk">ac_do_not_check_pmic_quirk</a>,</td></tr>
+<tr><th id="315">315</th><td>		.<a class="ref field" href="../../include/linux/mod_devicetable.h.html#dmi_system_id::matches" title='dmi_system_id::matches' data-ref="dmi_system_id::matches" data-ref-filename="dmi_system_id..matches">matches</a> = {</td></tr>
+<tr><th id="316">316</th><td>		  <a class="macro" href="../../include/linux/mod_devicetable.h.html#577" title="{ .slot = DMI_SYS_VENDOR, .substr = &quot;LENOVO&quot;, .exact_match = 1 }" data-ref="_M/DMI_EXACT_MATCH">DMI_EXACT_MATCH</a>(<a class="enum" href="../../include/linux/mod_devicetable.h.html#DMI_SYS_VENDOR" title='DMI_SYS_VENDOR' data-ref="DMI_SYS_VENDOR" data-ref-filename="DMI_SYS_VENDOR">DMI_SYS_VENDOR</a>, <q>"LENOVO"</q>),</td></tr>
+<tr><th id="317">317</th><td>		  <a class="macro" href="../../include/linux/mod_devicetable.h.html#577" title="{ .slot = DMI_PRODUCT_NAME, .substr = &quot;80XF&quot;, .exact_match = 1 }" data-ref="_M/DMI_EXACT_MATCH">DMI_EXACT_MATCH</a>(<a class="enum" href="../../include/linux/mod_devicetable.h.html#DMI_PRODUCT_NAME" title='DMI_PRODUCT_NAME' data-ref="DMI_PRODUCT_NAME" data-ref-filename="DMI_PRODUCT_NAME">DMI_PRODUCT_NAME</a>, <q>"80XF"</q>),</td></tr>
+<tr><th id="318">318</th><td>		  <a class="macro" href="../../include/linux/mod_devicetable.h.html#577" title="{ .slot = DMI_PRODUCT_VERSION, .substr = &quot;Lenovo MIIX 320-10ICR&quot;, .exact_match = 1 }" data-ref="_M/DMI_EXACT_MATCH">DMI_EXACT_MATCH</a>(<a class="enum" href="../../include/linux/mod_devicetable.h.html#DMI_PRODUCT_VERSION" title='DMI_PRODUCT_VERSION' data-ref="DMI_PRODUCT_VERSION" data-ref-filename="DMI_PRODUCT_VERSION">DMI_PRODUCT_VERSION</a>, <q>"Lenovo MIIX 320-10ICR"</q>),</td></tr>
+<tr><th id="319">319</th><td>		},</td></tr>
+<tr><th id="320">320</th><td>	},</td></tr>
+<tr><th id="321">321</th><td>	{},</td></tr>
+<tr><th id="322">322</th><td>};</td></tr>
+<tr><th id="323">323</th><td></td></tr>
+<tr><th id="324">324</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="acpi_ac_add" title='acpi_ac_add' data-type='int acpi_ac_add(struct acpi_device * device)' data-ref="acpi_ac_add" data-ref-filename="acpi_ac_add">acpi_ac_add</dfn>(<b>struct</b> <a class="type" href="../../include/acpi/acpi_bus.h.html#acpi_device" title='acpi_device' data-ref="acpi_device" data-ref-filename="acpi_device">acpi_device</a> *<dfn class="local col1 decl" id="181device" title='device' data-type='struct acpi_device *' data-ref="181device" data-ref-filename="181device">device</dfn>)</td></tr>
+<tr><th id="325">325</th><td>{</td></tr>
+<tr><th id="326">326</th><td>	<b>struct</b> <a class="type" href="../../include/linux/power_supply.h.html#power_supply_config" title='power_supply_config' data-ref="power_supply_config" data-ref-filename="power_supply_config">power_supply_config</a> <dfn class="local col2 decl" id="182psy_cfg" title='psy_cfg' data-type='struct power_supply_config' data-ref="182psy_cfg" data-ref-filename="182psy_cfg">psy_cfg</dfn> = {};</td></tr>
+<tr><th id="327">327</th><td>	<em>int</em> <dfn class="local col3 decl" id="183result" title='result' data-type='int' data-ref="183result" data-ref-filename="183result">result</dfn> = <var>0</var>;</td></tr>
+<tr><th id="328">328</th><td>	<b>struct</b> <a class="type" href="#acpi_ac" title='acpi_ac' data-ref="acpi_ac" data-ref-filename="acpi_ac">acpi_ac</a> *<dfn class="local col4 decl" id="184ac" title='ac' data-type='struct acpi_ac *' data-ref="184ac" data-ref-filename="184ac">ac</dfn> = <a class="macro" href="../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="329">329</th><td></td></tr>
+<tr><th id="330">330</th><td></td></tr>
+<tr><th id="331">331</th><td>	<b>if</b> (!<a class="local col1 ref" href="#181device" title='device' data-ref="181device" data-ref-filename="181device">device</a>)</td></tr>
+<tr><th id="332">332</th><td>		<b>return</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="333">333</th><td></td></tr>
+<tr><th id="334">334</th><td>	<a class="local col4 ref" href="#184ac" title='ac' data-ref="184ac" data-ref-filename="184ac">ac</a> = <a class="ref fn" href="../../include/linux/slab.h.html#kzalloc" title='kzalloc' data-ref="kzalloc" data-ref-filename="kzalloc">kzalloc</a>(<b>sizeof</b>(<b>struct</b> <a class="type" href="#acpi_ac" title='acpi_ac' data-ref="acpi_ac" data-ref-filename="acpi_ac">acpi_ac</a>), <a class="macro" href="../../include/linux/gfp.h.html#290" title="((( gfp_t)(0x400u|0x800u)) | (( gfp_t)0x40u) | (( gfp_t)0x80u))" data-ref="_M/GFP_KERNEL">GFP_KERNEL</a>);</td></tr>
+<tr><th id="335">335</th><td>	<b>if</b> (!<a class="local col4 ref" href="#184ac" title='ac' data-ref="184ac" data-ref-filename="184ac">ac</a>)</td></tr>
+<tr><th id="336">336</th><td>		<b>return</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#16" title="12" data-ref="_M/ENOMEM">ENOMEM</a>;</td></tr>
+<tr><th id="337">337</th><td></td></tr>
+<tr><th id="338">338</th><td>	<a class="local col4 ref" href="#184ac" title='ac' data-ref="184ac" data-ref-filename="184ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::device" title='acpi_ac::device' data-use='w' data-ref="acpi_ac::device" data-ref-filename="acpi_ac..device">device</a> = <a class="local col1 ref" href="#181device" title='device' data-ref="181device" data-ref-filename="181device">device</a>;</td></tr>
+<tr><th id="339">339</th><td>	<a class="ref fn" href="../../arch/x86/include/asm/string_64.h.html#strcpy" title='strcpy' data-ref="strcpy" data-ref-filename="strcpy">strcpy</a>(<a class="macro" href="../../include/acpi/acpi_bus.h.html#251" title="((device)-&gt;pnp.device_name)" data-ref="_M/acpi_device_name">acpi_device_name</a>(<a class="local col1 ref" href="#181device" title='device' data-ref="181device" data-ref-filename="181device">device</a>), <a class="macro" href="#28" title="&quot;AC Adapter&quot;" data-ref="_M/ACPI_AC_DEVICE_NAME">ACPI_AC_DEVICE_NAME</a>);</td></tr>
+<tr><th id="340">340</th><td>	<a class="ref fn" href="../../arch/x86/include/asm/string_64.h.html#strcpy" title='strcpy' data-ref="strcpy" data-ref-filename="strcpy">strcpy</a>(<a class="macro" href="../../include/acpi/acpi_bus.h.html#252" title="((device)-&gt;pnp.device_class)" data-ref="_M/acpi_device_class">acpi_device_class</a>(<a class="local col1 ref" href="#181device" title='device' data-ref="181device" data-ref-filename="181device">device</a>), <a class="macro" href="#27" title="&quot;ac_adapter&quot;" data-ref="_M/ACPI_AC_CLASS">ACPI_AC_CLASS</a>);</td></tr>
+<tr><th id="341">341</th><td>	<a class="local col1 ref" href="#181device" title='device' data-ref="181device" data-ref-filename="181device">device</a>-&gt;<a class="ref field" href="../../include/acpi/acpi_bus.h.html#acpi_device::driver_data" title='acpi_device::driver_data' data-ref="acpi_device::driver_data" data-ref-filename="acpi_device..driver_data">driver_data</a> = <a class="local col4 ref" href="#184ac" title='ac' data-ref="184ac" data-ref-filename="184ac">ac</a>;</td></tr>
+<tr><th id="342">342</th><td></td></tr>
+<tr><th id="343">343</th><td>	<a class="local col3 ref" href="#183result" title='result' data-ref="183result" data-ref-filename="183result">result</a> = <a class="tu ref fn" href="#acpi_ac_get_state" title='acpi_ac_get_state' data-use='c' data-ref="acpi_ac_get_state" data-ref-filename="acpi_ac_get_state">acpi_ac_get_state</a>(<a class="local col4 ref" href="#184ac" title='ac' data-ref="184ac" data-ref-filename="184ac">ac</a>);</td></tr>
+<tr><th id="344">344</th><td>	<b>if</b> (<a class="local col3 ref" href="#183result" title='result' data-ref="183result" data-ref-filename="183result">result</a>)</td></tr>
+<tr><th id="345">345</th><td>		<b>goto</b> <a class="lbl" href="#185end" data-ref="185end" data-ref-filename="185end">end</a>;</td></tr>
+<tr><th id="346">346</th><td></td></tr>
+<tr><th id="347">347</th><td>	<a class="local col2 ref" href="#182psy_cfg" title='psy_cfg' data-ref="182psy_cfg" data-ref-filename="182psy_cfg">psy_cfg</a>.<a class="ref field" href="../../include/linux/power_supply.h.html#power_supply_config::drv_data" title='power_supply_config::drv_data' data-ref="power_supply_config::drv_data" data-ref-filename="power_supply_config..drv_data">drv_data</a> = <a class="local col4 ref" href="#184ac" title='ac' data-ref="184ac" data-ref-filename="184ac">ac</a>;</td></tr>
+<tr><th id="348">348</th><td></td></tr>
+<tr><th id="349">349</th><td>	<a class="local col4 ref" href="#184ac" title='ac' data-ref="184ac" data-ref-filename="184ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::charger_desc" title='acpi_ac::charger_desc' data-use='m' data-ref="acpi_ac::charger_desc" data-ref-filename="acpi_ac..charger_desc">charger_desc</a>.<a class="ref field" href="../../include/linux/power_supply.h.html#power_supply_desc::name" title='power_supply_desc::name' data-ref="power_supply_desc::name" data-ref-filename="power_supply_desc..name">name</a> = <a class="macro" href="../../include/acpi/acpi_bus.h.html#247" title="((device)-&gt;pnp.bus_id)" data-ref="_M/acpi_device_bid">acpi_device_bid</a>(<a class="local col1 ref" href="#181device" title='device' data-ref="181device" data-ref-filename="181device">device</a>);</td></tr>
+<tr><th id="350">350</th><td><u>#<span data-ppcond="350">ifdef</span> <span class="macro" data-ref="_M/CONFIG_ACPI_PROCFS_POWER">CONFIG_ACPI_PROCFS_POWER</span></u></td></tr>
+<tr><th id="351">351</th><td>	result = acpi_ac_add_fs(ac);</td></tr>
+<tr><th id="352">352</th><td>	<b>if</b> (result)</td></tr>
+<tr><th id="353">353</th><td>		<b>goto</b> end;</td></tr>
+<tr><th id="354">354</th><td><u>#<span data-ppcond="350">endif</span></u></td></tr>
+<tr><th id="355">355</th><td>	<a class="local col4 ref" href="#184ac" title='ac' data-ref="184ac" data-ref-filename="184ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::charger_desc" title='acpi_ac::charger_desc' data-use='m' data-ref="acpi_ac::charger_desc" data-ref-filename="acpi_ac..charger_desc">charger_desc</a>.<a class="ref field" href="../../include/linux/power_supply.h.html#power_supply_desc::type" title='power_supply_desc::type' data-ref="power_supply_desc::type" data-ref-filename="power_supply_desc..type">type</a> = <a class="enum" href="../../include/linux/power_supply.h.html#POWER_SUPPLY_TYPE_MAINS" title='POWER_SUPPLY_TYPE_MAINS' data-ref="POWER_SUPPLY_TYPE_MAINS" data-ref-filename="POWER_SUPPLY_TYPE_MAINS">POWER_SUPPLY_TYPE_MAINS</a>;</td></tr>
+<tr><th id="356">356</th><td>	<a class="local col4 ref" href="#184ac" title='ac' data-ref="184ac" data-ref-filename="184ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::charger_desc" title='acpi_ac::charger_desc' data-use='m' data-ref="acpi_ac::charger_desc" data-ref-filename="acpi_ac..charger_desc">charger_desc</a>.<a class="ref field" href="../../include/linux/power_supply.h.html#power_supply_desc::properties" title='power_supply_desc::properties' data-ref="power_supply_desc::properties" data-ref-filename="power_supply_desc..properties">properties</a> = <a class="tu ref" href="#ac_props" title='ac_props' data-use='r' data-ref="ac_props" data-ref-filename="ac_props">ac_props</a>;</td></tr>
+<tr><th id="357">357</th><td>	<a class="local col4 ref" href="#184ac" title='ac' data-ref="184ac" data-ref-filename="184ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::charger_desc" title='acpi_ac::charger_desc' data-use='m' data-ref="acpi_ac::charger_desc" data-ref-filename="acpi_ac..charger_desc">charger_desc</a>.<a class="ref field" href="../../include/linux/power_supply.h.html#power_supply_desc::num_properties" title='power_supply_desc::num_properties' data-ref="power_supply_desc::num_properties" data-ref-filename="power_supply_desc..num_properties">num_properties</a> = <a class="macro" href="../../include/linux/kernel.h.html#47" title="(sizeof(ac_props) / sizeof((ac_props)[0]) + (sizeof(struct { int:(-!!(__builtin_types_compatible_p(typeof((ac_props)), typeof(&amp;(ac_props)[0])))); })))" data-ref="_M/ARRAY_SIZE">ARRAY_SIZE</a>(<a class="tu ref" href="#ac_props" title='ac_props' data-use='r' data-ref="ac_props" data-ref-filename="ac_props">ac_props</a>);</td></tr>
+<tr><th id="358">358</th><td>	<a class="local col4 ref" href="#184ac" title='ac' data-ref="184ac" data-ref-filename="184ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::charger_desc" title='acpi_ac::charger_desc' data-use='m' data-ref="acpi_ac::charger_desc" data-ref-filename="acpi_ac..charger_desc">charger_desc</a>.<a class="ref field" href="../../include/linux/power_supply.h.html#power_supply_desc::get_property" title='power_supply_desc::get_property' data-ref="power_supply_desc::get_property" data-ref-filename="power_supply_desc..get_property">get_property</a> = <a class="tu ref fn" href="#get_ac_property" title='get_ac_property' data-use='r' data-ref="get_ac_property" data-ref-filename="get_ac_property">get_ac_property</a>;</td></tr>
+<tr><th id="359">359</th><td>	<a class="local col4 ref" href="#184ac" title='ac' data-ref="184ac" data-ref-filename="184ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::charger" title='acpi_ac::charger' data-use='w' data-ref="acpi_ac::charger" data-ref-filename="acpi_ac..charger">charger</a> = <a class="ref fn" href="../../include/linux/power_supply.h.html#power_supply_register" title='power_supply_register' data-ref="power_supply_register" data-ref-filename="power_supply_register">power_supply_register</a>(&amp;<a class="local col4 ref" href="#184ac" title='ac' data-ref="184ac" data-ref-filename="184ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::device" title='acpi_ac::device' data-use='r' data-ref="acpi_ac::device" data-ref-filename="acpi_ac..device">device</a>-&gt;<a class="ref field" href="../../include/acpi/acpi_bus.h.html#acpi_device::dev" title='acpi_device::dev' data-ref="acpi_device::dev" data-ref-filename="acpi_device..dev">dev</a>,</td></tr>
+<tr><th id="360">360</th><td>					    &amp;<a class="local col4 ref" href="#184ac" title='ac' data-ref="184ac" data-ref-filename="184ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::charger_desc" title='acpi_ac::charger_desc' data-use='a' data-ref="acpi_ac::charger_desc" data-ref-filename="acpi_ac..charger_desc">charger_desc</a>, &amp;<a class="local col2 ref" href="#182psy_cfg" title='psy_cfg' data-ref="182psy_cfg" data-ref-filename="182psy_cfg">psy_cfg</a>);</td></tr>
+<tr><th id="361">361</th><td>	<b>if</b> (<a class="ref fn" href="../../include/linux/err.h.html#IS_ERR" title='IS_ERR' data-ref="IS_ERR" data-ref-filename="IS_ERR">IS_ERR</a>(<a class="local col4 ref" href="#184ac" title='ac' data-ref="184ac" data-ref-filename="184ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::charger" title='acpi_ac::charger' data-use='r' data-ref="acpi_ac::charger" data-ref-filename="acpi_ac..charger">charger</a>)) {</td></tr>
+<tr><th id="362">362</th><td>		<a class="local col3 ref" href="#183result" title='result' data-ref="183result" data-ref-filename="183result">result</a> = <a class="ref fn" href="../../include/linux/err.h.html#PTR_ERR" title='PTR_ERR' data-ref="PTR_ERR" data-ref-filename="PTR_ERR">PTR_ERR</a>(<a class="local col4 ref" href="#184ac" title='ac' data-ref="184ac" data-ref-filename="184ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::charger" title='acpi_ac::charger' data-use='r' data-ref="acpi_ac::charger" data-ref-filename="acpi_ac..charger">charger</a>);</td></tr>
+<tr><th id="363">363</th><td>		<b>goto</b> <a class="lbl" href="#185end" data-ref="185end" data-ref-filename="185end">end</a>;</td></tr>
+<tr><th id="364">364</th><td>	}</td></tr>
+<tr><th id="365">365</th><td></td></tr>
+<tr><th id="366">366</th><td>	<a class="ref fn" href="../../include/linux/printk.h.html#printk" title='printk' data-ref="printk" data-ref-filename="printk">printk</a>(<a class="macro" href="../../include/linux/kern_levels.h.html#14" title="&quot;\001&quot; &quot;6&quot;" data-ref="_M/KERN_INFO">KERN_INFO</a> <a class="macro" href="#25" title="&quot;ACPI: &quot;" data-ref="_M/PREFIX">PREFIX</a> <q>"%s [%s] (%s)\n"</q>,</td></tr>
+<tr><th id="367">367</th><td>	       <a class="macro" href="../../include/acpi/acpi_bus.h.html#251" title="((device)-&gt;pnp.device_name)" data-ref="_M/acpi_device_name">acpi_device_name</a>(<a class="local col1 ref" href="#181device" title='device' data-ref="181device" data-ref-filename="181device">device</a>), <a class="macro" href="../../include/acpi/acpi_bus.h.html#247" title="((device)-&gt;pnp.bus_id)" data-ref="_M/acpi_device_bid">acpi_device_bid</a>(<a class="local col1 ref" href="#181device" title='device' data-ref="181device" data-ref-filename="181device">device</a>),</td></tr>
+<tr><th id="368">368</th><td>	       <a class="local col4 ref" href="#184ac" title='ac' data-ref="184ac" data-ref-filename="184ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::state" title='acpi_ac::state' data-use='r' data-ref="acpi_ac::state" data-ref-filename="acpi_ac..state">state</a> ? <q>"on-line"</q> : <q>"off-line"</q>);</td></tr>
+<tr><th id="369">369</th><td></td></tr>
+<tr><th id="370">370</th><td>	<a class="local col4 ref" href="#184ac" title='ac' data-ref="184ac" data-ref-filename="184ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::battery_nb" title='acpi_ac::battery_nb' data-use='m' data-ref="acpi_ac::battery_nb" data-ref-filename="acpi_ac..battery_nb">battery_nb</a>.<a class="ref field" href="../../include/linux/notifier.h.html#notifier_block::notifier_call" title='notifier_block::notifier_call' data-ref="notifier_block::notifier_call" data-ref-filename="notifier_block..notifier_call">notifier_call</a> = <a class="tu ref fn" href="#acpi_ac_battery_notify" title='acpi_ac_battery_notify' data-use='r' data-ref="acpi_ac_battery_notify" data-ref-filename="acpi_ac_battery_notify">acpi_ac_battery_notify</a>;</td></tr>
+<tr><th id="371">371</th><td>	<a class="ref fn" href="../../include/acpi/acpi_bus.h.html#register_acpi_notifier" title='register_acpi_notifier' data-ref="register_acpi_notifier" data-ref-filename="register_acpi_notifier">register_acpi_notifier</a>(&amp;<a class="local col4 ref" href="#184ac" title='ac' data-ref="184ac" data-ref-filename="184ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::battery_nb" title='acpi_ac::battery_nb' data-use='a' data-ref="acpi_ac::battery_nb" data-ref-filename="acpi_ac..battery_nb">battery_nb</a>);</td></tr>
+<tr><th id="372">372</th><td><dfn class="lbl" id="185end" data-ref="185end" data-ref-filename="185end">end</dfn>:</td></tr>
+<tr><th id="373">373</th><td>	<b>if</b> (<a class="local col3 ref" href="#183result" title='result' data-ref="183result" data-ref-filename="183result">result</a>) {</td></tr>
+<tr><th id="374">374</th><td><u>#<span data-ppcond="374">ifdef</span> <span class="macro" data-ref="_M/CONFIG_ACPI_PROCFS_POWER">CONFIG_ACPI_PROCFS_POWER</span></u></td></tr>
+<tr><th id="375">375</th><td>		acpi_ac_remove_fs(ac);</td></tr>
+<tr><th id="376">376</th><td><u>#<span data-ppcond="374">endif</span></u></td></tr>
+<tr><th id="377">377</th><td>		<a class="ref fn" href="../../include/linux/slab.h.html#kfree" title='kfree' data-ref="kfree" data-ref-filename="kfree">kfree</a>(<a class="local col4 ref" href="#184ac" title='ac' data-ref="184ac" data-ref-filename="184ac">ac</a>);</td></tr>
+<tr><th id="378">378</th><td>	}</td></tr>
+<tr><th id="379">379</th><td></td></tr>
+<tr><th id="380">380</th><td>	<b>return</b> <a class="local col3 ref" href="#183result" title='result' data-ref="183result" data-ref-filename="183result">result</a>;</td></tr>
+<tr><th id="381">381</th><td>}</td></tr>
+<tr><th id="382">382</th><td></td></tr>
+<tr><th id="383">383</th><td><u>#<span data-ppcond="383">ifdef</span> <a class="macro" href="../../include/generated/autoconf.h.html#663" data-ref="_M/CONFIG_PM_SLEEP">CONFIG_PM_SLEEP</a></u></td></tr>
+<tr><th id="384">384</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="acpi_ac_resume" title='acpi_ac_resume' data-type='int acpi_ac_resume(struct device * dev)' data-ref="acpi_ac_resume" data-ref-filename="acpi_ac_resume">acpi_ac_resume</dfn>(<b>struct</b> <a class="type" href="../../include/linux/device.h.html#device" title='device' data-ref="device" data-ref-filename="device">device</a> *<dfn class="local col6 decl" id="186dev" title='dev' data-type='struct device *' data-ref="186dev" data-ref-filename="186dev">dev</dfn>)</td></tr>
+<tr><th id="385">385</th><td>{</td></tr>
+<tr><th id="386">386</th><td>	<b>struct</b> <a class="type" href="#acpi_ac" title='acpi_ac' data-ref="acpi_ac" data-ref-filename="acpi_ac">acpi_ac</a> *<dfn class="local col7 decl" id="187ac" title='ac' data-type='struct acpi_ac *' data-ref="187ac" data-ref-filename="187ac">ac</dfn>;</td></tr>
+<tr><th id="387">387</th><td>	<em>unsigned</em> <dfn class="local col8 decl" id="188old_state" title='old_state' data-type='unsigned int' data-ref="188old_state" data-ref-filename="188old_state">old_state</dfn>;</td></tr>
+<tr><th id="388">388</th><td></td></tr>
+<tr><th id="389">389</th><td>	<b>if</b> (!<a class="local col6 ref" href="#186dev" title='dev' data-ref="186dev" data-ref-filename="186dev">dev</a>)</td></tr>
+<tr><th id="390">390</th><td>		<b>return</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="391">391</th><td></td></tr>
+<tr><th id="392">392</th><td>	<a class="local col7 ref" href="#187ac" title='ac' data-ref="187ac" data-ref-filename="187ac">ac</a> = <a class="ref fn" href="../../include/acpi/acpi_bus.h.html#acpi_driver_data" title='acpi_driver_data' data-ref="acpi_driver_data" data-ref-filename="acpi_driver_data">acpi_driver_data</a>(<a class="macro" href="../../include/acpi/acpi_bus.h.html#450" title="({ void *__mptr = (void *)(dev); do { extern void __compiletime_assert_392(void) ; if (!(!(!__builtin_types_compatible_p(typeof(*(dev)), typeof(((struct acpi_device *)0)-&gt;dev)) &amp;&amp; !__builtin_types_compatible_p(typeof(*(dev)), typeof(void))))) __compiletime_assert_392(); } while (0); ((struct acpi_device *)(__mptr - __builtin_offsetof(struct acpi_device, dev))); })" data-ref="_M/to_acpi_device">to_acpi_device</a>(<a class="local col6 ref" href="#186dev" title='dev' data-ref="186dev" data-ref-filename="186dev">dev</a>));</td></tr>
+<tr><th id="393">393</th><td>	<b>if</b> (!<a class="local col7 ref" href="#187ac" title='ac' data-ref="187ac" data-ref-filename="187ac">ac</a>)</td></tr>
+<tr><th id="394">394</th><td>		<b>return</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="395">395</th><td></td></tr>
+<tr><th id="396">396</th><td>	<a class="local col8 ref" href="#188old_state" title='old_state' data-ref="188old_state" data-ref-filename="188old_state">old_state</a> = <a class="local col7 ref" href="#187ac" title='ac' data-ref="187ac" data-ref-filename="187ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::state" title='acpi_ac::state' data-use='r' data-ref="acpi_ac::state" data-ref-filename="acpi_ac..state">state</a>;</td></tr>
+<tr><th id="397">397</th><td>	<b>if</b> (<a class="tu ref fn" href="#acpi_ac_get_state" title='acpi_ac_get_state' data-use='c' data-ref="acpi_ac_get_state" data-ref-filename="acpi_ac_get_state">acpi_ac_get_state</a>(<a class="local col7 ref" href="#187ac" title='ac' data-ref="187ac" data-ref-filename="187ac">ac</a>))</td></tr>
+<tr><th id="398">398</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="399">399</th><td>	<b>if</b> (<a class="local col8 ref" href="#188old_state" title='old_state' data-ref="188old_state" data-ref-filename="188old_state">old_state</a> != <a class="local col7 ref" href="#187ac" title='ac' data-ref="187ac" data-ref-filename="187ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::state" title='acpi_ac::state' data-use='r' data-ref="acpi_ac::state" data-ref-filename="acpi_ac..state">state</a>)</td></tr>
+<tr><th id="400">400</th><td>		<a class="ref fn" href="../../include/linux/kobject.h.html#kobject_uevent" title='kobject_uevent' data-ref="kobject_uevent" data-ref-filename="kobject_uevent">kobject_uevent</a>(&amp;<a class="local col7 ref" href="#187ac" title='ac' data-ref="187ac" data-ref-filename="187ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::charger" title='acpi_ac::charger' data-use='r' data-ref="acpi_ac::charger" data-ref-filename="acpi_ac..charger">charger</a>-&gt;<a class="ref field" href="../../include/linux/power_supply.h.html#power_supply::dev" title='power_supply::dev' data-ref="power_supply::dev" data-ref-filename="power_supply..dev">dev</a>.<a class="ref field" href="../../include/linux/device.h.html#device::kobj" title='device::kobj' data-ref="device::kobj" data-ref-filename="device..kobj">kobj</a>, <a class="enum" href="../../include/linux/kobject.h.html#KOBJ_CHANGE" title='KOBJ_CHANGE' data-ref="KOBJ_CHANGE" data-ref-filename="KOBJ_CHANGE">KOBJ_CHANGE</a>);</td></tr>
+<tr><th id="401">401</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="402">402</th><td>}</td></tr>
+<tr><th id="403">403</th><td><u>#<span data-ppcond="383">else</span></u></td></tr>
+<tr><th id="404">404</th><td><u>#define acpi_ac_resume NULL</u></td></tr>
+<tr><th id="405">405</th><td><u>#<span data-ppcond="383">endif</span></u></td></tr>
+<tr><th id="406">406</th><td></td></tr>
+<tr><th id="407">407</th><td><em>static</em> <em>int</em> <dfn class="tu decl def fn" id="acpi_ac_remove" title='acpi_ac_remove' data-type='int acpi_ac_remove(struct acpi_device * device)' data-ref="acpi_ac_remove" data-ref-filename="acpi_ac_remove">acpi_ac_remove</dfn>(<b>struct</b> <a class="type" href="../../include/acpi/acpi_bus.h.html#acpi_device" title='acpi_device' data-ref="acpi_device" data-ref-filename="acpi_device">acpi_device</a> *<dfn class="local col9 decl" id="189device" title='device' data-type='struct acpi_device *' data-ref="189device" data-ref-filename="189device">device</dfn>)</td></tr>
+<tr><th id="408">408</th><td>{</td></tr>
+<tr><th id="409">409</th><td>	<b>struct</b> <a class="type" href="#acpi_ac" title='acpi_ac' data-ref="acpi_ac" data-ref-filename="acpi_ac">acpi_ac</a> *<dfn class="local col0 decl" id="190ac" title='ac' data-type='struct acpi_ac *' data-ref="190ac" data-ref-filename="190ac">ac</dfn> = <a class="macro" href="../../include/linux/stddef.h.html#8" title="((void *)0)" data-ref="_M/NULL">NULL</a>;</td></tr>
+<tr><th id="410">410</th><td></td></tr>
+<tr><th id="411">411</th><td></td></tr>
+<tr><th id="412">412</th><td>	<b>if</b> (!<a class="local col9 ref" href="#189device" title='device' data-ref="189device" data-ref-filename="189device">device</a> || !<a class="ref fn" href="../../include/acpi/acpi_bus.h.html#acpi_driver_data" title='acpi_driver_data' data-ref="acpi_driver_data" data-ref-filename="acpi_driver_data">acpi_driver_data</a>(<a class="local col9 ref" href="#189device" title='device' data-ref="189device" data-ref-filename="189device">device</a>))</td></tr>
+<tr><th id="413">413</th><td>		<b>return</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#26" title="22" data-ref="_M/EINVAL">EINVAL</a>;</td></tr>
+<tr><th id="414">414</th><td></td></tr>
+<tr><th id="415">415</th><td>	<a class="local col0 ref" href="#190ac" title='ac' data-ref="190ac" data-ref-filename="190ac">ac</a> = <a class="ref fn" href="../../include/acpi/acpi_bus.h.html#acpi_driver_data" title='acpi_driver_data' data-ref="acpi_driver_data" data-ref-filename="acpi_driver_data">acpi_driver_data</a>(<a class="local col9 ref" href="#189device" title='device' data-ref="189device" data-ref-filename="189device">device</a>);</td></tr>
+<tr><th id="416">416</th><td></td></tr>
+<tr><th id="417">417</th><td>	<a class="ref fn" href="../../include/linux/power_supply.h.html#power_supply_unregister" title='power_supply_unregister' data-ref="power_supply_unregister" data-ref-filename="power_supply_unregister">power_supply_unregister</a>(<a class="local col0 ref" href="#190ac" title='ac' data-ref="190ac" data-ref-filename="190ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::charger" title='acpi_ac::charger' data-use='r' data-ref="acpi_ac::charger" data-ref-filename="acpi_ac..charger">charger</a>);</td></tr>
+<tr><th id="418">418</th><td>	<a class="ref fn" href="../../include/acpi/acpi_bus.h.html#unregister_acpi_notifier" title='unregister_acpi_notifier' data-ref="unregister_acpi_notifier" data-ref-filename="unregister_acpi_notifier">unregister_acpi_notifier</a>(&amp;<a class="local col0 ref" href="#190ac" title='ac' data-ref="190ac" data-ref-filename="190ac">ac</a>-&gt;<a class="tu ref field" href="#acpi_ac::battery_nb" title='acpi_ac::battery_nb' data-use='a' data-ref="acpi_ac::battery_nb" data-ref-filename="acpi_ac..battery_nb">battery_nb</a>);</td></tr>
+<tr><th id="419">419</th><td></td></tr>
+<tr><th id="420">420</th><td><u>#<span data-ppcond="420">ifdef</span> <span class="macro" data-ref="_M/CONFIG_ACPI_PROCFS_POWER">CONFIG_ACPI_PROCFS_POWER</span></u></td></tr>
+<tr><th id="421">421</th><td>	acpi_ac_remove_fs(ac);</td></tr>
+<tr><th id="422">422</th><td><u>#<span data-ppcond="420">endif</span></u></td></tr>
+<tr><th id="423">423</th><td></td></tr>
+<tr><th id="424">424</th><td>	<a class="ref fn" href="../../include/linux/slab.h.html#kfree" title='kfree' data-ref="kfree" data-ref-filename="kfree">kfree</a>(<a class="local col0 ref" href="#190ac" title='ac' data-ref="190ac" data-ref-filename="190ac">ac</a>);</td></tr>
+<tr><th id="425">425</th><td></td></tr>
+<tr><th id="426">426</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="427">427</th><td>}</td></tr>
+<tr><th id="428">428</th><td></td></tr>
+<tr><th id="429">429</th><td><em>static</em> <em>int</em> <a class="macro" href="../../include/linux/init.h.html#50" title="__attribute__((__section__(&quot;.init.text&quot;))) __attribute__((__cold__))" data-ref="_M/__init">__init</a> <dfn class="tu decl def fn" id="acpi_ac_init" title='acpi_ac_init' data-type='int acpi_ac_init()' data-ref="acpi_ac_init" data-ref-filename="acpi_ac_init">acpi_ac_init</dfn>(<em>void</em>)</td></tr>
+<tr><th id="430">430</th><td>{</td></tr>
+<tr><th id="431">431</th><td>	<em>unsigned</em> <em>int</em> <dfn class="local col1 decl" id="191i" title='i' data-type='unsigned int' data-ref="191i" data-ref-filename="191i">i</dfn>;</td></tr>
+<tr><th id="432">432</th><td>	<em>int</em> <dfn class="local col2 decl" id="192result" title='result' data-type='int' data-ref="192result" data-ref-filename="192result">result</dfn>;</td></tr>
+<tr><th id="433">433</th><td></td></tr>
+<tr><th id="434">434</th><td>	<b>if</b> (<a class="ref" href="../../arch/x86/include/asm/acpi.h.html#acpi_disabled" title='acpi_disabled' data-ref="acpi_disabled" data-ref-filename="acpi_disabled">acpi_disabled</a>)</td></tr>
+<tr><th id="435">435</th><td>		<b>return</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#23" title="19" data-ref="_M/ENODEV">ENODEV</a>;</td></tr>
+<tr><th id="436">436</th><td></td></tr>
+<tr><th id="437">437</th><td>	<a class="ref fn" href="../../include/linux/dmi.h.html#dmi_check_system" title='dmi_check_system' data-ref="dmi_check_system" data-ref-filename="dmi_check_system">dmi_check_system</a>(<a class="tu ref" href="#ac_dmi_table" title='ac_dmi_table' data-use='r' data-ref="ac_dmi_table" data-ref-filename="ac_dmi_table">ac_dmi_table</a>);</td></tr>
+<tr><th id="438">438</th><td></td></tr>
+<tr><th id="439">439</th><td>	<b>if</b> (<a class="tu ref" href="#ac_check_pmic" title='ac_check_pmic' data-use='r' data-ref="ac_check_pmic" data-ref-filename="ac_check_pmic">ac_check_pmic</a>) {</td></tr>
+<tr><th id="440">440</th><td>		<b>for</b> (<a class="local col1 ref" href="#191i" title='i' data-ref="191i" data-ref-filename="191i">i</a> = <var>0</var>; <a class="local col1 ref" href="#191i" title='i' data-ref="191i" data-ref-filename="191i">i</a> &lt; <a class="macro" href="../../include/linux/kernel.h.html#47" title="(sizeof(acpi_ac_blacklist) / sizeof((acpi_ac_blacklist)[0]) + (sizeof(struct { int:(-!!(__builtin_types_compatible_p(typeof((acpi_ac_blacklist)), typeof(&amp;(acpi_ac_blacklist)[0])))); })))" data-ref="_M/ARRAY_SIZE">ARRAY_SIZE</a>(<a class="tu ref" href="#acpi_ac_blacklist" title='acpi_ac_blacklist' data-use='r' data-ref="acpi_ac_blacklist" data-ref-filename="acpi_ac_blacklist">acpi_ac_blacklist</a>); <a class="local col1 ref" href="#191i" title='i' data-ref="191i" data-ref-filename="191i">i</a>++)</td></tr>
+<tr><th id="441">441</th><td>			<b>if</b> (<a class="ref fn" href="../../include/acpi/acpi_bus.h.html#acpi_dev_present" title='acpi_dev_present' data-ref="acpi_dev_present" data-ref-filename="acpi_dev_present">acpi_dev_present</a>(<a class="tu ref" href="#acpi_ac_blacklist" title='acpi_ac_blacklist' data-use='m' data-ref="acpi_ac_blacklist" data-ref-filename="acpi_ac_blacklist">acpi_ac_blacklist</a>[<a class="local col1 ref" href="#191i" title='i' data-ref="191i" data-ref-filename="191i">i</a>].<a class="tu ref field" href="#acpi_ac_bl::hid" title='acpi_ac_bl::hid' data-use='r' data-ref="acpi_ac_bl::hid" data-ref-filename="acpi_ac_bl..hid">hid</a>, <q>"1"</q>,</td></tr>
+<tr><th id="442">442</th><td>					     <a class="tu ref" href="#acpi_ac_blacklist" title='acpi_ac_blacklist' data-use='m' data-ref="acpi_ac_blacklist" data-ref-filename="acpi_ac_blacklist">acpi_ac_blacklist</a>[<a class="local col1 ref" href="#191i" title='i' data-ref="191i" data-ref-filename="191i">i</a>].<a class="tu ref field" href="#acpi_ac_bl::hrv" title='acpi_ac_bl::hrv' data-use='r' data-ref="acpi_ac_bl::hrv" data-ref-filename="acpi_ac_bl..hrv">hrv</a>)) {</td></tr>
+<tr><th id="443">443</th><td>				<a class="macro" href="../../include/linux/printk.h.html#310" title="printk(&quot;\001&quot; &quot;6&quot; &quot;ACPI: &quot; &quot;AC: found native %s PMIC, not loading\n&quot;, acpi_ac_blacklist[i].hid)" data-ref="_M/pr_info">pr_info</a>(<a class="macro" href="#25" title="&quot;ACPI: &quot;" data-ref="_M/PREFIX">PREFIX</a> <q>"AC: found native %s PMIC, not loading\n"</q>,</td></tr>
+<tr><th id="444">444</th><td>					<a class="tu ref" href="#acpi_ac_blacklist" title='acpi_ac_blacklist' data-use='m' data-ref="acpi_ac_blacklist" data-ref-filename="acpi_ac_blacklist">acpi_ac_blacklist</a>[<a class="local col1 ref" href="#191i" title='i' data-ref="191i" data-ref-filename="191i">i</a>].<a class="tu ref field" href="#acpi_ac_bl::hid" title='acpi_ac_bl::hid' data-use='r' data-ref="acpi_ac_bl::hid" data-ref-filename="acpi_ac_bl..hid">hid</a>);</td></tr>
+<tr><th id="445">445</th><td>				<b>return</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#23" title="19" data-ref="_M/ENODEV">ENODEV</a>;</td></tr>
+<tr><th id="446">446</th><td>			}</td></tr>
+<tr><th id="447">447</th><td>	}</td></tr>
+<tr><th id="448">448</th><td></td></tr>
+<tr><th id="449">449</th><td><u>#<span data-ppcond="449">ifdef</span> <span class="macro" data-ref="_M/CONFIG_ACPI_PROCFS_POWER">CONFIG_ACPI_PROCFS_POWER</span></u></td></tr>
+<tr><th id="450">450</th><td>	acpi_ac_dir = acpi_lock_ac_dir();</td></tr>
+<tr><th id="451">451</th><td>	<b>if</b> (!acpi_ac_dir)</td></tr>
+<tr><th id="452">452</th><td>		<b>return</b> -ENODEV;</td></tr>
+<tr><th id="453">453</th><td><u>#<span data-ppcond="449">endif</span></u></td></tr>
+<tr><th id="454">454</th><td></td></tr>
+<tr><th id="455">455</th><td></td></tr>
+<tr><th id="456">456</th><td>	<a class="local col2 ref" href="#192result" title='result' data-ref="192result" data-ref-filename="192result">result</a> = <a class="ref fn" href="../../include/acpi/acpi_bus.h.html#acpi_bus_register_driver" title='acpi_bus_register_driver' data-ref="acpi_bus_register_driver" data-ref-filename="acpi_bus_register_driver">acpi_bus_register_driver</a>(&amp;<a class="tu ref" href="#acpi_ac_driver" title='acpi_ac_driver' data-use='a' data-ref="acpi_ac_driver" data-ref-filename="acpi_ac_driver">acpi_ac_driver</a>);</td></tr>
+<tr><th id="457">457</th><td>	<b>if</b> (<a class="local col2 ref" href="#192result" title='result' data-ref="192result" data-ref-filename="192result">result</a> &lt; <var>0</var>) {</td></tr>
+<tr><th id="458">458</th><td><u>#<span data-ppcond="458">ifdef</span> <span class="macro" data-ref="_M/CONFIG_ACPI_PROCFS_POWER">CONFIG_ACPI_PROCFS_POWER</span></u></td></tr>
+<tr><th id="459">459</th><td>		acpi_unlock_ac_dir(acpi_ac_dir);</td></tr>
+<tr><th id="460">460</th><td><u>#<span data-ppcond="458">endif</span></u></td></tr>
+<tr><th id="461">461</th><td>		<b>return</b> -<a class="macro" href="../../include/uapi/asm-generic/errno-base.h.html#23" title="19" data-ref="_M/ENODEV">ENODEV</a>;</td></tr>
+<tr><th id="462">462</th><td>	}</td></tr>
+<tr><th id="463">463</th><td></td></tr>
+<tr><th id="464">464</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="465">465</th><td>}</td></tr>
+<tr><th id="466">466</th><td></td></tr>
+<tr><th id="467">467</th><td><em>static</em> <em>void</em> <a class="macro" href="../../include/linux/init.h.html#83" title="__attribute__((__section__(&quot;.exit.text&quot;))) __attribute__((__used__)) __attribute__((__cold__)) __attribute__((no_instrument_function))" data-ref="_M/__exit">__exit</a> <dfn class="tu decl def fn" id="acpi_ac_exit" title='acpi_ac_exit' data-type='void acpi_ac_exit()' data-ref="acpi_ac_exit" data-ref-filename="acpi_ac_exit">acpi_ac_exit</dfn>(<em>void</em>)</td></tr>
+<tr><th id="468">468</th><td>{</td></tr>
+<tr><th id="469">469</th><td>	<a class="ref fn" href="../../include/acpi/acpi_bus.h.html#acpi_bus_unregister_driver" title='acpi_bus_unregister_driver' data-ref="acpi_bus_unregister_driver" data-ref-filename="acpi_bus_unregister_driver">acpi_bus_unregister_driver</a>(&amp;<a class="tu ref" href="#acpi_ac_driver" title='acpi_ac_driver' data-use='a' data-ref="acpi_ac_driver" data-ref-filename="acpi_ac_driver">acpi_ac_driver</a>);</td></tr>
+<tr><th id="470">470</th><td><u>#<span data-ppcond="470">ifdef</span> <span class="macro" data-ref="_M/CONFIG_ACPI_PROCFS_POWER">CONFIG_ACPI_PROCFS_POWER</span></u></td></tr>
+<tr><th id="471">471</th><td>	acpi_unlock_ac_dir(acpi_ac_dir);</td></tr>
+<tr><th id="472">472</th><td><u>#<span data-ppcond="470">endif</span></u></td></tr>
+<tr><th id="473">473</th><td>}</td></tr>
+<tr><th id="474">474</th><td><a class="macro" href="../../include/linux/module.h.html#88" title="static void * __attribute__((__section__(&quot;.discard.addressable&quot;))) __attribute__((__used__)) __addressable_acpi_ac_init474 = (void *)&amp;acpi_ac_init; asm(&quot;.section	\&quot;&quot; &quot;.initcall6&quot; &quot;.init\&quot;, \&quot;a\&quot;	\n&quot; &quot;__initcall_&quot; &quot;acpi_ac_init&quot; &quot;6&quot; &quot;:			\n&quot; &quot;.long	&quot; &quot;acpi_ac_init&quot; &quot; - .			\n&quot; &quot;.previous					\n&quot;);;" data-ref="_M/module_init">module_init</a>(<a class="tu ref fn" href="#acpi_ac_init" title='acpi_ac_init' data-use='a' data-ref="acpi_ac_init" data-ref-filename="acpi_ac_init">acpi_ac_init</a>);</td></tr>
+<tr><th id="475">475</th><td><a class="macro" href="../../include/linux/module.h.html#100" title="static exitcall_t __exitcall_acpi_ac_exit __attribute__((__used__)) __attribute__((__section__(&quot;.exitcall.exit&quot;))) = acpi_ac_exit;" data-ref="_M/module_exit">module_exit</a>(<a class="tu ref fn" href="#acpi_ac_exit" title='acpi_ac_exit' data-ref="acpi_ac_exit" data-ref-filename="acpi_ac_exit">acpi_ac_exit</a>);</td></tr>
+<tr><th id="476">476</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

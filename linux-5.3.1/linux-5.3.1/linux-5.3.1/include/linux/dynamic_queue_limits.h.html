@@ -1,0 +1,125 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>dynamic_queue_limits.h source code [linux-5.3.1/include/linux/dynamic_queue_limits.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="dql "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/include/linux/dynamic_queue_limits.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>include</a>/<a href='./'>linux</a>/<a href='dynamic_queue_limits.h.html'>dynamic_queue_limits.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0 */</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * Dynamic queue limits (dql) - Definitions</i></td></tr>
+<tr><th id="4">4</th><td><i> *</i></td></tr>
+<tr><th id="5">5</th><td><i> * Copyright (c) 2011, Tom Herbert &lt;therbert@google.com&gt;</i></td></tr>
+<tr><th id="6">6</th><td><i> *</i></td></tr>
+<tr><th id="7">7</th><td><i> * This header file contains the definitions for dynamic queue limits (dql).</i></td></tr>
+<tr><th id="8">8</th><td><i> * dql would be used in conjunction with a producer/consumer type queue</i></td></tr>
+<tr><th id="9">9</th><td><i> * (possibly a HW queue).  Such a queue would have these general properties:</i></td></tr>
+<tr><th id="10">10</th><td><i> *</i></td></tr>
+<tr><th id="11">11</th><td><i> *   1) Objects are queued up to some limit specified as number of objects.</i></td></tr>
+<tr><th id="12">12</th><td><i> *   2) Periodically a completion process executes which retires consumed</i></td></tr>
+<tr><th id="13">13</th><td><i> *      objects.</i></td></tr>
+<tr><th id="14">14</th><td><i> *   3) Starvation occurs when limit has been reached, all queued data has</i></td></tr>
+<tr><th id="15">15</th><td><i> *      actually been consumed, but completion processing has not yet run</i></td></tr>
+<tr><th id="16">16</th><td><i> *      so queuing new data is blocked.</i></td></tr>
+<tr><th id="17">17</th><td><i> *   4) Minimizing the amount of queued data is desirable.</i></td></tr>
+<tr><th id="18">18</th><td><i> *</i></td></tr>
+<tr><th id="19">19</th><td><i> * The goal of dql is to calculate the limit as the minimum number of objects</i></td></tr>
+<tr><th id="20">20</th><td><i> * needed to prevent starvation.</i></td></tr>
+<tr><th id="21">21</th><td><i> *</i></td></tr>
+<tr><th id="22">22</th><td><i> * The primary functions of dql are:</i></td></tr>
+<tr><th id="23">23</th><td><i> *    dql_queued - called when objects are enqueued to record number of objects</i></td></tr>
+<tr><th id="24">24</th><td><i> *    dql_avail - returns how many objects are available to be queued based</i></td></tr>
+<tr><th id="25">25</th><td><i> *      on the object limit and how many objects are already enqueued</i></td></tr>
+<tr><th id="26">26</th><td><i> *    dql_completed - called at completion time to indicate how many objects</i></td></tr>
+<tr><th id="27">27</th><td><i> *      were retired from the queue</i></td></tr>
+<tr><th id="28">28</th><td><i> *</i></td></tr>
+<tr><th id="29">29</th><td><i> * The dql implementation does not implement any locking for the dql data</i></td></tr>
+<tr><th id="30">30</th><td><i> * structures, the higher layer should provide this.  dql_queued should</i></td></tr>
+<tr><th id="31">31</th><td><i> * be serialized to prevent concurrent execution of the function; this</i></td></tr>
+<tr><th id="32">32</th><td><i> * is also true for  dql_completed.  However, dql_queued and dlq_completed  can</i></td></tr>
+<tr><th id="33">33</th><td><i> * be executed concurrently (i.e. they can be protected by different locks).</i></td></tr>
+<tr><th id="34">34</th><td><i> */</i></td></tr>
+<tr><th id="35">35</th><td></td></tr>
+<tr><th id="36">36</th><td><u>#<span data-ppcond="36">ifndef</span> <span class="macro" data-ref="_M/_LINUX_DQL_H">_LINUX_DQL_H</span></u></td></tr>
+<tr><th id="37">37</th><td><u>#define <dfn class="macro" id="_M/_LINUX_DQL_H" data-ref="_M/_LINUX_DQL_H">_LINUX_DQL_H</dfn></u></td></tr>
+<tr><th id="38">38</th><td></td></tr>
+<tr><th id="39">39</th><td><u>#<span data-ppcond="39">ifdef</span> <span class="macro" data-ref="_M/__KERNEL__">__KERNEL__</span></u></td></tr>
+<tr><th id="40">40</th><td></td></tr>
+<tr><th id="41">41</th><td><b>struct</b> <dfn class="type def" id="dql" title='dql' data-ref="dql" data-ref-filename="dql">dql</dfn> {</td></tr>
+<tr><th id="42">42</th><td>	<i>/* Fields accessed in enqueue path (dql_queued) */</i></td></tr>
+<tr><th id="43">43</th><td>	<em>unsigned</em> <em>int</em>	<dfn class="decl field" id="dql::num_queued" title='dql::num_queued' data-ref="dql::num_queued" data-ref-filename="dql..num_queued">num_queued</dfn>;		<i>/* Total ever queued */</i></td></tr>
+<tr><th id="44">44</th><td>	<em>unsigned</em> <em>int</em>	<dfn class="decl field" id="dql::adj_limit" title='dql::adj_limit' data-ref="dql::adj_limit" data-ref-filename="dql..adj_limit">adj_limit</dfn>;		<i>/* limit + num_completed */</i></td></tr>
+<tr><th id="45">45</th><td>	<em>unsigned</em> <em>int</em>	<dfn class="decl field" id="dql::last_obj_cnt" title='dql::last_obj_cnt' data-ref="dql::last_obj_cnt" data-ref-filename="dql..last_obj_cnt">last_obj_cnt</dfn>;		<i>/* Count at last queuing */</i></td></tr>
+<tr><th id="46">46</th><td></td></tr>
+<tr><th id="47">47</th><td>	<i>/* Fields accessed only by completion path (dql_completed) */</i></td></tr>
+<tr><th id="48">48</th><td></td></tr>
+<tr><th id="49">49</th><td>	<em>unsigned</em> <em>int</em>	<dfn class="decl field" id="dql::limit" title='dql::limit' data-ref="dql::limit" data-ref-filename="dql..limit">limit</dfn> <a class="macro" href="cache.h.html#40" title="__attribute__((__aligned__((1 &lt;&lt; (6)))))" data-ref="_M/____cacheline_aligned_in_smp">____cacheline_aligned_in_smp</a>; <i>/* Current limit */</i></td></tr>
+<tr><th id="50">50</th><td>	<em>unsigned</em> <em>int</em>	<dfn class="decl field" id="dql::num_completed" title='dql::num_completed' data-ref="dql::num_completed" data-ref-filename="dql..num_completed">num_completed</dfn>;		<i>/* Total ever completed */</i></td></tr>
+<tr><th id="51">51</th><td></td></tr>
+<tr><th id="52">52</th><td>	<em>unsigned</em> <em>int</em>	<dfn class="decl field" id="dql::prev_ovlimit" title='dql::prev_ovlimit' data-ref="dql::prev_ovlimit" data-ref-filename="dql..prev_ovlimit">prev_ovlimit</dfn>;		<i>/* Previous over limit */</i></td></tr>
+<tr><th id="53">53</th><td>	<em>unsigned</em> <em>int</em>	<dfn class="decl field" id="dql::prev_num_queued" title='dql::prev_num_queued' data-ref="dql::prev_num_queued" data-ref-filename="dql..prev_num_queued">prev_num_queued</dfn>;	<i>/* Previous queue total */</i></td></tr>
+<tr><th id="54">54</th><td>	<em>unsigned</em> <em>int</em>	<dfn class="decl field" id="dql::prev_last_obj_cnt" title='dql::prev_last_obj_cnt' data-ref="dql::prev_last_obj_cnt" data-ref-filename="dql..prev_last_obj_cnt">prev_last_obj_cnt</dfn>;	<i>/* Previous queuing cnt */</i></td></tr>
+<tr><th id="55">55</th><td></td></tr>
+<tr><th id="56">56</th><td>	<em>unsigned</em> <em>int</em>	<dfn class="decl field" id="dql::lowest_slack" title='dql::lowest_slack' data-ref="dql::lowest_slack" data-ref-filename="dql..lowest_slack">lowest_slack</dfn>;		<i>/* Lowest slack found */</i></td></tr>
+<tr><th id="57">57</th><td>	<em>unsigned</em> <em>long</em>	<dfn class="decl field" id="dql::slack_start_time" title='dql::slack_start_time' data-ref="dql::slack_start_time" data-ref-filename="dql..slack_start_time">slack_start_time</dfn>;	<i>/* Time slacks seen */</i></td></tr>
+<tr><th id="58">58</th><td></td></tr>
+<tr><th id="59">59</th><td>	<i>/* Configuration */</i></td></tr>
+<tr><th id="60">60</th><td>	<em>unsigned</em> <em>int</em>	<dfn class="decl field" id="dql::max_limit" title='dql::max_limit' data-ref="dql::max_limit" data-ref-filename="dql..max_limit">max_limit</dfn>;		<i>/* Max limit */</i></td></tr>
+<tr><th id="61">61</th><td>	<em>unsigned</em> <em>int</em>	<dfn class="decl field" id="dql::min_limit" title='dql::min_limit' data-ref="dql::min_limit" data-ref-filename="dql..min_limit">min_limit</dfn>;		<i>/* Minimum limit */</i></td></tr>
+<tr><th id="62">62</th><td>	<em>unsigned</em> <em>int</em>	<dfn class="decl field" id="dql::slack_hold_time" title='dql::slack_hold_time' data-ref="dql::slack_hold_time" data-ref-filename="dql..slack_hold_time">slack_hold_time</dfn>;	<i>/* Time to measure slack */</i></td></tr>
+<tr><th id="63">63</th><td>};</td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td><i>/* Set some static maximums */</i></td></tr>
+<tr><th id="66">66</th><td><u>#define <dfn class="macro" id="_M/DQL_MAX_OBJECT" data-ref="_M/DQL_MAX_OBJECT">DQL_MAX_OBJECT</dfn> (UINT_MAX / 16)</u></td></tr>
+<tr><th id="67">67</th><td><u>#define <dfn class="macro" id="_M/DQL_MAX_LIMIT" data-ref="_M/DQL_MAX_LIMIT">DQL_MAX_LIMIT</dfn> ((UINT_MAX / 2) - DQL_MAX_OBJECT)</u></td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td><i>/*</i></td></tr>
+<tr><th id="70">70</th><td><i> * Record number of objects queued. Assumes that caller has already checked</i></td></tr>
+<tr><th id="71">71</th><td><i> * availability in the queue with dql_avail.</i></td></tr>
+<tr><th id="72">72</th><td><i> */</i></td></tr>
+<tr><th id="73">73</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="dql_queued" title='dql_queued' data-ref="dql_queued" data-ref-filename="dql_queued">dql_queued</dfn>(<b>struct</b> <a class="type" href="#dql" title='dql' data-ref="dql" data-ref-filename="dql">dql</a> *<dfn class="local col3 decl" id="143dql" title='dql' data-type='struct dql *' data-ref="143dql" data-ref-filename="143dql">dql</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col4 decl" id="144count" title='count' data-type='unsigned int' data-ref="144count" data-ref-filename="144count">count</dfn>)</td></tr>
+<tr><th id="74">74</th><td>{</td></tr>
+<tr><th id="75">75</th><td>	<a class="macro" href="../asm-generic/bug.h.html#61" title="do { if (__builtin_expect(!!(count &gt; ((~0U) / 16)), 0)) do { do { asm volatile(&quot;1:\t&quot; &quot;.byte 0x0f, 0x0b&quot; &quot;\n&quot; &quot;.pushsection __bug_table,\&quot;aw\&quot;\n&quot; &quot;2:\t&quot; &quot;.long &quot; &quot;1b&quot; &quot; - 2b&quot; &quot;\t# bug_entry::bug_addr\n&quot; &quot;\t&quot; &quot;.long &quot; &quot;%c0&quot; &quot; - 2b&quot; &quot;\t# bug_entry::file\n&quot; &quot;\t.word %c1&quot; &quot;\t# bug_entry::line\n&quot; &quot;\t.word %c2&quot; &quot;\t# bug_entry::flags\n&quot; &quot;\t.org 2b+%c3\n&quot; &quot;.popsection&quot; : : &quot;i&quot; (&quot;/home/woboq/linux-5.3.1/./include/linux/dynamic_queue_limits.h&quot;), &quot;i&quot; (75), &quot;i&quot; (0), &quot;i&quot; (sizeof(struct bug_entry))); } while (0); do { ({ asm volatile(&quot;%c0:\n\t&quot; &quot;.pushsection .discard.unreachable\n\t&quot; &quot;.long %c0b - .\n\t&quot; &quot;.popsection\n\t&quot; : : &quot;i&quot; (70)); }); __builtin_unreachable(); } while (0); } while (0); } while (0)" data-ref="_M/BUG_ON">BUG_ON</a>(<a class="local col4 ref" href="#144count" title='count' data-ref="144count" data-ref-filename="144count">count</a> &gt; <a class="macro" href="#66" title="((~0U) / 16)" data-ref="_M/DQL_MAX_OBJECT">DQL_MAX_OBJECT</a>);</td></tr>
+<tr><th id="76">76</th><td></td></tr>
+<tr><th id="77">77</th><td>	<a class="local col3 ref" href="#143dql" title='dql' data-ref="143dql" data-ref-filename="143dql">dql</a>-&gt;<a class="ref field" href="#dql::last_obj_cnt" title='dql::last_obj_cnt' data-ref="dql::last_obj_cnt" data-ref-filename="dql..last_obj_cnt">last_obj_cnt</a> = <a class="local col4 ref" href="#144count" title='count' data-ref="144count" data-ref-filename="144count">count</a>;</td></tr>
+<tr><th id="78">78</th><td></td></tr>
+<tr><th id="79">79</th><td>	<i>/* We want to force a write first, so that cpu do not attempt</i></td></tr>
+<tr><th id="80">80</th><td><i>	 * to get cache line containing last_obj_cnt, num_queued, adj_limit</i></td></tr>
+<tr><th id="81">81</th><td><i>	 * in Shared state, but directly does a Request For Ownership</i></td></tr>
+<tr><th id="82">82</th><td><i>	 * It is only a hint, we use barrier() only.</i></td></tr>
+<tr><th id="83">83</th><td><i>	 */</i></td></tr>
+<tr><th id="84">84</th><td>	<a class="macro" href="compiler-clang.h.html#44" title="__asm__ __volatile__(&quot;&quot; : : : &quot;memory&quot;)" data-ref="_M/barrier">barrier</a>();</td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td>	<a class="local col3 ref" href="#143dql" title='dql' data-ref="143dql" data-ref-filename="143dql">dql</a>-&gt;<a class="ref field" href="#dql::num_queued" title='dql::num_queued' data-ref="dql::num_queued" data-ref-filename="dql..num_queued">num_queued</a> += <a class="local col4 ref" href="#144count" title='count' data-ref="144count" data-ref-filename="144count">count</a>;</td></tr>
+<tr><th id="87">87</th><td>}</td></tr>
+<tr><th id="88">88</th><td></td></tr>
+<tr><th id="89">89</th><td><i>/* Returns how many objects can be queued, &lt; 0 indicates over limit. */</i></td></tr>
+<tr><th id="90">90</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <dfn class="decl def fn" id="dql_avail" title='dql_avail' data-ref="dql_avail" data-ref-filename="dql_avail">dql_avail</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#dql" title='dql' data-ref="dql" data-ref-filename="dql">dql</a> *<dfn class="local col5 decl" id="145dql" title='dql' data-type='const struct dql *' data-ref="145dql" data-ref-filename="145dql">dql</dfn>)</td></tr>
+<tr><th id="91">91</th><td>{</td></tr>
+<tr><th id="92">92</th><td>	<b>return</b> <a class="macro" href="compiler.h.html#269" title="({ union { typeof(dql-&gt;adj_limit) __val; char __c[1]; } __u; if (1) __read_once_size(&amp;(dql-&gt;adj_limit), __u.__c, sizeof(dql-&gt;adj_limit)); else __read_once_size_nocheck(&amp;(dql-&gt;adj_limit), __u.__c, sizeof(dql-&gt;adj_limit)); do { } while (0); __u.__val; })" data-ref="_M/READ_ONCE">READ_ONCE</a>(<a class="local col5 ref" href="#145dql" title='dql' data-ref="145dql" data-ref-filename="145dql">dql</a>-&gt;<a class="ref field" href="#dql::adj_limit" title='dql::adj_limit' data-ref="dql::adj_limit" data-ref-filename="dql..adj_limit">adj_limit</a>) - <a class="macro" href="compiler.h.html#269" title="({ union { typeof(dql-&gt;num_queued) __val; char __c[1]; } __u; if (1) __read_once_size(&amp;(dql-&gt;num_queued), __u.__c, sizeof(dql-&gt;num_queued)); else __read_once_size_nocheck(&amp;(dql-&gt;num_queued), __u.__c, sizeof(dql-&gt;num_queued)); do { } while (0); __u.__val; })" data-ref="_M/READ_ONCE">READ_ONCE</a>(<a class="local col5 ref" href="#145dql" title='dql' data-ref="145dql" data-ref-filename="145dql">dql</a>-&gt;<a class="ref field" href="#dql::num_queued" title='dql::num_queued' data-ref="dql::num_queued" data-ref-filename="dql..num_queued">num_queued</a>);</td></tr>
+<tr><th id="93">93</th><td>}</td></tr>
+<tr><th id="94">94</th><td></td></tr>
+<tr><th id="95">95</th><td><i>/* Record number of completed objects and recalculate the limit. */</i></td></tr>
+<tr><th id="96">96</th><td><em>void</em> <dfn class="decl fn" id="dql_completed" title='dql_completed' data-ref="dql_completed" data-ref-filename="dql_completed">dql_completed</dfn>(<b>struct</b> <a class="type" href="#dql" title='dql' data-ref="dql" data-ref-filename="dql">dql</a> *<dfn class="local col6 decl" id="146dql" title='dql' data-type='struct dql *' data-ref="146dql" data-ref-filename="146dql">dql</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col7 decl" id="147count" title='count' data-type='unsigned int' data-ref="147count" data-ref-filename="147count">count</dfn>);</td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td><i>/* Reset dql state */</i></td></tr>
+<tr><th id="99">99</th><td><em>void</em> <dfn class="decl fn" id="dql_reset" title='dql_reset' data-ref="dql_reset" data-ref-filename="dql_reset">dql_reset</dfn>(<b>struct</b> <a class="type" href="#dql" title='dql' data-ref="dql" data-ref-filename="dql">dql</a> *<dfn class="local col8 decl" id="148dql" title='dql' data-type='struct dql *' data-ref="148dql" data-ref-filename="148dql">dql</dfn>);</td></tr>
+<tr><th id="100">100</th><td></td></tr>
+<tr><th id="101">101</th><td><i>/* Initialize dql state */</i></td></tr>
+<tr><th id="102">102</th><td><em>void</em> <dfn class="decl fn" id="dql_init" title='dql_init' data-ref="dql_init" data-ref-filename="dql_init">dql_init</dfn>(<b>struct</b> <a class="type" href="#dql" title='dql' data-ref="dql" data-ref-filename="dql">dql</a> *<dfn class="local col9 decl" id="149dql" title='dql' data-type='struct dql *' data-ref="149dql" data-ref-filename="149dql">dql</dfn>, <em>unsigned</em> <em>int</em> <dfn class="local col0 decl" id="150hold_time" title='hold_time' data-type='unsigned int' data-ref="150hold_time" data-ref-filename="150hold_time">hold_time</dfn>);</td></tr>
+<tr><th id="103">103</th><td></td></tr>
+<tr><th id="104">104</th><td><u>#<span data-ppcond="39">endif</span> /* _KERNEL_ */</u></td></tr>
+<tr><th id="105">105</th><td></td></tr>
+<tr><th id="106">106</th><td><u>#<span data-ppcond="36">endif</span> /* _LINUX_DQL_H */</u></td></tr>
+<tr><th id="107">107</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../crypto/aead.c.html'>linux-5.3.1/crypto/aead.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

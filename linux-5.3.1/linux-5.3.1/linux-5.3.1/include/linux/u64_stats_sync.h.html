@@ -1,0 +1,193 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>u64_stats_sync.h source code [linux-5.3.1/include/linux/u64_stats_sync.h] - Woboq Code Browser</title>
+<meta name="woboq:interestingDefinitions" content="u64_stats_sync "/>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/include/linux/u64_stats_sync.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>include</a>/<a href='./'>linux</a>/<a href='u64_stats_sync.h.html'>u64_stats_sync.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0 */</i></td></tr>
+<tr><th id="2">2</th><td><u>#<span data-ppcond="2">ifndef</span> <span class="macro" data-ref="_M/_LINUX_U64_STATS_SYNC_H">_LINUX_U64_STATS_SYNC_H</span></u></td></tr>
+<tr><th id="3">3</th><td><u>#define <dfn class="macro" id="_M/_LINUX_U64_STATS_SYNC_H" data-ref="_M/_LINUX_U64_STATS_SYNC_H">_LINUX_U64_STATS_SYNC_H</dfn></u></td></tr>
+<tr><th id="4">4</th><td></td></tr>
+<tr><th id="5">5</th><td><i>/*</i></td></tr>
+<tr><th id="6">6</th><td><i> * To properly implement 64bits network statistics on 32bit and 64bit hosts,</i></td></tr>
+<tr><th id="7">7</th><td><i> * we provide a synchronization point, that is a noop on 64bit or UP kernels.</i></td></tr>
+<tr><th id="8">8</th><td><i> *</i></td></tr>
+<tr><th id="9">9</th><td><i> * Key points :</i></td></tr>
+<tr><th id="10">10</th><td><i> * 1) Use a seqcount on SMP 32bits, with low overhead.</i></td></tr>
+<tr><th id="11">11</th><td><i> * 2) Whole thing is a noop on 64bit arches or UP kernels.</i></td></tr>
+<tr><th id="12">12</th><td><i> * 3) Write side must ensure mutual exclusion or one seqcount update could</i></td></tr>
+<tr><th id="13">13</th><td><i> *    be lost, thus blocking readers forever.</i></td></tr>
+<tr><th id="14">14</th><td><i> *    If this synchronization point is not a mutex, but a spinlock or</i></td></tr>
+<tr><th id="15">15</th><td><i> *    spinlock_bh() or disable_bh() :</i></td></tr>
+<tr><th id="16">16</th><td><i> * 3.1) Write side should not sleep.</i></td></tr>
+<tr><th id="17">17</th><td><i> * 3.2) Write side should not allow preemption.</i></td></tr>
+<tr><th id="18">18</th><td><i> * 3.3) If applicable, interrupts should be disabled.</i></td></tr>
+<tr><th id="19">19</th><td><i> *</i></td></tr>
+<tr><th id="20">20</th><td><i> * 4) If reader fetches several counters, there is no guarantee the whole values</i></td></tr>
+<tr><th id="21">21</th><td><i> *    are consistent (remember point 1) : this is a noop on 64bit arches anyway)</i></td></tr>
+<tr><th id="22">22</th><td><i> *</i></td></tr>
+<tr><th id="23">23</th><td><i> * 5) readers are allowed to sleep or be preempted/interrupted : They perform</i></td></tr>
+<tr><th id="24">24</th><td><i> *    pure reads. But if they have to fetch many values, it's better to not allow</i></td></tr>
+<tr><th id="25">25</th><td><i> *    preemptions/interruptions to avoid many retries.</i></td></tr>
+<tr><th id="26">26</th><td><i> *</i></td></tr>
+<tr><th id="27">27</th><td><i> * 6) If counter might be written by an interrupt, readers should block interrupts.</i></td></tr>
+<tr><th id="28">28</th><td><i> *    (On UP, there is no seqcount_t protection, a reader allowing interrupts could</i></td></tr>
+<tr><th id="29">29</th><td><i> *     read partial values)</i></td></tr>
+<tr><th id="30">30</th><td><i> *</i></td></tr>
+<tr><th id="31">31</th><td><i> * 7) For irq and softirq uses, readers can use u64_stats_fetch_begin_irq() and</i></td></tr>
+<tr><th id="32">32</th><td><i> *    u64_stats_fetch_retry_irq() helpers</i></td></tr>
+<tr><th id="33">33</th><td><i> *</i></td></tr>
+<tr><th id="34">34</th><td><i> * Usage :</i></td></tr>
+<tr><th id="35">35</th><td><i> *</i></td></tr>
+<tr><th id="36">36</th><td><i> * Stats producer (writer) should use following template granted it already got</i></td></tr>
+<tr><th id="37">37</th><td><i> * an exclusive access to counters (a lock is already taken, or per cpu</i></td></tr>
+<tr><th id="38">38</th><td><i> * data is used [in a non preemptable context])</i></td></tr>
+<tr><th id="39">39</th><td><i> *</i></td></tr>
+<tr><th id="40">40</th><td><i> *   spin_lock_bh(...) or other synchronization to get exclusive access</i></td></tr>
+<tr><th id="41">41</th><td><i> *   ...</i></td></tr>
+<tr><th id="42">42</th><td><i> *   u64_stats_update_begin(&amp;stats-&gt;syncp);</i></td></tr>
+<tr><th id="43">43</th><td><i> *   stats-&gt;bytes64 += len; // non atomic operation</i></td></tr>
+<tr><th id="44">44</th><td><i> *   stats-&gt;packets64++;    // non atomic operation</i></td></tr>
+<tr><th id="45">45</th><td><i> *   u64_stats_update_end(&amp;stats-&gt;syncp);</i></td></tr>
+<tr><th id="46">46</th><td><i> *</i></td></tr>
+<tr><th id="47">47</th><td><i> * While a consumer (reader) should use following template to get consistent</i></td></tr>
+<tr><th id="48">48</th><td><i> * snapshot for each variable (but no guarantee on several ones)</i></td></tr>
+<tr><th id="49">49</th><td><i> *</i></td></tr>
+<tr><th id="50">50</th><td><i> * u64 tbytes, tpackets;</i></td></tr>
+<tr><th id="51">51</th><td><i> * unsigned int start;</i></td></tr>
+<tr><th id="52">52</th><td><i> *</i></td></tr>
+<tr><th id="53">53</th><td><i> * do {</i></td></tr>
+<tr><th id="54">54</th><td><i> *         start = u64_stats_fetch_begin(&amp;stats-&gt;syncp);</i></td></tr>
+<tr><th id="55">55</th><td><i> *         tbytes = stats-&gt;bytes64; // non atomic operation</i></td></tr>
+<tr><th id="56">56</th><td><i> *         tpackets = stats-&gt;packets64; // non atomic operation</i></td></tr>
+<tr><th id="57">57</th><td><i> * } while (u64_stats_fetch_retry(&amp;stats-&gt;syncp, start));</i></td></tr>
+<tr><th id="58">58</th><td><i> *</i></td></tr>
+<tr><th id="59">59</th><td><i> *</i></td></tr>
+<tr><th id="60">60</th><td><i> * Example of use in drivers/net/loopback.c, using per_cpu containers,</i></td></tr>
+<tr><th id="61">61</th><td><i> * in BH disabled context.</i></td></tr>
+<tr><th id="62">62</th><td><i> */</i></td></tr>
+<tr><th id="63">63</th><td><u>#include <a href="seqlock.h.html">&lt;linux/seqlock.h&gt;</a></u></td></tr>
+<tr><th id="64">64</th><td></td></tr>
+<tr><th id="65">65</th><td><b>struct</b> <dfn class="type def" id="u64_stats_sync" title='u64_stats_sync' data-ref="u64_stats_sync" data-ref-filename="u64_stats_sync">u64_stats_sync</dfn> {</td></tr>
+<tr><th id="66">66</th><td><u>#<span data-ppcond="66">if</span> <a class="macro" href="../asm-generic/bitsperlong.h.html#9" title="64" data-ref="_M/BITS_PER_LONG">BITS_PER_LONG</a>==32 &amp;&amp; defined(<a class="macro" href="../generated/autoconf.h.html#860" data-ref="_M/CONFIG_SMP">CONFIG_SMP</a>)</u></td></tr>
+<tr><th id="67">67</th><td>	seqcount_t	seq;</td></tr>
+<tr><th id="68">68</th><td><u>#<span data-ppcond="66">endif</span></u></td></tr>
+<tr><th id="69">69</th><td>};</td></tr>
+<tr><th id="70">70</th><td></td></tr>
+<tr><th id="71">71</th><td></td></tr>
+<tr><th id="72">72</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="u64_stats_init" title='u64_stats_init' data-ref="u64_stats_init" data-ref-filename="u64_stats_init">u64_stats_init</dfn>(<b>struct</b> <a class="type" href="#u64_stats_sync" title='u64_stats_sync' data-ref="u64_stats_sync" data-ref-filename="u64_stats_sync">u64_stats_sync</a> *<dfn class="local col1 decl" id="10981syncp" title='syncp' data-type='struct u64_stats_sync *' data-ref="10981syncp" data-ref-filename="10981syncp">syncp</dfn>)</td></tr>
+<tr><th id="73">73</th><td>{</td></tr>
+<tr><th id="74">74</th><td><u>#<span data-ppcond="74">if</span> <a class="macro" href="../asm-generic/bitsperlong.h.html#9" title="64" data-ref="_M/BITS_PER_LONG">BITS_PER_LONG</a> == 32 &amp;&amp; defined(<a class="macro" href="../generated/autoconf.h.html#860" data-ref="_M/CONFIG_SMP">CONFIG_SMP</a>)</u></td></tr>
+<tr><th id="75">75</th><td>	seqcount_init(&amp;syncp-&gt;seq);</td></tr>
+<tr><th id="76">76</th><td><u>#<span data-ppcond="74">endif</span></u></td></tr>
+<tr><th id="77">77</th><td>}</td></tr>
+<tr><th id="78">78</th><td></td></tr>
+<tr><th id="79">79</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="u64_stats_update_begin" title='u64_stats_update_begin' data-ref="u64_stats_update_begin" data-ref-filename="u64_stats_update_begin">u64_stats_update_begin</dfn>(<b>struct</b> <a class="type" href="#u64_stats_sync" title='u64_stats_sync' data-ref="u64_stats_sync" data-ref-filename="u64_stats_sync">u64_stats_sync</a> *<dfn class="local col2 decl" id="10982syncp" title='syncp' data-type='struct u64_stats_sync *' data-ref="10982syncp" data-ref-filename="10982syncp">syncp</dfn>)</td></tr>
+<tr><th id="80">80</th><td>{</td></tr>
+<tr><th id="81">81</th><td><u>#<span data-ppcond="81">if</span> <a class="macro" href="../asm-generic/bitsperlong.h.html#9" title="64" data-ref="_M/BITS_PER_LONG">BITS_PER_LONG</a>==32 &amp;&amp; defined(<a class="macro" href="../generated/autoconf.h.html#860" data-ref="_M/CONFIG_SMP">CONFIG_SMP</a>)</u></td></tr>
+<tr><th id="82">82</th><td>	write_seqcount_begin(&amp;syncp-&gt;seq);</td></tr>
+<tr><th id="83">83</th><td><u>#<span data-ppcond="81">endif</span></u></td></tr>
+<tr><th id="84">84</th><td>}</td></tr>
+<tr><th id="85">85</th><td></td></tr>
+<tr><th id="86">86</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="u64_stats_update_end" title='u64_stats_update_end' data-ref="u64_stats_update_end" data-ref-filename="u64_stats_update_end">u64_stats_update_end</dfn>(<b>struct</b> <a class="type" href="#u64_stats_sync" title='u64_stats_sync' data-ref="u64_stats_sync" data-ref-filename="u64_stats_sync">u64_stats_sync</a> *<dfn class="local col3 decl" id="10983syncp" title='syncp' data-type='struct u64_stats_sync *' data-ref="10983syncp" data-ref-filename="10983syncp">syncp</dfn>)</td></tr>
+<tr><th id="87">87</th><td>{</td></tr>
+<tr><th id="88">88</th><td><u>#<span data-ppcond="88">if</span> <a class="macro" href="../asm-generic/bitsperlong.h.html#9" title="64" data-ref="_M/BITS_PER_LONG">BITS_PER_LONG</a>==32 &amp;&amp; defined(<a class="macro" href="../generated/autoconf.h.html#860" data-ref="_M/CONFIG_SMP">CONFIG_SMP</a>)</u></td></tr>
+<tr><th id="89">89</th><td>	write_seqcount_end(&amp;syncp-&gt;seq);</td></tr>
+<tr><th id="90">90</th><td><u>#<span data-ppcond="88">endif</span></u></td></tr>
+<tr><th id="91">91</th><td>}</td></tr>
+<tr><th id="92">92</th><td></td></tr>
+<tr><th id="93">93</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>long</em></td></tr>
+<tr><th id="94">94</th><td><dfn class="decl def fn" id="u64_stats_update_begin_irqsave" title='u64_stats_update_begin_irqsave' data-ref="u64_stats_update_begin_irqsave" data-ref-filename="u64_stats_update_begin_irqsave">u64_stats_update_begin_irqsave</dfn>(<b>struct</b> <a class="type" href="#u64_stats_sync" title='u64_stats_sync' data-ref="u64_stats_sync" data-ref-filename="u64_stats_sync">u64_stats_sync</a> *<dfn class="local col4 decl" id="10984syncp" title='syncp' data-type='struct u64_stats_sync *' data-ref="10984syncp" data-ref-filename="10984syncp">syncp</dfn>)</td></tr>
+<tr><th id="95">95</th><td>{</td></tr>
+<tr><th id="96">96</th><td>	<em>unsigned</em> <em>long</em> <dfn class="local col5 decl" id="10985flags" title='flags' data-type='unsigned long' data-ref="10985flags" data-ref-filename="10985flags">flags</dfn> = <var>0</var>;</td></tr>
+<tr><th id="97">97</th><td></td></tr>
+<tr><th id="98">98</th><td><u>#<span data-ppcond="98">if</span> <a class="macro" href="../asm-generic/bitsperlong.h.html#9" title="64" data-ref="_M/BITS_PER_LONG">BITS_PER_LONG</a>==32 &amp;&amp; defined(<a class="macro" href="../generated/autoconf.h.html#860" data-ref="_M/CONFIG_SMP">CONFIG_SMP</a>)</u></td></tr>
+<tr><th id="99">99</th><td>	local_irq_save(flags);</td></tr>
+<tr><th id="100">100</th><td>	write_seqcount_begin(&amp;syncp-&gt;seq);</td></tr>
+<tr><th id="101">101</th><td><u>#<span data-ppcond="98">endif</span></u></td></tr>
+<tr><th id="102">102</th><td>	<b>return</b> <a class="local col5 ref" href="#10985flags" title='flags' data-ref="10985flags" data-ref-filename="10985flags">flags</a>;</td></tr>
+<tr><th id="103">103</th><td>}</td></tr>
+<tr><th id="104">104</th><td></td></tr>
+<tr><th id="105">105</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em></td></tr>
+<tr><th id="106">106</th><td><dfn class="decl def fn" id="u64_stats_update_end_irqrestore" title='u64_stats_update_end_irqrestore' data-ref="u64_stats_update_end_irqrestore" data-ref-filename="u64_stats_update_end_irqrestore">u64_stats_update_end_irqrestore</dfn>(<b>struct</b> <a class="type" href="#u64_stats_sync" title='u64_stats_sync' data-ref="u64_stats_sync" data-ref-filename="u64_stats_sync">u64_stats_sync</a> *<dfn class="local col6 decl" id="10986syncp" title='syncp' data-type='struct u64_stats_sync *' data-ref="10986syncp" data-ref-filename="10986syncp">syncp</dfn>,</td></tr>
+<tr><th id="107">107</th><td>				<em>unsigned</em> <em>long</em> <dfn class="local col7 decl" id="10987flags" title='flags' data-type='unsigned long' data-ref="10987flags" data-ref-filename="10987flags">flags</dfn>)</td></tr>
+<tr><th id="108">108</th><td>{</td></tr>
+<tr><th id="109">109</th><td><u>#<span data-ppcond="109">if</span> <a class="macro" href="../asm-generic/bitsperlong.h.html#9" title="64" data-ref="_M/BITS_PER_LONG">BITS_PER_LONG</a>==32 &amp;&amp; defined(<a class="macro" href="../generated/autoconf.h.html#860" data-ref="_M/CONFIG_SMP">CONFIG_SMP</a>)</u></td></tr>
+<tr><th id="110">110</th><td>	write_seqcount_end(&amp;syncp-&gt;seq);</td></tr>
+<tr><th id="111">111</th><td>	local_irq_restore(flags);</td></tr>
+<tr><th id="112">112</th><td><u>#<span data-ppcond="109">endif</span></u></td></tr>
+<tr><th id="113">113</th><td>}</td></tr>
+<tr><th id="114">114</th><td></td></tr>
+<tr><th id="115">115</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>int</em> <dfn class="decl def fn" id="__u64_stats_fetch_begin" title='__u64_stats_fetch_begin' data-ref="__u64_stats_fetch_begin" data-ref-filename="__u64_stats_fetch_begin">__u64_stats_fetch_begin</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#u64_stats_sync" title='u64_stats_sync' data-ref="u64_stats_sync" data-ref-filename="u64_stats_sync">u64_stats_sync</a> *<dfn class="local col8 decl" id="10988syncp" title='syncp' data-type='const struct u64_stats_sync *' data-ref="10988syncp" data-ref-filename="10988syncp">syncp</dfn>)</td></tr>
+<tr><th id="116">116</th><td>{</td></tr>
+<tr><th id="117">117</th><td><u>#<span data-ppcond="117">if</span> <a class="macro" href="../asm-generic/bitsperlong.h.html#9" title="64" data-ref="_M/BITS_PER_LONG">BITS_PER_LONG</a>==32 &amp;&amp; defined(<a class="macro" href="../generated/autoconf.h.html#860" data-ref="_M/CONFIG_SMP">CONFIG_SMP</a>)</u></td></tr>
+<tr><th id="118">118</th><td>	<b>return</b> read_seqcount_begin(&amp;syncp-&gt;seq);</td></tr>
+<tr><th id="119">119</th><td><u>#<span data-ppcond="117">else</span></u></td></tr>
+<tr><th id="120">120</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="121">121</th><td><u>#<span data-ppcond="117">endif</span></u></td></tr>
+<tr><th id="122">122</th><td>}</td></tr>
+<tr><th id="123">123</th><td></td></tr>
+<tr><th id="124">124</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>int</em> <dfn class="decl def fn" id="u64_stats_fetch_begin" title='u64_stats_fetch_begin' data-ref="u64_stats_fetch_begin" data-ref-filename="u64_stats_fetch_begin">u64_stats_fetch_begin</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#u64_stats_sync" title='u64_stats_sync' data-ref="u64_stats_sync" data-ref-filename="u64_stats_sync">u64_stats_sync</a> *<dfn class="local col9 decl" id="10989syncp" title='syncp' data-type='const struct u64_stats_sync *' data-ref="10989syncp" data-ref-filename="10989syncp">syncp</dfn>)</td></tr>
+<tr><th id="125">125</th><td>{</td></tr>
+<tr><th id="126">126</th><td><u>#<span data-ppcond="126">if</span> <a class="macro" href="../asm-generic/bitsperlong.h.html#9" title="64" data-ref="_M/BITS_PER_LONG">BITS_PER_LONG</a>==32 &amp;&amp; !defined(<a class="macro" href="../generated/autoconf.h.html#860" data-ref="_M/CONFIG_SMP">CONFIG_SMP</a>)</u></td></tr>
+<tr><th id="127">127</th><td>	preempt_disable();</td></tr>
+<tr><th id="128">128</th><td><u>#<span data-ppcond="126">endif</span></u></td></tr>
+<tr><th id="129">129</th><td>	<b>return</b> <a class="ref fn" href="#__u64_stats_fetch_begin" title='__u64_stats_fetch_begin' data-ref="__u64_stats_fetch_begin" data-ref-filename="__u64_stats_fetch_begin">__u64_stats_fetch_begin</a>(<a class="local col9 ref" href="#10989syncp" title='syncp' data-ref="10989syncp" data-ref-filename="10989syncp">syncp</a>);</td></tr>
+<tr><th id="130">130</th><td>}</td></tr>
+<tr><th id="131">131</th><td></td></tr>
+<tr><th id="132">132</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="__u64_stats_fetch_retry" title='__u64_stats_fetch_retry' data-ref="__u64_stats_fetch_retry" data-ref-filename="__u64_stats_fetch_retry">__u64_stats_fetch_retry</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#u64_stats_sync" title='u64_stats_sync' data-ref="u64_stats_sync" data-ref-filename="u64_stats_sync">u64_stats_sync</a> *<dfn class="local col0 decl" id="10990syncp" title='syncp' data-type='const struct u64_stats_sync *' data-ref="10990syncp" data-ref-filename="10990syncp">syncp</dfn>,</td></tr>
+<tr><th id="133">133</th><td>					 <em>unsigned</em> <em>int</em> <dfn class="local col1 decl" id="10991start" title='start' data-type='unsigned int' data-ref="10991start" data-ref-filename="10991start">start</dfn>)</td></tr>
+<tr><th id="134">134</th><td>{</td></tr>
+<tr><th id="135">135</th><td><u>#<span data-ppcond="135">if</span> <a class="macro" href="../asm-generic/bitsperlong.h.html#9" title="64" data-ref="_M/BITS_PER_LONG">BITS_PER_LONG</a>==32 &amp;&amp; defined(<a class="macro" href="../generated/autoconf.h.html#860" data-ref="_M/CONFIG_SMP">CONFIG_SMP</a>)</u></td></tr>
+<tr><th id="136">136</th><td>	<b>return</b> read_seqcount_retry(&amp;syncp-&gt;seq, start);</td></tr>
+<tr><th id="137">137</th><td><u>#<span data-ppcond="135">else</span></u></td></tr>
+<tr><th id="138">138</th><td>	<b>return</b> <a class="enum" href="stddef.h.html#false" title='false' data-ref="false" data-ref-filename="false">false</a>;</td></tr>
+<tr><th id="139">139</th><td><u>#<span data-ppcond="135">endif</span></u></td></tr>
+<tr><th id="140">140</th><td>}</td></tr>
+<tr><th id="141">141</th><td></td></tr>
+<tr><th id="142">142</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="u64_stats_fetch_retry" title='u64_stats_fetch_retry' data-ref="u64_stats_fetch_retry" data-ref-filename="u64_stats_fetch_retry">u64_stats_fetch_retry</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#u64_stats_sync" title='u64_stats_sync' data-ref="u64_stats_sync" data-ref-filename="u64_stats_sync">u64_stats_sync</a> *<dfn class="local col2 decl" id="10992syncp" title='syncp' data-type='const struct u64_stats_sync *' data-ref="10992syncp" data-ref-filename="10992syncp">syncp</dfn>,</td></tr>
+<tr><th id="143">143</th><td>					 <em>unsigned</em> <em>int</em> <dfn class="local col3 decl" id="10993start" title='start' data-type='unsigned int' data-ref="10993start" data-ref-filename="10993start">start</dfn>)</td></tr>
+<tr><th id="144">144</th><td>{</td></tr>
+<tr><th id="145">145</th><td><u>#<span data-ppcond="145">if</span> <a class="macro" href="../asm-generic/bitsperlong.h.html#9" title="64" data-ref="_M/BITS_PER_LONG">BITS_PER_LONG</a>==32 &amp;&amp; !defined(<a class="macro" href="../generated/autoconf.h.html#860" data-ref="_M/CONFIG_SMP">CONFIG_SMP</a>)</u></td></tr>
+<tr><th id="146">146</th><td>	preempt_enable();</td></tr>
+<tr><th id="147">147</th><td><u>#<span data-ppcond="145">endif</span></u></td></tr>
+<tr><th id="148">148</th><td>	<b>return</b> <a class="ref fn" href="#__u64_stats_fetch_retry" title='__u64_stats_fetch_retry' data-ref="__u64_stats_fetch_retry" data-ref-filename="__u64_stats_fetch_retry">__u64_stats_fetch_retry</a>(<a class="local col2 ref" href="#10992syncp" title='syncp' data-ref="10992syncp" data-ref-filename="10992syncp">syncp</a>, <a class="local col3 ref" href="#10993start" title='start' data-ref="10993start" data-ref-filename="10993start">start</a>);</td></tr>
+<tr><th id="149">149</th><td>}</td></tr>
+<tr><th id="150">150</th><td></td></tr>
+<tr><th id="151">151</th><td><i>/*</i></td></tr>
+<tr><th id="152">152</th><td><i> * In case irq handlers can update u64 counters, readers can use following helpers</i></td></tr>
+<tr><th id="153">153</th><td><i> * - SMP 32bit arches use seqcount protection, irq safe.</i></td></tr>
+<tr><th id="154">154</th><td><i> * - UP 32bit must disable irqs.</i></td></tr>
+<tr><th id="155">155</th><td><i> * - 64bit have no problem atomically reading u64 values, irq safe.</i></td></tr>
+<tr><th id="156">156</th><td><i> */</i></td></tr>
+<tr><th id="157">157</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>unsigned</em> <em>int</em> <dfn class="decl def fn" id="u64_stats_fetch_begin_irq" title='u64_stats_fetch_begin_irq' data-ref="u64_stats_fetch_begin_irq" data-ref-filename="u64_stats_fetch_begin_irq">u64_stats_fetch_begin_irq</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#u64_stats_sync" title='u64_stats_sync' data-ref="u64_stats_sync" data-ref-filename="u64_stats_sync">u64_stats_sync</a> *<dfn class="local col4 decl" id="10994syncp" title='syncp' data-type='const struct u64_stats_sync *' data-ref="10994syncp" data-ref-filename="10994syncp">syncp</dfn>)</td></tr>
+<tr><th id="158">158</th><td>{</td></tr>
+<tr><th id="159">159</th><td><u>#<span data-ppcond="159">if</span> <a class="macro" href="../asm-generic/bitsperlong.h.html#9" title="64" data-ref="_M/BITS_PER_LONG">BITS_PER_LONG</a>==32 &amp;&amp; !defined(<a class="macro" href="../generated/autoconf.h.html#860" data-ref="_M/CONFIG_SMP">CONFIG_SMP</a>)</u></td></tr>
+<tr><th id="160">160</th><td>	local_irq_disable();</td></tr>
+<tr><th id="161">161</th><td><u>#<span data-ppcond="159">endif</span></u></td></tr>
+<tr><th id="162">162</th><td>	<b>return</b> <a class="ref fn" href="#__u64_stats_fetch_begin" title='__u64_stats_fetch_begin' data-ref="__u64_stats_fetch_begin" data-ref-filename="__u64_stats_fetch_begin">__u64_stats_fetch_begin</a>(<a class="local col4 ref" href="#10994syncp" title='syncp' data-ref="10994syncp" data-ref-filename="10994syncp">syncp</a>);</td></tr>
+<tr><th id="163">163</th><td>}</td></tr>
+<tr><th id="164">164</th><td></td></tr>
+<tr><th id="165">165</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="types.h.html#bool" title='bool' data-type='_Bool' data-ref="bool" data-ref-filename="bool">bool</a> <dfn class="decl def fn" id="u64_stats_fetch_retry_irq" title='u64_stats_fetch_retry_irq' data-ref="u64_stats_fetch_retry_irq" data-ref-filename="u64_stats_fetch_retry_irq">u64_stats_fetch_retry_irq</dfn>(<em>const</em> <b>struct</b> <a class="type" href="#u64_stats_sync" title='u64_stats_sync' data-ref="u64_stats_sync" data-ref-filename="u64_stats_sync">u64_stats_sync</a> *<dfn class="local col5 decl" id="10995syncp" title='syncp' data-type='const struct u64_stats_sync *' data-ref="10995syncp" data-ref-filename="10995syncp">syncp</dfn>,</td></tr>
+<tr><th id="166">166</th><td>					     <em>unsigned</em> <em>int</em> <dfn class="local col6 decl" id="10996start" title='start' data-type='unsigned int' data-ref="10996start" data-ref-filename="10996start">start</dfn>)</td></tr>
+<tr><th id="167">167</th><td>{</td></tr>
+<tr><th id="168">168</th><td><u>#<span data-ppcond="168">if</span> <a class="macro" href="../asm-generic/bitsperlong.h.html#9" title="64" data-ref="_M/BITS_PER_LONG">BITS_PER_LONG</a>==32 &amp;&amp; !defined(<a class="macro" href="../generated/autoconf.h.html#860" data-ref="_M/CONFIG_SMP">CONFIG_SMP</a>)</u></td></tr>
+<tr><th id="169">169</th><td>	local_irq_enable();</td></tr>
+<tr><th id="170">170</th><td><u>#<span data-ppcond="168">endif</span></u></td></tr>
+<tr><th id="171">171</th><td>	<b>return</b> <a class="ref fn" href="#__u64_stats_fetch_retry" title='__u64_stats_fetch_retry' data-ref="__u64_stats_fetch_retry" data-ref-filename="__u64_stats_fetch_retry">__u64_stats_fetch_retry</a>(<a class="local col5 ref" href="#10995syncp" title='syncp' data-ref="10995syncp" data-ref-filename="10995syncp">syncp</a>, <a class="local col6 ref" href="#10996start" title='start' data-ref="10996start" data-ref-filename="10996start">start</a>);</td></tr>
+<tr><th id="172">172</th><td>}</td></tr>
+<tr><th id="173">173</th><td></td></tr>
+<tr><th id="174">174</th><td><u>#<span data-ppcond="2">endif</span> /* _LINUX_U64_STATS_SYNC_H */</u></td></tr>
+<tr><th id="175">175</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../arch/x86/boot/compressed/acpi.c.html'>linux-5.3.1/arch/x86/boot/compressed/acpi.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

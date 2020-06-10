@@ -1,0 +1,96 @@
+<def f='linux-5.3.1/include/linux/iocontext.h' l='72' ll='92'/>
+<use f='linux-5.3.1/include/linux/iocontext.h' l='115'/>
+<use f='linux-5.3.1/include/linux/blkdev.h' l='184'/>
+<use f='linux-5.3.1/include/linux/elevator.h' l='51'/>
+<use f='linux-5.3.1/include/linux/elevator.h' l='52'/>
+<size>56</size>
+<doc f='linux-5.3.1/include/linux/iocontext.h' l='13'>/*
+ * An io_cq (icq) is association between an io_context (ioc) and a
+ * request_queue (q).  This is used by elevators which need to track
+ * information per ioc - q pair.
+ *
+ * Elevator can request use of icq by setting elevator_type-&gt;icq_size and
+ * -&gt;icq_align.  Both size and align must be larger than that of struct
+ * io_cq and elevator can use the tail area for private information.  The
+ * recommended way to do this is defining a struct which contains io_cq as
+ * the first member followed by private members and using its size and
+ * align.  For example,
+ *
+ *	struct snail_io_cq {
+ *		struct io_cq	icq;
+ *		int		poke_snail;
+ *		int		feed_snail;
+ *	};
+ *
+ *	struct elevator_type snail_elv_type {
+ *		.ops =		{ ... },
+ *		.icq_size =	sizeof(struct snail_io_cq),
+ *		.icq_align =	__alignof__(struct snail_io_cq),
+ *		...
+ *	};
+ *
+ * If icq_size is set, block core will manage icq&apos;s.  All requests will
+ * have its -&gt;elv.icq field set before elevator_ops-&gt;elevator_set_req_fn()
+ * is called and be holding a reference to the associated io_context.
+ *
+ * Whenever a new icq is created, elevator_ops-&gt;elevator_init_icq_fn() is
+ * called and, on destruction, -&gt;elevator_exit_icq_fn().  Both functions
+ * are called with both the associated io_context and queue locks held.
+ *
+ * Elevator is allowed to lookup icq using ioc_lookup_icq() while holding
+ * queue lock but the returned icq is valid only until the queue lock is
+ * released.  Elevators can not and should not try to create or destroy
+ * icq&apos;s.
+ *
+ * As icq&apos;s are linked from both ioc and q, the locking rules are a bit
+ * complex.
+ *
+ * - ioc lock nests inside q lock.
+ *
+ * - ioc-&gt;icq_list and icq-&gt;ioc_node are protected by ioc lock.
+ *   q-&gt;icq_list and icq-&gt;q_node by q lock.
+ *
+ * - ioc-&gt;icq_tree and ioc-&gt;icq_hint are protected by ioc lock, while icq
+ *   itself is protected by q lock.  However, both the indexes and icq
+ *   itself are also RCU managed and lookup can be performed holding only
+ *   the q lock.
+ *
+ * - icq&apos;s are not reference counted.  They are destroyed when either the
+ *   ioc or q goes away.  Each request with icq set holds an extra
+ *   reference to ioc to ensure it stays until the request is completed.
+ *
+ * - Linking and unlinking icq&apos;s are performed while holding both ioc and q
+ *   locks.  Due to the lock ordering, q exit is simple but ioc exit
+ *   requires reverse-order double lock dance.
+ */</doc>
+<mbr r='io_cq::q' o='0' t='struct request_queue *'/>
+<mbr r='io_cq::ioc' o='64' t='struct io_context *'/>
+<mbr r='io_cq::flags' o='384' t='unsigned int'/>
+<use f='linux-5.3.1/block/blk.h' l='267' c='ioc_lookup_icq'/>
+<use f='linux-5.3.1/block/blk.h' l='268' c='ioc_create_icq'/>
+<size>56</size>
+<use f='linux-5.3.1/block/blk-ioc.c' l='34' c='icq_free_icq_rcu'/>
+<use f='linux-5.3.1/block/blk-ioc.c' l='34' c='icq_free_icq_rcu'/>
+<use f='linux-5.3.1/block/blk-ioc.c' l='34' c='icq_free_icq_rcu'/>
+<use f='linux-5.3.1/block/blk-ioc.c' l='34' c='icq_free_icq_rcu'/>
+<use f='linux-5.3.1/block/blk-ioc.c' l='43' c='ioc_exit_icq'/>
+<use f='linux-5.3.1/block/blk-ioc.c' l='60' c='ioc_destroy_icq'/>
+<use f='linux-5.3.1/block/blk-ioc.c' l='109' c='ioc_release_fn'/>
+<use f='linux-5.3.1/block/blk-ioc.c' l='110' c='ioc_release_fn'/>
+<use f='linux-5.3.1/block/blk-ioc.c' l='110' c='ioc_release_fn'/>
+<use f='linux-5.3.1/block/blk-ioc.c' l='110' c='ioc_release_fn'/>
+<use f='linux-5.3.1/block/blk-ioc.c' l='173' c='put_io_context_active'/>
+<use f='linux-5.3.1/block/blk-ioc.c' l='216' c='__ioc_clear_queue'/>
+<use f='linux-5.3.1/block/blk-ioc.c' l='217' c='__ioc_clear_queue'/>
+<use f='linux-5.3.1/block/blk-ioc.c' l='217' c='__ioc_clear_queue'/>
+<use f='linux-5.3.1/block/blk-ioc.c' l='217' c='__ioc_clear_queue'/>
+<use f='linux-5.3.1/block/blk-ioc.c' l='325' c='ioc_lookup_icq'/>
+<use f='linux-5.3.1/block/blk-ioc.c' l='327' c='ioc_lookup_icq'/>
+<use f='linux-5.3.1/block/blk-ioc.c' l='365' c='ioc_create_icq'/>
+<use f='linux-5.3.1/block/blk-ioc.c' l='369' c='ioc_create_icq'/>
+<size>56</size>
+<use f='linux-5.3.1/block/blk-mq-sched.c' l='39' c='blk_mq_sched_assign_ioc'/>
+<size>56</size>
+<use f='linux-5.3.1/block/elevator.c' l='515' c='elv_register'/>
+<use f='linux-5.3.1/block/elevator.c' l='516' c='elv_register'/>
+<size>56</size>

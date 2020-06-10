@@ -1,0 +1,2 @@
+<dec f='linux-5.3.1/include/linux/sctp.h' l='352' type='struct sctp_paramhdr'/>
+<offset>0</offset>

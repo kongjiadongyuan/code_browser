@@ -1,0 +1,61 @@
+<dec f='linux-5.3.1/arch/x86/include/asm/iosf_mbi.h' l='143' type='int iosf_mbi_block_punit_i2c_access()'/>
+<def f='linux-5.3.1/arch/x86/platform/intel/iosf_mbi.c' l='291' ll='358' type='int iosf_mbi_block_punit_i2c_access()'/>
+<dec f='linux-5.3.1/arch/x86/platform/intel/iosf_mbi.c' l='359' type='int iosf_mbi_block_punit_i2c_access()'/>
+<use f='linux-5.3.1/arch/x86/platform/intel/iosf_mbi.c' l='359' c='iosf_mbi_block_punit_i2c_access'/>
+<use f='linux-5.3.1/arch/x86/platform/intel/iosf_mbi.c' l='359' u='a'/>
+<doc f='linux-5.3.1/arch/x86/platform/intel/iosf_mbi.c' l='251'>/*
+ * This function blocks P-Unit accesses to the PMIC I2C bus, so that kernel
+ * I2C code, such as e.g. a fuel-gauge driver, can access it safely.
+ *
+ * This function may be called by I2C controller code while an I2C driver has
+ * already blocked P-Unit accesses because it wants them blocked over multiple
+ * i2c-transfers, for e.g. read-modify-write of an I2C client register.
+ *
+ * The P-Unit accesses already being blocked is tracked through the
+ * iosf_mbi_block_punit_i2c_access_count variable which is protected by the
+ * iosf_mbi_block_punit_i2c_access_count_mutex this mutex is hold for the
+ * entire duration of the function.
+ *
+ * If access is not blocked yet, this function takes the following steps:
+ *
+ * 1) Some code sends request to the P-Unit which make it access the PMIC
+ *    I2C bus. Testing has shown that the P-Unit does not check its internal
+ *    PMIC bus semaphore for these requests. Callers of these requests call
+ *    iosf_mbi_punit_acquire()/_release() around their P-Unit accesses, these
+ *    functions lock/unlock the iosf_mbi_punit_mutex.
+ *    As the first step we lock the iosf_mbi_punit_mutex, to wait for any in
+ *    flight requests to finish and to block any new requests.
+ *
+ * 2) Some code makes such P-Unit requests from atomic contexts where it
+ *    cannot call iosf_mbi_punit_acquire() as that may sleep.
+ *    As the second step we call a notifier chain which allows any code
+ *    needing P-Unit resources from atomic context to acquire them before
+ *    we take control over the PMIC I2C bus.
+ *
+ * 3) When CPU cores enter C6 or C7 the P-Unit needs to talk to the PMIC
+ *    if this happens while the kernel itself is accessing the PMIC I2C bus
+ *    the SoC hangs.
+ *    As the third step we call pm_qos_update_request() to disallow the CPU
+ *    to enter C6 or C7.
+ *
+ * 4) The P-Unit has a PMIC bus semaphore which we can request to stop
+ *    autonomous P-Unit tasks from accessing the PMIC I2C bus while we hold it.
+ *    As the fourth and final step we request this semaphore and wait for our
+ *    request to be acknowledged.
+ */</doc>
+<doc f='linux-5.3.1/arch/x86/include/asm/iosf_mbi.h' l='127'>/**
+ * iosf_mbi_block_punit_i2c_access() - Block P-Unit accesses to the PMIC bus
+ *
+ * Call this function to block P-Unit access to the PMIC I2C bus, so that the
+ * kernel can safely access the PMIC over the shared I2C bus.
+ *
+ * This function acquires the P-Unit bus semaphore and notifies
+ * pmic_bus_access_notifier listeners that they may no longer access the
+ * P-Unit in a way which may cause it to access the shared I2C bus.
+ *
+ * Note this function may be called multiple times and the bus will not
+ * be released until iosf_mbi_unblock_punit_i2c_access() has been called the
+ * same amount of times.
+ *
+ * Return: Nonzero on error
+ */</doc>

@@ -1,0 +1,1099 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>ehci-dbg.c source code [linux-5.3.1/drivers/usb/host/ehci-dbg.c] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/drivers/usb/host/ehci-dbg.c'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>linux-5.3.1</a>/<a href='../..'>drivers</a>/<a href='..'>usb</a>/<a href='./'>host</a>/<a href='ehci-dbg.c.html'>ehci-dbg.c</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>// SPDX-License-Identifier: GPL-2.0+</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * Copyright (c) 2001-2002 by David Brownell</i></td></tr>
+<tr><th id="4">4</th><td><i> */</i></td></tr>
+<tr><th id="5">5</th><td></td></tr>
+<tr><th id="6">6</th><td><i>/* this file is part of ehci-hcd.c */</i></td></tr>
+<tr><th id="7">7</th><td></td></tr>
+<tr><th id="8">8</th><td><u>#<span data-ppcond="8">ifdef</span> <span class="macro" data-ref="_M/CONFIG_DYNAMIC_DEBUG">CONFIG_DYNAMIC_DEBUG</span></u></td></tr>
+<tr><th id="9">9</th><td></td></tr>
+<tr><th id="10">10</th><td><i>/*</i></td></tr>
+<tr><th id="11">11</th><td><i> * check the values in the HCSPARAMS register</i></td></tr>
+<tr><th id="12">12</th><td><i> * (host controller _Structural_ parameters)</i></td></tr>
+<tr><th id="13">13</th><td><i> * see EHCI spec, Table 2-4 for each value</i></td></tr>
+<tr><th id="14">14</th><td><i> */</i></td></tr>
+<tr><th id="15">15</th><td><em>static</em> <em>void</em> dbg_hcs_params(<b>struct</b> ehci_hcd *ehci, <em>char</em> *label)</td></tr>
+<tr><th id="16">16</th><td>{</td></tr>
+<tr><th id="17">17</th><td>	u32	params = ehci_readl(ehci, &amp;ehci-&gt;caps-&gt;hcs_params);</td></tr>
+<tr><th id="18">18</th><td></td></tr>
+<tr><th id="19">19</th><td>	ehci_dbg(ehci,</td></tr>
+<tr><th id="20">20</th><td>		<q>"%s hcs_params 0x%x dbg=%d%s cc=%d pcc=%d%s%s ports=%d\n"</q>,</td></tr>
+<tr><th id="21">21</th><td>		label, params,</td></tr>
+<tr><th id="22">22</th><td>		HCS_DEBUG_PORT(params),</td></tr>
+<tr><th id="23">23</th><td>		HCS_INDICATOR(params) ? <q>" ind"</q> : <q>""</q>,</td></tr>
+<tr><th id="24">24</th><td>		HCS_N_CC(params),</td></tr>
+<tr><th id="25">25</th><td>		HCS_N_PCC(params),</td></tr>
+<tr><th id="26">26</th><td>		HCS_PORTROUTED(params) ? <q>""</q> : <q>" ordered"</q>,</td></tr>
+<tr><th id="27">27</th><td>		HCS_PPC(params) ? <q>""</q> : <q>" !ppc"</q>,</td></tr>
+<tr><th id="28">28</th><td>		HCS_N_PORTS(params));</td></tr>
+<tr><th id="29">29</th><td>	<i>/* Port routing, per EHCI 0.95 Spec, Section 2.2.5 */</i></td></tr>
+<tr><th id="30">30</th><td>	<b>if</b> (HCS_PORTROUTED(params)) {</td></tr>
+<tr><th id="31">31</th><td>		<em>int</em> i;</td></tr>
+<tr><th id="32">32</th><td>		<em>char</em> buf[<var>46</var>], tmp[<var>7</var>], byte;</td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td>		buf[<var>0</var>] = <var>0</var>;</td></tr>
+<tr><th id="35">35</th><td>		<b>for</b> (i = <var>0</var>; i &lt; HCS_N_PORTS(params); i++) {</td></tr>
+<tr><th id="36">36</th><td>			<i>/* FIXME MIPS won't readb() ... */</i></td></tr>
+<tr><th id="37">37</th><td>			byte = readb(&amp;ehci-&gt;caps-&gt;portroute[(i &gt;&gt; <var>1</var>)]);</td></tr>
+<tr><th id="38">38</th><td>			sprintf(tmp, <q>"%d "</q>,</td></tr>
+<tr><th id="39">39</th><td>				(i &amp; <var>0x1</var>) ? byte &amp; <var>0xf</var> : (byte &gt;&gt; <var>4</var>) &amp; <var>0xf</var>);</td></tr>
+<tr><th id="40">40</th><td>			strcat(buf, tmp);</td></tr>
+<tr><th id="41">41</th><td>		}</td></tr>
+<tr><th id="42">42</th><td>		ehci_dbg(ehci, <q>"%s portroute %s\n"</q>, label, buf);</td></tr>
+<tr><th id="43">43</th><td>	}</td></tr>
+<tr><th id="44">44</th><td>}</td></tr>
+<tr><th id="45">45</th><td></td></tr>
+<tr><th id="46">46</th><td><i>/*</i></td></tr>
+<tr><th id="47">47</th><td><i> * check the values in the HCCPARAMS register</i></td></tr>
+<tr><th id="48">48</th><td><i> * (host controller _Capability_ parameters)</i></td></tr>
+<tr><th id="49">49</th><td><i> * see EHCI Spec, Table 2-5 for each value</i></td></tr>
+<tr><th id="50">50</th><td><i> */</i></td></tr>
+<tr><th id="51">51</th><td><em>static</em> <em>void</em> dbg_hcc_params(<b>struct</b> ehci_hcd *ehci, <em>char</em> *label)</td></tr>
+<tr><th id="52">52</th><td>{</td></tr>
+<tr><th id="53">53</th><td>	u32	params = ehci_readl(ehci, &amp;ehci-&gt;caps-&gt;hcc_params);</td></tr>
+<tr><th id="54">54</th><td></td></tr>
+<tr><th id="55">55</th><td>	<b>if</b> (HCC_ISOC_CACHE(params)) {</td></tr>
+<tr><th id="56">56</th><td>		ehci_dbg(ehci,</td></tr>
+<tr><th id="57">57</th><td>			<q>"%s hcc_params %04x caching frame %s%s%s\n"</q>,</td></tr>
+<tr><th id="58">58</th><td>			label, params,</td></tr>
+<tr><th id="59">59</th><td>			HCC_PGM_FRAMELISTLEN(params) ? <q>"256/512/1024"</q> : <q>"1024"</q>,</td></tr>
+<tr><th id="60">60</th><td>			HCC_CANPARK(params) ? <q>" park"</q> : <q>""</q>,</td></tr>
+<tr><th id="61">61</th><td>			HCC_64BIT_ADDR(params) ? <q>" 64 bit addr"</q> : <q>""</q>);</td></tr>
+<tr><th id="62">62</th><td>	} <b>else</b> {</td></tr>
+<tr><th id="63">63</th><td>		ehci_dbg(ehci,</td></tr>
+<tr><th id="64">64</th><td>			<q>"%s hcc_params %04x thresh %d uframes %s%s%s%s%s%s%s\n"</q>,</td></tr>
+<tr><th id="65">65</th><td>			label,</td></tr>
+<tr><th id="66">66</th><td>			params,</td></tr>
+<tr><th id="67">67</th><td>			HCC_ISOC_THRES(params),</td></tr>
+<tr><th id="68">68</th><td>			HCC_PGM_FRAMELISTLEN(params) ? <q>"256/512/1024"</q> : <q>"1024"</q>,</td></tr>
+<tr><th id="69">69</th><td>			HCC_CANPARK(params) ? <q>" park"</q> : <q>""</q>,</td></tr>
+<tr><th id="70">70</th><td>			HCC_64BIT_ADDR(params) ? <q>" 64 bit addr"</q> : <q>""</q>,</td></tr>
+<tr><th id="71">71</th><td>			HCC_LPM(params) ? <q>" LPM"</q> : <q>""</q>,</td></tr>
+<tr><th id="72">72</th><td>			HCC_PER_PORT_CHANGE_EVENT(params) ? <q>" ppce"</q> : <q>""</q>,</td></tr>
+<tr><th id="73">73</th><td>			HCC_HW_PREFETCH(params) ? <q>" hw prefetch"</q> : <q>""</q>,</td></tr>
+<tr><th id="74">74</th><td>			HCC_32FRAME_PERIODIC_LIST(params) ?</td></tr>
+<tr><th id="75">75</th><td>				<q>" 32 periodic list"</q> : <q>""</q>);</td></tr>
+<tr><th id="76">76</th><td>	}</td></tr>
+<tr><th id="77">77</th><td>}</td></tr>
+<tr><th id="78">78</th><td></td></tr>
+<tr><th id="79">79</th><td><em>static</em> <em>void</em> __maybe_unused</td></tr>
+<tr><th id="80">80</th><td>dbg_qtd(<em>const</em> <em>char</em> *label, <b>struct</b> ehci_hcd *ehci, <b>struct</b> ehci_qtd *qtd)</td></tr>
+<tr><th id="81">81</th><td>{</td></tr>
+<tr><th id="82">82</th><td>	ehci_dbg(ehci, <q>"%s td %p n%08x %08x t%08x p0=%08x\n"</q>, label, qtd,</td></tr>
+<tr><th id="83">83</th><td>		hc32_to_cpup(ehci, &amp;qtd-&gt;hw_next),</td></tr>
+<tr><th id="84">84</th><td>		hc32_to_cpup(ehci, &amp;qtd-&gt;hw_alt_next),</td></tr>
+<tr><th id="85">85</th><td>		hc32_to_cpup(ehci, &amp;qtd-&gt;hw_token),</td></tr>
+<tr><th id="86">86</th><td>		hc32_to_cpup(ehci, &amp;qtd-&gt;hw_buf[<var>0</var>]));</td></tr>
+<tr><th id="87">87</th><td>	<b>if</b> (qtd-&gt;hw_buf[<var>1</var>])</td></tr>
+<tr><th id="88">88</th><td>		ehci_dbg(ehci, <q>"  p1=%08x p2=%08x p3=%08x p4=%08x\n"</q>,</td></tr>
+<tr><th id="89">89</th><td>			hc32_to_cpup(ehci, &amp;qtd-&gt;hw_buf[<var>1</var>]),</td></tr>
+<tr><th id="90">90</th><td>			hc32_to_cpup(ehci, &amp;qtd-&gt;hw_buf[<var>2</var>]),</td></tr>
+<tr><th id="91">91</th><td>			hc32_to_cpup(ehci, &amp;qtd-&gt;hw_buf[<var>3</var>]),</td></tr>
+<tr><th id="92">92</th><td>			hc32_to_cpup(ehci, &amp;qtd-&gt;hw_buf[<var>4</var>]));</td></tr>
+<tr><th id="93">93</th><td>}</td></tr>
+<tr><th id="94">94</th><td></td></tr>
+<tr><th id="95">95</th><td><em>static</em> <em>void</em> __maybe_unused</td></tr>
+<tr><th id="96">96</th><td>dbg_qh(<em>const</em> <em>char</em> *label, <b>struct</b> ehci_hcd *ehci, <b>struct</b> ehci_qh *qh)</td></tr>
+<tr><th id="97">97</th><td>{</td></tr>
+<tr><th id="98">98</th><td>	<b>struct</b> ehci_qh_hw *hw = qh-&gt;hw;</td></tr>
+<tr><th id="99">99</th><td></td></tr>
+<tr><th id="100">100</th><td>	ehci_dbg(ehci, <q>"%s qh %p n%08x info %x %x qtd %x\n"</q>, label,</td></tr>
+<tr><th id="101">101</th><td>		qh, hw-&gt;hw_next, hw-&gt;hw_info1, hw-&gt;hw_info2, hw-&gt;hw_current);</td></tr>
+<tr><th id="102">102</th><td>	dbg_qtd(<q>"overlay"</q>, ehci, (<b>struct</b> ehci_qtd *) &amp;hw-&gt;hw_qtd_next);</td></tr>
+<tr><th id="103">103</th><td>}</td></tr>
+<tr><th id="104">104</th><td></td></tr>
+<tr><th id="105">105</th><td><em>static</em> <em>void</em> __maybe_unused</td></tr>
+<tr><th id="106">106</th><td>dbg_itd(<em>const</em> <em>char</em> *label, <b>struct</b> ehci_hcd *ehci, <b>struct</b> ehci_itd *itd)</td></tr>
+<tr><th id="107">107</th><td>{</td></tr>
+<tr><th id="108">108</th><td>	ehci_dbg(ehci, <q>"%s [%d] itd %p, next %08x, urb %p\n"</q>,</td></tr>
+<tr><th id="109">109</th><td>		label, itd-&gt;frame, itd, hc32_to_cpu(ehci, itd-&gt;hw_next),</td></tr>
+<tr><th id="110">110</th><td>		itd-&gt;urb);</td></tr>
+<tr><th id="111">111</th><td>	ehci_dbg(ehci,</td></tr>
+<tr><th id="112">112</th><td>		<q>"  trans: %08x %08x %08x %08x %08x %08x %08x %08x\n"</q>,</td></tr>
+<tr><th id="113">113</th><td>		hc32_to_cpu(ehci, itd-&gt;hw_transaction[<var>0</var>]),</td></tr>
+<tr><th id="114">114</th><td>		hc32_to_cpu(ehci, itd-&gt;hw_transaction[<var>1</var>]),</td></tr>
+<tr><th id="115">115</th><td>		hc32_to_cpu(ehci, itd-&gt;hw_transaction[<var>2</var>]),</td></tr>
+<tr><th id="116">116</th><td>		hc32_to_cpu(ehci, itd-&gt;hw_transaction[<var>3</var>]),</td></tr>
+<tr><th id="117">117</th><td>		hc32_to_cpu(ehci, itd-&gt;hw_transaction[<var>4</var>]),</td></tr>
+<tr><th id="118">118</th><td>		hc32_to_cpu(ehci, itd-&gt;hw_transaction[<var>5</var>]),</td></tr>
+<tr><th id="119">119</th><td>		hc32_to_cpu(ehci, itd-&gt;hw_transaction[<var>6</var>]),</td></tr>
+<tr><th id="120">120</th><td>		hc32_to_cpu(ehci, itd-&gt;hw_transaction[<var>7</var>]));</td></tr>
+<tr><th id="121">121</th><td>	ehci_dbg(ehci,</td></tr>
+<tr><th id="122">122</th><td>		<q>"  buf:   %08x %08x %08x %08x %08x %08x %08x\n"</q>,</td></tr>
+<tr><th id="123">123</th><td>		hc32_to_cpu(ehci, itd-&gt;hw_bufp[<var>0</var>]),</td></tr>
+<tr><th id="124">124</th><td>		hc32_to_cpu(ehci, itd-&gt;hw_bufp[<var>1</var>]),</td></tr>
+<tr><th id="125">125</th><td>		hc32_to_cpu(ehci, itd-&gt;hw_bufp[<var>2</var>]),</td></tr>
+<tr><th id="126">126</th><td>		hc32_to_cpu(ehci, itd-&gt;hw_bufp[<var>3</var>]),</td></tr>
+<tr><th id="127">127</th><td>		hc32_to_cpu(ehci, itd-&gt;hw_bufp[<var>4</var>]),</td></tr>
+<tr><th id="128">128</th><td>		hc32_to_cpu(ehci, itd-&gt;hw_bufp[<var>5</var>]),</td></tr>
+<tr><th id="129">129</th><td>		hc32_to_cpu(ehci, itd-&gt;hw_bufp[<var>6</var>]));</td></tr>
+<tr><th id="130">130</th><td>	ehci_dbg(ehci, <q>"  index: %d %d %d %d %d %d %d %d\n"</q>,</td></tr>
+<tr><th id="131">131</th><td>		itd-&gt;index[<var>0</var>], itd-&gt;index[<var>1</var>], itd-&gt;index[<var>2</var>],</td></tr>
+<tr><th id="132">132</th><td>		itd-&gt;index[<var>3</var>], itd-&gt;index[<var>4</var>], itd-&gt;index[<var>5</var>],</td></tr>
+<tr><th id="133">133</th><td>		itd-&gt;index[<var>6</var>], itd-&gt;index[<var>7</var>]);</td></tr>
+<tr><th id="134">134</th><td>}</td></tr>
+<tr><th id="135">135</th><td></td></tr>
+<tr><th id="136">136</th><td><em>static</em> <em>void</em> __maybe_unused</td></tr>
+<tr><th id="137">137</th><td>dbg_sitd(<em>const</em> <em>char</em> *label, <b>struct</b> ehci_hcd *ehci, <b>struct</b> ehci_sitd *sitd)</td></tr>
+<tr><th id="138">138</th><td>{</td></tr>
+<tr><th id="139">139</th><td>	ehci_dbg(ehci, <q>"%s [%d] sitd %p, next %08x, urb %p\n"</q>,</td></tr>
+<tr><th id="140">140</th><td>		label, sitd-&gt;frame, sitd, hc32_to_cpu(ehci, sitd-&gt;hw_next),</td></tr>
+<tr><th id="141">141</th><td>		sitd-&gt;urb);</td></tr>
+<tr><th id="142">142</th><td>	ehci_dbg(ehci,</td></tr>
+<tr><th id="143">143</th><td>		<q>"  addr %08x sched %04x result %08x buf %08x %08x\n"</q>,</td></tr>
+<tr><th id="144">144</th><td>		hc32_to_cpu(ehci, sitd-&gt;hw_fullspeed_ep),</td></tr>
+<tr><th id="145">145</th><td>		hc32_to_cpu(ehci, sitd-&gt;hw_uframe),</td></tr>
+<tr><th id="146">146</th><td>		hc32_to_cpu(ehci, sitd-&gt;hw_results),</td></tr>
+<tr><th id="147">147</th><td>		hc32_to_cpu(ehci, sitd-&gt;hw_buf[<var>0</var>]),</td></tr>
+<tr><th id="148">148</th><td>		hc32_to_cpu(ehci, sitd-&gt;hw_buf[<var>1</var>]));</td></tr>
+<tr><th id="149">149</th><td>}</td></tr>
+<tr><th id="150">150</th><td></td></tr>
+<tr><th id="151">151</th><td><em>static</em> <em>int</em> __maybe_unused</td></tr>
+<tr><th id="152">152</th><td>dbg_status_buf(<em>char</em> *buf, <em>unsigned</em> len, <em>const</em> <em>char</em> *label, u32 status)</td></tr>
+<tr><th id="153">153</th><td>{</td></tr>
+<tr><th id="154">154</th><td>	<b>return</b> scnprintf(buf, len,</td></tr>
+<tr><th id="155">155</th><td>		<q>"%s%sstatus %04x%s%s%s%s%s%s%s%s%s%s%s"</q>,</td></tr>
+<tr><th id="156">156</th><td>		label, label[<var>0</var>] ? <q>" "</q> : <q>""</q>, status,</td></tr>
+<tr><th id="157">157</th><td>		(status &amp; STS_PPCE_MASK) ? <q>" PPCE"</q> : <q>""</q>,</td></tr>
+<tr><th id="158">158</th><td>		(status &amp; STS_ASS) ? <q>" Async"</q> : <q>""</q>,</td></tr>
+<tr><th id="159">159</th><td>		(status &amp; STS_PSS) ? <q>" Periodic"</q> : <q>""</q>,</td></tr>
+<tr><th id="160">160</th><td>		(status &amp; STS_RECL) ? <q>" Recl"</q> : <q>""</q>,</td></tr>
+<tr><th id="161">161</th><td>		(status &amp; STS_HALT) ? <q>" Halt"</q> : <q>""</q>,</td></tr>
+<tr><th id="162">162</th><td>		(status &amp; STS_IAA) ? <q>" IAA"</q> : <q>""</q>,</td></tr>
+<tr><th id="163">163</th><td>		(status &amp; STS_FATAL) ? <q>" FATAL"</q> : <q>""</q>,</td></tr>
+<tr><th id="164">164</th><td>		(status &amp; STS_FLR) ? <q>" FLR"</q> : <q>""</q>,</td></tr>
+<tr><th id="165">165</th><td>		(status &amp; STS_PCD) ? <q>" PCD"</q> : <q>""</q>,</td></tr>
+<tr><th id="166">166</th><td>		(status &amp; STS_ERR) ? <q>" ERR"</q> : <q>""</q>,</td></tr>
+<tr><th id="167">167</th><td>		(status &amp; STS_INT) ? <q>" INT"</q> : <q>""</q>);</td></tr>
+<tr><th id="168">168</th><td>}</td></tr>
+<tr><th id="169">169</th><td></td></tr>
+<tr><th id="170">170</th><td><em>static</em> <em>int</em> __maybe_unused</td></tr>
+<tr><th id="171">171</th><td>dbg_intr_buf(<em>char</em> *buf, <em>unsigned</em> len, <em>const</em> <em>char</em> *label, u32 enable)</td></tr>
+<tr><th id="172">172</th><td>{</td></tr>
+<tr><th id="173">173</th><td>	<b>return</b> scnprintf(buf, len,</td></tr>
+<tr><th id="174">174</th><td>		<q>"%s%sintrenable %02x%s%s%s%s%s%s%s"</q>,</td></tr>
+<tr><th id="175">175</th><td>		label, label[<var>0</var>] ? <q>" "</q> : <q>""</q>, enable,</td></tr>
+<tr><th id="176">176</th><td>		(enable &amp; STS_PPCE_MASK) ? <q>" PPCE"</q> : <q>""</q>,</td></tr>
+<tr><th id="177">177</th><td>		(enable &amp; STS_IAA) ? <q>" IAA"</q> : <q>""</q>,</td></tr>
+<tr><th id="178">178</th><td>		(enable &amp; STS_FATAL) ? <q>" FATAL"</q> : <q>""</q>,</td></tr>
+<tr><th id="179">179</th><td>		(enable &amp; STS_FLR) ? <q>" FLR"</q> : <q>""</q>,</td></tr>
+<tr><th id="180">180</th><td>		(enable &amp; STS_PCD) ? <q>" PCD"</q> : <q>""</q>,</td></tr>
+<tr><th id="181">181</th><td>		(enable &amp; STS_ERR) ? <q>" ERR"</q> : <q>""</q>,</td></tr>
+<tr><th id="182">182</th><td>		(enable &amp; STS_INT) ? <q>" INT"</q> : <q>""</q>);</td></tr>
+<tr><th id="183">183</th><td>}</td></tr>
+<tr><th id="184">184</th><td></td></tr>
+<tr><th id="185">185</th><td><em>static</em> <em>const</em> <em>char</em> *<em>const</em> fls_strings[] = { <q>"1024"</q>, <q>"512"</q>, <q>"256"</q>, <q>"??"</q> };</td></tr>
+<tr><th id="186">186</th><td></td></tr>
+<tr><th id="187">187</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="188">188</th><td>dbg_command_buf(<em>char</em> *buf, <em>unsigned</em> len, <em>const</em> <em>char</em> *label, u32 command)</td></tr>
+<tr><th id="189">189</th><td>{</td></tr>
+<tr><th id="190">190</th><td>	<b>return</b> scnprintf(buf, len,</td></tr>
+<tr><th id="191">191</th><td>		<q>"%s%scommand %07x %s%s%s%s%s%s=%d ithresh=%d%s%s%s%s "</q></td></tr>
+<tr><th id="192">192</th><td>		<q>"period=%s%s %s"</q>,</td></tr>
+<tr><th id="193">193</th><td>		label, label[<var>0</var>] ? <q>" "</q> : <q>""</q>, command,</td></tr>
+<tr><th id="194">194</th><td>		(command &amp; CMD_HIRD) ? <q>" HIRD"</q> : <q>""</q>,</td></tr>
+<tr><th id="195">195</th><td>		(command &amp; CMD_PPCEE) ? <q>" PPCEE"</q> : <q>""</q>,</td></tr>
+<tr><th id="196">196</th><td>		(command &amp; CMD_FSP) ? <q>" FSP"</q> : <q>""</q>,</td></tr>
+<tr><th id="197">197</th><td>		(command &amp; CMD_ASPE) ? <q>" ASPE"</q> : <q>""</q>,</td></tr>
+<tr><th id="198">198</th><td>		(command &amp; CMD_PSPE) ? <q>" PSPE"</q> : <q>""</q>,</td></tr>
+<tr><th id="199">199</th><td>		(command &amp; CMD_PARK) ? <q>" park"</q> : <q>"(park)"</q>,</td></tr>
+<tr><th id="200">200</th><td>		CMD_PARK_CNT(command),</td></tr>
+<tr><th id="201">201</th><td>		(command &gt;&gt; <var>16</var>) &amp; <var>0x3f</var>,</td></tr>
+<tr><th id="202">202</th><td>		(command &amp; CMD_LRESET) ? <q>" LReset"</q> : <q>""</q>,</td></tr>
+<tr><th id="203">203</th><td>		(command &amp; CMD_IAAD) ? <q>" IAAD"</q> : <q>""</q>,</td></tr>
+<tr><th id="204">204</th><td>		(command &amp; CMD_ASE) ? <q>" Async"</q> : <q>""</q>,</td></tr>
+<tr><th id="205">205</th><td>		(command &amp; CMD_PSE) ? <q>" Periodic"</q> : <q>""</q>,</td></tr>
+<tr><th id="206">206</th><td>		fls_strings[(command &gt;&gt; <var>2</var>) &amp; <var>0x3</var>],</td></tr>
+<tr><th id="207">207</th><td>		(command &amp; CMD_RESET) ? <q>" Reset"</q> : <q>""</q>,</td></tr>
+<tr><th id="208">208</th><td>		(command &amp; CMD_RUN) ? <q>"RUN"</q> : <q>"HALT"</q>);</td></tr>
+<tr><th id="209">209</th><td>}</td></tr>
+<tr><th id="210">210</th><td></td></tr>
+<tr><th id="211">211</th><td><em>static</em> <em>int</em></td></tr>
+<tr><th id="212">212</th><td>dbg_port_buf(<em>char</em> *buf, <em>unsigned</em> len, <em>const</em> <em>char</em> *label, <em>int</em> port, u32 status)</td></tr>
+<tr><th id="213">213</th><td>{</td></tr>
+<tr><th id="214">214</th><td>	<em>char</em>	*sig;</td></tr>
+<tr><th id="215">215</th><td></td></tr>
+<tr><th id="216">216</th><td>	<i>/* signaling state */</i></td></tr>
+<tr><th id="217">217</th><td>	<b>switch</b> (status &amp; (<var>3</var> &lt;&lt; <var>10</var>)) {</td></tr>
+<tr><th id="218">218</th><td>	<b>case</b> <var>0</var> &lt;&lt; <var>10</var>:</td></tr>
+<tr><th id="219">219</th><td>		sig = <q>"se0"</q>;</td></tr>
+<tr><th id="220">220</th><td>		<b>break</b>;</td></tr>
+<tr><th id="221">221</th><td>	<b>case</b> <var>1</var> &lt;&lt; <var>10</var>: <i>/* low speed */</i></td></tr>
+<tr><th id="222">222</th><td>		sig = <q>"k"</q>;</td></tr>
+<tr><th id="223">223</th><td>		<b>break</b>;</td></tr>
+<tr><th id="224">224</th><td>	<b>case</b> <var>2</var> &lt;&lt; <var>10</var>:</td></tr>
+<tr><th id="225">225</th><td>		sig = <q>"j"</q>;</td></tr>
+<tr><th id="226">226</th><td>		<b>break</b>;</td></tr>
+<tr><th id="227">227</th><td>	<b>default</b>:</td></tr>
+<tr><th id="228">228</th><td>		sig = <q>"?"</q>;</td></tr>
+<tr><th id="229">229</th><td>		<b>break</b>;</td></tr>
+<tr><th id="230">230</th><td>	}</td></tr>
+<tr><th id="231">231</th><td></td></tr>
+<tr><th id="232">232</th><td>	<b>return</b> scnprintf(buf, len,</td></tr>
+<tr><th id="233">233</th><td>		<q>"%s%sport:%d status %06x %d %s%s%s%s%s%s "</q></td></tr>
+<tr><th id="234">234</th><td>		<q>"sig=%s%s%s%s%s%s%s%s%s%s%s"</q>,</td></tr>
+<tr><th id="235">235</th><td>		label, label[<var>0</var>] ? <q>" "</q> : <q>""</q>, port, status,</td></tr>
+<tr><th id="236">236</th><td>		status &gt;&gt; <var>25</var>, <i>/*device address */</i></td></tr>
+<tr><th id="237">237</th><td>		(status &amp; PORT_SSTS) &gt;&gt; <var>23</var> == PORTSC_SUSPEND_STS_ACK ?</td></tr>
+<tr><th id="238">238</th><td>						<q>" ACK"</q> : <q>""</q>,</td></tr>
+<tr><th id="239">239</th><td>		(status &amp; PORT_SSTS) &gt;&gt; <var>23</var> == PORTSC_SUSPEND_STS_NYET ?</td></tr>
+<tr><th id="240">240</th><td>						<q>" NYET"</q> : <q>""</q>,</td></tr>
+<tr><th id="241">241</th><td>		(status &amp; PORT_SSTS) &gt;&gt; <var>23</var> == PORTSC_SUSPEND_STS_STALL ?</td></tr>
+<tr><th id="242">242</th><td>						<q>" STALL"</q> : <q>""</q>,</td></tr>
+<tr><th id="243">243</th><td>		(status &amp; PORT_SSTS) &gt;&gt; <var>23</var> == PORTSC_SUSPEND_STS_ERR ?</td></tr>
+<tr><th id="244">244</th><td>						<q>" ERR"</q> : <q>""</q>,</td></tr>
+<tr><th id="245">245</th><td>		(status &amp; PORT_POWER) ? <q>" POWER"</q> : <q>""</q>,</td></tr>
+<tr><th id="246">246</th><td>		(status &amp; PORT_OWNER) ? <q>" OWNER"</q> : <q>""</q>,</td></tr>
+<tr><th id="247">247</th><td>		sig,</td></tr>
+<tr><th id="248">248</th><td>		(status &amp; PORT_LPM) ? <q>" LPM"</q> : <q>""</q>,</td></tr>
+<tr><th id="249">249</th><td>		(status &amp; PORT_RESET) ? <q>" RESET"</q> : <q>""</q>,</td></tr>
+<tr><th id="250">250</th><td>		(status &amp; PORT_SUSPEND) ? <q>" SUSPEND"</q> : <q>""</q>,</td></tr>
+<tr><th id="251">251</th><td>		(status &amp; PORT_RESUME) ? <q>" RESUME"</q> : <q>""</q>,</td></tr>
+<tr><th id="252">252</th><td>		(status &amp; PORT_OCC) ? <q>" OCC"</q> : <q>""</q>,</td></tr>
+<tr><th id="253">253</th><td>		(status &amp; PORT_OC) ? <q>" OC"</q> : <q>""</q>,</td></tr>
+<tr><th id="254">254</th><td>		(status &amp; PORT_PEC) ? <q>" PEC"</q> : <q>""</q>,</td></tr>
+<tr><th id="255">255</th><td>		(status &amp; PORT_PE) ? <q>" PE"</q> : <q>""</q>,</td></tr>
+<tr><th id="256">256</th><td>		(status &amp; PORT_CSC) ? <q>" CSC"</q> : <q>""</q>,</td></tr>
+<tr><th id="257">257</th><td>		(status &amp; PORT_CONNECT) ? <q>" CONNECT"</q> : <q>""</q>);</td></tr>
+<tr><th id="258">258</th><td>}</td></tr>
+<tr><th id="259">259</th><td></td></tr>
+<tr><th id="260">260</th><td><em>static</em> <b>inline</b> <em>void</em></td></tr>
+<tr><th id="261">261</th><td>dbg_status(<b>struct</b> ehci_hcd *ehci, <em>const</em> <em>char</em> *label, u32 status)</td></tr>
+<tr><th id="262">262</th><td>{</td></tr>
+<tr><th id="263">263</th><td>	<em>char</em> buf[<var>80</var>];</td></tr>
+<tr><th id="264">264</th><td></td></tr>
+<tr><th id="265">265</th><td>	dbg_status_buf(buf, <b>sizeof</b>(buf), label, status);</td></tr>
+<tr><th id="266">266</th><td>	ehci_dbg(ehci, <q>"%s\n"</q>, buf);</td></tr>
+<tr><th id="267">267</th><td>}</td></tr>
+<tr><th id="268">268</th><td></td></tr>
+<tr><th id="269">269</th><td><em>static</em> <b>inline</b> <em>void</em></td></tr>
+<tr><th id="270">270</th><td>dbg_cmd(<b>struct</b> ehci_hcd *ehci, <em>const</em> <em>char</em> *label, u32 command)</td></tr>
+<tr><th id="271">271</th><td>{</td></tr>
+<tr><th id="272">272</th><td>	<em>char</em> buf[<var>80</var>];</td></tr>
+<tr><th id="273">273</th><td></td></tr>
+<tr><th id="274">274</th><td>	dbg_command_buf(buf, <b>sizeof</b>(buf), label, command);</td></tr>
+<tr><th id="275">275</th><td>	ehci_dbg(ehci, <q>"%s\n"</q>, buf);</td></tr>
+<tr><th id="276">276</th><td>}</td></tr>
+<tr><th id="277">277</th><td></td></tr>
+<tr><th id="278">278</th><td><em>static</em> <b>inline</b> <em>void</em></td></tr>
+<tr><th id="279">279</th><td>dbg_port(<b>struct</b> ehci_hcd *ehci, <em>const</em> <em>char</em> *label, <em>int</em> port, u32 status)</td></tr>
+<tr><th id="280">280</th><td>{</td></tr>
+<tr><th id="281">281</th><td>	<em>char</em> buf[<var>80</var>];</td></tr>
+<tr><th id="282">282</th><td></td></tr>
+<tr><th id="283">283</th><td>	dbg_port_buf(buf, <b>sizeof</b>(buf), label, port, status);</td></tr>
+<tr><th id="284">284</th><td>	ehci_dbg(ehci, <q>"%s\n"</q>, buf);</td></tr>
+<tr><th id="285">285</th><td>}</td></tr>
+<tr><th id="286">286</th><td></td></tr>
+<tr><th id="287">287</th><td><i>/*-------------------------------------------------------------------------*/</i></td></tr>
+<tr><th id="288">288</th><td></td></tr>
+<tr><th id="289">289</th><td><i>/* troubleshooting help: expose state in debugfs */</i></td></tr>
+<tr><th id="290">290</th><td></td></tr>
+<tr><th id="291">291</th><td><em>static</em> <em>int</em> debug_async_open(<b>struct</b> inode *, <b>struct</b> file *);</td></tr>
+<tr><th id="292">292</th><td><em>static</em> <em>int</em> debug_bandwidth_open(<b>struct</b> inode *, <b>struct</b> file *);</td></tr>
+<tr><th id="293">293</th><td><em>static</em> <em>int</em> debug_periodic_open(<b>struct</b> inode *, <b>struct</b> file *);</td></tr>
+<tr><th id="294">294</th><td><em>static</em> <em>int</em> debug_registers_open(<b>struct</b> inode *, <b>struct</b> file *);</td></tr>
+<tr><th id="295">295</th><td></td></tr>
+<tr><th id="296">296</th><td><em>static</em> ssize_t debug_output(<b>struct</b> file*, <em>char</em> __user*, size_t, loff_t*);</td></tr>
+<tr><th id="297">297</th><td><em>static</em> <em>int</em> debug_close(<b>struct</b> inode *, <b>struct</b> file *);</td></tr>
+<tr><th id="298">298</th><td></td></tr>
+<tr><th id="299">299</th><td><em>static</em> <em>const</em> <b>struct</b> file_operations debug_async_fops = {</td></tr>
+<tr><th id="300">300</th><td>	.owner		= THIS_MODULE,</td></tr>
+<tr><th id="301">301</th><td>	.open		= debug_async_open,</td></tr>
+<tr><th id="302">302</th><td>	.read		= debug_output,</td></tr>
+<tr><th id="303">303</th><td>	.release	= debug_close,</td></tr>
+<tr><th id="304">304</th><td>	.llseek		= default_llseek,</td></tr>
+<tr><th id="305">305</th><td>};</td></tr>
+<tr><th id="306">306</th><td></td></tr>
+<tr><th id="307">307</th><td><em>static</em> <em>const</em> <b>struct</b> file_operations debug_bandwidth_fops = {</td></tr>
+<tr><th id="308">308</th><td>	.owner		= THIS_MODULE,</td></tr>
+<tr><th id="309">309</th><td>	.open		= debug_bandwidth_open,</td></tr>
+<tr><th id="310">310</th><td>	.read		= debug_output,</td></tr>
+<tr><th id="311">311</th><td>	.release	= debug_close,</td></tr>
+<tr><th id="312">312</th><td>	.llseek		= default_llseek,</td></tr>
+<tr><th id="313">313</th><td>};</td></tr>
+<tr><th id="314">314</th><td></td></tr>
+<tr><th id="315">315</th><td><em>static</em> <em>const</em> <b>struct</b> file_operations debug_periodic_fops = {</td></tr>
+<tr><th id="316">316</th><td>	.owner		= THIS_MODULE,</td></tr>
+<tr><th id="317">317</th><td>	.open		= debug_periodic_open,</td></tr>
+<tr><th id="318">318</th><td>	.read		= debug_output,</td></tr>
+<tr><th id="319">319</th><td>	.release	= debug_close,</td></tr>
+<tr><th id="320">320</th><td>	.llseek		= default_llseek,</td></tr>
+<tr><th id="321">321</th><td>};</td></tr>
+<tr><th id="322">322</th><td></td></tr>
+<tr><th id="323">323</th><td><em>static</em> <em>const</em> <b>struct</b> file_operations debug_registers_fops = {</td></tr>
+<tr><th id="324">324</th><td>	.owner		= THIS_MODULE,</td></tr>
+<tr><th id="325">325</th><td>	.open		= debug_registers_open,</td></tr>
+<tr><th id="326">326</th><td>	.read		= debug_output,</td></tr>
+<tr><th id="327">327</th><td>	.release	= debug_close,</td></tr>
+<tr><th id="328">328</th><td>	.llseek		= default_llseek,</td></tr>
+<tr><th id="329">329</th><td>};</td></tr>
+<tr><th id="330">330</th><td></td></tr>
+<tr><th id="331">331</th><td><em>static</em> <b>struct</b> dentry *ehci_debug_root;</td></tr>
+<tr><th id="332">332</th><td></td></tr>
+<tr><th id="333">333</th><td><b>struct</b> debug_buffer {</td></tr>
+<tr><th id="334">334</th><td>	ssize_t (*fill_func)(<b>struct</b> debug_buffer *);	<i>/* fill method */</i></td></tr>
+<tr><th id="335">335</th><td>	<b>struct</b> usb_bus *bus;</td></tr>
+<tr><th id="336">336</th><td>	<b>struct</b> mutex mutex;	<i>/* protect filling of buffer */</i></td></tr>
+<tr><th id="337">337</th><td>	size_t count;		<i>/* number of characters filled into buffer */</i></td></tr>
+<tr><th id="338">338</th><td>	<em>char</em> *output_buf;</td></tr>
+<tr><th id="339">339</th><td>	size_t alloc_size;</td></tr>
+<tr><th id="340">340</th><td>};</td></tr>
+<tr><th id="341">341</th><td></td></tr>
+<tr><th id="342">342</th><td><em>static</em> <b>inline</b> <em>char</em> speed_char(u32 info1)</td></tr>
+<tr><th id="343">343</th><td>{</td></tr>
+<tr><th id="344">344</th><td>	<b>switch</b> (info1 &amp; (<var>3</var> &lt;&lt; <var>12</var>)) {</td></tr>
+<tr><th id="345">345</th><td>	<b>case</b> QH_FULL_SPEED:</td></tr>
+<tr><th id="346">346</th><td>		<b>return</b> <kbd>'f'</kbd>;</td></tr>
+<tr><th id="347">347</th><td>	<b>case</b> QH_LOW_SPEED:</td></tr>
+<tr><th id="348">348</th><td>		<b>return</b> <kbd>'l'</kbd>;</td></tr>
+<tr><th id="349">349</th><td>	<b>case</b> QH_HIGH_SPEED:</td></tr>
+<tr><th id="350">350</th><td>		<b>return</b> <kbd>'h'</kbd>;</td></tr>
+<tr><th id="351">351</th><td>	<b>default</b>:</td></tr>
+<tr><th id="352">352</th><td>		<b>return</b> <kbd>'?'</kbd>;</td></tr>
+<tr><th id="353">353</th><td>	}</td></tr>
+<tr><th id="354">354</th><td>}</td></tr>
+<tr><th id="355">355</th><td></td></tr>
+<tr><th id="356">356</th><td><em>static</em> <b>inline</b> <em>char</em> token_mark(<b>struct</b> ehci_hcd *ehci, __hc32 token)</td></tr>
+<tr><th id="357">357</th><td>{</td></tr>
+<tr><th id="358">358</th><td>	__u32 v = hc32_to_cpu(ehci, token);</td></tr>
+<tr><th id="359">359</th><td></td></tr>
+<tr><th id="360">360</th><td>	<b>if</b> (v &amp; QTD_STS_ACTIVE)</td></tr>
+<tr><th id="361">361</th><td>		<b>return</b> <kbd>'*'</kbd>;</td></tr>
+<tr><th id="362">362</th><td>	<b>if</b> (v &amp; QTD_STS_HALT)</td></tr>
+<tr><th id="363">363</th><td>		<b>return</b> <kbd>'-'</kbd>;</td></tr>
+<tr><th id="364">364</th><td>	<b>if</b> (!IS_SHORT_READ(v))</td></tr>
+<tr><th id="365">365</th><td>		<b>return</b> <kbd>' '</kbd>;</td></tr>
+<tr><th id="366">366</th><td>	<i>/* tries to advance through hw_alt_next */</i></td></tr>
+<tr><th id="367">367</th><td>	<b>return</b> <kbd>'/'</kbd>;</td></tr>
+<tr><th id="368">368</th><td>}</td></tr>
+<tr><th id="369">369</th><td></td></tr>
+<tr><th id="370">370</th><td><em>static</em> <em>void</em> qh_lines(<b>struct</b> ehci_hcd *ehci, <b>struct</b> ehci_qh *qh,</td></tr>
+<tr><th id="371">371</th><td>		<em>char</em> **nextp, <em>unsigned</em> *sizep)</td></tr>
+<tr><th id="372">372</th><td>{</td></tr>
+<tr><th id="373">373</th><td>	u32			scratch;</td></tr>
+<tr><th id="374">374</th><td>	u32			hw_curr;</td></tr>
+<tr><th id="375">375</th><td>	<b>struct</b> list_head	*entry;</td></tr>
+<tr><th id="376">376</th><td>	<b>struct</b> ehci_qtd		*td;</td></tr>
+<tr><th id="377">377</th><td>	<em>unsigned</em>		temp;</td></tr>
+<tr><th id="378">378</th><td>	<em>unsigned</em>		size = *sizep;</td></tr>
+<tr><th id="379">379</th><td>	<em>char</em>			*next = *nextp;</td></tr>
+<tr><th id="380">380</th><td>	<em>char</em>			mark;</td></tr>
+<tr><th id="381">381</th><td>	__le32			list_end = EHCI_LIST_END(ehci);</td></tr>
+<tr><th id="382">382</th><td>	<b>struct</b> ehci_qh_hw	*hw = qh-&gt;hw;</td></tr>
+<tr><th id="383">383</th><td></td></tr>
+<tr><th id="384">384</th><td>	<b>if</b> (hw-&gt;hw_qtd_next == list_end)	<i>/* NEC does this */</i></td></tr>
+<tr><th id="385">385</th><td>		mark = <kbd>'@'</kbd>;</td></tr>
+<tr><th id="386">386</th><td>	<b>else</b></td></tr>
+<tr><th id="387">387</th><td>		mark = token_mark(ehci, hw-&gt;hw_token);</td></tr>
+<tr><th id="388">388</th><td>	<b>if</b> (mark == <kbd>'/'</kbd>) {	<i>/* qh_alt_next controls qh advance? */</i></td></tr>
+<tr><th id="389">389</th><td>		<b>if</b> ((hw-&gt;hw_alt_next &amp; QTD_MASK(ehci))</td></tr>
+<tr><th id="390">390</th><td>				== ehci-&gt;async-&gt;hw-&gt;hw_alt_next)</td></tr>
+<tr><th id="391">391</th><td>			mark = <kbd>'#'</kbd>;	<i>/* blocked */</i></td></tr>
+<tr><th id="392">392</th><td>		<b>else</b> <b>if</b> (hw-&gt;hw_alt_next == list_end)</td></tr>
+<tr><th id="393">393</th><td>			mark = <kbd>'.'</kbd>;	<i>/* use hw_qtd_next */</i></td></tr>
+<tr><th id="394">394</th><td>		<i>/* else alt_next points to some other qtd */</i></td></tr>
+<tr><th id="395">395</th><td>	}</td></tr>
+<tr><th id="396">396</th><td>	scratch = hc32_to_cpup(ehci, &amp;hw-&gt;hw_info1);</td></tr>
+<tr><th id="397">397</th><td>	hw_curr = (mark == <kbd>'*'</kbd>) ? hc32_to_cpup(ehci, &amp;hw-&gt;hw_current) : <var>0</var>;</td></tr>
+<tr><th id="398">398</th><td>	temp = scnprintf(next, size,</td></tr>
+<tr><th id="399">399</th><td>			<q>"qh/%p dev%d %cs ep%d %08x %08x (%08x%c %s nak%d)"</q></td></tr>
+<tr><th id="400">400</th><td>			<q>" [cur %08x next %08x buf[0] %08x]"</q>,</td></tr>
+<tr><th id="401">401</th><td>			qh, scratch &amp; <var>0x007f</var>,</td></tr>
+<tr><th id="402">402</th><td>			speed_char (scratch),</td></tr>
+<tr><th id="403">403</th><td>			(scratch &gt;&gt; <var>8</var>) &amp; <var>0x000f</var>,</td></tr>
+<tr><th id="404">404</th><td>			scratch, hc32_to_cpup(ehci, &amp;hw-&gt;hw_info2),</td></tr>
+<tr><th id="405">405</th><td>			hc32_to_cpup(ehci, &amp;hw-&gt;hw_token), mark,</td></tr>
+<tr><th id="406">406</th><td>			(cpu_to_hc32(ehci, QTD_TOGGLE) &amp; hw-&gt;hw_token)</td></tr>
+<tr><th id="407">407</th><td>				? <q>"data1"</q> : <q>"data0"</q>,</td></tr>
+<tr><th id="408">408</th><td>			(hc32_to_cpup(ehci, &amp;hw-&gt;hw_alt_next) &gt;&gt; <var>1</var>) &amp; <var>0x0f</var>,</td></tr>
+<tr><th id="409">409</th><td>			hc32_to_cpup(ehci, &amp;hw-&gt;hw_current),</td></tr>
+<tr><th id="410">410</th><td>			hc32_to_cpup(ehci, &amp;hw-&gt;hw_qtd_next),</td></tr>
+<tr><th id="411">411</th><td>			hc32_to_cpup(ehci, &amp;hw-&gt;hw_buf[<var>0</var>]));</td></tr>
+<tr><th id="412">412</th><td>	size -= temp;</td></tr>
+<tr><th id="413">413</th><td>	next += temp;</td></tr>
+<tr><th id="414">414</th><td></td></tr>
+<tr><th id="415">415</th><td>	<i>/* hc may be modifying the list as we read it ... */</i></td></tr>
+<tr><th id="416">416</th><td>	list_for_each(entry, &amp;qh-&gt;qtd_list) {</td></tr>
+<tr><th id="417">417</th><td>		<em>char</em> *type;</td></tr>
+<tr><th id="418">418</th><td></td></tr>
+<tr><th id="419">419</th><td>		td = list_entry(entry, <b>struct</b> ehci_qtd, qtd_list);</td></tr>
+<tr><th id="420">420</th><td>		scratch = hc32_to_cpup(ehci, &amp;td-&gt;hw_token);</td></tr>
+<tr><th id="421">421</th><td>		mark = <kbd>' '</kbd>;</td></tr>
+<tr><th id="422">422</th><td>		<b>if</b> (hw_curr == td-&gt;qtd_dma) {</td></tr>
+<tr><th id="423">423</th><td>			mark = <kbd>'*'</kbd>;</td></tr>
+<tr><th id="424">424</th><td>		} <b>else</b> <b>if</b> (hw-&gt;hw_qtd_next == cpu_to_hc32(ehci, td-&gt;qtd_dma)) {</td></tr>
+<tr><th id="425">425</th><td>			mark = <kbd>'+'</kbd>;</td></tr>
+<tr><th id="426">426</th><td>		} <b>else</b> <b>if</b> (QTD_LENGTH(scratch)) {</td></tr>
+<tr><th id="427">427</th><td>			<b>if</b> (td-&gt;hw_alt_next == ehci-&gt;async-&gt;hw-&gt;hw_alt_next)</td></tr>
+<tr><th id="428">428</th><td>				mark = <kbd>'#'</kbd>;</td></tr>
+<tr><th id="429">429</th><td>			<b>else</b> <b>if</b> (td-&gt;hw_alt_next != list_end)</td></tr>
+<tr><th id="430">430</th><td>				mark = <kbd>'/'</kbd>;</td></tr>
+<tr><th id="431">431</th><td>		}</td></tr>
+<tr><th id="432">432</th><td>		<b>switch</b> ((scratch &gt;&gt; <var>8</var>) &amp; <var>0x03</var>) {</td></tr>
+<tr><th id="433">433</th><td>		<b>case</b> <var>0</var>:</td></tr>
+<tr><th id="434">434</th><td>			type = <q>"out"</q>;</td></tr>
+<tr><th id="435">435</th><td>			<b>break</b>;</td></tr>
+<tr><th id="436">436</th><td>		<b>case</b> <var>1</var>:</td></tr>
+<tr><th id="437">437</th><td>			type = <q>"in"</q>;</td></tr>
+<tr><th id="438">438</th><td>			<b>break</b>;</td></tr>
+<tr><th id="439">439</th><td>		<b>case</b> <var>2</var>:</td></tr>
+<tr><th id="440">440</th><td>			type = <q>"setup"</q>;</td></tr>
+<tr><th id="441">441</th><td>			<b>break</b>;</td></tr>
+<tr><th id="442">442</th><td>		<b>default</b>:</td></tr>
+<tr><th id="443">443</th><td>			type = <q>"?"</q>;</td></tr>
+<tr><th id="444">444</th><td>			<b>break</b>;</td></tr>
+<tr><th id="445">445</th><td>		}</td></tr>
+<tr><th id="446">446</th><td>		temp = scnprintf(next, size,</td></tr>
+<tr><th id="447">447</th><td>				<q>"\n\t%p%c%s len=%d %08x urb %p"</q></td></tr>
+<tr><th id="448">448</th><td>				<q>" [td %08x buf[0] %08x]"</q>,</td></tr>
+<tr><th id="449">449</th><td>				td, mark, type,</td></tr>
+<tr><th id="450">450</th><td>				(scratch &gt;&gt; <var>16</var>) &amp; <var>0x7fff</var>,</td></tr>
+<tr><th id="451">451</th><td>				scratch,</td></tr>
+<tr><th id="452">452</th><td>				td-&gt;urb,</td></tr>
+<tr><th id="453">453</th><td>				(u32) td-&gt;qtd_dma,</td></tr>
+<tr><th id="454">454</th><td>				hc32_to_cpup(ehci, &amp;td-&gt;hw_buf[<var>0</var>]));</td></tr>
+<tr><th id="455">455</th><td>		size -= temp;</td></tr>
+<tr><th id="456">456</th><td>		next += temp;</td></tr>
+<tr><th id="457">457</th><td>		<b>if</b> (temp == size)</td></tr>
+<tr><th id="458">458</th><td>			<b>goto</b> done;</td></tr>
+<tr><th id="459">459</th><td>	}</td></tr>
+<tr><th id="460">460</th><td></td></tr>
+<tr><th id="461">461</th><td>	temp = scnprintf(next, size, <q>"\n"</q>);</td></tr>
+<tr><th id="462">462</th><td>	size -= temp;</td></tr>
+<tr><th id="463">463</th><td>	next += temp;</td></tr>
+<tr><th id="464">464</th><td></td></tr>
+<tr><th id="465">465</th><td>done:</td></tr>
+<tr><th id="466">466</th><td>	*sizep = size;</td></tr>
+<tr><th id="467">467</th><td>	*nextp = next;</td></tr>
+<tr><th id="468">468</th><td>}</td></tr>
+<tr><th id="469">469</th><td></td></tr>
+<tr><th id="470">470</th><td><em>static</em> ssize_t fill_async_buffer(<b>struct</b> debug_buffer *buf)</td></tr>
+<tr><th id="471">471</th><td>{</td></tr>
+<tr><th id="472">472</th><td>	<b>struct</b> usb_hcd		*hcd;</td></tr>
+<tr><th id="473">473</th><td>	<b>struct</b> ehci_hcd		*ehci;</td></tr>
+<tr><th id="474">474</th><td>	<em>unsigned</em> <em>long</em>		flags;</td></tr>
+<tr><th id="475">475</th><td>	<em>unsigned</em>		temp, size;</td></tr>
+<tr><th id="476">476</th><td>	<em>char</em>			*next;</td></tr>
+<tr><th id="477">477</th><td>	<b>struct</b> ehci_qh		*qh;</td></tr>
+<tr><th id="478">478</th><td></td></tr>
+<tr><th id="479">479</th><td>	hcd = bus_to_hcd(buf-&gt;bus);</td></tr>
+<tr><th id="480">480</th><td>	ehci = hcd_to_ehci(hcd);</td></tr>
+<tr><th id="481">481</th><td>	next = buf-&gt;output_buf;</td></tr>
+<tr><th id="482">482</th><td>	size = buf-&gt;alloc_size;</td></tr>
+<tr><th id="483">483</th><td></td></tr>
+<tr><th id="484">484</th><td>	*next = <var>0</var>;</td></tr>
+<tr><th id="485">485</th><td></td></tr>
+<tr><th id="486">486</th><td>	<i>/*</i></td></tr>
+<tr><th id="487">487</th><td><i>	 * dumps a snapshot of the async schedule.</i></td></tr>
+<tr><th id="488">488</th><td><i>	 * usually empty except for long-term bulk reads, or head.</i></td></tr>
+<tr><th id="489">489</th><td><i>	 * one QH per line, and TDs we know about</i></td></tr>
+<tr><th id="490">490</th><td><i>	 */</i></td></tr>
+<tr><th id="491">491</th><td>	spin_lock_irqsave(&amp;ehci-&gt;lock, flags);</td></tr>
+<tr><th id="492">492</th><td>	<b>for</b> (qh = ehci-&gt;async-&gt;qh_next.qh; size &gt; <var>0</var> &amp;&amp; qh; qh = qh-&gt;qh_next.qh)</td></tr>
+<tr><th id="493">493</th><td>		qh_lines(ehci, qh, &amp;next, &amp;size);</td></tr>
+<tr><th id="494">494</th><td>	<b>if</b> (!list_empty(&amp;ehci-&gt;async_unlink) &amp;&amp; size &gt; <var>0</var>) {</td></tr>
+<tr><th id="495">495</th><td>		temp = scnprintf(next, size, <q>"\nunlink =\n"</q>);</td></tr>
+<tr><th id="496">496</th><td>		size -= temp;</td></tr>
+<tr><th id="497">497</th><td>		next += temp;</td></tr>
+<tr><th id="498">498</th><td></td></tr>
+<tr><th id="499">499</th><td>		list_for_each_entry(qh, &amp;ehci-&gt;async_unlink, unlink_node) {</td></tr>
+<tr><th id="500">500</th><td>			<b>if</b> (size &lt;= <var>0</var>)</td></tr>
+<tr><th id="501">501</th><td>				<b>break</b>;</td></tr>
+<tr><th id="502">502</th><td>			qh_lines(ehci, qh, &amp;next, &amp;size);</td></tr>
+<tr><th id="503">503</th><td>		}</td></tr>
+<tr><th id="504">504</th><td>	}</td></tr>
+<tr><th id="505">505</th><td>	spin_unlock_irqrestore(&amp;ehci-&gt;lock, flags);</td></tr>
+<tr><th id="506">506</th><td></td></tr>
+<tr><th id="507">507</th><td>	<b>return</b> strlen(buf-&gt;output_buf);</td></tr>
+<tr><th id="508">508</th><td>}</td></tr>
+<tr><th id="509">509</th><td></td></tr>
+<tr><th id="510">510</th><td><em>static</em> ssize_t fill_bandwidth_buffer(<b>struct</b> debug_buffer *buf)</td></tr>
+<tr><th id="511">511</th><td>{</td></tr>
+<tr><th id="512">512</th><td>	<b>struct</b> ehci_hcd		*ehci;</td></tr>
+<tr><th id="513">513</th><td>	<b>struct</b> ehci_tt		*tt;</td></tr>
+<tr><th id="514">514</th><td>	<b>struct</b> ehci_per_sched	*ps;</td></tr>
+<tr><th id="515">515</th><td>	<em>unsigned</em>		temp, size;</td></tr>
+<tr><th id="516">516</th><td>	<em>char</em>			*next;</td></tr>
+<tr><th id="517">517</th><td>	<em>unsigned</em>		i;</td></tr>
+<tr><th id="518">518</th><td>	u8			*bw;</td></tr>
+<tr><th id="519">519</th><td>	u16			*bf;</td></tr>
+<tr><th id="520">520</th><td>	u8			budget[EHCI_BANDWIDTH_SIZE];</td></tr>
+<tr><th id="521">521</th><td></td></tr>
+<tr><th id="522">522</th><td>	ehci = hcd_to_ehci(bus_to_hcd(buf-&gt;bus));</td></tr>
+<tr><th id="523">523</th><td>	next = buf-&gt;output_buf;</td></tr>
+<tr><th id="524">524</th><td>	size = buf-&gt;alloc_size;</td></tr>
+<tr><th id="525">525</th><td></td></tr>
+<tr><th id="526">526</th><td>	*next = <var>0</var>;</td></tr>
+<tr><th id="527">527</th><td></td></tr>
+<tr><th id="528">528</th><td>	spin_lock_irq(&amp;ehci-&gt;lock);</td></tr>
+<tr><th id="529">529</th><td></td></tr>
+<tr><th id="530">530</th><td>	<i>/* Dump the HS bandwidth table */</i></td></tr>
+<tr><th id="531">531</th><td>	temp = scnprintf(next, size,</td></tr>
+<tr><th id="532">532</th><td>			<q>"HS bandwidth allocation (us per microframe)\n"</q>);</td></tr>
+<tr><th id="533">533</th><td>	size -= temp;</td></tr>
+<tr><th id="534">534</th><td>	next += temp;</td></tr>
+<tr><th id="535">535</th><td>	<b>for</b> (i = <var>0</var>; i &lt; EHCI_BANDWIDTH_SIZE; i += <var>8</var>) {</td></tr>
+<tr><th id="536">536</th><td>		bw = &amp;ehci-&gt;bandwidth[i];</td></tr>
+<tr><th id="537">537</th><td>		temp = scnprintf(next, size,</td></tr>
+<tr><th id="538">538</th><td>				<q>"%2u: %4u%4u%4u%4u%4u%4u%4u%4u\n"</q>,</td></tr>
+<tr><th id="539">539</th><td>				i, bw[<var>0</var>], bw[<var>1</var>], bw[<var>2</var>], bw[<var>3</var>],</td></tr>
+<tr><th id="540">540</th><td>					bw[<var>4</var>], bw[<var>5</var>], bw[<var>6</var>], bw[<var>7</var>]);</td></tr>
+<tr><th id="541">541</th><td>		size -= temp;</td></tr>
+<tr><th id="542">542</th><td>		next += temp;</td></tr>
+<tr><th id="543">543</th><td>	}</td></tr>
+<tr><th id="544">544</th><td></td></tr>
+<tr><th id="545">545</th><td>	<i>/* Dump all the FS/LS tables */</i></td></tr>
+<tr><th id="546">546</th><td>	list_for_each_entry(tt, &amp;ehci-&gt;tt_list, tt_list) {</td></tr>
+<tr><th id="547">547</th><td>		temp = scnprintf(next, size,</td></tr>
+<tr><th id="548">548</th><td>				<q>"\nTT %s port %d  FS/LS bandwidth allocation (us per frame)\n"</q>,</td></tr>
+<tr><th id="549">549</th><td>				dev_name(&amp;tt-&gt;usb_tt-&gt;hub-&gt;dev),</td></tr>
+<tr><th id="550">550</th><td>				tt-&gt;tt_port + !!tt-&gt;usb_tt-&gt;multi);</td></tr>
+<tr><th id="551">551</th><td>		size -= temp;</td></tr>
+<tr><th id="552">552</th><td>		next += temp;</td></tr>
+<tr><th id="553">553</th><td></td></tr>
+<tr><th id="554">554</th><td>		bf = tt-&gt;bandwidth;</td></tr>
+<tr><th id="555">555</th><td>		temp = scnprintf(next, size,</td></tr>
+<tr><th id="556">556</th><td>				<q>"  %5u%5u%5u%5u%5u%5u%5u%5u\n"</q>,</td></tr>
+<tr><th id="557">557</th><td>				bf[<var>0</var>], bf[<var>1</var>], bf[<var>2</var>], bf[<var>3</var>],</td></tr>
+<tr><th id="558">558</th><td>					bf[<var>4</var>], bf[<var>5</var>], bf[<var>6</var>], bf[<var>7</var>]);</td></tr>
+<tr><th id="559">559</th><td>		size -= temp;</td></tr>
+<tr><th id="560">560</th><td>		next += temp;</td></tr>
+<tr><th id="561">561</th><td></td></tr>
+<tr><th id="562">562</th><td>		temp = scnprintf(next, size,</td></tr>
+<tr><th id="563">563</th><td>				<q>"FS/LS budget (us per microframe)\n"</q>);</td></tr>
+<tr><th id="564">564</th><td>		size -= temp;</td></tr>
+<tr><th id="565">565</th><td>		next += temp;</td></tr>
+<tr><th id="566">566</th><td>		compute_tt_budget(budget, tt);</td></tr>
+<tr><th id="567">567</th><td>		<b>for</b> (i = <var>0</var>; i &lt; EHCI_BANDWIDTH_SIZE; i += <var>8</var>) {</td></tr>
+<tr><th id="568">568</th><td>			bw = &amp;budget[i];</td></tr>
+<tr><th id="569">569</th><td>			temp = scnprintf(next, size,</td></tr>
+<tr><th id="570">570</th><td>					<q>"%2u: %4u%4u%4u%4u%4u%4u%4u%4u\n"</q>,</td></tr>
+<tr><th id="571">571</th><td>					i, bw[<var>0</var>], bw[<var>1</var>], bw[<var>2</var>], bw[<var>3</var>],</td></tr>
+<tr><th id="572">572</th><td>						bw[<var>4</var>], bw[<var>5</var>], bw[<var>6</var>], bw[<var>7</var>]);</td></tr>
+<tr><th id="573">573</th><td>			size -= temp;</td></tr>
+<tr><th id="574">574</th><td>			next += temp;</td></tr>
+<tr><th id="575">575</th><td>		}</td></tr>
+<tr><th id="576">576</th><td>		list_for_each_entry(ps, &amp;tt-&gt;ps_list, ps_list) {</td></tr>
+<tr><th id="577">577</th><td>			temp = scnprintf(next, size,</td></tr>
+<tr><th id="578">578</th><td>					<q>"%s ep %02x:  %4u @ %2u.%u+%u mask %04x\n"</q>,</td></tr>
+<tr><th id="579">579</th><td>					dev_name(&amp;ps-&gt;udev-&gt;dev),</td></tr>
+<tr><th id="580">580</th><td>					ps-&gt;ep-&gt;desc.bEndpointAddress,</td></tr>
+<tr><th id="581">581</th><td>					ps-&gt;tt_usecs,</td></tr>
+<tr><th id="582">582</th><td>					ps-&gt;bw_phase, ps-&gt;phase_uf,</td></tr>
+<tr><th id="583">583</th><td>					ps-&gt;bw_period, ps-&gt;cs_mask);</td></tr>
+<tr><th id="584">584</th><td>			size -= temp;</td></tr>
+<tr><th id="585">585</th><td>			next += temp;</td></tr>
+<tr><th id="586">586</th><td>		}</td></tr>
+<tr><th id="587">587</th><td>	}</td></tr>
+<tr><th id="588">588</th><td>	spin_unlock_irq(&amp;ehci-&gt;lock);</td></tr>
+<tr><th id="589">589</th><td></td></tr>
+<tr><th id="590">590</th><td>	<b>return</b> next - buf-&gt;output_buf;</td></tr>
+<tr><th id="591">591</th><td>}</td></tr>
+<tr><th id="592">592</th><td></td></tr>
+<tr><th id="593">593</th><td><em>static</em> <em>unsigned</em> output_buf_tds_dir(<em>char</em> *buf, <b>struct</b> ehci_hcd *ehci,</td></tr>
+<tr><th id="594">594</th><td>		<b>struct</b> ehci_qh_hw *hw, <b>struct</b> ehci_qh *qh, <em>unsigned</em> size)</td></tr>
+<tr><th id="595">595</th><td>{</td></tr>
+<tr><th id="596">596</th><td>	u32			scratch = hc32_to_cpup(ehci, &amp;hw-&gt;hw_info1);</td></tr>
+<tr><th id="597">597</th><td>	<b>struct</b> ehci_qtd		*qtd;</td></tr>
+<tr><th id="598">598</th><td>	<em>char</em>			*type = <q>""</q>;</td></tr>
+<tr><th id="599">599</th><td>	<em>unsigned</em>		temp = <var>0</var>;</td></tr>
+<tr><th id="600">600</th><td></td></tr>
+<tr><th id="601">601</th><td>	<i>/* count tds, get ep direction */</i></td></tr>
+<tr><th id="602">602</th><td>	list_for_each_entry(qtd, &amp;qh-&gt;qtd_list, qtd_list) {</td></tr>
+<tr><th id="603">603</th><td>		temp++;</td></tr>
+<tr><th id="604">604</th><td>		<b>switch</b> ((hc32_to_cpu(ehci, qtd-&gt;hw_token) &gt;&gt; <var>8</var>)	&amp; <var>0x03</var>) {</td></tr>
+<tr><th id="605">605</th><td>		<b>case</b> <var>0</var>:</td></tr>
+<tr><th id="606">606</th><td>			type = <q>"out"</q>;</td></tr>
+<tr><th id="607">607</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="608">608</th><td>		<b>case</b> <var>1</var>:</td></tr>
+<tr><th id="609">609</th><td>			type = <q>"in"</q>;</td></tr>
+<tr><th id="610">610</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="611">611</th><td>		}</td></tr>
+<tr><th id="612">612</th><td>	}</td></tr>
+<tr><th id="613">613</th><td></td></tr>
+<tr><th id="614">614</th><td>	<b>return</b> scnprintf(buf, size, <q>" (%c%d ep%d%s [%d/%d] q%d p%d)"</q>,</td></tr>
+<tr><th id="615">615</th><td>			speed_char(scratch), scratch &amp; <var>0x007f</var>,</td></tr>
+<tr><th id="616">616</th><td>			(scratch &gt;&gt; <var>8</var>) &amp; <var>0x000f</var>, type, qh-&gt;ps.usecs,</td></tr>
+<tr><th id="617">617</th><td>			qh-&gt;ps.c_usecs, temp, <var>0x7ff</var> &amp; (scratch &gt;&gt; <var>16</var>));</td></tr>
+<tr><th id="618">618</th><td>}</td></tr>
+<tr><th id="619">619</th><td></td></tr>
+<tr><th id="620">620</th><td><u>#define DBG_SCHED_LIMIT 64</u></td></tr>
+<tr><th id="621">621</th><td><em>static</em> ssize_t fill_periodic_buffer(<b>struct</b> debug_buffer *buf)</td></tr>
+<tr><th id="622">622</th><td>{</td></tr>
+<tr><th id="623">623</th><td>	<b>struct</b> usb_hcd		*hcd;</td></tr>
+<tr><th id="624">624</th><td>	<b>struct</b> ehci_hcd		*ehci;</td></tr>
+<tr><th id="625">625</th><td>	<em>unsigned</em> <em>long</em>		flags;</td></tr>
+<tr><th id="626">626</th><td>	<b>union</b> ehci_shadow	p, *seen;</td></tr>
+<tr><th id="627">627</th><td>	<em>unsigned</em>		temp, size, seen_count;</td></tr>
+<tr><th id="628">628</th><td>	<em>char</em>			*next;</td></tr>
+<tr><th id="629">629</th><td>	<em>unsigned</em>		i;</td></tr>
+<tr><th id="630">630</th><td>	__hc32			tag;</td></tr>
+<tr><th id="631">631</th><td></td></tr>
+<tr><th id="632">632</th><td>	seen = kmalloc_array(DBG_SCHED_LIMIT, <b>sizeof</b>(*seen), GFP_ATOMIC);</td></tr>
+<tr><th id="633">633</th><td>	<b>if</b> (!seen)</td></tr>
+<tr><th id="634">634</th><td>		<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="635">635</th><td>	seen_count = <var>0</var>;</td></tr>
+<tr><th id="636">636</th><td></td></tr>
+<tr><th id="637">637</th><td>	hcd = bus_to_hcd(buf-&gt;bus);</td></tr>
+<tr><th id="638">638</th><td>	ehci = hcd_to_ehci(hcd);</td></tr>
+<tr><th id="639">639</th><td>	next = buf-&gt;output_buf;</td></tr>
+<tr><th id="640">640</th><td>	size = buf-&gt;alloc_size;</td></tr>
+<tr><th id="641">641</th><td></td></tr>
+<tr><th id="642">642</th><td>	temp = scnprintf(next, size, <q>"size = %d\n"</q>, ehci-&gt;periodic_size);</td></tr>
+<tr><th id="643">643</th><td>	size -= temp;</td></tr>
+<tr><th id="644">644</th><td>	next += temp;</td></tr>
+<tr><th id="645">645</th><td></td></tr>
+<tr><th id="646">646</th><td>	<i>/*</i></td></tr>
+<tr><th id="647">647</th><td><i>	 * dump a snapshot of the periodic schedule.</i></td></tr>
+<tr><th id="648">648</th><td><i>	 * iso changes, interrupt usually doesn't.</i></td></tr>
+<tr><th id="649">649</th><td><i>	 */</i></td></tr>
+<tr><th id="650">650</th><td>	spin_lock_irqsave(&amp;ehci-&gt;lock, flags);</td></tr>
+<tr><th id="651">651</th><td>	<b>for</b> (i = <var>0</var>; i &lt; ehci-&gt;periodic_size; i++) {</td></tr>
+<tr><th id="652">652</th><td>		p = ehci-&gt;pshadow[i];</td></tr>
+<tr><th id="653">653</th><td>		<b>if</b> (likely(!p.ptr))</td></tr>
+<tr><th id="654">654</th><td>			<b>continue</b>;</td></tr>
+<tr><th id="655">655</th><td>		tag = Q_NEXT_TYPE(ehci, ehci-&gt;periodic[i]);</td></tr>
+<tr><th id="656">656</th><td></td></tr>
+<tr><th id="657">657</th><td>		temp = scnprintf(next, size, <q>"%4d: "</q>, i);</td></tr>
+<tr><th id="658">658</th><td>		size -= temp;</td></tr>
+<tr><th id="659">659</th><td>		next += temp;</td></tr>
+<tr><th id="660">660</th><td></td></tr>
+<tr><th id="661">661</th><td>		<b>do</b> {</td></tr>
+<tr><th id="662">662</th><td>			<b>struct</b> ehci_qh_hw *hw;</td></tr>
+<tr><th id="663">663</th><td></td></tr>
+<tr><th id="664">664</th><td>			<b>switch</b> (hc32_to_cpu(ehci, tag)) {</td></tr>
+<tr><th id="665">665</th><td>			<b>case</b> Q_TYPE_QH:</td></tr>
+<tr><th id="666">666</th><td>				hw = p.qh-&gt;hw;</td></tr>
+<tr><th id="667">667</th><td>				temp = scnprintf(next, size, <q>" qh%d-%04x/%p"</q>,</td></tr>
+<tr><th id="668">668</th><td>						p.qh-&gt;ps.period,</td></tr>
+<tr><th id="669">669</th><td>						hc32_to_cpup(ehci,</td></tr>
+<tr><th id="670">670</th><td>							&amp;hw-&gt;hw_info2)</td></tr>
+<tr><th id="671">671</th><td>							<i>/* uframe masks */</i></td></tr>
+<tr><th id="672">672</th><td>							&amp; (QH_CMASK | QH_SMASK),</td></tr>
+<tr><th id="673">673</th><td>						p.qh);</td></tr>
+<tr><th id="674">674</th><td>				size -= temp;</td></tr>
+<tr><th id="675">675</th><td>				next += temp;</td></tr>
+<tr><th id="676">676</th><td>				<i>/* don't repeat what follows this qh */</i></td></tr>
+<tr><th id="677">677</th><td>				<b>for</b> (temp = <var>0</var>; temp &lt; seen_count; temp++) {</td></tr>
+<tr><th id="678">678</th><td>					<b>if</b> (seen[temp].ptr != p.ptr)</td></tr>
+<tr><th id="679">679</th><td>						<b>continue</b>;</td></tr>
+<tr><th id="680">680</th><td>					<b>if</b> (p.qh-&gt;qh_next.ptr) {</td></tr>
+<tr><th id="681">681</th><td>						temp = scnprintf(next, size,</td></tr>
+<tr><th id="682">682</th><td>							<q>" ..."</q>);</td></tr>
+<tr><th id="683">683</th><td>						size -= temp;</td></tr>
+<tr><th id="684">684</th><td>						next += temp;</td></tr>
+<tr><th id="685">685</th><td>					}</td></tr>
+<tr><th id="686">686</th><td>					<b>break</b>;</td></tr>
+<tr><th id="687">687</th><td>				}</td></tr>
+<tr><th id="688">688</th><td>				<i>/* show more info the first time around */</i></td></tr>
+<tr><th id="689">689</th><td>				<b>if</b> (temp == seen_count) {</td></tr>
+<tr><th id="690">690</th><td>					temp = output_buf_tds_dir(next, ehci,</td></tr>
+<tr><th id="691">691</th><td>						hw, p.qh, size);</td></tr>
+<tr><th id="692">692</th><td></td></tr>
+<tr><th id="693">693</th><td>					<b>if</b> (seen_count &lt; DBG_SCHED_LIMIT)</td></tr>
+<tr><th id="694">694</th><td>						seen[seen_count++].qh = p.qh;</td></tr>
+<tr><th id="695">695</th><td>				} <b>else</b> {</td></tr>
+<tr><th id="696">696</th><td>					temp = <var>0</var>;</td></tr>
+<tr><th id="697">697</th><td>				}</td></tr>
+<tr><th id="698">698</th><td>				tag = Q_NEXT_TYPE(ehci, hw-&gt;hw_next);</td></tr>
+<tr><th id="699">699</th><td>				p = p.qh-&gt;qh_next;</td></tr>
+<tr><th id="700">700</th><td>				<b>break</b>;</td></tr>
+<tr><th id="701">701</th><td>			<b>case</b> Q_TYPE_FSTN:</td></tr>
+<tr><th id="702">702</th><td>				temp = scnprintf(next, size,</td></tr>
+<tr><th id="703">703</th><td>					<q>" fstn-%8x/%p"</q>, p.fstn-&gt;hw_prev,</td></tr>
+<tr><th id="704">704</th><td>					p.fstn);</td></tr>
+<tr><th id="705">705</th><td>				tag = Q_NEXT_TYPE(ehci, p.fstn-&gt;hw_next);</td></tr>
+<tr><th id="706">706</th><td>				p = p.fstn-&gt;fstn_next;</td></tr>
+<tr><th id="707">707</th><td>				<b>break</b>;</td></tr>
+<tr><th id="708">708</th><td>			<b>case</b> Q_TYPE_ITD:</td></tr>
+<tr><th id="709">709</th><td>				temp = scnprintf(next, size,</td></tr>
+<tr><th id="710">710</th><td>					<q>" itd/%p"</q>, p.itd);</td></tr>
+<tr><th id="711">711</th><td>				tag = Q_NEXT_TYPE(ehci, p.itd-&gt;hw_next);</td></tr>
+<tr><th id="712">712</th><td>				p = p.itd-&gt;itd_next;</td></tr>
+<tr><th id="713">713</th><td>				<b>break</b>;</td></tr>
+<tr><th id="714">714</th><td>			<b>case</b> Q_TYPE_SITD:</td></tr>
+<tr><th id="715">715</th><td>				temp = scnprintf(next, size,</td></tr>
+<tr><th id="716">716</th><td>					<q>" sitd%d-%04x/%p"</q>,</td></tr>
+<tr><th id="717">717</th><td>					p.sitd-&gt;stream-&gt;ps.period,</td></tr>
+<tr><th id="718">718</th><td>					hc32_to_cpup(ehci, &amp;p.sitd-&gt;hw_uframe)</td></tr>
+<tr><th id="719">719</th><td>						&amp; <var>0x0000ffff</var>,</td></tr>
+<tr><th id="720">720</th><td>					p.sitd);</td></tr>
+<tr><th id="721">721</th><td>				tag = Q_NEXT_TYPE(ehci, p.sitd-&gt;hw_next);</td></tr>
+<tr><th id="722">722</th><td>				p = p.sitd-&gt;sitd_next;</td></tr>
+<tr><th id="723">723</th><td>				<b>break</b>;</td></tr>
+<tr><th id="724">724</th><td>			}</td></tr>
+<tr><th id="725">725</th><td>			size -= temp;</td></tr>
+<tr><th id="726">726</th><td>			next += temp;</td></tr>
+<tr><th id="727">727</th><td>		} <b>while</b> (p.ptr);</td></tr>
+<tr><th id="728">728</th><td></td></tr>
+<tr><th id="729">729</th><td>		temp = scnprintf(next, size, <q>"\n"</q>);</td></tr>
+<tr><th id="730">730</th><td>		size -= temp;</td></tr>
+<tr><th id="731">731</th><td>		next += temp;</td></tr>
+<tr><th id="732">732</th><td>	}</td></tr>
+<tr><th id="733">733</th><td>	spin_unlock_irqrestore(&amp;ehci-&gt;lock, flags);</td></tr>
+<tr><th id="734">734</th><td>	kfree(seen);</td></tr>
+<tr><th id="735">735</th><td></td></tr>
+<tr><th id="736">736</th><td>	<b>return</b> buf-&gt;alloc_size - size;</td></tr>
+<tr><th id="737">737</th><td>}</td></tr>
+<tr><th id="738">738</th><td><u>#undef DBG_SCHED_LIMIT</u></td></tr>
+<tr><th id="739">739</th><td></td></tr>
+<tr><th id="740">740</th><td><em>static</em> <em>const</em> <em>char</em> *rh_state_string(<b>struct</b> ehci_hcd *ehci)</td></tr>
+<tr><th id="741">741</th><td>{</td></tr>
+<tr><th id="742">742</th><td>	<b>switch</b> (ehci-&gt;rh_state) {</td></tr>
+<tr><th id="743">743</th><td>	<b>case</b> EHCI_RH_HALTED:</td></tr>
+<tr><th id="744">744</th><td>		<b>return</b> <q>"halted"</q>;</td></tr>
+<tr><th id="745">745</th><td>	<b>case</b> EHCI_RH_SUSPENDED:</td></tr>
+<tr><th id="746">746</th><td>		<b>return</b> <q>"suspended"</q>;</td></tr>
+<tr><th id="747">747</th><td>	<b>case</b> EHCI_RH_RUNNING:</td></tr>
+<tr><th id="748">748</th><td>		<b>return</b> <q>"running"</q>;</td></tr>
+<tr><th id="749">749</th><td>	<b>case</b> EHCI_RH_STOPPING:</td></tr>
+<tr><th id="750">750</th><td>		<b>return</b> <q>"stopping"</q>;</td></tr>
+<tr><th id="751">751</th><td>	}</td></tr>
+<tr><th id="752">752</th><td>	<b>return</b> <q>"?"</q>;</td></tr>
+<tr><th id="753">753</th><td>}</td></tr>
+<tr><th id="754">754</th><td></td></tr>
+<tr><th id="755">755</th><td><em>static</em> ssize_t fill_registers_buffer(<b>struct</b> debug_buffer *buf)</td></tr>
+<tr><th id="756">756</th><td>{</td></tr>
+<tr><th id="757">757</th><td>	<b>struct</b> usb_hcd		*hcd;</td></tr>
+<tr><th id="758">758</th><td>	<b>struct</b> ehci_hcd		*ehci;</td></tr>
+<tr><th id="759">759</th><td>	<em>unsigned</em> <em>long</em>		flags;</td></tr>
+<tr><th id="760">760</th><td>	<em>unsigned</em>		temp, size, i;</td></tr>
+<tr><th id="761">761</th><td>	<em>char</em>			*next, scratch[<var>80</var>];</td></tr>
+<tr><th id="762">762</th><td>	<em>static</em> <em>char</em>		fmt[] = <q>"%*s\n"</q>;</td></tr>
+<tr><th id="763">763</th><td>	<em>static</em> <em>char</em>		label[] = <q>""</q>;</td></tr>
+<tr><th id="764">764</th><td></td></tr>
+<tr><th id="765">765</th><td>	hcd = bus_to_hcd(buf-&gt;bus);</td></tr>
+<tr><th id="766">766</th><td>	ehci = hcd_to_ehci(hcd);</td></tr>
+<tr><th id="767">767</th><td>	next = buf-&gt;output_buf;</td></tr>
+<tr><th id="768">768</th><td>	size = buf-&gt;alloc_size;</td></tr>
+<tr><th id="769">769</th><td></td></tr>
+<tr><th id="770">770</th><td>	spin_lock_irqsave(&amp;ehci-&gt;lock, flags);</td></tr>
+<tr><th id="771">771</th><td></td></tr>
+<tr><th id="772">772</th><td>	<b>if</b> (!HCD_HW_ACCESSIBLE(hcd)) {</td></tr>
+<tr><th id="773">773</th><td>		size = scnprintf(next, size,</td></tr>
+<tr><th id="774">774</th><td>			<q>"bus %s, device %s\n"</q></td></tr>
+<tr><th id="775">775</th><td>			<q>"%s\n"</q></td></tr>
+<tr><th id="776">776</th><td>			<q>"SUSPENDED (no register access)\n"</q>,</td></tr>
+<tr><th id="777">777</th><td>			hcd-&gt;self.controller-&gt;bus-&gt;name,</td></tr>
+<tr><th id="778">778</th><td>			dev_name(hcd-&gt;self.controller),</td></tr>
+<tr><th id="779">779</th><td>			hcd-&gt;product_desc);</td></tr>
+<tr><th id="780">780</th><td>		<b>goto</b> done;</td></tr>
+<tr><th id="781">781</th><td>	}</td></tr>
+<tr><th id="782">782</th><td></td></tr>
+<tr><th id="783">783</th><td>	<i>/* Capability Registers */</i></td></tr>
+<tr><th id="784">784</th><td>	i = HC_VERSION(ehci, ehci_readl(ehci, &amp;ehci-&gt;caps-&gt;hc_capbase));</td></tr>
+<tr><th id="785">785</th><td>	temp = scnprintf(next, size,</td></tr>
+<tr><th id="786">786</th><td>		<q>"bus %s, device %s\n"</q></td></tr>
+<tr><th id="787">787</th><td>		<q>"%s\n"</q></td></tr>
+<tr><th id="788">788</th><td>		<q>"EHCI %x.%02x, rh state %s\n"</q>,</td></tr>
+<tr><th id="789">789</th><td>		hcd-&gt;self.controller-&gt;bus-&gt;name,</td></tr>
+<tr><th id="790">790</th><td>		dev_name(hcd-&gt;self.controller),</td></tr>
+<tr><th id="791">791</th><td>		hcd-&gt;product_desc,</td></tr>
+<tr><th id="792">792</th><td>		i &gt;&gt; <var>8</var>, i &amp; <var>0x0ff</var>, rh_state_string(ehci));</td></tr>
+<tr><th id="793">793</th><td>	size -= temp;</td></tr>
+<tr><th id="794">794</th><td>	next += temp;</td></tr>
+<tr><th id="795">795</th><td></td></tr>
+<tr><th id="796">796</th><td><u>#ifdef	CONFIG_USB_PCI</u></td></tr>
+<tr><th id="797">797</th><td>	<i>/* EHCI 0.96 and later may have "extended capabilities" */</i></td></tr>
+<tr><th id="798">798</th><td>	<b>if</b> (dev_is_pci(hcd-&gt;self.controller)) {</td></tr>
+<tr><th id="799">799</th><td>		<b>struct</b> pci_dev	*pdev;</td></tr>
+<tr><th id="800">800</th><td>		u32		offset, cap, cap2;</td></tr>
+<tr><th id="801">801</th><td>		<em>unsigned</em>	count = <var>256</var> / <var>4</var>;</td></tr>
+<tr><th id="802">802</th><td></td></tr>
+<tr><th id="803">803</th><td>		pdev = to_pci_dev(ehci_to_hcd(ehci)-&gt;self.controller);</td></tr>
+<tr><th id="804">804</th><td>		offset = HCC_EXT_CAPS(ehci_readl(ehci,</td></tr>
+<tr><th id="805">805</th><td>				&amp;ehci-&gt;caps-&gt;hcc_params));</td></tr>
+<tr><th id="806">806</th><td>		<b>while</b> (offset &amp;&amp; count--) {</td></tr>
+<tr><th id="807">807</th><td>			pci_read_config_dword(pdev, offset, &amp;cap);</td></tr>
+<tr><th id="808">808</th><td>			<b>switch</b> (cap &amp; <var>0xff</var>) {</td></tr>
+<tr><th id="809">809</th><td>			<b>case</b> <var>1</var>:</td></tr>
+<tr><th id="810">810</th><td>				temp = scnprintf(next, size,</td></tr>
+<tr><th id="811">811</th><td>					<q>"ownership %08x%s%s\n"</q>, cap,</td></tr>
+<tr><th id="812">812</th><td>					(cap &amp; (<var>1</var> &lt;&lt; <var>24</var>)) ? <q>" linux"</q> : <q>""</q>,</td></tr>
+<tr><th id="813">813</th><td>					(cap &amp; (<var>1</var> &lt;&lt; <var>16</var>)) ? <q>" firmware"</q> : <q>""</q>);</td></tr>
+<tr><th id="814">814</th><td>				size -= temp;</td></tr>
+<tr><th id="815">815</th><td>				next += temp;</td></tr>
+<tr><th id="816">816</th><td></td></tr>
+<tr><th id="817">817</th><td>				offset += <var>4</var>;</td></tr>
+<tr><th id="818">818</th><td>				pci_read_config_dword(pdev, offset, &amp;cap2);</td></tr>
+<tr><th id="819">819</th><td>				temp = scnprintf(next, size,</td></tr>
+<tr><th id="820">820</th><td>					<q>"SMI sts/enable 0x%08x\n"</q>, cap2);</td></tr>
+<tr><th id="821">821</th><td>				size -= temp;</td></tr>
+<tr><th id="822">822</th><td>				next += temp;</td></tr>
+<tr><th id="823">823</th><td>				<b>break</b>;</td></tr>
+<tr><th id="824">824</th><td>			<b>case</b> <var>0</var>:		<i>/* illegal reserved capability */</i></td></tr>
+<tr><th id="825">825</th><td>				cap = <var>0</var>;</td></tr>
+<tr><th id="826">826</th><td>				<i>/* FALLTHROUGH */</i></td></tr>
+<tr><th id="827">827</th><td>			<b>default</b>:		<i>/* unknown */</i></td></tr>
+<tr><th id="828">828</th><td>				<b>break</b>;</td></tr>
+<tr><th id="829">829</th><td>			}</td></tr>
+<tr><th id="830">830</th><td>			offset = (cap &gt;&gt; <var>8</var>) &amp; <var>0xff</var>;</td></tr>
+<tr><th id="831">831</th><td>		}</td></tr>
+<tr><th id="832">832</th><td>	}</td></tr>
+<tr><th id="833">833</th><td><u>#endif</u></td></tr>
+<tr><th id="834">834</th><td></td></tr>
+<tr><th id="835">835</th><td>	<i>/* FIXME interpret both types of params */</i></td></tr>
+<tr><th id="836">836</th><td>	i = ehci_readl(ehci, &amp;ehci-&gt;caps-&gt;hcs_params);</td></tr>
+<tr><th id="837">837</th><td>	temp = scnprintf(next, size, <q>"structural params 0x%08x\n"</q>, i);</td></tr>
+<tr><th id="838">838</th><td>	size -= temp;</td></tr>
+<tr><th id="839">839</th><td>	next += temp;</td></tr>
+<tr><th id="840">840</th><td></td></tr>
+<tr><th id="841">841</th><td>	i = ehci_readl(ehci, &amp;ehci-&gt;caps-&gt;hcc_params);</td></tr>
+<tr><th id="842">842</th><td>	temp = scnprintf(next, size, <q>"capability params 0x%08x\n"</q>, i);</td></tr>
+<tr><th id="843">843</th><td>	size -= temp;</td></tr>
+<tr><th id="844">844</th><td>	next += temp;</td></tr>
+<tr><th id="845">845</th><td></td></tr>
+<tr><th id="846">846</th><td>	<i>/* Operational Registers */</i></td></tr>
+<tr><th id="847">847</th><td>	temp = dbg_status_buf(scratch, <b>sizeof</b>(scratch), label,</td></tr>
+<tr><th id="848">848</th><td>			ehci_readl(ehci, &amp;ehci-&gt;regs-&gt;status));</td></tr>
+<tr><th id="849">849</th><td>	temp = scnprintf(next, size, fmt, temp, scratch);</td></tr>
+<tr><th id="850">850</th><td>	size -= temp;</td></tr>
+<tr><th id="851">851</th><td>	next += temp;</td></tr>
+<tr><th id="852">852</th><td></td></tr>
+<tr><th id="853">853</th><td>	temp = dbg_command_buf(scratch, <b>sizeof</b>(scratch), label,</td></tr>
+<tr><th id="854">854</th><td>			ehci_readl(ehci, &amp;ehci-&gt;regs-&gt;command));</td></tr>
+<tr><th id="855">855</th><td>	temp = scnprintf(next, size, fmt, temp, scratch);</td></tr>
+<tr><th id="856">856</th><td>	size -= temp;</td></tr>
+<tr><th id="857">857</th><td>	next += temp;</td></tr>
+<tr><th id="858">858</th><td></td></tr>
+<tr><th id="859">859</th><td>	temp = dbg_intr_buf(scratch, <b>sizeof</b>(scratch), label,</td></tr>
+<tr><th id="860">860</th><td>			ehci_readl(ehci, &amp;ehci-&gt;regs-&gt;intr_enable));</td></tr>
+<tr><th id="861">861</th><td>	temp = scnprintf(next, size, fmt, temp, scratch);</td></tr>
+<tr><th id="862">862</th><td>	size -= temp;</td></tr>
+<tr><th id="863">863</th><td>	next += temp;</td></tr>
+<tr><th id="864">864</th><td></td></tr>
+<tr><th id="865">865</th><td>	temp = scnprintf(next, size, <q>"uframe %04x\n"</q>,</td></tr>
+<tr><th id="866">866</th><td>			ehci_read_frame_index(ehci));</td></tr>
+<tr><th id="867">867</th><td>	size -= temp;</td></tr>
+<tr><th id="868">868</th><td>	next += temp;</td></tr>
+<tr><th id="869">869</th><td></td></tr>
+<tr><th id="870">870</th><td>	<b>for</b> (i = <var>1</var>; i &lt;= HCS_N_PORTS(ehci-&gt;hcs_params); i++) {</td></tr>
+<tr><th id="871">871</th><td>		temp = dbg_port_buf(scratch, <b>sizeof</b>(scratch), label, i,</td></tr>
+<tr><th id="872">872</th><td>				ehci_readl(ehci,</td></tr>
+<tr><th id="873">873</th><td>					&amp;ehci-&gt;regs-&gt;port_status[i - <var>1</var>]));</td></tr>
+<tr><th id="874">874</th><td>		temp = scnprintf(next, size, fmt, temp, scratch);</td></tr>
+<tr><th id="875">875</th><td>		size -= temp;</td></tr>
+<tr><th id="876">876</th><td>		next += temp;</td></tr>
+<tr><th id="877">877</th><td>		<b>if</b> (i == HCS_DEBUG_PORT(ehci-&gt;hcs_params) &amp;&amp; ehci-&gt;debug) {</td></tr>
+<tr><th id="878">878</th><td>			temp = scnprintf(next, size,</td></tr>
+<tr><th id="879">879</th><td>					<q>"    debug control %08x\n"</q>,</td></tr>
+<tr><th id="880">880</th><td>					ehci_readl(ehci,</td></tr>
+<tr><th id="881">881</th><td>						&amp;ehci-&gt;debug-&gt;control));</td></tr>
+<tr><th id="882">882</th><td>			size -= temp;</td></tr>
+<tr><th id="883">883</th><td>			next += temp;</td></tr>
+<tr><th id="884">884</th><td>		}</td></tr>
+<tr><th id="885">885</th><td>	}</td></tr>
+<tr><th id="886">886</th><td></td></tr>
+<tr><th id="887">887</th><td>	<b>if</b> (!list_empty(&amp;ehci-&gt;async_unlink)) {</td></tr>
+<tr><th id="888">888</th><td>		temp = scnprintf(next, size, <q>"async unlink qh %p\n"</q>,</td></tr>
+<tr><th id="889">889</th><td>				list_first_entry(&amp;ehci-&gt;async_unlink,</td></tr>
+<tr><th id="890">890</th><td>						<b>struct</b> ehci_qh, unlink_node));</td></tr>
+<tr><th id="891">891</th><td>		size -= temp;</td></tr>
+<tr><th id="892">892</th><td>		next += temp;</td></tr>
+<tr><th id="893">893</th><td>	}</td></tr>
+<tr><th id="894">894</th><td></td></tr>
+<tr><th id="895">895</th><td><u>#ifdef EHCI_STATS</u></td></tr>
+<tr><th id="896">896</th><td>	temp = scnprintf(next, size,</td></tr>
+<tr><th id="897">897</th><td>		<q>"irq normal %ld err %ld iaa %ld (lost %ld)\n"</q>,</td></tr>
+<tr><th id="898">898</th><td>		ehci-&gt;stats.normal, ehci-&gt;stats.error, ehci-&gt;stats.iaa,</td></tr>
+<tr><th id="899">899</th><td>		ehci-&gt;stats.lost_iaa);</td></tr>
+<tr><th id="900">900</th><td>	size -= temp;</td></tr>
+<tr><th id="901">901</th><td>	next += temp;</td></tr>
+<tr><th id="902">902</th><td></td></tr>
+<tr><th id="903">903</th><td>	temp = scnprintf(next, size, <q>"complete %ld unlink %ld\n"</q>,</td></tr>
+<tr><th id="904">904</th><td>		ehci-&gt;stats.complete, ehci-&gt;stats.unlink);</td></tr>
+<tr><th id="905">905</th><td>	size -= temp;</td></tr>
+<tr><th id="906">906</th><td>	next += temp;</td></tr>
+<tr><th id="907">907</th><td><u>#endif</u></td></tr>
+<tr><th id="908">908</th><td></td></tr>
+<tr><th id="909">909</th><td>done:</td></tr>
+<tr><th id="910">910</th><td>	spin_unlock_irqrestore(&amp;ehci-&gt;lock, flags);</td></tr>
+<tr><th id="911">911</th><td></td></tr>
+<tr><th id="912">912</th><td>	<b>return</b> buf-&gt;alloc_size - size;</td></tr>
+<tr><th id="913">913</th><td>}</td></tr>
+<tr><th id="914">914</th><td></td></tr>
+<tr><th id="915">915</th><td><em>static</em> <b>struct</b> debug_buffer *alloc_buffer(<b>struct</b> usb_bus *bus,</td></tr>
+<tr><th id="916">916</th><td>		ssize_t (*fill_func)(<b>struct</b> debug_buffer *))</td></tr>
+<tr><th id="917">917</th><td>{</td></tr>
+<tr><th id="918">918</th><td>	<b>struct</b> debug_buffer *buf;</td></tr>
+<tr><th id="919">919</th><td></td></tr>
+<tr><th id="920">920</th><td>	buf = kzalloc(<b>sizeof</b>(*buf), GFP_KERNEL);</td></tr>
+<tr><th id="921">921</th><td></td></tr>
+<tr><th id="922">922</th><td>	<b>if</b> (buf) {</td></tr>
+<tr><th id="923">923</th><td>		buf-&gt;bus = bus;</td></tr>
+<tr><th id="924">924</th><td>		buf-&gt;fill_func = fill_func;</td></tr>
+<tr><th id="925">925</th><td>		mutex_init(&amp;buf-&gt;mutex);</td></tr>
+<tr><th id="926">926</th><td>		buf-&gt;alloc_size = PAGE_SIZE;</td></tr>
+<tr><th id="927">927</th><td>	}</td></tr>
+<tr><th id="928">928</th><td></td></tr>
+<tr><th id="929">929</th><td>	<b>return</b> buf;</td></tr>
+<tr><th id="930">930</th><td>}</td></tr>
+<tr><th id="931">931</th><td></td></tr>
+<tr><th id="932">932</th><td><em>static</em> <em>int</em> fill_buffer(<b>struct</b> debug_buffer *buf)</td></tr>
+<tr><th id="933">933</th><td>{</td></tr>
+<tr><th id="934">934</th><td>	<em>int</em> ret = <var>0</var>;</td></tr>
+<tr><th id="935">935</th><td></td></tr>
+<tr><th id="936">936</th><td>	<b>if</b> (!buf-&gt;output_buf)</td></tr>
+<tr><th id="937">937</th><td>		buf-&gt;output_buf = vmalloc(buf-&gt;alloc_size);</td></tr>
+<tr><th id="938">938</th><td></td></tr>
+<tr><th id="939">939</th><td>	<b>if</b> (!buf-&gt;output_buf) {</td></tr>
+<tr><th id="940">940</th><td>		ret = -ENOMEM;</td></tr>
+<tr><th id="941">941</th><td>		<b>goto</b> out;</td></tr>
+<tr><th id="942">942</th><td>	}</td></tr>
+<tr><th id="943">943</th><td></td></tr>
+<tr><th id="944">944</th><td>	ret = buf-&gt;fill_func(buf);</td></tr>
+<tr><th id="945">945</th><td></td></tr>
+<tr><th id="946">946</th><td>	<b>if</b> (ret &gt;= <var>0</var>) {</td></tr>
+<tr><th id="947">947</th><td>		buf-&gt;count = ret;</td></tr>
+<tr><th id="948">948</th><td>		ret = <var>0</var>;</td></tr>
+<tr><th id="949">949</th><td>	}</td></tr>
+<tr><th id="950">950</th><td></td></tr>
+<tr><th id="951">951</th><td>out:</td></tr>
+<tr><th id="952">952</th><td>	<b>return</b> ret;</td></tr>
+<tr><th id="953">953</th><td>}</td></tr>
+<tr><th id="954">954</th><td></td></tr>
+<tr><th id="955">955</th><td><em>static</em> ssize_t debug_output(<b>struct</b> file *file, <em>char</em> __user *user_buf,</td></tr>
+<tr><th id="956">956</th><td>		size_t len, loff_t *offset)</td></tr>
+<tr><th id="957">957</th><td>{</td></tr>
+<tr><th id="958">958</th><td>	<b>struct</b> debug_buffer *buf = file-&gt;private_data;</td></tr>
+<tr><th id="959">959</th><td>	<em>int</em> ret = <var>0</var>;</td></tr>
+<tr><th id="960">960</th><td></td></tr>
+<tr><th id="961">961</th><td>	mutex_lock(&amp;buf-&gt;mutex);</td></tr>
+<tr><th id="962">962</th><td>	<b>if</b> (buf-&gt;count == <var>0</var>) {</td></tr>
+<tr><th id="963">963</th><td>		ret = fill_buffer(buf);</td></tr>
+<tr><th id="964">964</th><td>		<b>if</b> (ret != <var>0</var>) {</td></tr>
+<tr><th id="965">965</th><td>			mutex_unlock(&amp;buf-&gt;mutex);</td></tr>
+<tr><th id="966">966</th><td>			<b>goto</b> out;</td></tr>
+<tr><th id="967">967</th><td>		}</td></tr>
+<tr><th id="968">968</th><td>	}</td></tr>
+<tr><th id="969">969</th><td>	mutex_unlock(&amp;buf-&gt;mutex);</td></tr>
+<tr><th id="970">970</th><td></td></tr>
+<tr><th id="971">971</th><td>	ret = simple_read_from_buffer(user_buf, len, offset,</td></tr>
+<tr><th id="972">972</th><td>				      buf-&gt;output_buf, buf-&gt;count);</td></tr>
+<tr><th id="973">973</th><td></td></tr>
+<tr><th id="974">974</th><td>out:</td></tr>
+<tr><th id="975">975</th><td>	<b>return</b> ret;</td></tr>
+<tr><th id="976">976</th><td>}</td></tr>
+<tr><th id="977">977</th><td></td></tr>
+<tr><th id="978">978</th><td><em>static</em> <em>int</em> debug_close(<b>struct</b> inode *inode, <b>struct</b> file *file)</td></tr>
+<tr><th id="979">979</th><td>{</td></tr>
+<tr><th id="980">980</th><td>	<b>struct</b> debug_buffer *buf = file-&gt;private_data;</td></tr>
+<tr><th id="981">981</th><td></td></tr>
+<tr><th id="982">982</th><td>	<b>if</b> (buf) {</td></tr>
+<tr><th id="983">983</th><td>		vfree(buf-&gt;output_buf);</td></tr>
+<tr><th id="984">984</th><td>		kfree(buf);</td></tr>
+<tr><th id="985">985</th><td>	}</td></tr>
+<tr><th id="986">986</th><td></td></tr>
+<tr><th id="987">987</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="988">988</th><td>}</td></tr>
+<tr><th id="989">989</th><td></td></tr>
+<tr><th id="990">990</th><td><em>static</em> <em>int</em> debug_async_open(<b>struct</b> inode *inode, <b>struct</b> file *file)</td></tr>
+<tr><th id="991">991</th><td>{</td></tr>
+<tr><th id="992">992</th><td>	file-&gt;private_data = alloc_buffer(inode-&gt;i_private, fill_async_buffer);</td></tr>
+<tr><th id="993">993</th><td></td></tr>
+<tr><th id="994">994</th><td>	<b>return</b> file-&gt;private_data ? <var>0</var> : -ENOMEM;</td></tr>
+<tr><th id="995">995</th><td>}</td></tr>
+<tr><th id="996">996</th><td></td></tr>
+<tr><th id="997">997</th><td><em>static</em> <em>int</em> debug_bandwidth_open(<b>struct</b> inode *inode, <b>struct</b> file *file)</td></tr>
+<tr><th id="998">998</th><td>{</td></tr>
+<tr><th id="999">999</th><td>	file-&gt;private_data = alloc_buffer(inode-&gt;i_private,</td></tr>
+<tr><th id="1000">1000</th><td>			fill_bandwidth_buffer);</td></tr>
+<tr><th id="1001">1001</th><td></td></tr>
+<tr><th id="1002">1002</th><td>	<b>return</b> file-&gt;private_data ? <var>0</var> : -ENOMEM;</td></tr>
+<tr><th id="1003">1003</th><td>}</td></tr>
+<tr><th id="1004">1004</th><td></td></tr>
+<tr><th id="1005">1005</th><td><em>static</em> <em>int</em> debug_periodic_open(<b>struct</b> inode *inode, <b>struct</b> file *file)</td></tr>
+<tr><th id="1006">1006</th><td>{</td></tr>
+<tr><th id="1007">1007</th><td>	<b>struct</b> debug_buffer *buf;</td></tr>
+<tr><th id="1008">1008</th><td></td></tr>
+<tr><th id="1009">1009</th><td>	buf = alloc_buffer(inode-&gt;i_private, fill_periodic_buffer);</td></tr>
+<tr><th id="1010">1010</th><td>	<b>if</b> (!buf)</td></tr>
+<tr><th id="1011">1011</th><td>		<b>return</b> -ENOMEM;</td></tr>
+<tr><th id="1012">1012</th><td></td></tr>
+<tr><th id="1013">1013</th><td>	buf-&gt;alloc_size = (<b>sizeof</b>(<em>void</em> *) == <var>4</var> ? <var>6</var> : <var>8</var>) * PAGE_SIZE;</td></tr>
+<tr><th id="1014">1014</th><td>	file-&gt;private_data = buf;</td></tr>
+<tr><th id="1015">1015</th><td>	<b>return</b> <var>0</var>;</td></tr>
+<tr><th id="1016">1016</th><td>}</td></tr>
+<tr><th id="1017">1017</th><td></td></tr>
+<tr><th id="1018">1018</th><td><em>static</em> <em>int</em> debug_registers_open(<b>struct</b> inode *inode, <b>struct</b> file *file)</td></tr>
+<tr><th id="1019">1019</th><td>{</td></tr>
+<tr><th id="1020">1020</th><td>	file-&gt;private_data = alloc_buffer(inode-&gt;i_private,</td></tr>
+<tr><th id="1021">1021</th><td>					  fill_registers_buffer);</td></tr>
+<tr><th id="1022">1022</th><td></td></tr>
+<tr><th id="1023">1023</th><td>	<b>return</b> file-&gt;private_data ? <var>0</var> : -ENOMEM;</td></tr>
+<tr><th id="1024">1024</th><td>}</td></tr>
+<tr><th id="1025">1025</th><td></td></tr>
+<tr><th id="1026">1026</th><td><em>static</em> <b>inline</b> <em>void</em> create_debug_files(<b>struct</b> ehci_hcd *ehci)</td></tr>
+<tr><th id="1027">1027</th><td>{</td></tr>
+<tr><th id="1028">1028</th><td>	<b>struct</b> usb_bus *bus = &amp;ehci_to_hcd(ehci)-&gt;self;</td></tr>
+<tr><th id="1029">1029</th><td></td></tr>
+<tr><th id="1030">1030</th><td>	ehci-&gt;debug_dir = debugfs_create_dir(bus-&gt;bus_name, ehci_debug_root);</td></tr>
+<tr><th id="1031">1031</th><td></td></tr>
+<tr><th id="1032">1032</th><td>	debugfs_create_file(<q>"async"</q>, S_IRUGO, ehci-&gt;debug_dir, bus,</td></tr>
+<tr><th id="1033">1033</th><td>			    &amp;debug_async_fops);</td></tr>
+<tr><th id="1034">1034</th><td>	debugfs_create_file(<q>"bandwidth"</q>, S_IRUGO, ehci-&gt;debug_dir, bus,</td></tr>
+<tr><th id="1035">1035</th><td>			    &amp;debug_bandwidth_fops);</td></tr>
+<tr><th id="1036">1036</th><td>	debugfs_create_file(<q>"periodic"</q>, S_IRUGO, ehci-&gt;debug_dir, bus,</td></tr>
+<tr><th id="1037">1037</th><td>			    &amp;debug_periodic_fops);</td></tr>
+<tr><th id="1038">1038</th><td>	debugfs_create_file(<q>"registers"</q>, S_IRUGO, ehci-&gt;debug_dir, bus,</td></tr>
+<tr><th id="1039">1039</th><td>			    &amp;debug_registers_fops);</td></tr>
+<tr><th id="1040">1040</th><td>}</td></tr>
+<tr><th id="1041">1041</th><td></td></tr>
+<tr><th id="1042">1042</th><td><em>static</em> <b>inline</b> <em>void</em> remove_debug_files(<b>struct</b> ehci_hcd *ehci)</td></tr>
+<tr><th id="1043">1043</th><td>{</td></tr>
+<tr><th id="1044">1044</th><td>	debugfs_remove_recursive(ehci-&gt;debug_dir);</td></tr>
+<tr><th id="1045">1045</th><td>}</td></tr>
+<tr><th id="1046">1046</th><td></td></tr>
+<tr><th id="1047">1047</th><td><u>#<span data-ppcond="8">else</span> /* CONFIG_DYNAMIC_DEBUG */</u></td></tr>
+<tr><th id="1048">1048</th><td></td></tr>
+<tr><th id="1049">1049</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="dbg_hcs_params" title='dbg_hcs_params' data-ref="dbg_hcs_params" data-ref-filename="dbg_hcs_params">dbg_hcs_params</dfn>(<b>struct</b> <a class="type" href="ehci.h.html#ehci_hcd" title='ehci_hcd' data-ref="ehci_hcd" data-ref-filename="ehci_hcd">ehci_hcd</a> *<dfn class="local col1 decl" id="61ehci" title='ehci' data-type='struct ehci_hcd *' data-ref="61ehci" data-ref-filename="61ehci">ehci</dfn>, <em>char</em> *<dfn class="local col2 decl" id="62label" title='label' data-type='char *' data-ref="62label" data-ref-filename="62label">label</dfn>) { }</td></tr>
+<tr><th id="1050">1050</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="dbg_hcc_params" title='dbg_hcc_params' data-ref="dbg_hcc_params" data-ref-filename="dbg_hcc_params">dbg_hcc_params</dfn>(<b>struct</b> <a class="type" href="ehci.h.html#ehci_hcd" title='ehci_hcd' data-ref="ehci_hcd" data-ref-filename="ehci_hcd">ehci_hcd</a> *<dfn class="local col3 decl" id="63ehci" title='ehci' data-type='struct ehci_hcd *' data-ref="63ehci" data-ref-filename="63ehci">ehci</dfn>, <em>char</em> *<dfn class="local col4 decl" id="64label" title='label' data-type='char *' data-ref="64label" data-ref-filename="64label">label</dfn>) { }</td></tr>
+<tr><th id="1051">1051</th><td></td></tr>
+<tr><th id="1052">1052</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <a class="macro" href="../../../include/linux/compiler_attributes.h.html#242" title="__attribute__((__unused__))" data-ref="_M/__maybe_unused">__maybe_unused</a> <dfn class="decl def fn" id="dbg_qh" title='dbg_qh' data-ref="dbg_qh" data-ref-filename="dbg_qh">dbg_qh</dfn>(<em>const</em> <em>char</em> *<dfn class="local col5 decl" id="65label" title='label' data-type='const char *' data-ref="65label" data-ref-filename="65label">label</dfn>,</td></tr>
+<tr><th id="1053">1053</th><td>		<b>struct</b> <a class="type" href="ehci.h.html#ehci_hcd" title='ehci_hcd' data-ref="ehci_hcd" data-ref-filename="ehci_hcd">ehci_hcd</a> *<dfn class="local col6 decl" id="66ehci" title='ehci' data-type='struct ehci_hcd *' data-ref="66ehci" data-ref-filename="66ehci">ehci</dfn>, <b>struct</b> <a class="type" href="ehci.h.html#ehci_qh" title='ehci_qh' data-ref="ehci_qh" data-ref-filename="ehci_qh">ehci_qh</a> *<dfn class="local col7 decl" id="67qh" title='qh' data-type='struct ehci_qh *' data-ref="67qh" data-ref-filename="67qh">qh</dfn>) { }</td></tr>
+<tr><th id="1054">1054</th><td></td></tr>
+<tr><th id="1055">1055</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <a class="macro" href="../../../include/linux/compiler_attributes.h.html#242" title="__attribute__((__unused__))" data-ref="_M/__maybe_unused">__maybe_unused</a> <dfn class="decl def fn" id="dbg_status_buf" title='dbg_status_buf' data-ref="dbg_status_buf" data-ref-filename="dbg_status_buf">dbg_status_buf</dfn>(<em>const</em> <em>char</em> *<dfn class="local col8 decl" id="68buf" title='buf' data-type='const char *' data-ref="68buf" data-ref-filename="68buf">buf</dfn>,</td></tr>
+<tr><th id="1056">1056</th><td>		<em>unsigned</em> <em>int</em> <dfn class="local col9 decl" id="69len" title='len' data-type='unsigned int' data-ref="69len" data-ref-filename="69len">len</dfn>, <em>const</em> <em>char</em> *<dfn class="local col0 decl" id="70label" title='label' data-type='const char *' data-ref="70label" data-ref-filename="70label">label</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col1 decl" id="71status" title='status' data-type='u32' data-ref="71status" data-ref-filename="71status">status</dfn>)</td></tr>
+<tr><th id="1057">1057</th><td>{ <b>return</b> <var>0</var>; }</td></tr>
+<tr><th id="1058">1058</th><td></td></tr>
+<tr><th id="1059">1059</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <a class="macro" href="../../../include/linux/compiler_attributes.h.html#242" title="__attribute__((__unused__))" data-ref="_M/__maybe_unused">__maybe_unused</a> <dfn class="decl def fn" id="dbg_command_buf" title='dbg_command_buf' data-ref="dbg_command_buf" data-ref-filename="dbg_command_buf">dbg_command_buf</dfn>(<em>const</em> <em>char</em> *<dfn class="local col2 decl" id="72buf" title='buf' data-type='const char *' data-ref="72buf" data-ref-filename="72buf">buf</dfn>,</td></tr>
+<tr><th id="1060">1060</th><td>		<em>unsigned</em> <em>int</em> <dfn class="local col3 decl" id="73len" title='len' data-type='unsigned int' data-ref="73len" data-ref-filename="73len">len</dfn>, <em>const</em> <em>char</em> *<dfn class="local col4 decl" id="74label" title='label' data-type='const char *' data-ref="74label" data-ref-filename="74label">label</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col5 decl" id="75command" title='command' data-type='u32' data-ref="75command" data-ref-filename="75command">command</dfn>)</td></tr>
+<tr><th id="1061">1061</th><td>{ <b>return</b> <var>0</var>; }</td></tr>
+<tr><th id="1062">1062</th><td></td></tr>
+<tr><th id="1063">1063</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <a class="macro" href="../../../include/linux/compiler_attributes.h.html#242" title="__attribute__((__unused__))" data-ref="_M/__maybe_unused">__maybe_unused</a> <dfn class="decl def fn" id="dbg_intr_buf" title='dbg_intr_buf' data-ref="dbg_intr_buf" data-ref-filename="dbg_intr_buf">dbg_intr_buf</dfn>(<em>const</em> <em>char</em> *<dfn class="local col6 decl" id="76buf" title='buf' data-type='const char *' data-ref="76buf" data-ref-filename="76buf">buf</dfn>,</td></tr>
+<tr><th id="1064">1064</th><td>		<em>unsigned</em> <em>int</em> <dfn class="local col7 decl" id="77len" title='len' data-type='unsigned int' data-ref="77len" data-ref-filename="77len">len</dfn>, <em>const</em> <em>char</em> *<dfn class="local col8 decl" id="78label" title='label' data-type='const char *' data-ref="78label" data-ref-filename="78label">label</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col9 decl" id="79enable" title='enable' data-type='u32' data-ref="79enable" data-ref-filename="79enable">enable</dfn>)</td></tr>
+<tr><th id="1065">1065</th><td>{ <b>return</b> <var>0</var>; }</td></tr>
+<tr><th id="1066">1066</th><td></td></tr>
+<tr><th id="1067">1067</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>int</em> <a class="macro" href="../../../include/linux/compiler_attributes.h.html#242" title="__attribute__((__unused__))" data-ref="_M/__maybe_unused">__maybe_unused</a> <dfn class="decl def fn" id="dbg_port_buf" title='dbg_port_buf' data-ref="dbg_port_buf" data-ref-filename="dbg_port_buf">dbg_port_buf</dfn>(<em>char</em> *<dfn class="local col0 decl" id="80buf" title='buf' data-type='char *' data-ref="80buf" data-ref-filename="80buf">buf</dfn>,</td></tr>
+<tr><th id="1068">1068</th><td>		<em>unsigned</em> <em>int</em> <dfn class="local col1 decl" id="81len" title='len' data-type='unsigned int' data-ref="81len" data-ref-filename="81len">len</dfn>, <em>const</em> <em>char</em> *<dfn class="local col2 decl" id="82label" title='label' data-type='const char *' data-ref="82label" data-ref-filename="82label">label</dfn>, <em>int</em> <dfn class="local col3 decl" id="83port" title='port' data-type='int' data-ref="83port" data-ref-filename="83port">port</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col4 decl" id="84status" title='status' data-type='u32' data-ref="84status" data-ref-filename="84status">status</dfn>)</td></tr>
+<tr><th id="1069">1069</th><td>{ <b>return</b> <var>0</var>; }</td></tr>
+<tr><th id="1070">1070</th><td></td></tr>
+<tr><th id="1071">1071</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="dbg_status" title='dbg_status' data-ref="dbg_status" data-ref-filename="dbg_status">dbg_status</dfn>(<b>struct</b> <a class="type" href="ehci.h.html#ehci_hcd" title='ehci_hcd' data-ref="ehci_hcd" data-ref-filename="ehci_hcd">ehci_hcd</a> *<dfn class="local col5 decl" id="85ehci" title='ehci' data-type='struct ehci_hcd *' data-ref="85ehci" data-ref-filename="85ehci">ehci</dfn>, <em>const</em> <em>char</em> *<dfn class="local col6 decl" id="86label" title='label' data-type='const char *' data-ref="86label" data-ref-filename="86label">label</dfn>,</td></tr>
+<tr><th id="1072">1072</th><td>		<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col7 decl" id="87status" title='status' data-type='u32' data-ref="87status" data-ref-filename="87status">status</dfn>) { }</td></tr>
+<tr><th id="1073">1073</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="dbg_cmd" title='dbg_cmd' data-ref="dbg_cmd" data-ref-filename="dbg_cmd">dbg_cmd</dfn>(<b>struct</b> <a class="type" href="ehci.h.html#ehci_hcd" title='ehci_hcd' data-ref="ehci_hcd" data-ref-filename="ehci_hcd">ehci_hcd</a> *<dfn class="local col8 decl" id="88ehci" title='ehci' data-type='struct ehci_hcd *' data-ref="88ehci" data-ref-filename="88ehci">ehci</dfn>, <em>const</em> <em>char</em> *<dfn class="local col9 decl" id="89label" title='label' data-type='const char *' data-ref="89label" data-ref-filename="89label">label</dfn>,</td></tr>
+<tr><th id="1074">1074</th><td>		<a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col0 decl" id="90command" title='command' data-type='u32' data-ref="90command" data-ref-filename="90command">command</dfn>) { }</td></tr>
+<tr><th id="1075">1075</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="dbg_port" title='dbg_port' data-ref="dbg_port" data-ref-filename="dbg_port">dbg_port</dfn>(<b>struct</b> <a class="type" href="ehci.h.html#ehci_hcd" title='ehci_hcd' data-ref="ehci_hcd" data-ref-filename="ehci_hcd">ehci_hcd</a> *<dfn class="local col1 decl" id="91ehci" title='ehci' data-type='struct ehci_hcd *' data-ref="91ehci" data-ref-filename="91ehci">ehci</dfn>, <em>const</em> <em>char</em> *<dfn class="local col2 decl" id="92label" title='label' data-type='const char *' data-ref="92label" data-ref-filename="92label">label</dfn>,</td></tr>
+<tr><th id="1076">1076</th><td>		<em>int</em> <dfn class="local col3 decl" id="93port" title='port' data-type='int' data-ref="93port" data-ref-filename="93port">port</dfn>, <a class="typedef" href="../../../include/asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col4 decl" id="94status" title='status' data-type='u32' data-ref="94status" data-ref-filename="94status">status</dfn>) { }</td></tr>
+<tr><th id="1077">1077</th><td></td></tr>
+<tr><th id="1078">1078</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="create_debug_files" title='create_debug_files' data-ref="create_debug_files" data-ref-filename="create_debug_files">create_debug_files</dfn>(<b>struct</b> <a class="type" href="ehci.h.html#ehci_hcd" title='ehci_hcd' data-ref="ehci_hcd" data-ref-filename="ehci_hcd">ehci_hcd</a> *<dfn class="local col5 decl" id="95bus" title='bus' data-type='struct ehci_hcd *' data-ref="95bus" data-ref-filename="95bus">bus</dfn>) { }</td></tr>
+<tr><th id="1079">1079</th><td><em>static</em> <a class="macro" href="../../../include/linux/compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <em>void</em> <dfn class="decl def fn" id="remove_debug_files" title='remove_debug_files' data-ref="remove_debug_files" data-ref-filename="remove_debug_files">remove_debug_files</dfn>(<b>struct</b> <a class="type" href="ehci.h.html#ehci_hcd" title='ehci_hcd' data-ref="ehci_hcd" data-ref-filename="ehci_hcd">ehci_hcd</a> *<dfn class="local col6 decl" id="96bus" title='bus' data-type='struct ehci_hcd *' data-ref="96bus" data-ref-filename="96bus">bus</dfn>) { }</td></tr>
+<tr><th id="1080">1080</th><td></td></tr>
+<tr><th id="1081">1081</th><td><u>#<span data-ppcond="8">endif</span> /* CONFIG_DYNAMIC_DEBUG */</u></td></tr>
+<tr><th id="1082">1082</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='ehci-hcd.c.html'>linux-5.3.1/drivers/usb/host/ehci-hcd.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

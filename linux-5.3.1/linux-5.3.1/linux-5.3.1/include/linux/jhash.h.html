@@ -1,0 +1,192 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>jhash.h source code [linux-5.3.1/include/linux/jhash.h] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/include/linux/jhash.h'; var root_path = '../../..'; var data_path = '../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../..'>linux-5.3.1</a>/<a href='..'>include</a>/<a href='./'>linux</a>/<a href='jhash.h.html'>jhash.h</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><u>#<span data-ppcond="1">ifndef</span> <span class="macro" data-ref="_M/_LINUX_JHASH_H">_LINUX_JHASH_H</span></u></td></tr>
+<tr><th id="2">2</th><td><u>#define <dfn class="macro" id="_M/_LINUX_JHASH_H" data-ref="_M/_LINUX_JHASH_H">_LINUX_JHASH_H</dfn></u></td></tr>
+<tr><th id="3">3</th><td></td></tr>
+<tr><th id="4">4</th><td><i>/* jhash.h: Jenkins hash support.</i></td></tr>
+<tr><th id="5">5</th><td><i> *</i></td></tr>
+<tr><th id="6">6</th><td><i> * Copyright (C) 2006. Bob Jenkins (bob_jenkins@burtleburtle.net)</i></td></tr>
+<tr><th id="7">7</th><td><i> *</i></td></tr>
+<tr><th id="8">8</th><td><i> * <a href="http://burtleburtle.net/bob/hash/">http://burtleburtle.net/bob/hash/</a></i></td></tr>
+<tr><th id="9">9</th><td><i> *</i></td></tr>
+<tr><th id="10">10</th><td><i> * These are the credits from Bob's sources:</i></td></tr>
+<tr><th id="11">11</th><td><i> *</i></td></tr>
+<tr><th id="12">12</th><td><i> * lookup3.c, by Bob Jenkins, May 2006, Public Domain.</i></td></tr>
+<tr><th id="13">13</th><td><i> *</i></td></tr>
+<tr><th id="14">14</th><td><i> * These are functions for producing 32-bit hashes for hash table lookup.</i></td></tr>
+<tr><th id="15">15</th><td><i> * hashword(), hashlittle(), hashlittle2(), hashbig(), mix(), and final()</i></td></tr>
+<tr><th id="16">16</th><td><i> * are externally useful functions.  Routines to test the hash are included</i></td></tr>
+<tr><th id="17">17</th><td><i> * if SELF_TEST is defined.  You can use this free for any purpose.  It's in</i></td></tr>
+<tr><th id="18">18</th><td><i> * the public domain.  It has no warranty.</i></td></tr>
+<tr><th id="19">19</th><td><i> *</i></td></tr>
+<tr><th id="20">20</th><td><i> * Copyright (C) 2009-2010 Jozsef Kadlecsik (kadlec@netfilter.org)</i></td></tr>
+<tr><th id="21">21</th><td><i> *</i></td></tr>
+<tr><th id="22">22</th><td><i> * I've modified Bob's hash to be useful in the Linux kernel, and</i></td></tr>
+<tr><th id="23">23</th><td><i> * any bugs present are my fault.</i></td></tr>
+<tr><th id="24">24</th><td><i> * Jozsef</i></td></tr>
+<tr><th id="25">25</th><td><i> */</i></td></tr>
+<tr><th id="26">26</th><td><u>#include <a href="bitops.h.html">&lt;linux/bitops.h&gt;</a></u></td></tr>
+<tr><th id="27">27</th><td><u>#include <a href="unaligned/packed_struct.h.html">&lt;linux/unaligned/packed_struct.h&gt;</a></u></td></tr>
+<tr><th id="28">28</th><td></td></tr>
+<tr><th id="29">29</th><td><i>/* Best hash sizes are of power of two */</i></td></tr>
+<tr><th id="30">30</th><td><u>#define <dfn class="macro" id="_M/jhash_size" data-ref="_M/jhash_size">jhash_size</dfn>(n)   ((u32)1&lt;&lt;(n))</u></td></tr>
+<tr><th id="31">31</th><td><i>/* Mask the hash value, i.e (value &amp; jhash_mask(n)) instead of (value % n) */</i></td></tr>
+<tr><th id="32">32</th><td><u>#define <dfn class="macro" id="_M/jhash_mask" data-ref="_M/jhash_mask">jhash_mask</dfn>(n)   (jhash_size(n)-1)</u></td></tr>
+<tr><th id="33">33</th><td></td></tr>
+<tr><th id="34">34</th><td><i>/* __jhash_mix -- mix 3 32-bit values reversibly. */</i></td></tr>
+<tr><th id="35">35</th><td><u>#define <dfn class="macro" id="_M/__jhash_mix" data-ref="_M/__jhash_mix">__jhash_mix</dfn>(a, b, c)			\</u></td></tr>
+<tr><th id="36">36</th><td><u>{						\</u></td></tr>
+<tr><th id="37">37</th><td><u>	a -= c;  a ^= <a class="ref fn" href="bitops.h.html#rol32" title='rol32' data-ref="rol32" data-ref-filename="rol32">rol32</a>(c, 4);  c += b;	\</u></td></tr>
+<tr><th id="38">38</th><td><u>	b -= a;  b ^= <a class="ref fn" href="bitops.h.html#rol32" title='rol32' data-ref="rol32" data-ref-filename="rol32">rol32</a>(a, 6);  a += c;	\</u></td></tr>
+<tr><th id="39">39</th><td><u>	c -= b;  c ^= <a class="ref fn" href="bitops.h.html#rol32" title='rol32' data-ref="rol32" data-ref-filename="rol32">rol32</a>(b, 8);  b += a;	\</u></td></tr>
+<tr><th id="40">40</th><td><u>	a -= c;  a ^= <a class="ref fn" href="bitops.h.html#rol32" title='rol32' data-ref="rol32" data-ref-filename="rol32">rol32</a>(c, 16); c += b;	\</u></td></tr>
+<tr><th id="41">41</th><td><u>	b -= a;  b ^= <a class="ref fn" href="bitops.h.html#rol32" title='rol32' data-ref="rol32" data-ref-filename="rol32">rol32</a>(a, 19); a += c;	\</u></td></tr>
+<tr><th id="42">42</th><td><u>	c -= b;  c ^= <a class="ref fn" href="bitops.h.html#rol32" title='rol32' data-ref="rol32" data-ref-filename="rol32">rol32</a>(b, 4);  b += a;	\</u></td></tr>
+<tr><th id="43">43</th><td><u>}</u></td></tr>
+<tr><th id="44">44</th><td></td></tr>
+<tr><th id="45">45</th><td><i>/* __jhash_final - final mixing of 3 32-bit values (a,b,c) into c */</i></td></tr>
+<tr><th id="46">46</th><td><u>#define <dfn class="macro" id="_M/__jhash_final" data-ref="_M/__jhash_final">__jhash_final</dfn>(a, b, c)			\</u></td></tr>
+<tr><th id="47">47</th><td><u>{						\</u></td></tr>
+<tr><th id="48">48</th><td><u>	c ^= b; c -= <a class="ref fn" href="bitops.h.html#rol32" title='rol32' data-ref="rol32" data-ref-filename="rol32">rol32</a>(b, 14);		\</u></td></tr>
+<tr><th id="49">49</th><td><u>	a ^= c; a -= <a class="ref fn" href="bitops.h.html#rol32" title='rol32' data-ref="rol32" data-ref-filename="rol32">rol32</a>(c, 11);		\</u></td></tr>
+<tr><th id="50">50</th><td><u>	b ^= a; b -= <a class="ref fn" href="bitops.h.html#rol32" title='rol32' data-ref="rol32" data-ref-filename="rol32">rol32</a>(a, 25);		\</u></td></tr>
+<tr><th id="51">51</th><td><u>	c ^= b; c -= <a class="ref fn" href="bitops.h.html#rol32" title='rol32' data-ref="rol32" data-ref-filename="rol32">rol32</a>(b, 16);		\</u></td></tr>
+<tr><th id="52">52</th><td><u>	a ^= c; a -= <a class="ref fn" href="bitops.h.html#rol32" title='rol32' data-ref="rol32" data-ref-filename="rol32">rol32</a>(c, 4);		\</u></td></tr>
+<tr><th id="53">53</th><td><u>	b ^= a; b -= <a class="ref fn" href="bitops.h.html#rol32" title='rol32' data-ref="rol32" data-ref-filename="rol32">rol32</a>(a, 14);		\</u></td></tr>
+<tr><th id="54">54</th><td><u>	c ^= b; c -= <a class="ref fn" href="bitops.h.html#rol32" title='rol32' data-ref="rol32" data-ref-filename="rol32">rol32</a>(b, 24);		\</u></td></tr>
+<tr><th id="55">55</th><td><u>}</u></td></tr>
+<tr><th id="56">56</th><td></td></tr>
+<tr><th id="57">57</th><td><i>/* An arbitrary initial parameter */</i></td></tr>
+<tr><th id="58">58</th><td><u>#define <dfn class="macro" id="_M/JHASH_INITVAL" data-ref="_M/JHASH_INITVAL">JHASH_INITVAL</dfn>		0xdeadbeef</u></td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td><i>/* jhash - hash an arbitrary key</i></td></tr>
+<tr><th id="61">61</th><td><i> * @k: sequence of bytes as key</i></td></tr>
+<tr><th id="62">62</th><td><i> * @length: the length of the key</i></td></tr>
+<tr><th id="63">63</th><td><i> * @initval: the previous hash, or an arbitray value</i></td></tr>
+<tr><th id="64">64</th><td><i> *</i></td></tr>
+<tr><th id="65">65</th><td><i> * The generic version, hashes an arbitrary sequence of bytes.</i></td></tr>
+<tr><th id="66">66</th><td><i> * No alignment or length assumptions are made about the input key.</i></td></tr>
+<tr><th id="67">67</th><td><i> *</i></td></tr>
+<tr><th id="68">68</th><td><i> * Returns the hash value of the key. The result depends on endianness.</i></td></tr>
+<tr><th id="69">69</th><td><i> */</i></td></tr>
+<tr><th id="70">70</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl def fn" id="jhash" title='jhash' data-ref="jhash" data-ref-filename="jhash">jhash</dfn>(<em>const</em> <em>void</em> *<dfn class="local col6 decl" id="16key" title='key' data-type='const void *' data-ref="16key" data-ref-filename="16key">key</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col7 decl" id="17length" title='length' data-type='u32' data-ref="17length" data-ref-filename="17length">length</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col8 decl" id="18initval" title='initval' data-type='u32' data-ref="18initval" data-ref-filename="18initval">initval</dfn>)</td></tr>
+<tr><th id="71">71</th><td>{</td></tr>
+<tr><th id="72">72</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col9 decl" id="19a" title='a' data-type='u32' data-ref="19a" data-ref-filename="19a">a</dfn>, <dfn class="local col0 decl" id="20b" title='b' data-type='u32' data-ref="20b" data-ref-filename="20b">b</dfn>, <dfn class="local col1 decl" id="21c" title='c' data-type='u32' data-ref="21c" data-ref-filename="21c">c</dfn>;</td></tr>
+<tr><th id="73">73</th><td>	<em>const</em> <a class="typedef" href="../asm-generic/int-ll64.h.html#u8" title='u8' data-type='__u8' data-ref="u8" data-ref-filename="u8">u8</a> *<dfn class="local col2 decl" id="22k" title='k' data-type='const u8 *' data-ref="22k" data-ref-filename="22k">k</dfn> = <a class="local col6 ref" href="#16key" title='key' data-ref="16key" data-ref-filename="16key">key</a>;</td></tr>
+<tr><th id="74">74</th><td></td></tr>
+<tr><th id="75">75</th><td>	<i>/* Set up the internal state */</i></td></tr>
+<tr><th id="76">76</th><td>	<a class="local col9 ref" href="#19a" title='a' data-ref="19a" data-ref-filename="19a">a</a> = <a class="local col0 ref" href="#20b" title='b' data-ref="20b" data-ref-filename="20b">b</a> = <a class="local col1 ref" href="#21c" title='c' data-ref="21c" data-ref-filename="21c">c</a> = <a class="macro" href="#58" title="0xdeadbeef" data-ref="_M/JHASH_INITVAL">JHASH_INITVAL</a> + <a class="local col7 ref" href="#17length" title='length' data-ref="17length" data-ref-filename="17length">length</a> + <a class="local col8 ref" href="#18initval" title='initval' data-ref="18initval" data-ref-filename="18initval">initval</a>;</td></tr>
+<tr><th id="77">77</th><td></td></tr>
+<tr><th id="78">78</th><td>	<i>/* All but the last block: affect some 32 bits of (a,b,c) */</i></td></tr>
+<tr><th id="79">79</th><td>	<b>while</b> (<a class="local col7 ref" href="#17length" title='length' data-ref="17length" data-ref-filename="17length">length</a> &gt; <var>12</var>) {</td></tr>
+<tr><th id="80">80</th><td>		<a class="local col9 ref" href="#19a" title='a' data-ref="19a" data-ref-filename="19a">a</a> += <a class="ref fn" href="unaligned/packed_struct.h.html#__get_unaligned_cpu32" title='__get_unaligned_cpu32' data-ref="__get_unaligned_cpu32" data-ref-filename="__get_unaligned_cpu32">__get_unaligned_cpu32</a>(<a class="local col2 ref" href="#22k" title='k' data-ref="22k" data-ref-filename="22k">k</a>);</td></tr>
+<tr><th id="81">81</th><td>		<a class="local col0 ref" href="#20b" title='b' data-ref="20b" data-ref-filename="20b">b</a> += <a class="ref fn" href="unaligned/packed_struct.h.html#__get_unaligned_cpu32" title='__get_unaligned_cpu32' data-ref="__get_unaligned_cpu32" data-ref-filename="__get_unaligned_cpu32">__get_unaligned_cpu32</a>(<a class="local col2 ref" href="#22k" title='k' data-ref="22k" data-ref-filename="22k">k</a> + <var>4</var>);</td></tr>
+<tr><th id="82">82</th><td>		<a class="local col1 ref" href="#21c" title='c' data-ref="21c" data-ref-filename="21c">c</a> += <a class="ref fn" href="unaligned/packed_struct.h.html#__get_unaligned_cpu32" title='__get_unaligned_cpu32' data-ref="__get_unaligned_cpu32" data-ref-filename="__get_unaligned_cpu32">__get_unaligned_cpu32</a>(<a class="local col2 ref" href="#22k" title='k' data-ref="22k" data-ref-filename="22k">k</a> + <var>8</var>);</td></tr>
+<tr><th id="83">83</th><td>		<a class="macro" href="#35" title="{ a -= c; a ^= rol32(c, 4); c += b; b -= a; b ^= rol32(a, 6); a += c; c -= b; c ^= rol32(b, 8); b += a; a -= c; a ^= rol32(c, 16); c += b; b -= a; b ^= rol32(a, 19); a += c; c -= b; c ^= rol32(b, 4); b += a; }" data-ref="_M/__jhash_mix">__jhash_mix</a>(<a class="local col9 ref" href="#19a" title='a' data-ref="19a" data-ref-filename="19a">a</a>, <a class="local col0 ref" href="#20b" title='b' data-ref="20b" data-ref-filename="20b">b</a>, <a class="local col1 ref" href="#21c" title='c' data-ref="21c" data-ref-filename="21c">c</a>);</td></tr>
+<tr><th id="84">84</th><td>		<a class="local col7 ref" href="#17length" title='length' data-ref="17length" data-ref-filename="17length">length</a> -= <var>12</var>;</td></tr>
+<tr><th id="85">85</th><td>		<a class="local col2 ref" href="#22k" title='k' data-ref="22k" data-ref-filename="22k">k</a> += <var>12</var>;</td></tr>
+<tr><th id="86">86</th><td>	}</td></tr>
+<tr><th id="87">87</th><td>	<i>/* Last block: affect all 32 bits of (c) */</i></td></tr>
+<tr><th id="88">88</th><td>	<b>switch</b> (<a class="local col7 ref" href="#17length" title='length' data-ref="17length" data-ref-filename="17length">length</a>) {</td></tr>
+<tr><th id="89">89</th><td>	<b>case</b> <var>12</var>: <a class="local col1 ref" href="#21c" title='c' data-ref="21c" data-ref-filename="21c">c</a> += (<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>)<a class="local col2 ref" href="#22k" title='k' data-ref="22k" data-ref-filename="22k">k</a>[<var>11</var>]&lt;&lt;<var>24</var>;	<i>/* fall through */</i></td></tr>
+<tr><th id="90">90</th><td>	<b>case</b> <var>11</var>: <a class="local col1 ref" href="#21c" title='c' data-ref="21c" data-ref-filename="21c">c</a> += (<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>)<a class="local col2 ref" href="#22k" title='k' data-ref="22k" data-ref-filename="22k">k</a>[<var>10</var>]&lt;&lt;<var>16</var>;	<i>/* fall through */</i></td></tr>
+<tr><th id="91">91</th><td>	<b>case</b> <var>10</var>: <a class="local col1 ref" href="#21c" title='c' data-ref="21c" data-ref-filename="21c">c</a> += (<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>)<a class="local col2 ref" href="#22k" title='k' data-ref="22k" data-ref-filename="22k">k</a>[<var>9</var>]&lt;&lt;<var>8</var>;	<i>/* fall through */</i></td></tr>
+<tr><th id="92">92</th><td>	<b>case</b> <var>9</var>:  <a class="local col1 ref" href="#21c" title='c' data-ref="21c" data-ref-filename="21c">c</a> += <a class="local col2 ref" href="#22k" title='k' data-ref="22k" data-ref-filename="22k">k</a>[<var>8</var>];		<i>/* fall through */</i></td></tr>
+<tr><th id="93">93</th><td>	<b>case</b> <var>8</var>:  <a class="local col0 ref" href="#20b" title='b' data-ref="20b" data-ref-filename="20b">b</a> += (<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>)<a class="local col2 ref" href="#22k" title='k' data-ref="22k" data-ref-filename="22k">k</a>[<var>7</var>]&lt;&lt;<var>24</var>;	<i>/* fall through */</i></td></tr>
+<tr><th id="94">94</th><td>	<b>case</b> <var>7</var>:  <a class="local col0 ref" href="#20b" title='b' data-ref="20b" data-ref-filename="20b">b</a> += (<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>)<a class="local col2 ref" href="#22k" title='k' data-ref="22k" data-ref-filename="22k">k</a>[<var>6</var>]&lt;&lt;<var>16</var>;	<i>/* fall through */</i></td></tr>
+<tr><th id="95">95</th><td>	<b>case</b> <var>6</var>:  <a class="local col0 ref" href="#20b" title='b' data-ref="20b" data-ref-filename="20b">b</a> += (<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>)<a class="local col2 ref" href="#22k" title='k' data-ref="22k" data-ref-filename="22k">k</a>[<var>5</var>]&lt;&lt;<var>8</var>;	<i>/* fall through */</i></td></tr>
+<tr><th id="96">96</th><td>	<b>case</b> <var>5</var>:  <a class="local col0 ref" href="#20b" title='b' data-ref="20b" data-ref-filename="20b">b</a> += <a class="local col2 ref" href="#22k" title='k' data-ref="22k" data-ref-filename="22k">k</a>[<var>4</var>];		<i>/* fall through */</i></td></tr>
+<tr><th id="97">97</th><td>	<b>case</b> <var>4</var>:  <a class="local col9 ref" href="#19a" title='a' data-ref="19a" data-ref-filename="19a">a</a> += (<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>)<a class="local col2 ref" href="#22k" title='k' data-ref="22k" data-ref-filename="22k">k</a>[<var>3</var>]&lt;&lt;<var>24</var>;	<i>/* fall through */</i></td></tr>
+<tr><th id="98">98</th><td>	<b>case</b> <var>3</var>:  <a class="local col9 ref" href="#19a" title='a' data-ref="19a" data-ref-filename="19a">a</a> += (<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>)<a class="local col2 ref" href="#22k" title='k' data-ref="22k" data-ref-filename="22k">k</a>[<var>2</var>]&lt;&lt;<var>16</var>;	<i>/* fall through */</i></td></tr>
+<tr><th id="99">99</th><td>	<b>case</b> <var>2</var>:  <a class="local col9 ref" href="#19a" title='a' data-ref="19a" data-ref-filename="19a">a</a> += (<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a>)<a class="local col2 ref" href="#22k" title='k' data-ref="22k" data-ref-filename="22k">k</a>[<var>1</var>]&lt;&lt;<var>8</var>;	<i>/* fall through */</i></td></tr>
+<tr><th id="100">100</th><td>	<b>case</b> <var>1</var>:  <a class="local col9 ref" href="#19a" title='a' data-ref="19a" data-ref-filename="19a">a</a> += <a class="local col2 ref" href="#22k" title='k' data-ref="22k" data-ref-filename="22k">k</a>[<var>0</var>];</td></tr>
+<tr><th id="101">101</th><td>		 <a class="macro" href="#46" title="{ c ^= b; c -= rol32(b, 14); a ^= c; a -= rol32(c, 11); b ^= a; b -= rol32(a, 25); c ^= b; c -= rol32(b, 16); a ^= c; a -= rol32(c, 4); b ^= a; b -= rol32(a, 14); c ^= b; c -= rol32(b, 24); }" data-ref="_M/__jhash_final">__jhash_final</a>(<a class="local col9 ref" href="#19a" title='a' data-ref="19a" data-ref-filename="19a">a</a>, <a class="local col0 ref" href="#20b" title='b' data-ref="20b" data-ref-filename="20b">b</a>, <a class="local col1 ref" href="#21c" title='c' data-ref="21c" data-ref-filename="21c">c</a>);</td></tr>
+<tr><th id="102">102</th><td>	<b>case</b> <var>0</var>: <i>/* Nothing left to add */</i></td></tr>
+<tr><th id="103">103</th><td>		<b>break</b>;</td></tr>
+<tr><th id="104">104</th><td>	}</td></tr>
+<tr><th id="105">105</th><td></td></tr>
+<tr><th id="106">106</th><td>	<b>return</b> <a class="local col1 ref" href="#21c" title='c' data-ref="21c" data-ref-filename="21c">c</a>;</td></tr>
+<tr><th id="107">107</th><td>}</td></tr>
+<tr><th id="108">108</th><td></td></tr>
+<tr><th id="109">109</th><td><i>/* jhash2 - hash an array of u32's</i></td></tr>
+<tr><th id="110">110</th><td><i> * @k: the key which must be an array of u32's</i></td></tr>
+<tr><th id="111">111</th><td><i> * @length: the number of u32's in the key</i></td></tr>
+<tr><th id="112">112</th><td><i> * @initval: the previous hash, or an arbitray value</i></td></tr>
+<tr><th id="113">113</th><td><i> *</i></td></tr>
+<tr><th id="114">114</th><td><i> * Returns the hash value of the key.</i></td></tr>
+<tr><th id="115">115</th><td><i> */</i></td></tr>
+<tr><th id="116">116</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl def fn" id="jhash2" title='jhash2' data-ref="jhash2" data-ref-filename="jhash2">jhash2</dfn>(<em>const</em> <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> *<dfn class="local col3 decl" id="23k" title='k' data-type='const u32 *' data-ref="23k" data-ref-filename="23k">k</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col4 decl" id="24length" title='length' data-type='u32' data-ref="24length" data-ref-filename="24length">length</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col5 decl" id="25initval" title='initval' data-type='u32' data-ref="25initval" data-ref-filename="25initval">initval</dfn>)</td></tr>
+<tr><th id="117">117</th><td>{</td></tr>
+<tr><th id="118">118</th><td>	<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col6 decl" id="26a" title='a' data-type='u32' data-ref="26a" data-ref-filename="26a">a</dfn>, <dfn class="local col7 decl" id="27b" title='b' data-type='u32' data-ref="27b" data-ref-filename="27b">b</dfn>, <dfn class="local col8 decl" id="28c" title='c' data-type='u32' data-ref="28c" data-ref-filename="28c">c</dfn>;</td></tr>
+<tr><th id="119">119</th><td></td></tr>
+<tr><th id="120">120</th><td>	<i>/* Set up the internal state */</i></td></tr>
+<tr><th id="121">121</th><td>	<a class="local col6 ref" href="#26a" title='a' data-ref="26a" data-ref-filename="26a">a</a> = <a class="local col7 ref" href="#27b" title='b' data-ref="27b" data-ref-filename="27b">b</a> = <a class="local col8 ref" href="#28c" title='c' data-ref="28c" data-ref-filename="28c">c</a> = <a class="macro" href="#58" title="0xdeadbeef" data-ref="_M/JHASH_INITVAL">JHASH_INITVAL</a> + (<a class="local col4 ref" href="#24length" title='length' data-ref="24length" data-ref-filename="24length">length</a>&lt;&lt;<var>2</var>) + <a class="local col5 ref" href="#25initval" title='initval' data-ref="25initval" data-ref-filename="25initval">initval</a>;</td></tr>
+<tr><th id="122">122</th><td></td></tr>
+<tr><th id="123">123</th><td>	<i>/* Handle most of the key */</i></td></tr>
+<tr><th id="124">124</th><td>	<b>while</b> (<a class="local col4 ref" href="#24length" title='length' data-ref="24length" data-ref-filename="24length">length</a> &gt; <var>3</var>) {</td></tr>
+<tr><th id="125">125</th><td>		<a class="local col6 ref" href="#26a" title='a' data-ref="26a" data-ref-filename="26a">a</a> += <a class="local col3 ref" href="#23k" title='k' data-ref="23k" data-ref-filename="23k">k</a>[<var>0</var>];</td></tr>
+<tr><th id="126">126</th><td>		<a class="local col7 ref" href="#27b" title='b' data-ref="27b" data-ref-filename="27b">b</a> += <a class="local col3 ref" href="#23k" title='k' data-ref="23k" data-ref-filename="23k">k</a>[<var>1</var>];</td></tr>
+<tr><th id="127">127</th><td>		<a class="local col8 ref" href="#28c" title='c' data-ref="28c" data-ref-filename="28c">c</a> += <a class="local col3 ref" href="#23k" title='k' data-ref="23k" data-ref-filename="23k">k</a>[<var>2</var>];</td></tr>
+<tr><th id="128">128</th><td>		<a class="macro" href="#35" title="{ a -= c; a ^= rol32(c, 4); c += b; b -= a; b ^= rol32(a, 6); a += c; c -= b; c ^= rol32(b, 8); b += a; a -= c; a ^= rol32(c, 16); c += b; b -= a; b ^= rol32(a, 19); a += c; c -= b; c ^= rol32(b, 4); b += a; }" data-ref="_M/__jhash_mix">__jhash_mix</a>(<a class="local col6 ref" href="#26a" title='a' data-ref="26a" data-ref-filename="26a">a</a>, <a class="local col7 ref" href="#27b" title='b' data-ref="27b" data-ref-filename="27b">b</a>, <a class="local col8 ref" href="#28c" title='c' data-ref="28c" data-ref-filename="28c">c</a>);</td></tr>
+<tr><th id="129">129</th><td>		<a class="local col4 ref" href="#24length" title='length' data-ref="24length" data-ref-filename="24length">length</a> -= <var>3</var>;</td></tr>
+<tr><th id="130">130</th><td>		<a class="local col3 ref" href="#23k" title='k' data-ref="23k" data-ref-filename="23k">k</a> += <var>3</var>;</td></tr>
+<tr><th id="131">131</th><td>	}</td></tr>
+<tr><th id="132">132</th><td></td></tr>
+<tr><th id="133">133</th><td>	<i>/* Handle the last 3 u32's */</i></td></tr>
+<tr><th id="134">134</th><td>	<b>switch</b> (<a class="local col4 ref" href="#24length" title='length' data-ref="24length" data-ref-filename="24length">length</a>) {</td></tr>
+<tr><th id="135">135</th><td>	<b>case</b> <var>3</var>: <a class="local col8 ref" href="#28c" title='c' data-ref="28c" data-ref-filename="28c">c</a> += <a class="local col3 ref" href="#23k" title='k' data-ref="23k" data-ref-filename="23k">k</a>[<var>2</var>];	<i>/* fall through */</i></td></tr>
+<tr><th id="136">136</th><td>	<b>case</b> <var>2</var>: <a class="local col7 ref" href="#27b" title='b' data-ref="27b" data-ref-filename="27b">b</a> += <a class="local col3 ref" href="#23k" title='k' data-ref="23k" data-ref-filename="23k">k</a>[<var>1</var>];	<i>/* fall through */</i></td></tr>
+<tr><th id="137">137</th><td>	<b>case</b> <var>1</var>: <a class="local col6 ref" href="#26a" title='a' data-ref="26a" data-ref-filename="26a">a</a> += <a class="local col3 ref" href="#23k" title='k' data-ref="23k" data-ref-filename="23k">k</a>[<var>0</var>];</td></tr>
+<tr><th id="138">138</th><td>		<a class="macro" href="#46" title="{ c ^= b; c -= rol32(b, 14); a ^= c; a -= rol32(c, 11); b ^= a; b -= rol32(a, 25); c ^= b; c -= rol32(b, 16); a ^= c; a -= rol32(c, 4); b ^= a; b -= rol32(a, 14); c ^= b; c -= rol32(b, 24); }" data-ref="_M/__jhash_final">__jhash_final</a>(<a class="local col6 ref" href="#26a" title='a' data-ref="26a" data-ref-filename="26a">a</a>, <a class="local col7 ref" href="#27b" title='b' data-ref="27b" data-ref-filename="27b">b</a>, <a class="local col8 ref" href="#28c" title='c' data-ref="28c" data-ref-filename="28c">c</a>);</td></tr>
+<tr><th id="139">139</th><td>	<b>case</b> <var>0</var>:	<i>/* Nothing left to add */</i></td></tr>
+<tr><th id="140">140</th><td>		<b>break</b>;</td></tr>
+<tr><th id="141">141</th><td>	}</td></tr>
+<tr><th id="142">142</th><td></td></tr>
+<tr><th id="143">143</th><td>	<b>return</b> <a class="local col8 ref" href="#28c" title='c' data-ref="28c" data-ref-filename="28c">c</a>;</td></tr>
+<tr><th id="144">144</th><td>}</td></tr>
+<tr><th id="145">145</th><td></td></tr>
+<tr><th id="146">146</th><td></td></tr>
+<tr><th id="147">147</th><td><i>/* __jhash_nwords - hash exactly 3, 2 or 1 word(s) */</i></td></tr>
+<tr><th id="148">148</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl def fn" id="__jhash_nwords" title='__jhash_nwords' data-ref="__jhash_nwords" data-ref-filename="__jhash_nwords">__jhash_nwords</dfn>(<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col9 decl" id="29a" title='a' data-type='u32' data-ref="29a" data-ref-filename="29a">a</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col0 decl" id="30b" title='b' data-type='u32' data-ref="30b" data-ref-filename="30b">b</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col1 decl" id="31c" title='c' data-type='u32' data-ref="31c" data-ref-filename="31c">c</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col2 decl" id="32initval" title='initval' data-type='u32' data-ref="32initval" data-ref-filename="32initval">initval</dfn>)</td></tr>
+<tr><th id="149">149</th><td>{</td></tr>
+<tr><th id="150">150</th><td>	<a class="local col9 ref" href="#29a" title='a' data-ref="29a" data-ref-filename="29a">a</a> += <a class="local col2 ref" href="#32initval" title='initval' data-ref="32initval" data-ref-filename="32initval">initval</a>;</td></tr>
+<tr><th id="151">151</th><td>	<a class="local col0 ref" href="#30b" title='b' data-ref="30b" data-ref-filename="30b">b</a> += <a class="local col2 ref" href="#32initval" title='initval' data-ref="32initval" data-ref-filename="32initval">initval</a>;</td></tr>
+<tr><th id="152">152</th><td>	<a class="local col1 ref" href="#31c" title='c' data-ref="31c" data-ref-filename="31c">c</a> += <a class="local col2 ref" href="#32initval" title='initval' data-ref="32initval" data-ref-filename="32initval">initval</a>;</td></tr>
+<tr><th id="153">153</th><td></td></tr>
+<tr><th id="154">154</th><td>	<a class="macro" href="#46" title="{ c ^= b; c -= rol32(b, 14); a ^= c; a -= rol32(c, 11); b ^= a; b -= rol32(a, 25); c ^= b; c -= rol32(b, 16); a ^= c; a -= rol32(c, 4); b ^= a; b -= rol32(a, 14); c ^= b; c -= rol32(b, 24); }" data-ref="_M/__jhash_final">__jhash_final</a>(<a class="local col9 ref" href="#29a" title='a' data-ref="29a" data-ref-filename="29a">a</a>, <a class="local col0 ref" href="#30b" title='b' data-ref="30b" data-ref-filename="30b">b</a>, <a class="local col1 ref" href="#31c" title='c' data-ref="31c" data-ref-filename="31c">c</a>);</td></tr>
+<tr><th id="155">155</th><td></td></tr>
+<tr><th id="156">156</th><td>	<b>return</b> <a class="local col1 ref" href="#31c" title='c' data-ref="31c" data-ref-filename="31c">c</a>;</td></tr>
+<tr><th id="157">157</th><td>}</td></tr>
+<tr><th id="158">158</th><td></td></tr>
+<tr><th id="159">159</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl def fn" id="jhash_3words" title='jhash_3words' data-ref="jhash_3words" data-ref-filename="jhash_3words">jhash_3words</dfn>(<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col3 decl" id="33a" title='a' data-type='u32' data-ref="33a" data-ref-filename="33a">a</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col4 decl" id="34b" title='b' data-type='u32' data-ref="34b" data-ref-filename="34b">b</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col5 decl" id="35c" title='c' data-type='u32' data-ref="35c" data-ref-filename="35c">c</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col6 decl" id="36initval" title='initval' data-type='u32' data-ref="36initval" data-ref-filename="36initval">initval</dfn>)</td></tr>
+<tr><th id="160">160</th><td>{</td></tr>
+<tr><th id="161">161</th><td>	<b>return</b> <a class="ref fn" href="#__jhash_nwords" title='__jhash_nwords' data-ref="__jhash_nwords" data-ref-filename="__jhash_nwords">__jhash_nwords</a>(<a class="local col3 ref" href="#33a" title='a' data-ref="33a" data-ref-filename="33a">a</a>, <a class="local col4 ref" href="#34b" title='b' data-ref="34b" data-ref-filename="34b">b</a>, <a class="local col5 ref" href="#35c" title='c' data-ref="35c" data-ref-filename="35c">c</a>, <a class="local col6 ref" href="#36initval" title='initval' data-ref="36initval" data-ref-filename="36initval">initval</a> + <a class="macro" href="#58" title="0xdeadbeef" data-ref="_M/JHASH_INITVAL">JHASH_INITVAL</a> + (<var>3</var> &lt;&lt; <var>2</var>));</td></tr>
+<tr><th id="162">162</th><td>}</td></tr>
+<tr><th id="163">163</th><td></td></tr>
+<tr><th id="164">164</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl def fn" id="jhash_2words" title='jhash_2words' data-ref="jhash_2words" data-ref-filename="jhash_2words">jhash_2words</dfn>(<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col7 decl" id="37a" title='a' data-type='u32' data-ref="37a" data-ref-filename="37a">a</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col8 decl" id="38b" title='b' data-type='u32' data-ref="38b" data-ref-filename="38b">b</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col9 decl" id="39initval" title='initval' data-type='u32' data-ref="39initval" data-ref-filename="39initval">initval</dfn>)</td></tr>
+<tr><th id="165">165</th><td>{</td></tr>
+<tr><th id="166">166</th><td>	<b>return</b> <a class="ref fn" href="#__jhash_nwords" title='__jhash_nwords' data-ref="__jhash_nwords" data-ref-filename="__jhash_nwords">__jhash_nwords</a>(<a class="local col7 ref" href="#37a" title='a' data-ref="37a" data-ref-filename="37a">a</a>, <a class="local col8 ref" href="#38b" title='b' data-ref="38b" data-ref-filename="38b">b</a>, <var>0</var>, <a class="local col9 ref" href="#39initval" title='initval' data-ref="39initval" data-ref-filename="39initval">initval</a> + <a class="macro" href="#58" title="0xdeadbeef" data-ref="_M/JHASH_INITVAL">JHASH_INITVAL</a> + (<var>2</var> &lt;&lt; <var>2</var>));</td></tr>
+<tr><th id="167">167</th><td>}</td></tr>
+<tr><th id="168">168</th><td></td></tr>
+<tr><th id="169">169</th><td><em>static</em> <a class="macro" href="compiler_types.h.html#149" title="inline __attribute__((__gnu_inline__)) __attribute__((__unused__)) __attribute__((no_instrument_function))" data-ref="_M/inline"><b>inline</b></a> <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="decl def fn" id="jhash_1word" title='jhash_1word' data-ref="jhash_1word" data-ref-filename="jhash_1word">jhash_1word</dfn>(<a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col0 decl" id="40a" title='a' data-type='u32' data-ref="40a" data-ref-filename="40a">a</dfn>, <a class="typedef" href="../asm-generic/int-ll64.h.html#u32" title='u32' data-type='__u32' data-ref="u32" data-ref-filename="u32">u32</a> <dfn class="local col1 decl" id="41initval" title='initval' data-type='u32' data-ref="41initval" data-ref-filename="41initval">initval</dfn>)</td></tr>
+<tr><th id="170">170</th><td>{</td></tr>
+<tr><th id="171">171</th><td>	<b>return</b> <a class="ref fn" href="#__jhash_nwords" title='__jhash_nwords' data-ref="__jhash_nwords" data-ref-filename="__jhash_nwords">__jhash_nwords</a>(<a class="local col0 ref" href="#40a" title='a' data-ref="40a" data-ref-filename="40a">a</a>, <var>0</var>, <var>0</var>, <a class="local col1 ref" href="#41initval" title='initval' data-ref="41initval" data-ref-filename="41initval">initval</a> + <a class="macro" href="#58" title="0xdeadbeef" data-ref="_M/JHASH_INITVAL">JHASH_INITVAL</a> + (<var>1</var> &lt;&lt; <var>2</var>));</td></tr>
+<tr><th id="172">172</th><td>}</td></tr>
+<tr><th id="173">173</th><td></td></tr>
+<tr><th id="174">174</th><td><u>#<span data-ppcond="1">endif</span> /* _LINUX_JHASH_H */</u></td></tr>
+<tr><th id="175">175</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated while processing <a href='../../arch/x86/kernel/jump_label.c.html'>linux-5.3.1/arch/x86/kernel/jump_label.c</a><br/>Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>

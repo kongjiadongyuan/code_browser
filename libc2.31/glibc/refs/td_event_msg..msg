@@ -1,0 +1,4 @@
+<dec f='libc2.31/sysdeps/nptl/thread_db.h' l='208' type='union (anonymous union at /root/glibc-2.31/argp/../sysdeps/nptl/thread_db.h:202:3)'/>
+<offset>128</offset>
+<use f='libc2.31/nptl_db/td_ta_event_getmsg.c' l='79' u='m' c='td_ta_event_getmsg'/>
+<use f='libc2.31/nptl_db/td_thr_event_getmsg.c' l='57' u='m' c='td_thr_event_getmsg'/>

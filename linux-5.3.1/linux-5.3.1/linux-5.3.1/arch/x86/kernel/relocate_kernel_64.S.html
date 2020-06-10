@@ -1,0 +1,306 @@
+<!doctype html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"><title>relocate_kernel_64.S source code [linux-5.3.1/arch/x86/kernel/relocate_kernel_64.S] - Woboq Code Browser</title>
+<link rel="stylesheet" href="../../../../../data/qtcreator.css" title="QtCreator"/>
+<link rel="alternate stylesheet" href="../../../../../data/kdevelop.css" title="KDevelop"/>
+<script type="text/javascript" src="../../../../../data/jquery/jquery.min.js"></script>
+<script type="text/javascript" src="../../../../../data/jquery/jquery-ui.min.js"></script>
+<script>var file = 'linux-5.3.1/arch/x86/kernel/relocate_kernel_64.S'; var root_path = '../../../..'; var data_path = '../../../../../data'; var ecma_script_api_version = 2;</script>
+<script src='../../../../../data/codebrowser.js'></script>
+</head>
+<body><div id='header'><h1 id='breadcrumb'><span>Browse the source code of </span><a href='../../..'>linux-5.3.1</a>/<a href='../..'>arch</a>/<a href='..'>x86</a>/<a href='./'>kernel</a>/<a href='relocate_kernel_64.S.html'>relocate_kernel_64.S</a></h1></div>
+<hr/><div id='content'><table class="code">
+<tr><th id="1">1</th><td><i>/* SPDX-License-Identifier: GPL-2.0-only */</i></td></tr>
+<tr><th id="2">2</th><td><i>/*</i></td></tr>
+<tr><th id="3">3</th><td><i> * relocate_kernel.S - put the kernel image in place to boot</i></td></tr>
+<tr><th id="4">4</th><td><i> * Copyright (C) 2002-2005 Eric Biederman  &lt;ebiederm@xmission.com&gt;</i></td></tr>
+<tr><th id="5">5</th><td><i> */</i></td></tr>
+<tr><th id="6">6</th><td></td></tr>
+<tr><th id="7">7</th><td><u>#include <a href="../../../include/linux/linkage.h.html">&lt;linux/linkage.h&gt;</a></u></td></tr>
+<tr><th id="8">8</th><td><u>#include <a href="../include/asm/page_types.h.html">&lt;asm/page_types.h&gt;</a></u></td></tr>
+<tr><th id="9">9</th><td><u>#include <a href="../include/asm/kexec.h.html">&lt;asm/kexec.h&gt;</a></u></td></tr>
+<tr><th id="10">10</th><td><u>#include <a href="../include/asm/processor-flags.h.html">&lt;asm/processor-flags.h&gt;</a></u></td></tr>
+<tr><th id="11">11</th><td><u>#include <a href="../include/asm/pgtable_types.h.html">&lt;asm/pgtable_types.h&gt;</a></u></td></tr>
+<tr><th id="12">12</th><td></td></tr>
+<tr><th id="13">13</th><td><i>/*</i></td></tr>
+<tr><th id="14">14</th><td><i> * Must be relocatable PIC code callable as a C function</i></td></tr>
+<tr><th id="15">15</th><td><i> */</i></td></tr>
+<tr><th id="16">16</th><td></td></tr>
+<tr><th id="17">17</th><td><u>#define <dfn class="macro" id="_M/PTR" data-ref="_M/PTR">PTR</dfn>(x) (x &lt;&lt; 3)</u></td></tr>
+<tr><th id="18">18</th><td><u>#define <dfn class="macro" id="_M/PAGE_ATTR" data-ref="_M/PAGE_ATTR">PAGE_ATTR</dfn> (_PAGE_PRESENT | _PAGE_RW | _PAGE_ACCESSED | _PAGE_DIRTY)</u></td></tr>
+<tr><th id="19">19</th><td></td></tr>
+<tr><th id="20">20</th><td><i>/*</i></td></tr>
+<tr><th id="21">21</th><td><i> * control_page + KEXEC_CONTROL_CODE_MAX_SIZE</i></td></tr>
+<tr><th id="22">22</th><td><i> * ~ control_page + PAGE_SIZE are used as data storage and stack for</i></td></tr>
+<tr><th id="23">23</th><td><i> * jumping back</i></td></tr>
+<tr><th id="24">24</th><td><i> */</i></td></tr>
+<tr><th id="25">25</th><td><u>#define <dfn class="macro" id="_M/DATA" data-ref="_M/DATA">DATA</dfn>(offset)		(KEXEC_CONTROL_CODE_MAX_SIZE+(offset))</u></td></tr>
+<tr><th id="26">26</th><td></td></tr>
+<tr><th id="27">27</th><td><i>/* Minimal CPU state */</i></td></tr>
+<tr><th id="28">28</th><td><u>#define <dfn class="macro" id="_M/RSP" data-ref="_M/RSP">RSP</dfn>			DATA(0x0)</u></td></tr>
+<tr><th id="29">29</th><td><u>#define <dfn class="macro" id="_M/CR0" data-ref="_M/CR0">CR0</dfn>			DATA(0x8)</u></td></tr>
+<tr><th id="30">30</th><td><u>#define <dfn class="macro" id="_M/CR3" data-ref="_M/CR3">CR3</dfn>			DATA(0x10)</u></td></tr>
+<tr><th id="31">31</th><td><u>#define <dfn class="macro" id="_M/CR4" data-ref="_M/CR4">CR4</dfn>			DATA(0x18)</u></td></tr>
+<tr><th id="32">32</th><td></td></tr>
+<tr><th id="33">33</th><td><i>/* other data */</i></td></tr>
+<tr><th id="34">34</th><td><u>#define <dfn class="macro" id="_M/CP_PA_TABLE_PAGE" data-ref="_M/CP_PA_TABLE_PAGE">CP_PA_TABLE_PAGE</dfn>	DATA(0x20)</u></td></tr>
+<tr><th id="35">35</th><td><u>#define <dfn class="macro" id="_M/CP_PA_SWAP_PAGE" data-ref="_M/CP_PA_SWAP_PAGE">CP_PA_SWAP_PAGE</dfn>		DATA(0x28)</u></td></tr>
+<tr><th id="36">36</th><td><u>#define <dfn class="macro" id="_M/CP_PA_BACKUP_PAGES_MAP" data-ref="_M/CP_PA_BACKUP_PAGES_MAP">CP_PA_BACKUP_PAGES_MAP</dfn>	DATA(0x30)</u></td></tr>
+<tr><th id="37">37</th><td></td></tr>
+<tr><th id="38">38</th><td>	<span class='error' title="expected identifier or &apos;(&apos;">.</span>text</td></tr>
+<tr><th id="39">39</th><td>	.align <a class="macro" href="../include/asm/page_types.h.html#11" title="(1 &lt;&lt; 12)" data-ref="_M/PAGE_SIZE">PAGE_SIZE</a></td></tr>
+<tr><th id="40">40</th><td>	.code64</td></tr>
+<tr><th id="41">41</th><td>	.globl relocate_kernel</td></tr>
+<tr><th id="42">42</th><td>relocate_kernel:</td></tr>
+<tr><th id="43">43</th><td>	<i>/*</i></td></tr>
+<tr><th id="44">44</th><td><i>	 * %rdi indirection_page</i></td></tr>
+<tr><th id="45">45</th><td><i>	 * %rsi page_list</i></td></tr>
+<tr><th id="46">46</th><td><i>	 * %rdx start address</i></td></tr>
+<tr><th id="47">47</th><td><i>	 * %rcx preserve_context</i></td></tr>
+<tr><th id="48">48</th><td><i>	 * %r8  sme_active</i></td></tr>
+<tr><th id="49">49</th><td><i>	 */</i></td></tr>
+<tr><th id="50">50</th><td></td></tr>
+<tr><th id="51">51</th><td>	<i>/* Save the CPU context, used for jumping back */</i></td></tr>
+<tr><th id="52">52</th><td>	pushq %rbx</td></tr>
+<tr><th id="53">53</th><td>	pushq %rbp</td></tr>
+<tr><th id="54">54</th><td>	pushq %r12</td></tr>
+<tr><th id="55">55</th><td>	pushq %r13</td></tr>
+<tr><th id="56">56</th><td>	pushq %r14</td></tr>
+<tr><th id="57">57</th><td>	pushq %r15</td></tr>
+<tr><th id="58">58</th><td>	pushf</td></tr>
+<tr><th id="59">59</th><td></td></tr>
+<tr><th id="60">60</th><td>	movq	<a class="macro" href="#17" title="(1 &lt;&lt; 3)" data-ref="_M/PTR">PTR</a>(<a class="macro" href="../include/asm/kexec.h.html#13" title="1" data-ref="_M/VA_CONTROL_PAGE">VA_CONTROL_PAGE</a>)(%rsi), %r11</td></tr>
+<tr><th id="61">61</th><td>	movq	%rsp, <a class="macro" href="#28" title="(2048+(0x0))" data-ref="_M/RSP">RSP</a>(%r11)</td></tr>
+<tr><th id="62">62</th><td>	movq	%cr0, %rax</td></tr>
+<tr><th id="63">63</th><td>	movq	%rax, <a class="macro" href="#29" title="(2048+(0x8))" data-ref="_M/CR0">CR0</a>(%r11)</td></tr>
+<tr><th id="64">64</th><td>	movq	%cr3, %rax</td></tr>
+<tr><th id="65">65</th><td>	movq	%rax, <a class="macro" href="#30" title="(2048+(0x10))" data-ref="_M/CR3">CR3</a>(%r11)</td></tr>
+<tr><th id="66">66</th><td>	movq	%cr4, %rax</td></tr>
+<tr><th id="67">67</th><td>	movq	%rax, <a class="macro" href="#31" title="(2048+(0x18))" data-ref="_M/CR4">CR4</a>(%r11)</td></tr>
+<tr><th id="68">68</th><td></td></tr>
+<tr><th id="69">69</th><td>	<i>/* Save CR4. Required to enable the right paging mode later. */</i></td></tr>
+<tr><th id="70">70</th><td>	movq	%rax, %r13</td></tr>
+<tr><th id="71">71</th><td></td></tr>
+<tr><th id="72">72</th><td>	<i>/* zero out flags, and disable interrupts */</i></td></tr>
+<tr><th id="73">73</th><td>	pushq $<var>0</var></td></tr>
+<tr><th id="74">74</th><td>	popfq</td></tr>
+<tr><th id="75">75</th><td></td></tr>
+<tr><th id="76">76</th><td>	<i>/* Save SME active flag */</i></td></tr>
+<tr><th id="77">77</th><td>	movq	%r8, %r12</td></tr>
+<tr><th id="78">78</th><td></td></tr>
+<tr><th id="79">79</th><td>	<i>/*</i></td></tr>
+<tr><th id="80">80</th><td><i>	 * get physical address of control page now</i></td></tr>
+<tr><th id="81">81</th><td><i>	 * this is impossible after page table switch</i></td></tr>
+<tr><th id="82">82</th><td><i>	 */</i></td></tr>
+<tr><th id="83">83</th><td>	movq	<a class="macro" href="#17" title="(0 &lt;&lt; 3)" data-ref="_M/PTR">PTR</a>(<a class="macro" href="../include/asm/kexec.h.html#12" title="0" data-ref="_M/PA_CONTROL_PAGE">PA_CONTROL_PAGE</a>)(%rsi), %r8</td></tr>
+<tr><th id="84">84</th><td></td></tr>
+<tr><th id="85">85</th><td>	<i>/* get physical address of page table now too */</i></td></tr>
+<tr><th id="86">86</th><td>	movq	<a class="macro" href="#17" title="(2 &lt;&lt; 3)" data-ref="_M/PTR">PTR</a>(<a class="macro" href="../include/asm/kexec.h.html#14" title="2" data-ref="_M/PA_TABLE_PAGE">PA_TABLE_PAGE</a>)(%rsi), %r9</td></tr>
+<tr><th id="87">87</th><td></td></tr>
+<tr><th id="88">88</th><td>	<i>/* get physical address of swap page now */</i></td></tr>
+<tr><th id="89">89</th><td>	movq	<a class="macro" href="#17" title="(3 &lt;&lt; 3)" data-ref="_M/PTR">PTR</a>(<a class="macro" href="../include/asm/kexec.h.html#15" title="3" data-ref="_M/PA_SWAP_PAGE">PA_SWAP_PAGE</a>)(%rsi), %r10</td></tr>
+<tr><th id="90">90</th><td></td></tr>
+<tr><th id="91">91</th><td>	<i>/* save some information for jumping back */</i></td></tr>
+<tr><th id="92">92</th><td>	movq	%r9, <a class="macro" href="#34" title="(2048+(0x20))" data-ref="_M/CP_PA_TABLE_PAGE">CP_PA_TABLE_PAGE</a>(%r11)</td></tr>
+<tr><th id="93">93</th><td>	movq	%r10, <a class="macro" href="#35" title="(2048+(0x28))" data-ref="_M/CP_PA_SWAP_PAGE">CP_PA_SWAP_PAGE</a>(%r11)</td></tr>
+<tr><th id="94">94</th><td>	movq	%rdi, <a class="macro" href="#36" title="(2048+(0x30))" data-ref="_M/CP_PA_BACKUP_PAGES_MAP">CP_PA_BACKUP_PAGES_MAP</a>(%r11)</td></tr>
+<tr><th id="95">95</th><td></td></tr>
+<tr><th id="96">96</th><td>	<i>/* Switch to the identity mapped page tables */</i></td></tr>
+<tr><th id="97">97</th><td>	movq	%r9, %cr3</td></tr>
+<tr><th id="98">98</th><td></td></tr>
+<tr><th id="99">99</th><td>	<i>/* setup a new stack at the end of the physical control page */</i></td></tr>
+<tr><th id="100">100</th><td>	lea	<a class="macro" href="../include/asm/page_types.h.html#11" title="(1 &lt;&lt; 12)" data-ref="_M/PAGE_SIZE">PAGE_SIZE</a>(%r8), %rsp</td></tr>
+<tr><th id="101">101</th><td></td></tr>
+<tr><th id="102">102</th><td>	<i>/* jump to identity mapped page */</i></td></tr>
+<tr><th id="103">103</th><td>	addq	$(identity_mapped - relocate_kernel), %r8</td></tr>
+<tr><th id="104">104</th><td>	pushq	%r8</td></tr>
+<tr><th id="105">105</th><td>	ret</td></tr>
+<tr><th id="106">106</th><td></td></tr>
+<tr><th id="107">107</th><td>identity_mapped:</td></tr>
+<tr><th id="108">108</th><td>	<i>/* set return address to 0 if not preserving context */</i></td></tr>
+<tr><th id="109">109</th><td>	pushq	$<var>0</var></td></tr>
+<tr><th id="110">110</th><td>	<i>/* store the start address on the stack */</i></td></tr>
+<tr><th id="111">111</th><td>	pushq   %rdx</td></tr>
+<tr><th id="112">112</th><td></td></tr>
+<tr><th id="113">113</th><td>	<i>/*</i></td></tr>
+<tr><th id="114">114</th><td><i>	 * Set cr0 to a known state:</i></td></tr>
+<tr><th id="115">115</th><td><i>	 *  - Paging enabled</i></td></tr>
+<tr><th id="116">116</th><td><i>	 *  - Alignment check disabled</i></td></tr>
+<tr><th id="117">117</th><td><i>	 *  - Write protect disabled</i></td></tr>
+<tr><th id="118">118</th><td><i>	 *  - No task switch</i></td></tr>
+<tr><th id="119">119</th><td><i>	 *  - Don't do FP software emulation.</i></td></tr>
+<tr><th id="120">120</th><td><i>	 *  - Proctected mode enabled</i></td></tr>
+<tr><th id="121">121</th><td><i>	 */</i></td></tr>
+<tr><th id="122">122</th><td>	movq	%cr0, %rax</td></tr>
+<tr><th id="123">123</th><td>	andq	$~(<a class="macro" href="../include/uapi/asm/processor-flags.h.html#66" title="((1) &lt;&lt; (18))" data-ref="_M/X86_CR0_AM">X86_CR0_AM</a> | <a class="macro" href="../include/uapi/asm/processor-flags.h.html#64" title="((1) &lt;&lt; (16))" data-ref="_M/X86_CR0_WP">X86_CR0_WP</a> | <a class="macro" href="../include/uapi/asm/processor-flags.h.html#58" title="((1) &lt;&lt; (3))" data-ref="_M/X86_CR0_TS">X86_CR0_TS</a> | <a class="macro" href="../include/uapi/asm/processor-flags.h.html#56" title="((1) &lt;&lt; (2))" data-ref="_M/X86_CR0_EM">X86_CR0_EM</a>), %rax</td></tr>
+<tr><th id="124">124</th><td>	orl	$(<a class="macro" href="../include/uapi/asm/processor-flags.h.html#72" title="((1) &lt;&lt; (31))" data-ref="_M/X86_CR0_PG">X86_CR0_PG</a> | <a class="macro" href="../include/uapi/asm/processor-flags.h.html#52" title="((1) &lt;&lt; (0))" data-ref="_M/X86_CR0_PE">X86_CR0_PE</a>), %eax</td></tr>
+<tr><th id="125">125</th><td>	movq	%rax, %cr0</td></tr>
+<tr><th id="126">126</th><td></td></tr>
+<tr><th id="127">127</th><td>	<i>/*</i></td></tr>
+<tr><th id="128">128</th><td><i>	 * Set cr4 to a known state:</i></td></tr>
+<tr><th id="129">129</th><td><i>	 *  - physical address extension enabled</i></td></tr>
+<tr><th id="130">130</th><td><i>	 *  - 5-level paging, if it was enabled before</i></td></tr>
+<tr><th id="131">131</th><td><i>	 */</i></td></tr>
+<tr><th id="132">132</th><td>	movl	$<a class="macro" href="../include/uapi/asm/processor-flags.h.html#102" title="((1) &lt;&lt; (5))" data-ref="_M/X86_CR4_PAE">X86_CR4_PAE</a>, %eax</td></tr>
+<tr><th id="133">133</th><td>	testq	$<a class="macro" href="../include/uapi/asm/processor-flags.h.html#116" title="((1) &lt;&lt; (12))" data-ref="_M/X86_CR4_LA57">X86_CR4_LA57</a>, %r13</td></tr>
+<tr><th id="134">134</th><td>	jz	<var>1f</var></td></tr>
+<tr><th id="135">135</th><td>	orl	$<a class="macro" href="../include/uapi/asm/processor-flags.h.html#116" title="((1) &lt;&lt; (12))" data-ref="_M/X86_CR4_LA57">X86_CR4_LA57</a>, %eax</td></tr>
+<tr><th id="136">136</th><td><var>1</var>:</td></tr>
+<tr><th id="137">137</th><td>	movq	%rax, %cr4</td></tr>
+<tr><th id="138">138</th><td></td></tr>
+<tr><th id="139">139</th><td>	jmp <var>1f</var></td></tr>
+<tr><th id="140">140</th><td><var>1</var>:</td></tr>
+<tr><th id="141">141</th><td></td></tr>
+<tr><th id="142">142</th><td>	<i>/* Flush the TLB (needed?) */</i></td></tr>
+<tr><th id="143">143</th><td>	movq	%r9, %cr3</td></tr>
+<tr><th id="144">144</th><td></td></tr>
+<tr><th id="145">145</th><td>	<i>/*</i></td></tr>
+<tr><th id="146">146</th><td><i>	 * If SME is active, there could be old encrypted cache line</i></td></tr>
+<tr><th id="147">147</th><td><i>	 * entries that will conflict with the now unencrypted memory</i></td></tr>
+<tr><th id="148">148</th><td><i>	 * used by kexec. Flush the caches before copying the kernel.</i></td></tr>
+<tr><th id="149">149</th><td><i>	 */</i></td></tr>
+<tr><th id="150">150</th><td>	testq	%r12, %r12</td></tr>
+<tr><th id="151">151</th><td>	jz <var>1f</var></td></tr>
+<tr><th id="152">152</th><td>	wbinvd</td></tr>
+<tr><th id="153">153</th><td><var>1</var>:</td></tr>
+<tr><th id="154">154</th><td></td></tr>
+<tr><th id="155">155</th><td>	movq	%rcx, %r11</td></tr>
+<tr><th id="156">156</th><td>	call	swap_pages</td></tr>
+<tr><th id="157">157</th><td></td></tr>
+<tr><th id="158">158</th><td>	<i>/*</i></td></tr>
+<tr><th id="159">159</th><td><i>	 * To be certain of avoiding problems with self-modifying code</i></td></tr>
+<tr><th id="160">160</th><td><i>	 * I need to execute a serializing instruction here.</i></td></tr>
+<tr><th id="161">161</th><td><i>	 * So I flush the TLB by reloading %cr3 here, it's handy,</i></td></tr>
+<tr><th id="162">162</th><td><i>	 * and not processor dependent.</i></td></tr>
+<tr><th id="163">163</th><td><i>	 */</i></td></tr>
+<tr><th id="164">164</th><td>	movq	%cr3, %rax</td></tr>
+<tr><th id="165">165</th><td>	movq	%rax, %cr3</td></tr>
+<tr><th id="166">166</th><td></td></tr>
+<tr><th id="167">167</th><td>	<i>/*</i></td></tr>
+<tr><th id="168">168</th><td><i>	 * set all of the registers to known values</i></td></tr>
+<tr><th id="169">169</th><td><i>	 * leave %rsp alone</i></td></tr>
+<tr><th id="170">170</th><td><i>	 */</i></td></tr>
+<tr><th id="171">171</th><td></td></tr>
+<tr><th id="172">172</th><td>	testq	%r11, %r11</td></tr>
+<tr><th id="173">173</th><td>	jnz <var>1f</var></td></tr>
+<tr><th id="174">174</th><td>	xorl	%eax, %eax</td></tr>
+<tr><th id="175">175</th><td>	xorl	%ebx, %ebx</td></tr>
+<tr><th id="176">176</th><td>	xorl    %ecx, %ecx</td></tr>
+<tr><th id="177">177</th><td>	xorl    %edx, %edx</td></tr>
+<tr><th id="178">178</th><td>	xorl    %esi, %esi</td></tr>
+<tr><th id="179">179</th><td>	xorl    %edi, %edi</td></tr>
+<tr><th id="180">180</th><td>	xorl    %ebp, %ebp</td></tr>
+<tr><th id="181">181</th><td>	xorl	%r8d, %r8d</td></tr>
+<tr><th id="182">182</th><td>	xorl	%r9d, %r9d</td></tr>
+<tr><th id="183">183</th><td>	xorl	%r10d, %r10d</td></tr>
+<tr><th id="184">184</th><td>	xorl	%r11d, %r11d</td></tr>
+<tr><th id="185">185</th><td>	xorl	%r12d, %r12d</td></tr>
+<tr><th id="186">186</th><td>	xorl	%r13d, %r13d</td></tr>
+<tr><th id="187">187</th><td>	xorl	%r14d, %r14d</td></tr>
+<tr><th id="188">188</th><td>	xorl	%r15d, %r15d</td></tr>
+<tr><th id="189">189</th><td></td></tr>
+<tr><th id="190">190</th><td>	ret</td></tr>
+<tr><th id="191">191</th><td></td></tr>
+<tr><th id="192">192</th><td><var>1</var>:</td></tr>
+<tr><th id="193">193</th><td>	popq	%rdx</td></tr>
+<tr><th id="194">194</th><td>	leaq	<a class="macro" href="../include/asm/page_types.h.html#11" title="(1 &lt;&lt; 12)" data-ref="_M/PAGE_SIZE">PAGE_SIZE</a>(%r10), %rsp</td></tr>
+<tr><th id="195">195</th><td>	call	*%rdx</td></tr>
+<tr><th id="196">196</th><td></td></tr>
+<tr><th id="197">197</th><td>	<i>/* get the re-entry point of the peer system */</i></td></tr>
+<tr><th id="198">198</th><td>	movq	<var>0</var>(%rsp), %rbp</td></tr>
+<tr><th id="199">199</th><td>	call	<var>1f</var></td></tr>
+<tr><th id="200">200</th><td><var>1</var>:</td></tr>
+<tr><th id="201">201</th><td>	popq	%r8</td></tr>
+<tr><th id="202">202</th><td>	subq	$(<var>1b</var> - relocate_kernel), %r8</td></tr>
+<tr><th id="203">203</th><td>	movq	<a class="macro" href="#35" title="(2048+(0x28))" data-ref="_M/CP_PA_SWAP_PAGE">CP_PA_SWAP_PAGE</a>(%r8), %r10</td></tr>
+<tr><th id="204">204</th><td>	movq	<a class="macro" href="#36" title="(2048+(0x30))" data-ref="_M/CP_PA_BACKUP_PAGES_MAP">CP_PA_BACKUP_PAGES_MAP</a>(%r8), %rdi</td></tr>
+<tr><th id="205">205</th><td>	movq	<a class="macro" href="#34" title="(2048+(0x20))" data-ref="_M/CP_PA_TABLE_PAGE">CP_PA_TABLE_PAGE</a>(%r8), %rax</td></tr>
+<tr><th id="206">206</th><td>	movq	%rax, %cr3</td></tr>
+<tr><th id="207">207</th><td>	lea	<a class="macro" href="../include/asm/page_types.h.html#11" title="(1 &lt;&lt; 12)" data-ref="_M/PAGE_SIZE">PAGE_SIZE</a>(%r8), %rsp</td></tr>
+<tr><th id="208">208</th><td>	call	swap_pages</td></tr>
+<tr><th id="209">209</th><td>	movq	$virtual_mapped, %rax</td></tr>
+<tr><th id="210">210</th><td>	pushq	%rax</td></tr>
+<tr><th id="211">211</th><td>	ret</td></tr>
+<tr><th id="212">212</th><td></td></tr>
+<tr><th id="213">213</th><td>virtual_mapped:</td></tr>
+<tr><th id="214">214</th><td>	movq	<a class="macro" href="#28" title="(2048+(0x0))" data-ref="_M/RSP">RSP</a>(%r8), %rsp</td></tr>
+<tr><th id="215">215</th><td>	movq	<a class="macro" href="#31" title="(2048+(0x18))" data-ref="_M/CR4">CR4</a>(%r8), %rax</td></tr>
+<tr><th id="216">216</th><td>	movq	%rax, %cr4</td></tr>
+<tr><th id="217">217</th><td>	movq	<a class="macro" href="#30" title="(2048+(0x10))" data-ref="_M/CR3">CR3</a>(%r8), %rax</td></tr>
+<tr><th id="218">218</th><td>	movq	<a class="macro" href="#29" title="(2048+(0x8))" data-ref="_M/CR0">CR0</a>(%r8), %r8</td></tr>
+<tr><th id="219">219</th><td>	movq	%rax, %cr3</td></tr>
+<tr><th id="220">220</th><td>	movq	%r8, %cr0</td></tr>
+<tr><th id="221">221</th><td>	movq	%rbp, %rax</td></tr>
+<tr><th id="222">222</th><td></td></tr>
+<tr><th id="223">223</th><td>	popf</td></tr>
+<tr><th id="224">224</th><td>	popq	%r15</td></tr>
+<tr><th id="225">225</th><td>	popq	%r14</td></tr>
+<tr><th id="226">226</th><td>	popq	%r13</td></tr>
+<tr><th id="227">227</th><td>	popq	%r12</td></tr>
+<tr><th id="228">228</th><td>	popq	%rbp</td></tr>
+<tr><th id="229">229</th><td>	popq	%rbx</td></tr>
+<tr><th id="230">230</th><td>	ret</td></tr>
+<tr><th id="231">231</th><td></td></tr>
+<tr><th id="232">232</th><td>	<i>/* Do the copies */</i></td></tr>
+<tr><th id="233">233</th><td>swap_pages:</td></tr>
+<tr><th id="234">234</th><td>	movq	%rdi, %rcx 	<i>/* Put the page_list in %rcx */</i></td></tr>
+<tr><th id="235">235</th><td>	xorl	%edi, %edi</td></tr>
+<tr><th id="236">236</th><td>	xorl	%esi, %esi</td></tr>
+<tr><th id="237">237</th><td>	jmp	<var>1f</var></td></tr>
+<tr><th id="238">238</th><td></td></tr>
+<tr><th id="239">239</th><td><var>0</var>:	<i>/* top, read another word for the indirection page */</i></td></tr>
+<tr><th id="240">240</th><td></td></tr>
+<tr><th id="241">241</th><td>	movq	(%rbx), %rcx</td></tr>
+<tr><th id="242">242</th><td>	addq	$<var>8</var>,	%rbx</td></tr>
+<tr><th id="243">243</th><td><var>1</var>:</td></tr>
+<tr><th id="244">244</th><td>	testb	$<var>0x1</var>,	%cl   <i>/* is it a destination page? */</i></td></tr>
+<tr><th id="245">245</th><td>	jz	<var>2f</var></td></tr>
+<tr><th id="246">246</th><td>	movq	%rcx,	%rdi</td></tr>
+<tr><th id="247">247</th><td>	andq	$<var>0xfffffffffffff000</var>, %rdi</td></tr>
+<tr><th id="248">248</th><td>	jmp	<var>0b</var></td></tr>
+<tr><th id="249">249</th><td><var>2</var>:</td></tr>
+<tr><th id="250">250</th><td>	testb	$<var>0x2</var>,	%cl   <i>/* is it an indirection page? */</i></td></tr>
+<tr><th id="251">251</th><td>	jz	<var>2f</var></td></tr>
+<tr><th id="252">252</th><td>	movq	%rcx,   %rbx</td></tr>
+<tr><th id="253">253</th><td>	andq	$<var>0xfffffffffffff000</var>, %rbx</td></tr>
+<tr><th id="254">254</th><td>	jmp	<var>0b</var></td></tr>
+<tr><th id="255">255</th><td><var>2</var>:</td></tr>
+<tr><th id="256">256</th><td>	testb	$<var>0x4</var>,	%cl   <i>/* is it the done indicator? */</i></td></tr>
+<tr><th id="257">257</th><td>	jz	<var>2f</var></td></tr>
+<tr><th id="258">258</th><td>	jmp	<var>3f</var></td></tr>
+<tr><th id="259">259</th><td><var>2</var>:</td></tr>
+<tr><th id="260">260</th><td>	testb	$<var>0x8</var>,	%cl   <i>/* is it the source indicator? */</i></td></tr>
+<tr><th id="261">261</th><td>	jz	<var>0b</var>	      <i>/* Ignore it otherwise */</i></td></tr>
+<tr><th id="262">262</th><td>	movq	%rcx,   %rsi  <i>/* For ever source page do a copy */</i></td></tr>
+<tr><th id="263">263</th><td>	andq	$<var>0xfffffffffffff000</var>, %rsi</td></tr>
+<tr><th id="264">264</th><td></td></tr>
+<tr><th id="265">265</th><td>	movq	%rdi, %rdx</td></tr>
+<tr><th id="266">266</th><td>	movq	%rsi, %rax</td></tr>
+<tr><th id="267">267</th><td></td></tr>
+<tr><th id="268">268</th><td>	movq	%r10, %rdi</td></tr>
+<tr><th id="269">269</th><td>	movl	$<var>512</var>, %ecx</td></tr>
+<tr><th id="270">270</th><td>	rep ; <span class='error' title="unknown type name &apos;movsq&apos;">movsq</span></td></tr>
+<tr><th id="271">271</th><td></td></tr>
+<tr><th id="272">272</th><td>	<dfn class="tu decl def" id="movq" title='movq' data-type='int' data-ref="movq" data-ref-filename="movq">movq</dfn><span class='error' title="expected &apos;;&apos; after top level declarator"></span>	%rax, %rdi</td></tr>
+<tr><th id="273">273</th><td>	movq	%rdx, %rsi</td></tr>
+<tr><th id="274">274</th><td>	movl	$<var>512</var>, %ecx</td></tr>
+<tr><th id="275">275</th><td>	rep ; <span class='error' title="unknown type name &apos;movsq&apos;">movsq</span></td></tr>
+<tr><th id="276">276</th><td></td></tr>
+<tr><th id="277">277</th><td>	<dfn class="tu decl def" id="movq" title='movq' data-type='int' data-ref="movq" data-ref-filename="movq">movq</dfn><span class='error' title="expected &apos;;&apos; after top level declarator"></span>	%rdx, %rdi</td></tr>
+<tr><th id="278">278</th><td>	movq	%r10, %rsi</td></tr>
+<tr><th id="279">279</th><td>	movl	$<var>512</var>, %ecx</td></tr>
+<tr><th id="280">280</th><td>	rep ; <span class='error' title="unknown type name &apos;movsq&apos;">movsq</span></td></tr>
+<tr><th id="281">281</th><td></td></tr>
+<tr><th id="282">282</th><td>	<dfn class="decl fn" id="lea" title='lea' data-ref="lea" data-ref-filename="lea">lea</dfn>	<a class="macro" href="../include/asm/page_types.h.html#11" title="(1 &lt;&lt; 12)" data-ref="_M/PAGE_SIZE">PAGE_SIZE</a>(<span class='error' title="expected parameter declarator"><span class='error' title="expected &apos;)&apos;">%</span></span>rax),<span class='error' title="expected &apos;;&apos; after top level declarator"></span> <span class='error' title="expected identifier or &apos;(&apos;">%</span>rsi</td></tr>
+<tr><th id="283">283</th><td>	jmp	<var>0b</var></td></tr>
+<tr><th id="284">284</th><td><var>3</var>:</td></tr>
+<tr><th id="285">285</th><td>	ret</td></tr>
+<tr><th id="286">286</th><td></td></tr>
+<tr><th id="287">287</th><td>	.globl kexec_control_code_size</td></tr>
+<tr><th id="288">288</th><td>.set kexec_control_code_size, . - relocate_kernel</td></tr>
+<tr><th id="289">289</th><td></td></tr>
+</table><hr/><p id='footer'>
+Generated on <em>2020-Jun-10</em> from project linux-5.3.1 revision <em>5.3.1</em><br />Powered by <a href='https://woboq.com'><img alt='Woboq' src='https://code.woboq.org/woboq-16.png' width='41' height='16' /></a> <a href='https://code.woboq.org'>Code Browser</a> 2.1
+<br/>Generator usage only permitted with license.</p>
+</div></body></html>
